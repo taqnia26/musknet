@@ -34,6 +34,10 @@ app.use(
   "/api/media",
   express.static(path.resolve(import.meta.dirname, "../../../attached_assets")),
 );
+app.use(
+  "/api/site-assets",
+  express.static(path.resolve(import.meta.dirname, "../../musk-ellolo/public/site-assets")),
+);
 app.use("/api", router);
 
 export default app;

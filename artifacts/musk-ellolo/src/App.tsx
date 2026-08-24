@@ -11,6 +11,9 @@ import ProductDetails from '@/pages/product-details';
 import Cart from '@/pages/cart';
 import Checkout from '@/pages/checkout';
 import About from '@/pages/about';
+import Policy from '@/pages/policy';
+import Guarantee from '@/pages/guarantee';
+import Privacy from '@/pages/privacy';
 import Contact from '@/pages/contact';
 import Account from '@/pages/account';
 import Orders from '@/pages/account-orders';
@@ -40,6 +43,9 @@ function Router() {
         <Route path="/cart" component={Cart} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/about" component={About} />
+        <Route path="/policy" component={Policy} />
+        <Route path="/guarantee" component={Guarantee} />
+        <Route path="/privacy" component={Privacy} />
         <Route path="/contact" component={Contact} />
         
         <Route path="/auth/register" component={Login} />

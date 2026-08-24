@@ -1,81 +1,57 @@
 import { useLanguage } from '@/hooks/use-language';
-import { useGetHomeContent } from '@workspace/api-client-react';
+import { Link } from 'wouter';
 
 export default function About() {
   const { t } = useLanguage();
-  const { data: content } = useGetHomeContent();
-  
+
   return (
-    <div className="w-full bg-background animate-in fade-in duration-700">
-      
-      {/* Hero Section */}
-      <section className="relative h-[60dvh] w-full flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src={content?.aboutImageUrl || "/api/media/Perfume-04_1787598876726.jpg"} 
-            alt="About Musk Ellolo" 
-            className="w-full h-full object-cover object-center opacity-60 mix-blend-multiply"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"></div>
-        </div>
+    <div className="w-full bg-white min-h-screen">
+      <div className="container mx-auto px-4 py-16 md:py-24 max-w-4xl text-center flex flex-col items-center">
+        
+        <h1 className="text-2xl md:text-3xl font-bold mb-16 text-black">
+          {t('من نحن', 'About Us')}
+        </h1>
 
-        <div className="relative z-10 text-center max-w-3xl px-4">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 text-foreground tracking-tight">
-            {t('قصة مسك اللولو', 'The Story of Musk Ellolo')}
-          </h1>
-          <p className="text-xl md:text-2xl text-foreground/80 font-serif">
-            {t('حيث تلتقي الأصالة بالفخامة', 'Where Heritage Meets Luxury')}
-          </p>
-        </div>
-      </section>
-
-      {/* Content Section */}
-      <section className="py-24">
-        <div className="container mx-auto px-4 max-w-4xl space-y-24">
-          
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-primary">{t('بدايتنا', 'Our Beginning')}</h2>
-              <p className="text-lg text-muted-foreground leading-relaxed text-justify">
-                {t(
-                  'بدأت رحلة مسك اللولو بشغف عميق للروائح التي تروي قصصاً لا تُنسى. استلهمنا من سحر الشرق وعراقته لنبتكر عطوراً تجسد الفخامة والأناقة في كل قطرة.',
-                  'The journey of Musk Ellolo began with a deep passion for scents that tell unforgettable stories. We were inspired by the magic and heritage of the East to create fragrances that embody luxury and elegance in every drop.'
-                )}
-              </p>
-            </div>
-            <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl">
-              <img src="/api/media/Perfume-03_1787598876725.jpg" alt="Heritage" className="w-full h-full object-cover" />
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-12 items-center flex-col-reverse md:flex-row-reverse">
-            <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-2xl">
-              <img src="/api/media/Perfume-05_1787598876727.jpg" alt="Craftsmanship" className="w-full h-full object-cover" />
-            </div>
-            <div className="space-y-6">
-              <h2 className="text-3xl font-bold text-primary">{t('الإبداع الحرفي', 'Craftsmanship')}</h2>
-              <p className="text-lg text-muted-foreground leading-relaxed text-justify">
-                {t(
-                  'كل زجاجة عطر من مسك اللولو هي تحفة فنية بحد ذاتها. نحن نختار أندر المكونات وأجود الزيوت العطرية من مختلف أنحاء العالم، وندمجها بحرفية عالية لنضمن لك تجربة عطرية استثنائية تدوم طويلاً.',
-                  'Every bottle of Musk Ellolo perfume is a masterpiece in itself. We select the rarest ingredients and the finest essential oils from around the world, blending them with high craftsmanship to guarantee you an exceptional, long-lasting fragrance experience.'
-                )}
-              </p>
-            </div>
-          </div>
-
-          <div className="text-center max-w-2xl mx-auto space-y-6">
-            <h2 className="text-3xl font-bold text-primary">{t('رؤيتنا', 'Our Vision')}</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
+        <div className="space-y-12 w-full">
+          {/* Story */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-black">{t('قصة مسك اللولو', 'Musk Ellolo Story')}</h2>
+            <p className="text-gray-700 leading-relaxed max-w-2xl mx-auto">
               {t(
-                'نسعى لأن نكون الرمز الأول للعطور الفاخرة التي تعبر عن الشخصية العربية الأصيلة بلمسة عصرية، وأن نترك أثراً عطرياً يخلد في الذاكرة.',
-                'We strive to be the premier symbol of luxury perfumes that express the authentic Arabic personality with a modern touch, and to leave a fragrant trace that is immortalized in memory.'
+                'تأسست دار عطور مسك اللولو عام 2011م بالتعاون مع أهم العطارين المحترفين في العالم. حيث تخصصنا بصناعة منتجات عطرية متنوعة ترتكز في تكوينها على المسك، لننتج من خلالها مجموعة من الروائح الشرقية والفرنسية الفريدة بتصميمنا الحصري المتناغم بحبات اللولو، لنصنع منها اسم مسك اللولو.',
+                'Musk Ellolo Perfume House was established in 2011 in collaboration with the world\'s most prominent professional perfumers. We specialized in creating diverse aromatic products based on musk, producing a collection of unique Oriental and French scents with our exclusive design harmonizing with pearls, creating the name Musk Ellolo.'
               )}
             </p>
           </div>
 
-        </div>
-      </section>
+          {/* Vision */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-black">{t('رؤيتنا', 'Our Vision')}</h2>
+            <p className="text-gray-700 leading-relaxed max-w-2xl mx-auto">
+              {t(
+                'نطمح بأن نحتل مكانة متميزة محلياً وعالمياً في صناعة العطور.',
+                'We aspire to occupy a distinguished position locally and globally in the perfume industry.'
+              )}
+            </p>
+          </div>
 
+          {/* Values */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-black">{t('قيمنا', 'Our Values')}</h2>
+            <p className="text-gray-700 leading-relaxed max-w-2xl mx-auto">
+              {t(
+                'في مسك اللولو نعمل لإنتاج أجود وأفخر أنواع الزيوت العطرية والعطور، لنصنع وجهة سعودية مبتكرة ورائدة في صناعة العطور. فنحن حريصون على تقديم أفضل الخدمات والمنتجات المصنعة بأيدي خبراء مختصين بأعلى المستويات.',
+                'At Musk Ellolo, we work to produce the finest and most luxurious essential oils and perfumes, creating an innovative and leading Saudi destination in the perfume industry. We are keen on providing the best services and products manufactured by specialized experts at the highest levels.'
+              )}
+            </p>
+          </div>
+          
+          <div className="pt-8 text-gray-500 font-medium">
+            {t('رقم السجل التجاري: 1010311811', 'Commercial Register Number: 1010311811')}
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
