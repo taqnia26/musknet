@@ -3,20 +3,23 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Public storefront API for Musk Ellolo
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: catalog
+  - name: auth
+  - name: cart
+  - name: checkout
+  - name: account
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +27,869 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [catalog]
+      summary: List storefront categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [catalog]
+      summary: List and filter storefront products
+      parameters:
+        - $ref: "#/components/parameters/CategorySlug"
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [featured, bestseller, price_asc, price_desc, newest]
+            default: featured
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+            minimum: 0
+        - name: limit
+          in: query
+          schema:
+            type: number
+            minimum: 1
+            maximum: 48
+            default: 24
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /products/{slug}:
+    get:
+      operationId: getProduct
+      tags: [catalog]
+      summary: Get product details
+      parameters:
+        - $ref: "#/components/parameters/ProductSlug"
+      responses:
+        "200":
+          description: Product
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductDetails"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /products/{slug}/related:
+    get:
+      operationId: getRelatedProducts
+      tags: [catalog]
+      summary: Get related products
+      parameters:
+        - $ref: "#/components/parameters/ProductSlug"
+      responses:
+        "200":
+          description: Related products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+
+  /content/home:
+    get:
+      operationId: getHomeContent
+      tags: [catalog]
+      summary: Get editable storefront content
+      responses:
+        "200":
+          description: Home content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeContent"
+
+  /auth/request-otp:
+    post:
+      operationId: requestOtp
+      tags: [auth]
+      summary: Request a phone verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpRequest"
+      responses:
+        "200":
+          description: OTP requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OtpRequestResult"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify a phone code and sign in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OtpVerification"
+      responses:
+        "200":
+          description: Signed-in customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get the current customer
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /cart:
+    get:
+      operationId: getCart
+      tags: [cart]
+      summary: Get the current cart
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /cart/items:
+    post:
+      operationId: addCartItem
+      tags: [cart]
+      summary: Add a product to the cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CartItemInput"
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /cart/items/{itemId}:
+    patch:
+      operationId: updateCartItem
+      tags: [cart]
+      summary: Update cart item quantity
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CartItemUpdate"
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: removeCartItem
+      tags: [cart]
+      summary: Remove cart item
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ItemId"
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Cart"
+
+  /coupons/validate:
+    post:
+      operationId: validateCoupon
+      tags: [checkout]
+      summary: Validate a discount code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CouponValidation"
+      responses:
+        "200":
+          description: Coupon validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CouponResult"
+
+  /checkout/quote:
+    post:
+      operationId: getCheckoutQuote
+      tags: [checkout]
+      summary: Calculate shipping, tax, and checkout total
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutQuoteInput"
+      responses:
+        "200":
+          description: Checkout quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutQuote"
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [account]
+      summary: List the current customer's orders
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [checkout]
+      summary: Create an order from the current cart
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /orders/{orderNumber}:
+    get:
+      operationId: getOrder
+      tags: [account]
+      summary: Get an order by order number
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderNumber
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /account/profile:
+    patch:
+      operationId: updateProfile
+      tags: [account]
+      summary: Update customer profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /account/addresses:
+    get:
+      operationId: listAddresses
+      tags: [account]
+      summary: List saved customer addresses
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Saved addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Address"
+    post:
+      operationId: createAddress
+      tags: [account]
+      summary: Save a customer address
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddressInput"
+      responses:
+        "201":
+          description: Saved address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Address"
+
+  /account/addresses/{addressId}:
+    delete:
+      operationId: deleteAddress
+      tags: [account]
+      summary: Delete a saved address
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AddressId"
+      responses:
+        "204":
+          description: Address deleted
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CategorySlug:
+      name: category
+      in: query
+      schema:
+        type: string
+    ProductSlug:
+      name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        type: number
+    AddressId:
+      name: addressId
+      in: path
+      required: true
+      schema:
+        type: number
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
-
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    Category:
+      type: object
+      required: [id, nameAr, nameEn, slug, imageUrl]
+      properties:
+        id:
+          type: number
+        nameAr:
+          type: string
+        nameEn:
+          type: string
+        slug:
+          type: string
+        imageUrl:
+          type: string
+    Product:
+      type: object
+      required: [id, nameAr, nameEn, slug, price, categorySlug, imageUrl, isBestseller, stock]
+      properties:
+        id:
+          type: number
+        nameAr:
+          type: string
+        nameEn:
+          type: string
+        slug:
+          type: string
+        price:
+          type: number
+        compareAtPrice:
+          type: ["number", "null"]
+        categorySlug:
+          type: string
+        categoryNameAr:
+          type: string
+        imageUrl:
+          type: string
+        hoverImageUrl:
+          type: ["string", "null"]
+        isFeatured:
+          type: boolean
+        isBestseller:
+          type: boolean
+        stock:
+          type: number
+    ProductDetails:
+      allOf:
+        - $ref: "#/components/schemas/Product"
+        - type: object
+          required: [descriptionAr, descriptionEn, images, notes, relatedProducts]
+          properties:
+            descriptionAr:
+              type: string
+            descriptionEn:
+              type: string
+            images:
+              type: array
+              items:
+                type: string
+            notes:
+              type: array
+              items:
+                $ref: "#/components/schemas/FragranceNote"
+            relatedProducts:
+              type: array
+              items:
+                $ref: "#/components/schemas/Product"
+    FragranceNote:
+      type: object
+      required: [type, nameAr, nameEn]
+      properties:
+        type:
+          type: string
+          enum: [top, heart, base]
+        nameAr:
+          type: string
+        nameEn:
+          type: string
+    HomeContent:
+      type: object
+      required: [heroTitleAr, heroTitleEn, heroSubtitleAr, heroSubtitleEn, aboutTitleAr, aboutBodyAr, creativeTitleAr, creativeBodyAr]
+      properties:
+        heroTitleAr:
+          type: string
+        heroTitleEn:
+          type: string
+        heroSubtitleAr:
+          type: string
+        heroSubtitleEn:
+          type: string
+        heroImageUrl:
+          type: ["string", "null"]
+        heroVideoUrl:
+          type: ["string", "null"]
+        aboutTitleAr:
+          type: string
+        aboutBodyAr:
+          type: string
+        aboutImageUrl:
+          type: ["string", "null"]
+        creativeTitleAr:
+          type: string
+        creativeBodyAr:
+          type: string
+        creativeImageUrl:
+          type: ["string", "null"]
+    OtpRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          minLength: 8
+    OtpRequestResult:
+      type: object
+      required: [success, expiresInSeconds]
+      properties:
+        success:
+          type: boolean
+        expiresInSeconds:
+          type: number
+        devCode:
+          type: ["string", "null"]
+    OtpVerification:
+      type: object
+      required: [phone, code]
+      properties:
+        phone:
+          type: string
+        code:
+          type: string
+          minLength: 4
+          maxLength: 6
+    AuthSession:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/Customer"
+    Customer:
+      type: object
+      required: [id, phone, name, phoneVerified]
+      properties:
+        id:
+          type: number
+        phone:
+          type: string
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phoneVerified:
+          type: boolean
+    Cart:
+      type: object
+      required: [id, items, subtotal, itemCount]
+      properties:
+        id:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        subtotal:
+          type: number
+        itemCount:
+          type: number
+    CartItem:
+      type: object
+      required: [id, quantity, product, lineTotal]
+      properties:
+        id:
+          type: number
+        quantity:
+          type: number
+        lineTotal:
+          type: number
+        product:
+          $ref: "#/components/schemas/Product"
+    CartItemInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: number
+        quantity:
+          type: number
+          minimum: 1
+          maximum: 20
+    CartItemUpdate:
+      type: object
+      required: [quantity]
+      properties:
+        quantity:
+          type: number
+          minimum: 1
+          maximum: 20
+    CouponValidation:
+      type: object
+      required: [code, subtotal]
+      properties:
+        code:
+          type: string
+        subtotal:
+          type: number
+          minimum: 0
+    CouponResult:
+      type: object
+      required: [valid, discount, message]
+      properties:
+        valid:
+          type: boolean
+        discount:
+          type: number
+        message:
+          type: string
+        code:
+          type: ["string", "null"]
+    CheckoutQuoteInput:
+      type: object
+      required: [city]
+      properties:
+        city:
+          type: string
+        couponCode:
+          type: ["string", "null"]
+    CheckoutQuote:
+      type: object
+      required: [subtotal, shippingCost, discount, tax, total, shippingMethods, paymentMethods]
+      properties:
+        subtotal:
+          type: number
+        shippingCost:
+          type: number
+        discount:
+          type: number
+        tax:
+          type: number
+        total:
+          type: number
+        shippingMethods:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShippingMethod"
+        paymentMethods:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentMethod"
+    ShippingMethod:
+      type: object
+      required: [id, name, description, price, estimatedDays]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        estimatedDays:
+          type: string
+    PaymentMethod:
+      type: object
+      required: [id, name, description, available]
+      properties:
+        id:
+          type: string
+          enum: [moyasar, tabby, tamara]
+        name:
+          type: string
+        description:
+          type: string
+        available:
+          type: boolean
+    OrderInput:
+      type: object
+      required: [address, shippingMethod, paymentMethod]
+      properties:
+        address:
+          $ref: "#/components/schemas/AddressInput"
+        shippingMethod:
+          type: string
+        paymentMethod:
+          type: string
+          enum: [moyasar, tabby, tamara]
+        couponCode:
+          type: ["string", "null"]
+    Order:
+      type: object
+      required: [id, orderNumber, subtotal, shippingCost, discount, tax, total, status, paymentStatus, items, createdAt]
+      properties:
+        id:
+          type: number
+        orderNumber:
+          type: string
+        subtotal:
+          type: number
+        shippingCost:
+          type: number
+        discount:
+          type: number
+        tax:
+          type: number
+        total:
+          type: number
+        status:
+          type: string
+          enum: [new, processing, shipped, delivered, cancelled]
+        paymentStatus:
+          type: string
+          enum: [pending, paid, failed, refunded]
+        trackingNumber:
+          type: ["string", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        createdAt:
+          type: string
+          format: date-time
+    OrderItem:
+      type: object
+      required: [productName, quantity, unitPrice, totalPrice]
+      properties:
+        productName:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        totalPrice:
+          type: number
+        imageUrl:
+          type: ["string", "null"]
+    ProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+    Address:
+      type: object
+      required: [id, label, city, district, street, buildingNo, isDefault]
+      properties:
+        id:
+          type: number
+        label:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        street:
+          type: string
+        buildingNo:
+          type: string
+        additionalInfo:
+          type: ["string", "null"]
+        isDefault:
+          type: boolean
+    AddressInput:
+      type: object
+      required: [label, city, district, street, buildingNo]
+      properties:
+        label:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        street:
+          type: string
+        buildingNo:
+          type: string
+        additionalInfo:
+          type: ["string", "null"]
+        isDefault:
+          type: boolean

@@ -1,6 +1,6 @@
-# [Project name]
+# Musk Ellolo Storefront
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Arabic-first luxury fragrance storefront for Musk Ellolo, with a public product catalog, cart, OTP sign-in, customer account, and checkout flow.
 
 ## Run & Operate
 
@@ -22,19 +22,26 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/musk-ellolo/` — React/Vite public storefront.
+- `artifacts/api-server/src/routes/storefront.ts` — public storefront API.
+- `artifacts/api-server/src/lib/storefront.ts` — development catalog, checkout, and OTP provider abstraction data.
+- `lib/api-spec/openapi.yaml` — API contract and generated client source.
+- `attached_assets/` — supplied product photography and official brand guide.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The public shopping surface is built before any admin UI, by product direction.
+- OTP, payments, and shipping use development-safe behaviour now; their frontend and API contracts are ready to be swapped for provider-backed implementations when credentials are supplied.
+- The supplied product images are served from the API at `/api/media` so the catalog can use the same paths in development and deployment.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Bilingual RTL/LTR browsing for perfumes and hair mists.
+- Product details, cart, discount-code validation, delivery quote, checkout, phone OTP, orders, profile, and saved addresses.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Do not build the admin dashboard until the public storefront and sections are reviewed; it will have separately defined requirements.
 
 ## Gotchas
 

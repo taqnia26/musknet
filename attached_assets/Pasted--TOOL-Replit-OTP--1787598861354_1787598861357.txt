@@ -1,0 +1,263 @@
+**TOOL: Replit — السبب:** متجر إلكتروني كامل (منتجات + سلة + طلبات + مخزون) مع مصادقة عبر OTP، عمولات دفع متعددة (Moyasar/Tabby/Tamara)، تكامل شحن، وداشبورد إدارية شاملة — نطاق Full-stack حقيقي لا يناسب إلا Replit.
+
+---
+
+## [1] PROJECT OVERVIEW
+- **اسم المشروع:** مسك اللولو | Musk Ellolo — Luxury Perfumes
+- **النشاط:** متجر إلكتروني متخصص في العطور الفاخرة (تصنيع محلي بالتعاون مع Master Perfumers عالميين)
+- **الهدف:** استنساخ هيكلة وتصميم موقع muskellolo.com الحالي (المبني على Salla) بالكامل ككود مخصص على Replit — نفس تجربة المستخدم والتصميم البصري، لكن ببنية تقنية مستقلة يملكها العميل بالكامل بدل الاعتماد على منصة Salla
+- **الجمهور:** أفراد يبحثون عن عطور فاخرة أصلية (سوق سعودي/خليجي بالدرجة الأولى)
+- **الدومين:** muskellolo.com (نفس الدومين الحالي)
+- **اللغات:** العربية (الأساس) + الإنجليزية مع دعم RTL/LTR كامل
+
+## [2] TECH STACK
+```
+Frontend:
+- React + Vite
+- Tailwind CSS + shadcn/ui
+- Framer Motion للأنيميشن
+- Lucide React للأيقونات
+- react-i18next للترجمة
+- Embla Carousel أو Swiper (سلايدر المنتجات والفئات)
+
+Backend:
+- Node.js + Express
+- PostgreSQL (database: muskellolo_db)
+- Drizzle ORM
+- JWT للمصادقة (بعد تفعيل OTP)
+- Multer / Cloudinary (صور المنتجات وفيديو الـ Hero)
+
+Integrations:
+- Moyasar (مدى، فيزا، آبل باي، STC Pay)
+- Tabby (تقسيط 4 دفعات)
+- Tamara (تقسيط 3-6 شهور)
+- شركة الشحن: Storage Station (ستورج ستيشن) — تكامل API فعلي لحساب الشحن وتتبع الطلبات
+- بوابة OTP/SMS: TBD (يُحدَّد لاحقاً) — ابنِ طبقة Abstraction (SmsProvider interface) بحيث تبديل المزوّد لاحقاً (Unifonic/Taqnyat/غيرهما) لا يلمس باقي الكود
+- WhatsApp Float: wa.me/966580008874
+
+Hosting: Replit Deployments
+```
+
+## [3] PAGES & ROUTES
+
+### الواجهة العامة
+```
+/                       → Home (Hero بفيديو + تبويبات الفئات + قسم "العقل المبدع خلف العطور" + قسم من نحن + منتجات مميزة)
+/products               → كل المنتجات + فلترة (الفئة: عطور/عطور الشعر، السعر، الأكثر مبيعاً، التقييم)
+/products/[slug]        → تفاصيل منتج (معرض صور + السعر + الكمية + إضافة للسلة + منتجات ذات صلة)
+/categories/[slug]      → صفحة فئة (عطور / عطور الشعر)
+/cart                   → السلة
+/checkout               → إتمام الطلب (العنوان + الشحن + الدفع)
+/about                  → من نحن (قصة العلامة التجارية — نص الدليل: "Founded in 2011...")
+/contact                → تواصل + واتساب + نموذج
+```
+
+### حساب العميل (محمي — تسجيل إجباري عبر OTP)
+```
+/auth/register          → تسجيل برقم الجوال
+/auth/verify-otp        → إدخال كود OTP المرسل عبر SMS
+/account                → ملخص الحساب
+/account/orders         → طلباتي وتتبع الشحن
+/account/addresses      → عناويني
+/account/profile        → الملف الشخصي
+```
+
+### الداشبورد الإدارية (محمية — `/admin`)
+```
+/admin                  → Overview (مبيعات اليوم، طلبات جديدة، منتجات منخفضة المخزون)
+/admin/products         → إدارة المنتجات (إضافة/تعديل/حذف، صور، أسعار، مخزون)
+/admin/categories       → إدارة الفئات
+/admin/orders           → إدارة الطلبات (حالة: جديد/قيد التجهيز/تم الشحن/تم التسليم/ملغي)
+/admin/customers        → قاعدة بيانات العملاء
+/admin/coupons          → إنشاء وإدارة أكواد الخصم (نسبة/مبلغ ثابت، تاريخ انتهاء، حد استخدام)
+/admin/shipping         → إعدادات تكامل الشحن (Storage Station) ومتابعة الشحنات
+/admin/content          → CMS: تعديل نصوص وفيديو/صور الصفحة الرئيسية وقسم "من نحن" بدون كود
+/admin/reports          → تقارير المبيعات (يومي/أسبوعي/شهري، الأكثر مبيعاً)
+/admin/settings         → إعدادات عامة (رقم واتساب، مزوّد SMS، مزوّد الشحن، بيانات ضريبية)
+/admin/users            → إدارة حسابات موظفي الداشبورد
+```
+
+## [4] DESIGN SYSTEM
+
+### الألوان (من Brand Guideline الرسمي)
+```css
+--bg-pearl:          #E9E6DF   /* بيج لؤلؤي — أساسي */
+--charcoal:          #3D3D3D   /* رمادي فحمي — أساسي */
+--coral:             #EF8275   /* مرجاني — ثانوي */
+--copper:            #C47B47   /* نحاسي — ثانوي */
+--gold-light:        #FDC87F   /* ذهبي فاتح — ثانوي */
+--taupe:             #D1CABE   /* تربة — ثانوي */
+--near-black:        #313031   /* أسود — ثانوي */
+--marketing-brown:   #714721
+--marketing-teal:    #022B30
+--marketing-navy:    #102039
+--marketing-maroon:  #731323
+```
+
+### Typography
+```
+Arabic Primary:  Tajawal
+English Primary: Open Sans
+Packaging/Display (Logo & Hero accents only): Athelas أو Gill Sans (لا تُستخدم بالنصوص الطويلة)
+
+قواعد صارمة من الدليل الرسمي:
+- ALL CAPS بالعناوين فقط
+- ممنوع الـ Outlines على النصوص
+- ممنوع استخدام أكثر من لون بنفس الجملة
+```
+
+### Theme
+- Light فاخر (خلفية بيج لؤلؤي/أبيض) بلمسات رمادي فحمي وذهبي — نفس طابع "Where luxury is felt, not spoken"
+- Border radius: 4-8px فقط (تصميم فخم أنيق لا يعتمد على انحناءات كبيرة، اتساق مع صور علب العطور بزوايا حادة بالدليل)
+
+## [5] COMPONENTS & UI ELEMENTS
+- **Navbar:** شفاف على الـ Hero، Solid عند Scroll. الشعار (MUSK ELLOLO / LUXURY PERFUMES) + قائمة + Language/Currency Toggle + أيقونة سلة + أيقونة حساب
+- **Hero:** فيديو خلفية بملء الشاشة (Placeholder فيديو بالبداية، يُستبدل من `/admin/content`) + شعار متراكب + تبويبات فئات ("عطور الشعر" / "عطور") تنقل مباشرة لصفحة الفئة
+- **قسم "العقل المبدع خلف العطور":** نص + صورة/فيديو + زر "شاهد الفيديو" (رابط يوتيوب أو فيديو مرفوع، قابل للتعديل من CMS)
+- **قسم "من نحن":** صور مزدوجة + نص القصة (Founded 2011...) بتصميم متوازي
+- **Product Card:** صورة المنتج (زجاجة عطر) + الاسم + السعر شامل الضريبة + Badge (الأكثر مبيعاً لو ينطبق) + إضافة سريعة للسلة
+- **Product Detail Page:** معرض صور بزوايا مختلفة + وصف العطر (نوتات عطرية) + منتقي الكمية + شارة "شامل الضريبة"
+- **Cart Drawer:** سلة منزلقة من الجانب (بنفس تجربة Salla الحالية) — تظهر عند إضافة أي منتج
+- **Checkout Wizard:** العنوان → طريقة الشحن (Storage Station) → طريقة الدفع (Moyasar/Tabby/Tamara) → مراجعة وتأكيد
+- **OTP Modal:** إدخال رقم الجوال ثم كود من 4-6 أرقام بمؤقّت عد تنازلي وزر "إعادة الإرسال"
+- **Coupon Field:** حقل إدخال كود خصم بصفحة السلة والـ Checkout مع تحقق فوري
+- **Footer:** الشعار + الرقم الضريبي (بنفس أسلوب الموقع الحالي) + روابط مهمة + السوشيال ميديا (تويتر/إنستقرام/سناب شات)
+
+## [6] ANIMATIONS & INTERACTIONS
+```
+Hero: الفيديو يشتغل تلقائياً (Muted + Loop) + الشعار يدخل بـ Fade
+Category Tabs: انتقال سلس (Underline slide) عند التبديل بين "عطور" و"عطور الشعر"
+Product Cards: Hover → صورة المنتج تتبدل لصورة ثانية (Front/Back bottle) + Lift خفيف
+Cart Drawer: يدخل من اليمين (RTL) بـ Slide + خلفية Backdrop blur
+Add to Cart: Micro-animation (أيقونة السلة تهتز/تنبض) + Toast تأكيد
+Checkout Wizard: انتقال Slide بين الخطوات
+Page Load: Stagger fade لبطاقات المنتجات عند التصفح
+```
+
+## [7] BILINGUAL & RTL
+- الافتراضي: العربية (نفس الموقع الحالي: "العربية | دولار أمريكي" بالـ Navbar — لكن نستخدم ريال سعودي كعملة أساسية بدل الدولار)
+- Toggle AR/EN + Toggle العملة إن رغب العميل بدعم عملات متعددة لاحقاً (Phase 2)
+- RTL كامل + الأرقام والأسعار بصيغة عربية بالواجهة العربية
+
+## [8] INTEGRATIONS
+```
+Payment: Moyasar (المحفظة الأساسية لمدى/فيزا/آبل باي/STC Pay) + Tabby + Tamara كخيارات تقسيط بصفحة الدفع
+
+Shipping: تكامل API مباشر مع Storage Station (ستورج ستيشن) — حساب تكلفة الشحن حسب الوزن/المدينة، إنشاء بوليصة شحن تلقائي عند تأكيد الطلب، رقم تتبع يظهر بـ /account/orders
+
+SMS/OTP: مزوّد TBD — واجهة موحّدة (SmsProvider.sendOtp(phone), SmsProvider.verifyOtp(phone, code)) قابلة لربط أي مزوّد لاحقاً دون تعديل باقي الكود
+
+WhatsApp: زر Float ثابت — wa.me/966580008874
+
+Analytics: Google Analytics 4 + Meta Pixel (مهم للعطور — تسويق مكثف بالسوشيال ميديا)
+```
+
+## [9] ADMIN DASHBOARD — تحكم كامل
+- **CMS شامل:** فيديو/صور الـ Hero، نص قسم "من نحن"، نص قسم "العقل المبدع" — كل ذلك يُدار من `/admin/content` بدون كود
+- **إدارة كاملة للمنتجات:** إضافة منتج بصوره وسعره ووصفه ومخزونه مباشرة — لا حاجة لانتظار المطور لإضافة منتج جديد
+- **إدارة الطلبات:** تتبع الحالة من "جديد" حتى "تم التسليم" مع تحديث تلقائي لحالة الشحن من Storage Station
+- **الكوبونات:** إنشاء أكواد خصم (نسبة أو مبلغ ثابت) بحد استخدام وتاريخ انتهاء
+- **تقارير المبيعات:** الأكثر مبيعاً، الإيرادات اليومية/الأسبوعية/الشهرية (Recharts)
+
+## [10] DATABASE SCHEMA
+```sql
+users (id, phone, name, email, password_hash, phone_verified, created_at)
+
+categories (id, name_ar, name_en, slug, image_url, order_index)
+
+products (id, category_id, name_ar, name_en, slug, description_ar, description_en,
+          price, compare_at_price, stock, sku, images[], is_featured, is_bestseller, created_at)
+
+carts (id, user_id, created_at)
+cart_items (id, cart_id, product_id, quantity)
+
+orders (id, user_id, order_number, subtotal, shipping_cost, discount, total,
+        payment_status, payment_method, shipping_status, tracking_number,
+        shipping_address, created_at)
+order_items (id, order_id, product_id, quantity, unit_price)
+
+coupons (id, code, discount_type, value, max_uses, used_count, expires_at, active)
+
+addresses (id, user_id, label, city, district, street, building_no, is_default)
+
+otp_codes (id, phone, code, expires_at, verified)
+
+page_content (id, page_slug, section_key, field_key, value_ar, value_en,
+              content_type, media_url, updated_by, updated_at)
+
+reviews (id, product_id, user_id, rating, comment, created_at)
+
+site_settings (id, key, value)
+```
+
+## [11] AUTHENTICATION & SECURITY
+- **تسجيل إجباري** برقم الجوال قبل إتمام أي عملية شراء (Guest Checkout غير متاح)
+- **OTP:** كود 4-6 أرقام عبر SMS، صلاحية 5 دقائق، حد 3 محاولات إعادة إرسال بالساعة
+- **JWT:** Access (15 دقيقة) + Refresh (30 يوم — بما إنه متجر يُفضَّل بقاء تسجيل الدخول لفترة أطول للعملاء)
+- **Rate Limiting** على إرسال OTP ومحاولات تسجيل الدخول
+- **PCI Compliance:** لا تُخزَّن بيانات بطاقات الدفع مطلقاً — تُدار بالكامل عبر Moyasar/Tabby/Tamara SDKs
+- **CSRF Protection** على كل عمليات الداشبورد
+
+## [12] SEO & PERFORMANCE
+- Meta tags ديناميكية لكل منتج وفئة (عربي + إنجليزي)
+- Schema.org: Product + Offer + AggregateRating لكل منتج
+- Sitemap.xml تلقائي يتحدث مع كل منتج جديد
+- Image optimization (WebP + Lazy Load) — أساسي لصور العطور عالية الجودة
+- Open Graph tags مخصصة لكل منتج (مهم للمشاركة على انستقرام/سناب شات)
+- Lighthouse target: 90+
+
+## [13] MOBILE RESPONSIVENESS
+- Mobile-first كامل (الغالبية العظمى من عملاء العطور يتسوقون عبر الجوال)
+- Cart Drawer بملء الشاشة تقريباً بالجوال
+- Checkout Wizard بخطوات ملء الشاشة (Full-screen steps)
+- زر واتساب Float ثابت أسفل يمين الشاشة
+- Product Gallery بـ Swipe gestures
+
+## [14] EDGE CASES & ERROR HANDLING
+- نفاد المخزون: عرض "غير متوفر حالياً" + خيار "أعلمني عند التوفر" (تسجيل الإيميل/الجوال)
+- فشل الدفع: رسالة واضحة + الاحتفاظ بالسلة كاملة لإعادة المحاولة
+- فشل إرسال OTP: رسالة خطأ + زر إعادة إرسال بعد مهلة عد تنازلي
+- كوبون منتهي/غير صالح: رسالة فورية بحقل الإدخال دون إعادة تحميل الصفحة
+- انقطاع تكامل الشحن: حفظ الطلب كـ "قيد المعالجة" وتنبيه الداشبورد يدوياً لإدخال الشحن
+- Empty states لكل قائمة بالداشبورد
+- 404 + 500 مخصصة بهوية مسك اللولو (بيج/رمادي فحمي)
+
+## [15] DEPLOYMENT & ENV VARIABLES
+```env
+DATABASE_URL=postgresql://...@localhost/muskellolo_db
+
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+
+MOYASAR_KEY=
+TABBY_KEY=
+TAMARA_KEY=
+
+STORAGE_STATION_API_KEY=      # TBD — تُدخل عند التسليم
+
+SMS_PROVIDER=                 # TBD — Unifonic/Taqnyat/غيره
+SMS_API_KEY=
+
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
+
+### Verification Checklist بعد التوليد:
+- [ ] تسجيل الدخول برقم الجوال + OTP يعمل فعلياً (حتى لو بمزوّد SMS مؤقت/Mock بانتظار تحديد المزوّد النهائي)
+- [ ] السلة والـ Checkout يعملان من البداية للنهاية
+- [ ] الدفع يظهر بالثلاث بوابات (Moyasar/Tabby/Tamara) بصفحة واحدة
+- [ ] الكوبونات تُطبَّق فعلياً على الإجمالي
+- [ ] فيديو الـ Hero وتبويبات الفئات تعمل بنفس روح الموقع الحالي
+- [ ] CMS: تعديل نص "من نحن" من الداشبورد ينعكس فوراً بالموقع
+- [ ] الألوان والخطوط مطابقة تماماً لملف Brand Guideline
+- [ ] الموقع متجاوب بالكامل على الجوال
+- [ ] لا يوجد أي زر معطّل أو بلا وظيفة
+
+---
+
+**Reply with the list of files you'll create, the database schema, and any clarifying questions before writing code.**
+
+---
+
+بهذا خلصنا الأربع مشاريع كاملة ✅. تبي أسجلهم الآن بـ Notion Tasks DB (Mega-Prompt - [اسم المشروع] لكل واحد)، أو تراجعهم أول؟

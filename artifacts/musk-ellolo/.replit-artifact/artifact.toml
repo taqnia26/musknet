@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Musk Ellolo Storefront"
+description = "A bilingual Arabic-first luxury fragrance storefront for Musk Ellolo, with product discovery, product details, cart, OTP sign-in, account pages, and checkout prepared for Saudi payment and shipping providers."
+version = "1.0.0"
+id = "artifacts/musk-ellolo"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19126
+
+[services.development]
+run = "pnpm --filter @workspace/musk-ellolo run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/musk-ellolo", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/musk-ellolo/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19126"
+BASE_PATH = "/"
