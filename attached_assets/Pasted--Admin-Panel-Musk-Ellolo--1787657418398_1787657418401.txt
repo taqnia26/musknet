@@ -1,0 +1,57 @@
+أضف نظام مصادقة وصلاحيات كامل للوحة تحكم الأدمن (Admin Panel) لمشروع Musk Ellolo، منفصل تمامًا عن نظام عملاء المتجر (customers/OTP).
+
+1. أنشئ جداول جديدة في lib/db/src/schema/admin.ts:
+
+   - admin_users:
+     id, name, email (unique), password_hash, is_active (boolean, default true),
+     is_super_admin (boolean, default false), created_at, last_login_at
+
+   - admin_permissions (كتالوج ثابت لكل الصلاحيات الممكنة في النظام، يُعبّأ عبر seed):
+     id, module_key (مثل "products", "orders", "categories", "coupons", "customers",
+     "inventory", "b2b_distributors", "hr_employees", "finance", "settings"),
+     module_label_ar (اسم عربي يظهر بالواجهة مثل "المنتجات"، "الطلبات"، إلخ)
+
+   - admin_user_permissions (الربط الفعلي: أي موظف له أي صلاحية):
+     id, admin_user_id (FK), permission_id (FK),
+     can_view (boolean), can_edit (boolean), can_delete (boolean)
+     — قيد فريد (unique) على admin_user_id + permission_id
+
+2. اعمل seed script يعبّئ admin_permissions بالوحدات دي فقط حاليًا (مرحلة أولى):
+   products, categories, orders, coupons, customers, inventory, b2b_distributors
+
+3. أنشئ مستخدم Super Admin واحد فقط عبر متغيرات بيئة (لا تكتب كلمة مرور بالكود مباشرة):
+   ADMIN_SEED_EMAIL و ADMIN_SEED_PASSWORD (اقرأهم من process.env وقت الـ seed فقط)
+   هذا المستخدم يُنشأ بـ is_super_admin=true وله كل الصلاحيات can_view/can_edit/can_delete=true تلقائيًا.
+
+4. أضف مكتبة تشفير كلمات مرور (bcrypt أو argon2 — استخدم bcrypt إذا كانت موجودة بالمشروع أو أضفها).
+
+5. أضف endpoints جديدة في artifacts/api-server تحت /api/admin/auth:
+   - POST /api/admin/auth/login (email + password → يتحقق من bcrypt hash، ينشئ admin session منفصل تمامًا عن جلسة العميل، يسجل last_login_at)
+   - POST /api/admin/auth/logout
+   - GET /api/admin/auth/me (يرجع بيانات الأدمن الحالي + كل صلاحياته)
+
+6. أضف middleware اسمه requireAdminPermission(moduleKey, action) يُستخدم على كل route إداري لاحق،
+   يتحقق إن الأدمن مسجل دخول، وإن عنده can_[action]=true على module_key المطلوب،
+   وإلا يرجع 403.
+
+7. أضف endpoints لإدارة الموظفين والصلاحيات (Super Admin فقط يقدر يستخدمها):
+   - GET /api/admin/users (قائمة كل موظفي لوحة التحكم)
+   - POST /api/admin/users (إنشاء موظف جديد: اسم، إيميل، كلمة مرور مبدئية)
+   - PATCH /api/admin/users/:id (تعديل بيانات، تفعيل/تعطيل)
+   - GET /api/admin/permissions (قائمة كل الوحدات المتاحة من admin_permissions)
+   - PUT /api/admin/users/:id/permissions (تحديث كامل صلاحيات موظف: مصفوفة من
+     { permission_id, can_view, can_edit, can_delete } — هذا اللي يغذي شاشة العلامات ✅
+     قدام كل صلاحية بالواجهة)
+
+8. لا تلمس أي جدول أو route خاص بعملاء المتجر (storefront_customers, OTP, إلخ) — هذا نظام منفصل بالكامل.
+
+9. طبّق الـ schema:
+   pnpm --filter @workspace/db run push
+
+10. اكتب اختبار (test) يتحقق من:
+    - تسجيل دخول ناجح بكلمة مرور صحيحة
+    - رفض تسجيل دخول بكلمة مرور خاطئة
+    - رفض وصول موظف بدون صلاحية can_edit على "products" لمحاولة تعديل منتج
+    - نجاح وصول موظف عنده can_edit=true
+
+شغّل pnpm run typecheck وتأكد من نجاحه، واكتب لي ملخص بكل الملفات والـ endpoints الجديدة.
