@@ -1,0 +1,31 @@
+اعمل التالي بالضبط في مشروع Musk Ellolo:
+
+1. أنشئ schema كامل في lib/db/src/schema/index.ts باستخدام Drizzle ORM لـ PostgreSQL، يغطي:
+   - categories (id, name, slug, parent_id, created_at)
+   - products (id, name, slug, description, price, category_id, images jsonb, stock_quantity, is_active, created_at, updated_at)
+   - customers (id, phone, name, is_verified, created_at)
+   - otp_codes (id, customer_id/phone, code, expires_at, is_used, created_at) — لتخزين رموز OTP الحقيقية بدل الذاكرة
+   - addresses (id, customer_id, label, city, district, street, building_number, additional_number, postal_code, is_default)
+   - carts (id, customer_id nullable للضيوف، session_id، created_at)
+   - cart_items (id, cart_id, product_id, quantity, price_at_time)
+   - coupons (id, code, discount_type, discount_value, expires_at, usage_limit, times_used, is_active)
+   - orders (id, order_number, customer_id, status, subtotal, discount, shipping_fee, total, coupon_id nullable, created_at)
+   - order_items (id, order_id, product_id, product_name_snapshot, quantity, price_at_time)
+   - order_addresses (id, order_id, نسخة كاملة من العنوان وقت الطلب)
+
+2. أنشئ migration فعلي باستخدام:
+   pnpm --filter @workspace/db run push
+
+3. استبدل التخزين الحالي داخل الذاكرة (في جميع routes تحت artifacts/api-server) بعمليات فعلية على قاعدة البيانات عبر Drizzle:
+   - /api/categories, /api/products, /api/products/:slug → قراءة من الجداول بدل بيانات ثابتة
+   - /api/auth/request-otp, /api/auth/verify-otp → إنشاء/تحقق فعلي من جدول otp_codes بدل الرمز الثابت 123456
+   - /api/cart/* → عمليات فعلية على carts وcart_items
+   - /api/orders/* → إنشاء طلب فعلي في orders + order_items + order_addresses، وربطه بالكوبون إن وجد
+   - /api/account/addresses → CRUD فعلي على جدول addresses
+   - /api/coupons/validate → تحقق فعلي من جدول coupons وتواريخ الصلاحية وحد الاستخدام
+
+4. لا تغيّر أي واجهة API الخارجية (نفس أسماء endpoints ونفس شكل الاستجابة JSON) — فقط استبدل التخزين الداخلي بحيث لا ينكسر شي في الواجهة الأمامية.
+
+5. بعد الانتهاء، شغّل pnpm run typecheck وتأكد من نجاحه، واختبر: تسجيل عميل جديد → إضافة منتج للسلة → إنشاء طلب → إعادة تشغيل السيرفر → تأكد إن الطلب لسا موجود (يعني فعليًا محفوظ بقاعدة البيانات مو بالذاكرة).
+
+اكتب لي ملخص بالتغييرات اللي سويتها والملفات اللي عدّلتها.
