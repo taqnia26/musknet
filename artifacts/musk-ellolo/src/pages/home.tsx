@@ -107,9 +107,6 @@ export default function Home() {
 
       {/* Destinations Banner */}
       <section className="container mx-auto px-4 py-8 mb-16 flex flex-col items-center">
-        <h2 className="text-2xl font-bold mb-12 text-center text-black">
-          {t('وجهاتنا الحصرية', 'Our Exclusive Destinations')}
-        </h2>
         <div className="w-full max-w-4xl mx-auto">
           <img 
             src={siteAsset('a3e884dd-7169-41b1-811a-a4d64ddd15e7-original-d7f7e86104.webp')} 
