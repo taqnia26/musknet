@@ -18,9 +18,11 @@ export const ordersTable = pgTable("storefront_orders", {
   address: text("address_json").notNull(),
   shippingMethod: text("shipping_method").notNull(),
   paymentMethod: text("payment_method").notNull(),
+  adminNotes: text("admin_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [uniqueIndex("storefront_orders_order_number_unique").on(table.orderNumber)]);
 
-export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true });
+export const insertOrderSchema = createInsertSchema(ordersTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof ordersTable.$inferSelect;

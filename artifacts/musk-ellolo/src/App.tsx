@@ -32,7 +32,15 @@ import { useLanguage } from './hooks/use-language';
 
 const queryClient = new QueryClient();
 
+import AdminRoutes from '@/pages/admin';
+
 function Router() {
+  const [location] = useLocation();
+
+  if (location.startsWith('/admin')) {
+    return <AdminRoutes />;
+  }
+
   return (
     <Layout>
       <Switch>

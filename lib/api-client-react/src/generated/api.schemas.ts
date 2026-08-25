@@ -293,6 +293,341 @@ export interface Address {
   isDefault: boolean;
 }
 
+export interface AdminLoginInput {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  name: string;
+  isSuperAdmin: boolean;
+  isActive: boolean;
+  permissions: string[];
+  /** @nullable */
+  lastLoginAt?: string | null;
+  createdAt: string;
+}
+
+export interface AdminAuthSession {
+  token: string;
+  user: AdminUser;
+}
+
+export type AdminPermissionAction = typeof AdminPermissionAction[keyof typeof AdminPermissionAction];
+
+
+export const AdminPermissionAction = {
+  view: 'view',
+  edit: 'edit',
+  delete: 'delete',
+} as const;
+
+export interface AdminPermission {
+  id: number;
+  module: string;
+  action: AdminPermissionAction;
+  key: string;
+}
+
+export interface AdminDashboard {
+  revenue: number;
+  orders: number;
+  customers: number;
+  products: number;
+  lowStock: number;
+  pendingOrders: number;
+  activeCoupons: number;
+  distributors: number;
+}
+
+export interface AdminProductImage {
+  url: string;
+  alt: string;
+}
+
+export interface AdminProduct {
+  id: number;
+  nameAr: string;
+  nameEn: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
+  slug: string;
+  price: number;
+  /** @nullable */
+  compareAtPrice?: number | null;
+  categoryId: number;
+  images: AdminProductImage[];
+  notes: FragranceNote[];
+  stockQuantity: number;
+  /** @nullable */
+  sku?: string | null;
+  isActive: boolean;
+  isFeatured: boolean;
+  isBestseller: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminProductInput {
+  /** @minLength 1 */
+  nameAr: string;
+  /** @minLength 1 */
+  nameEn: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
+  /** @minLength 1 */
+  slug: string;
+  /** @minimum 0 */
+  price: number;
+  /** @nullable */
+  compareAtPrice?: number | null;
+  categoryId: number;
+  images?: AdminProductImage[];
+  notes?: FragranceNote[];
+  /** @minimum 0 */
+  stockQuantity?: number;
+  /** @nullable */
+  sku?: string | null;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  isBestseller?: boolean;
+}
+
+export type AdminProductUpdate = AdminProductInput;
+
+export interface AdminCategory {
+  id: number;
+  nameAr: string;
+  nameEn: string;
+  slug: string;
+  /** @nullable */
+  parentId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface AdminCategoryInput {
+  /** @minLength 1 */
+  nameAr: string;
+  /** @minLength 1 */
+  nameEn: string;
+  /** @minLength 1 */
+  slug: string;
+  /** @nullable */
+  parentId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  isActive?: boolean;
+}
+
+export type AdminCategoryUpdate = AdminCategoryInput;
+
+export interface AdminOrder {
+  id: number;
+  userId: number;
+  orderNumber: string;
+  subtotal: number;
+  shippingCost: number;
+  discount: number;
+  tax: number;
+  total: number;
+  status: string;
+  paymentStatus: string;
+  /** @nullable */
+  trackingNumber?: string | null;
+  address?: string;
+  shippingMethod: string;
+  paymentMethod: string;
+  /** @nullable */
+  adminNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AdminOrderUpdateStatus = typeof AdminOrderUpdateStatus[keyof typeof AdminOrderUpdateStatus];
+
+
+export const AdminOrderUpdateStatus = {
+  new: 'new',
+  processing: 'processing',
+  shipped: 'shipped',
+  delivered: 'delivered',
+  cancelled: 'cancelled',
+} as const;
+
+export type AdminOrderUpdatePaymentStatus = typeof AdminOrderUpdatePaymentStatus[keyof typeof AdminOrderUpdatePaymentStatus];
+
+
+export const AdminOrderUpdatePaymentStatus = {
+  pending: 'pending',
+  paid: 'paid',
+  failed: 'failed',
+  refunded: 'refunded',
+} as const;
+
+export interface AdminOrderUpdate {
+  status?: AdminOrderUpdateStatus;
+  paymentStatus?: AdminOrderUpdatePaymentStatus;
+  /** @nullable */
+  trackingNumber?: string | null;
+  /** @nullable */
+  adminNotes?: string | null;
+}
+
+export type AdminCouponDiscountType = typeof AdminCouponDiscountType[keyof typeof AdminCouponDiscountType];
+
+
+export const AdminCouponDiscountType = {
+  percentage: 'percentage',
+  fixed: 'fixed',
+} as const;
+
+export interface AdminCoupon {
+  id: number;
+  code: string;
+  discountType: AdminCouponDiscountType;
+  discountValue: number;
+  /** @nullable */
+  expiresAt?: string | null;
+  /** @nullable */
+  usageLimit?: number | null;
+  timesUsed: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export type AdminCouponInputDiscountType = typeof AdminCouponInputDiscountType[keyof typeof AdminCouponInputDiscountType];
+
+
+export const AdminCouponInputDiscountType = {
+  percentage: 'percentage',
+  fixed: 'fixed',
+} as const;
+
+export interface AdminCouponInput {
+  /** @minLength 1 */
+  code: string;
+  discountType: AdminCouponInputDiscountType;
+  /** @minimum 0 */
+  discountValue: number;
+  /** @nullable */
+  expiresAt?: string | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  usageLimit?: number | null;
+  isActive?: boolean;
+}
+
+export type AdminCouponUpdate = AdminCouponInput;
+
+export interface AdminCustomer {
+  id: number;
+  phone: string;
+  name: string;
+  /** @nullable */
+  email?: string | null;
+  phoneVerified: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminCustomerUpdate {
+  name?: string;
+  /** @nullable */
+  email?: string | null;
+  isActive?: boolean;
+}
+
+export interface AdminInventoryItem {
+  id: number;
+  nameAr: string;
+  nameEn: string;
+  /** @nullable */
+  sku: string | null;
+  stockQuantity: number;
+  isActive: boolean;
+}
+
+export interface AdminInventoryUpdate {
+  /** @minimum 0 */
+  stockQuantity: number;
+}
+
+export interface AdminDistributor {
+  id: number;
+  companyName: string;
+  contactName: string;
+  /** @nullable */
+  email?: string | null;
+  phone: string;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  taxNumber?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminDistributorInput {
+  /** @minLength 1 */
+  companyName: string;
+  /** @minLength 1 */
+  contactName: string;
+  /** @nullable */
+  email?: string | null;
+  /** @minLength 1 */
+  phone: string;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  taxNumber?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  isActive?: boolean;
+}
+
+export type AdminDistributorUpdate = AdminDistributorInput;
+
+export interface AdminStaffInput {
+  email: string;
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 8 */
+  password: string;
+  isActive?: boolean;
+  isSuperAdmin?: boolean;
+  permissionIds?: number[];
+}
+
+export interface AdminStaffUpdate {
+  email?: string;
+  /** @minLength 1 */
+  name?: string;
+  /** @minLength 8 */
+  password?: string;
+  isActive?: boolean;
+  isSuperAdmin?: boolean;
+}
+
+export interface AdminPermissionAssignment {
+  permissionIds: number[];
+}
+
 /**
  * Invalid request
  */
@@ -304,6 +639,11 @@ export type BadRequestResponse = Error;
 export type UnauthorizedResponse = Error;
 
 /**
+ * Insufficient permission
+ */
+export type ForbiddenResponse = Error;
+
+/**
  * Resource not found
  */
 export type NotFoundResponse = Error;
@@ -312,6 +652,17 @@ export type NotFoundResponse = Error;
  * Too many requests
  */
 export type RateLimitedResponse = Error;
+
+export type AdminSearchParameter = string;
+
+export type AdminStatusParameter = typeof AdminStatusParameter[keyof typeof AdminStatusParameter];
+
+
+export const AdminStatusParameter = {
+  active: 'active',
+  inactive: 'inactive',
+  all: 'all',
+} as const;
 
 export type CategorySlugParameter = string;
 
@@ -344,4 +695,51 @@ export const ListProductsSort = {
   price_desc: 'price_desc',
   newest: 'newest',
 } as const;
+
+export type AdminListProductsParams = {
+search?: AdminSearchParameter;
+status?: AdminStatusParameter;
+};
+
+export type AdminListCategoriesParams = {
+search?: AdminSearchParameter;
+status?: AdminStatusParameter;
+};
+
+export type AdminListOrdersParams = {
+search?: AdminSearchParameter;
+status?: AdminListOrdersStatus;
+};
+
+export type AdminListOrdersStatus = typeof AdminListOrdersStatus[keyof typeof AdminListOrdersStatus];
+
+
+export const AdminListOrdersStatus = {
+  all: 'all',
+  new: 'new',
+  processing: 'processing',
+  shipped: 'shipped',
+  delivered: 'delivered',
+  cancelled: 'cancelled',
+} as const;
+
+export type AdminListCouponsParams = {
+search?: AdminSearchParameter;
+status?: AdminStatusParameter;
+};
+
+export type AdminListCustomersParams = {
+search?: AdminSearchParameter;
+status?: AdminStatusParameter;
+};
+
+export type AdminListInventoryParams = {
+search?: AdminSearchParameter;
+lowStock?: boolean;
+};
+
+export type AdminListDistributorsParams = {
+search?: AdminSearchParameter;
+status?: AdminStatusParameter;
+};
 

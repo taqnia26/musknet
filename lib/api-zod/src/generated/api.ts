@@ -574,3 +574,821 @@ export const DeleteAddressParams = zod.object({
 export const DeleteAddressResponse = zod.void()
 
 
+export const adminLoginBodyPasswordMin = 8;
+
+
+
+export const AdminLoginBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string().min(adminLoginBodyPasswordMin)
+})
+
+export const AdminLoginResponse = zod.object({
+  "token": zod.string(),
+  "user": zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "isSuperAdmin": zod.boolean(),
+  "isActive": zod.boolean(),
+  "permissions": zod.array(zod.string()),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+export const AdminLogoutResponse = zod.void()
+
+
+export const GetAdminMeResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "isSuperAdmin": zod.boolean(),
+  "isActive": zod.boolean(),
+  "permissions": zod.array(zod.string()),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const GetAdminDashboardResponse = zod.object({
+  "revenue": zod.number(),
+  "orders": zod.number(),
+  "customers": zod.number(),
+  "products": zod.number(),
+  "lowStock": zod.number(),
+  "pendingOrders": zod.number(),
+  "activeCoupons": zod.number(),
+  "distributors": zod.number()
+})
+
+
+export const adminListProductsQueryStatusDefault = `all`;
+
+export const AdminListProductsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['active', 'inactive', 'all']).default(adminListProductsQueryStatusDefault)
+})
+
+export const AdminListProductsResponseItem = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "descriptionAr": zod.string().optional(),
+  "descriptionEn": zod.string().optional(),
+  "slug": zod.string(),
+  "price": zod.number(),
+  "compareAtPrice": zod.number().nullish(),
+  "categoryId": zod.number(),
+  "images": zod.array(zod.object({
+  "url": zod.string(),
+  "alt": zod.string()
+})),
+  "notes": zod.array(zod.object({
+  "type": zod.enum(['top', 'heart', 'base']),
+  "nameAr": zod.string(),
+  "nameEn": zod.string()
+})),
+  "stockQuantity": zod.number(),
+  "sku": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "isFeatured": zod.boolean(),
+  "isBestseller": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListProductsResponse = zod.array(AdminListProductsResponseItem)
+
+
+
+
+export const adminCreateProductBodyDescriptionArDefault = ``;
+export const adminCreateProductBodyDescriptionEnDefault = ``;
+export const adminCreateProductBodyPriceMin = 0;
+
+export const adminCreateProductBodyStockQuantityMin = 0;
+
+
+
+export const AdminCreateProductBody = zod.object({
+  "nameAr": zod.string().min(1),
+  "nameEn": zod.string().min(1),
+  "descriptionAr": zod.string().default(adminCreateProductBodyDescriptionArDefault),
+  "descriptionEn": zod.string().default(adminCreateProductBodyDescriptionEnDefault),
+  "slug": zod.string().min(1),
+  "price": zod.number().min(adminCreateProductBodyPriceMin),
+  "compareAtPrice": zod.number().nullish(),
+  "categoryId": zod.number(),
+  "images": zod.array(zod.object({
+  "url": zod.string(),
+  "alt": zod.string()
+})).optional(),
+  "notes": zod.array(zod.object({
+  "type": zod.enum(['top', 'heart', 'base']),
+  "nameAr": zod.string(),
+  "nameEn": zod.string()
+})).optional(),
+  "stockQuantity": zod.number().min(adminCreateProductBodyStockQuantityMin).optional(),
+  "sku": zod.string().nullish(),
+  "isActive": zod.boolean().optional(),
+  "isFeatured": zod.boolean().optional(),
+  "isBestseller": zod.boolean().optional()
+})
+
+export const AdminCreateProductResponse = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "descriptionAr": zod.string().optional(),
+  "descriptionEn": zod.string().optional(),
+  "slug": zod.string(),
+  "price": zod.number(),
+  "compareAtPrice": zod.number().nullish(),
+  "categoryId": zod.number(),
+  "images": zod.array(zod.object({
+  "url": zod.string(),
+  "alt": zod.string()
+})),
+  "notes": zod.array(zod.object({
+  "type": zod.enum(['top', 'heart', 'base']),
+  "nameAr": zod.string(),
+  "nameEn": zod.string()
+})),
+  "stockQuantity": zod.number(),
+  "sku": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "isFeatured": zod.boolean(),
+  "isBestseller": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminGetProductParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminGetProductResponse = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "descriptionAr": zod.string().optional(),
+  "descriptionEn": zod.string().optional(),
+  "slug": zod.string(),
+  "price": zod.number(),
+  "compareAtPrice": zod.number().nullish(),
+  "categoryId": zod.number(),
+  "images": zod.array(zod.object({
+  "url": zod.string(),
+  "alt": zod.string()
+})),
+  "notes": zod.array(zod.object({
+  "type": zod.enum(['top', 'heart', 'base']),
+  "nameAr": zod.string(),
+  "nameEn": zod.string()
+})),
+  "stockQuantity": zod.number(),
+  "sku": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "isFeatured": zod.boolean(),
+  "isBestseller": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateProductParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+export const adminUpdateProductBodyOneDescriptionArDefault = ``;
+export const adminUpdateProductBodyOneDescriptionEnDefault = ``;
+export const adminUpdateProductBodyOnePriceMin = 0;
+
+export const adminUpdateProductBodyOneStockQuantityMin = 0;
+
+
+
+export const AdminUpdateProductBody = zod.object({
+  "nameAr": zod.string().min(1),
+  "nameEn": zod.string().min(1),
+  "descriptionAr": zod.string().default(adminUpdateProductBodyOneDescriptionArDefault),
+  "descriptionEn": zod.string().default(adminUpdateProductBodyOneDescriptionEnDefault),
+  "slug": zod.string().min(1),
+  "price": zod.number().min(adminUpdateProductBodyOnePriceMin),
+  "compareAtPrice": zod.number().nullish(),
+  "categoryId": zod.number(),
+  "images": zod.array(zod.object({
+  "url": zod.string(),
+  "alt": zod.string()
+})).optional(),
+  "notes": zod.array(zod.object({
+  "type": zod.enum(['top', 'heart', 'base']),
+  "nameAr": zod.string(),
+  "nameEn": zod.string()
+})).optional(),
+  "stockQuantity": zod.number().min(adminUpdateProductBodyOneStockQuantityMin).optional(),
+  "sku": zod.string().nullish(),
+  "isActive": zod.boolean().optional(),
+  "isFeatured": zod.boolean().optional(),
+  "isBestseller": zod.boolean().optional()
+})
+
+export const AdminUpdateProductResponse = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "descriptionAr": zod.string().optional(),
+  "descriptionEn": zod.string().optional(),
+  "slug": zod.string(),
+  "price": zod.number(),
+  "compareAtPrice": zod.number().nullish(),
+  "categoryId": zod.number(),
+  "images": zod.array(zod.object({
+  "url": zod.string(),
+  "alt": zod.string()
+})),
+  "notes": zod.array(zod.object({
+  "type": zod.enum(['top', 'heart', 'base']),
+  "nameAr": zod.string(),
+  "nameEn": zod.string()
+})),
+  "stockQuantity": zod.number(),
+  "sku": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "isFeatured": zod.boolean(),
+  "isBestseller": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminDisableProductParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDisableProductResponse = zod.void()
+
+
+export const adminListCategoriesQueryStatusDefault = `all`;
+
+export const AdminListCategoriesQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['active', 'inactive', 'all']).default(adminListCategoriesQueryStatusDefault)
+})
+
+export const AdminListCategoriesResponseItem = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "slug": zod.string(),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListCategoriesResponse = zod.array(AdminListCategoriesResponseItem)
+
+
+
+
+
+
+
+export const AdminCreateCategoryBody = zod.object({
+  "nameAr": zod.string().min(1),
+  "nameEn": zod.string().min(1),
+  "slug": zod.string().min(1),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const AdminCreateCategoryResponse = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "slug": zod.string(),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateCategoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const AdminUpdateCategoryBody = zod.object({
+  "nameAr": zod.string().min(1),
+  "nameEn": zod.string().min(1),
+  "slug": zod.string().min(1),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const AdminUpdateCategoryResponse = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "slug": zod.string(),
+  "parentId": zod.number().nullish(),
+  "imageUrl": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminDisableCategoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDisableCategoryResponse = zod.void()
+
+
+export const adminListOrdersQueryStatusDefault = `all`;
+
+export const AdminListOrdersQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['all', 'new', 'processing', 'shipped', 'delivered', 'cancelled']).default(adminListOrdersQueryStatusDefault)
+})
+
+export const AdminListOrdersResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "orderNumber": zod.string(),
+  "subtotal": zod.number(),
+  "shippingCost": zod.number(),
+  "discount": zod.number(),
+  "tax": zod.number(),
+  "total": zod.number(),
+  "status": zod.string(),
+  "paymentStatus": zod.string(),
+  "trackingNumber": zod.string().nullish(),
+  "address": zod.string().optional(),
+  "shippingMethod": zod.string(),
+  "paymentMethod": zod.string(),
+  "adminNotes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListOrdersResponse = zod.array(AdminListOrdersResponseItem)
+
+
+export const AdminGetOrderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminGetOrderResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "orderNumber": zod.string(),
+  "subtotal": zod.number(),
+  "shippingCost": zod.number(),
+  "discount": zod.number(),
+  "tax": zod.number(),
+  "total": zod.number(),
+  "status": zod.string(),
+  "paymentStatus": zod.string(),
+  "trackingNumber": zod.string().nullish(),
+  "address": zod.string().optional(),
+  "shippingMethod": zod.string(),
+  "paymentMethod": zod.string(),
+  "adminNotes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateOrderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminUpdateOrderBody = zod.object({
+  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']).optional(),
+  "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']).optional(),
+  "trackingNumber": zod.string().nullish(),
+  "adminNotes": zod.string().nullish()
+})
+
+export const AdminUpdateOrderResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "orderNumber": zod.string(),
+  "subtotal": zod.number(),
+  "shippingCost": zod.number(),
+  "discount": zod.number(),
+  "tax": zod.number(),
+  "total": zod.number(),
+  "status": zod.string(),
+  "paymentStatus": zod.string(),
+  "trackingNumber": zod.string().nullish(),
+  "address": zod.string().optional(),
+  "shippingMethod": zod.string(),
+  "paymentMethod": zod.string(),
+  "adminNotes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const adminListCouponsQueryStatusDefault = `all`;
+
+export const AdminListCouponsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['active', 'inactive', 'all']).default(adminListCouponsQueryStatusDefault)
+})
+
+export const AdminListCouponsResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "discountType": zod.enum(['percentage', 'fixed']),
+  "discountValue": zod.number(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "usageLimit": zod.number().nullish(),
+  "timesUsed": zod.number(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListCouponsResponse = zod.array(AdminListCouponsResponseItem)
+
+
+
+export const adminCreateCouponBodyDiscountValueMin = 0;
+
+
+
+
+export const AdminCreateCouponBody = zod.object({
+  "code": zod.string().min(1),
+  "discountType": zod.enum(['percentage', 'fixed']),
+  "discountValue": zod.number().min(adminCreateCouponBodyDiscountValueMin),
+  "expiresAt": zod.coerce.date().nullish(),
+  "usageLimit": zod.number().min(1).nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const AdminCreateCouponResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "discountType": zod.enum(['percentage', 'fixed']),
+  "discountValue": zod.number(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "usageLimit": zod.number().nullish(),
+  "timesUsed": zod.number(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateCouponParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const adminUpdateCouponBodyOneDiscountValueMin = 0;
+
+
+
+
+export const AdminUpdateCouponBody = zod.object({
+  "code": zod.string().min(1),
+  "discountType": zod.enum(['percentage', 'fixed']),
+  "discountValue": zod.number().min(adminUpdateCouponBodyOneDiscountValueMin),
+  "expiresAt": zod.coerce.date().nullish(),
+  "usageLimit": zod.number().min(1).nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const AdminUpdateCouponResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "discountType": zod.enum(['percentage', 'fixed']),
+  "discountValue": zod.number(),
+  "expiresAt": zod.coerce.date().nullish(),
+  "usageLimit": zod.number().nullish(),
+  "timesUsed": zod.number(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminDisableCouponParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDisableCouponResponse = zod.void()
+
+
+export const adminListCustomersQueryStatusDefault = `all`;
+
+export const AdminListCustomersQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['active', 'inactive', 'all']).default(adminListCustomersQueryStatusDefault)
+})
+
+export const AdminListCustomersResponseItem = zod.object({
+  "id": zod.number(),
+  "phone": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phoneVerified": zod.boolean(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListCustomersResponse = zod.array(AdminListCustomersResponseItem)
+
+
+export const AdminGetCustomerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminGetCustomerResponse = zod.object({
+  "id": zod.number(),
+  "phone": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phoneVerified": zod.boolean(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateCustomerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminUpdateCustomerBody = zod.object({
+  "name": zod.string().optional(),
+  "email": zod.string().nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const AdminUpdateCustomerResponse = zod.object({
+  "id": zod.number(),
+  "phone": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phoneVerified": zod.boolean(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminListInventoryQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "lowStock": zod.coerce.boolean().optional()
+})
+
+export const AdminListInventoryResponseItem = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "stockQuantity": zod.number(),
+  "isActive": zod.boolean()
+})
+export const AdminListInventoryResponse = zod.array(AdminListInventoryResponseItem)
+
+
+export const AdminUpdateInventoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminUpdateInventoryBodyStockQuantityMin = 0;
+
+
+
+export const AdminUpdateInventoryBody = zod.object({
+  "stockQuantity": zod.number().min(adminUpdateInventoryBodyStockQuantityMin)
+})
+
+export const AdminUpdateInventoryResponse = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "stockQuantity": zod.number(),
+  "isActive": zod.boolean()
+})
+
+
+export const adminListDistributorsQueryStatusDefault = `all`;
+
+export const AdminListDistributorsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['active', 'inactive', 'all']).default(adminListDistributorsQueryStatusDefault)
+})
+
+export const AdminListDistributorsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyName": zod.string(),
+  "contactName": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string(),
+  "city": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "taxNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListDistributorsResponse = zod.array(AdminListDistributorsResponseItem)
+
+
+
+
+
+
+
+export const AdminCreateDistributorBody = zod.object({
+  "companyName": zod.string().min(1),
+  "contactName": zod.string().min(1),
+  "email": zod.string().nullish(),
+  "phone": zod.string().min(1),
+  "city": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "taxNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const AdminCreateDistributorResponse = zod.object({
+  "id": zod.number(),
+  "companyName": zod.string(),
+  "contactName": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string(),
+  "city": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "taxNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateDistributorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const AdminUpdateDistributorBody = zod.object({
+  "companyName": zod.string().min(1),
+  "contactName": zod.string().min(1),
+  "email": zod.string().nullish(),
+  "phone": zod.string().min(1),
+  "city": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "taxNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const AdminUpdateDistributorResponse = zod.object({
+  "id": zod.number(),
+  "companyName": zod.string(),
+  "contactName": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string(),
+  "city": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "taxNumber": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminDisableDistributorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDisableDistributorResponse = zod.void()
+
+
+export const AdminListStaffResponseItem = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "isSuperAdmin": zod.boolean(),
+  "isActive": zod.boolean(),
+  "permissions": zod.array(zod.string()),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListStaffResponse = zod.array(AdminListStaffResponseItem)
+
+
+
+export const adminCreateStaffBodyPasswordMin = 8;
+
+
+
+export const AdminCreateStaffBody = zod.object({
+  "email": zod.string(),
+  "name": zod.string().min(1),
+  "password": zod.string().min(adminCreateStaffBodyPasswordMin),
+  "isActive": zod.boolean().optional(),
+  "isSuperAdmin": zod.boolean().optional(),
+  "permissionIds": zod.array(zod.number()).optional()
+})
+
+export const AdminCreateStaffResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "isSuperAdmin": zod.boolean(),
+  "isActive": zod.boolean(),
+  "permissions": zod.array(zod.string()),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateStaffParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const adminUpdateStaffBodyPasswordMin = 8;
+
+
+
+export const AdminUpdateStaffBody = zod.object({
+  "email": zod.string().optional(),
+  "name": zod.string().min(1).optional(),
+  "password": zod.string().min(adminUpdateStaffBodyPasswordMin).optional(),
+  "isActive": zod.boolean().optional(),
+  "isSuperAdmin": zod.boolean().optional()
+})
+
+export const AdminUpdateStaffResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "isSuperAdmin": zod.boolean(),
+  "isActive": zod.boolean(),
+  "permissions": zod.array(zod.string()),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminDisableStaffParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDisableStaffResponse = zod.void()
+
+
+export const AdminListPermissionsResponseItem = zod.object({
+  "id": zod.number(),
+  "module": zod.string(),
+  "action": zod.enum(['view', 'edit', 'delete']),
+  "key": zod.string()
+})
+export const AdminListPermissionsResponse = zod.array(AdminListPermissionsResponseItem)
+
+
+export const AdminSetStaffPermissionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminSetStaffPermissionsBody = zod.object({
+  "permissionIds": zod.array(zod.number())
+})
+
+export const AdminSetStaffPermissionsResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "isSuperAdmin": zod.boolean(),
+  "isActive": zod.boolean(),
+  "permissions": zod.array(zod.string()),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+

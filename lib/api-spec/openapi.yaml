@@ -14,6 +14,7 @@ tags:
   - name: cart
   - name: checkout
   - name: account
+  - name: admin
 paths:
   /healthz:
     get:
@@ -444,13 +445,270 @@ paths:
         "204":
           description: Address deleted
 
+  /admin/auth/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminLoginInput" } } } }
+      responses: { "200": { description: Signed in, content: { application/json: { schema: { $ref: "#/components/schemas/AdminAuthSession" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /admin/auth/logout:
+    post:
+      operationId: adminLogout
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "204": { description: Signed out }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /admin/auth/me:
+    get:
+      operationId: getAdminMe
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Current admin, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUser" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Metrics, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDashboard" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /admin/products:
+    get:
+      operationId: adminListProducts
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { $ref: "#/components/parameters/AdminStatus" }]
+      responses: { "200": { description: Products, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminProduct" } } } } } }
+    post:
+      operationId: adminCreateProduct
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProductInput" } } } }
+      responses: { "201": { description: Product, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProduct" } } } } }
+  /admin/products/{id}:
+    get:
+      operationId: adminGetProduct
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Product, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProduct" } } } }, "404": { $ref: "#/components/responses/NotFound" } }
+    patch:
+      operationId: adminUpdateProduct
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProductUpdate" } } } }
+      responses: { "200": { description: Product, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProduct" } } } } }
+    delete:
+      operationId: adminDisableProduct
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Disabled } }
+  /admin/categories:
+    get:
+      operationId: adminListCategories
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { $ref: "#/components/parameters/AdminStatus" }]
+      responses: { "200": { description: Categories, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminCategory" } } } } } }
+    post:
+      operationId: adminCreateCategory
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCategoryInput" } } } }
+      responses: { "201": { description: Category, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCategory" } } } } }
+  /admin/categories/{id}:
+    patch:
+      operationId: adminUpdateCategory
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCategoryUpdate" } } } }
+      responses: { "200": { description: Category, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCategory" } } } } }
+    delete:
+      operationId: adminDisableCategory
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Disabled } }
+  /admin/orders:
+    get:
+      operationId: adminListOrders
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/AdminSearch"
+        - name: status
+          in: query
+          schema: { type: string, enum: [all, new, processing, shipped, delivered, cancelled], default: all }
+      responses: { "200": { description: Orders, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminOrder" } } } } } }
+  /admin/orders/{id}:
+    get:
+      operationId: adminGetOrder
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Order, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrder" } } } } }
+    patch:
+      operationId: adminUpdateOrder
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrderUpdate" } } } }
+      responses: { "200": { description: Order, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrder" } } } } }
+  /admin/coupons:
+    get:
+      operationId: adminListCoupons
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { $ref: "#/components/parameters/AdminStatus" }]
+      responses: { "200": { description: Coupons, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminCoupon" } } } } } }
+    post:
+      operationId: adminCreateCoupon
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCouponInput" } } } }
+      responses: { "201": { description: Coupon, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCoupon" } } } } }
+  /admin/coupons/{id}:
+    patch:
+      operationId: adminUpdateCoupon
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCouponUpdate" } } } }
+      responses: { "200": { description: Coupon, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCoupon" } } } } }
+    delete:
+      operationId: adminDisableCoupon
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Disabled } }
+  /admin/customers:
+    get:
+      operationId: adminListCustomers
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { $ref: "#/components/parameters/AdminStatus" }]
+      responses: { "200": { description: Customers, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminCustomer" } } } } } }
+  /admin/customers/{id}:
+    get:
+      operationId: adminGetCustomer
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Customer, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCustomer" } } } } }
+    patch:
+      operationId: adminUpdateCustomer
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCustomerUpdate" } } } }
+      responses: { "200": { description: Customer, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCustomer" } } } } }
+  /admin/inventory:
+    get:
+      operationId: adminListInventory
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { name: lowStock, in: query, schema: { type: boolean } }]
+      responses: { "200": { description: Inventory, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminInventoryItem" } } } } } }
+  /admin/inventory/{id}:
+    patch:
+      operationId: adminUpdateInventory
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryUpdate" } } } }
+      responses: { "200": { description: Inventory item, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryItem" } } } } }
+  /admin/distributors:
+    get:
+      operationId: adminListDistributors
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { $ref: "#/components/parameters/AdminStatus" }]
+      responses: { "200": { description: Distributors, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminDistributor" } } } } } }
+    post:
+      operationId: adminCreateDistributor
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDistributorInput" } } } }
+      responses: { "201": { description: Distributor, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDistributor" } } } } }
+  /admin/distributors/{id}:
+    patch:
+      operationId: adminUpdateDistributor
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDistributorUpdate" } } } }
+      responses: { "200": { description: Distributor, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDistributor" } } } } }
+    delete:
+      operationId: adminDisableDistributor
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Disabled } }
+  /admin/staff:
+    get:
+      operationId: adminListStaff
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Staff, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminUser" } } } } } }
+    post:
+      operationId: adminCreateStaff
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminStaffInput" } } } }
+      responses: { "201": { description: Staff, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUser" } } } } }
+  /admin/staff/{id}:
+    patch:
+      operationId: adminUpdateStaff
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminStaffUpdate" } } } }
+      responses: { "200": { description: Staff, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUser" } } } } }
+    delete:
+      operationId: adminDisableStaff
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Disabled } }
+  /admin/permissions:
+    get:
+      operationId: adminListPermissions
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Permissions, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminPermission" } } } } } }
+  /admin/staff/{id}/permissions:
+    put:
+      operationId: adminSetStaffPermissions
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminPermissionAssignment" } } } }
+      responses: { "200": { description: Staff, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUser" } } } } }
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    adminBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
   parameters:
+    AdminId:
+      name: id
+      in: path
+      required: true
+      schema: { type: number }
+    AdminSearch:
+      name: search
+      in: query
+      schema: { type: string }
+    AdminStatus:
+      name: status
+      in: query
+      schema: { type: string, enum: [active, inactive, all], default: all }
     CategorySlug:
       name: category
       in: query
@@ -483,6 +741,12 @@ components:
             $ref: "#/components/schemas/Error"
     Unauthorized:
       description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Insufficient permission
       content:
         application/json:
           schema:
@@ -893,3 +1157,260 @@ components:
           type: ["string", "null"]
         isDefault:
           type: boolean
+    AdminLoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string, minLength: 8 }
+    AdminAuthSession:
+      type: object
+      required: [token, user]
+      properties:
+        token: { type: string }
+        user: { $ref: "#/components/schemas/AdminUser" }
+    AdminUser:
+      type: object
+      required: [id, email, name, isSuperAdmin, isActive, permissions, createdAt]
+      properties:
+        id: { type: number }
+        email: { type: string }
+        name: { type: string }
+        isSuperAdmin: { type: boolean }
+        isActive: { type: boolean }
+        permissions: { type: array, items: { type: string } }
+        lastLoginAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+    AdminPermission:
+      type: object
+      required: [id, module, action, key]
+      properties:
+        id: { type: number }
+        module: { type: string }
+        action: { type: string, enum: [view, edit, delete] }
+        key: { type: string }
+    AdminDashboard:
+      type: object
+      required: [revenue, orders, customers, products, lowStock, pendingOrders, activeCoupons, distributors]
+      properties:
+        revenue: { type: number }
+        orders: { type: number }
+        customers: { type: number }
+        products: { type: number }
+        lowStock: { type: number }
+        pendingOrders: { type: number }
+        activeCoupons: { type: number }
+        distributors: { type: number }
+    AdminProduct:
+      type: object
+      required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, isActive, isFeatured, isBestseller, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        descriptionAr: { type: string }
+        descriptionEn: { type: string }
+        slug: { type: string }
+        price: { type: number }
+        compareAtPrice: { type: [number, "null"] }
+        categoryId: { type: number }
+        images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
+        notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
+        stockQuantity: { type: number }
+        sku: { type: [string, "null"] }
+        isActive: { type: boolean }
+        isFeatured: { type: boolean }
+        isBestseller: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminProductImage:
+      type: object
+      required: [url, alt]
+      properties:
+        url: { type: string }
+        alt: { type: string }
+    AdminProductInput:
+      type: object
+      required: [nameAr, nameEn, slug, price, categoryId]
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        descriptionAr: { type: string, default: "" }
+        descriptionEn: { type: string, default: "" }
+        slug: { type: string, minLength: 1 }
+        price: { type: number, minimum: 0 }
+        compareAtPrice: { type: [number, "null"] }
+        categoryId: { type: number }
+        images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
+        notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
+        stockQuantity: { type: number, minimum: 0 }
+        sku: { type: [string, "null"] }
+        isActive: { type: boolean }
+        isFeatured: { type: boolean }
+        isBestseller: { type: boolean }
+    AdminProductUpdate:
+      allOf: [{ $ref: "#/components/schemas/AdminProductInput" }]
+    AdminCategory:
+      type: object
+      required: [id, nameAr, nameEn, slug, isActive, createdAt]
+      properties:
+        id: { type: number }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        slug: { type: string }
+        parentId: { type: [number, "null"] }
+        imageUrl: { type: [string, "null"] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    AdminCategoryInput:
+      type: object
+      required: [nameAr, nameEn, slug]
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        parentId: { type: [number, "null"] }
+        imageUrl: { type: [string, "null"] }
+        isActive: { type: boolean }
+    AdminCategoryUpdate:
+      allOf: [{ $ref: "#/components/schemas/AdminCategoryInput" }]
+    AdminOrder:
+      type: object
+      required: [id, userId, orderNumber, subtotal, shippingCost, discount, tax, total, status, paymentStatus, shippingMethod, paymentMethod, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        userId: { type: number }
+        orderNumber: { type: string }
+        subtotal: { type: number }
+        shippingCost: { type: number }
+        discount: { type: number }
+        tax: { type: number }
+        total: { type: number }
+        status: { type: string }
+        paymentStatus: { type: string }
+        trackingNumber: { type: [string, "null"] }
+        address: { type: string }
+        shippingMethod: { type: string }
+        paymentMethod: { type: string }
+        adminNotes: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminOrderUpdate:
+      type: object
+      properties:
+        status: { type: string, enum: [new, processing, shipped, delivered, cancelled] }
+        paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
+        trackingNumber: { type: [string, "null"] }
+        adminNotes: { type: [string, "null"] }
+    AdminCoupon:
+      type: object
+      required: [id, code, discountType, discountValue, timesUsed, isActive, createdAt]
+      properties:
+        id: { type: number }
+        code: { type: string }
+        discountType: { type: string, enum: [percentage, fixed] }
+        discountValue: { type: number }
+        expiresAt: { type: [string, "null"], format: date-time }
+        usageLimit: { type: [number, "null"] }
+        timesUsed: { type: number }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    AdminCouponInput:
+      type: object
+      required: [code, discountType, discountValue]
+      properties:
+        code: { type: string, minLength: 1 }
+        discountType: { type: string, enum: [percentage, fixed] }
+        discountValue: { type: number, minimum: 0 }
+        expiresAt: { type: [string, "null"], format: date-time }
+        usageLimit: { type: [number, "null"], minimum: 1 }
+        isActive: { type: boolean }
+    AdminCouponUpdate:
+      allOf: [{ $ref: "#/components/schemas/AdminCouponInput" }]
+    AdminCustomer:
+      type: object
+      required: [id, phone, name, phoneVerified, isActive, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        phone: { type: string }
+        name: { type: string }
+        email: { type: [string, "null"] }
+        phoneVerified: { type: boolean }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminCustomerUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: [string, "null"] }
+        isActive: { type: boolean }
+    AdminInventoryItem:
+      type: object
+      required: [id, nameAr, nameEn, sku, stockQuantity, isActive]
+      properties:
+        id: { type: number }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        sku: { type: [string, "null"] }
+        stockQuantity: { type: number }
+        isActive: { type: boolean }
+    AdminInventoryUpdate:
+      type: object
+      required: [stockQuantity]
+      properties:
+        stockQuantity: { type: number, minimum: 0 }
+    AdminDistributor:
+      type: object
+      required: [id, companyName, contactName, phone, isActive, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        companyName: { type: string }
+        contactName: { type: string }
+        email: { type: [string, "null"] }
+        phone: { type: string }
+        city: { type: [string, "null"] }
+        address: { type: [string, "null"] }
+        taxNumber: { type: [string, "null"] }
+        notes: { type: [string, "null"] }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminDistributorInput:
+      type: object
+      required: [companyName, contactName, phone]
+      properties:
+        companyName: { type: string, minLength: 1 }
+        contactName: { type: string, minLength: 1 }
+        email: { type: [string, "null"] }
+        phone: { type: string, minLength: 1 }
+        city: { type: [string, "null"] }
+        address: { type: [string, "null"] }
+        taxNumber: { type: [string, "null"] }
+        notes: { type: [string, "null"] }
+        isActive: { type: boolean }
+    AdminDistributorUpdate:
+      allOf: [{ $ref: "#/components/schemas/AdminDistributorInput" }]
+    AdminStaffInput:
+      type: object
+      required: [email, name, password]
+      properties:
+        email: { type: string }
+        name: { type: string, minLength: 1 }
+        password: { type: string, minLength: 8 }
+        isActive: { type: boolean }
+        isSuperAdmin: { type: boolean }
+        permissionIds: { type: array, items: { type: number } }
+    AdminStaffUpdate:
+      type: object
+      properties:
+        email: { type: string }
+        name: { type: string, minLength: 1 }
+        password: { type: string, minLength: 8 }
+        isActive: { type: boolean }
+        isSuperAdmin: { type: boolean }
+    AdminPermissionAssignment:
+      type: object
+      required: [permissionIds]
+      properties:
+        permissionIds: { type: array, items: { type: number } }

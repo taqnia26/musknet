@@ -8,6 +8,7 @@ export const customersTable = pgTable("storefront_customers", {
   name: text("name").notNull(),
   email: text("email"),
   phoneVerified: boolean("phone_verified").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -26,6 +26,7 @@ export const couponsTable = pgTable("storefront_coupons", {
   usageLimit: integer("usage_limit"),
   timesUsed: integer("times_used").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("storefront_coupons_code_unique").on(table.code),
 ]);
