@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { inArray } from "drizzle-orm";
-import { customersTable, db, ordersTable } from "@workspace/db";
+import { eq, inArray } from "drizzle-orm";
+import { customersTable, db, orderAddressesTable, ordersTable } from "@workspace/db";
 import {
   addAddress,
   addToCart,
@@ -74,6 +74,18 @@ describe.sequential("persistent storefront carts and orders", () => {
     });
 
     expect(order?.items).toHaveLength(1);
+    const [addressSnapshot] = await db
+      .select()
+      .from(orderAddressesTable)
+      .where(eq(orderAddressesTable.orderId, order!.id));
+    expect(addressSnapshot).toMatchObject({
+      label: "المنزل",
+      city: "الرياض",
+      district: "العليا",
+      street: "الملك فهد",
+      buildingNo: "10",
+      additionalInfo: null,
+    });
     expect((await getCartForUser(owner.id)).items).toEqual([]);
     expect((await getCartForUser(other.id)).itemCount).toBe(1);
     expect((await getOrders(owner.id)).map(({ orderNumber }) => orderNumber)).toContain(order!.orderNumber);

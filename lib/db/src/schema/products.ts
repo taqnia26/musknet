@@ -1,0 +1,53 @@
+import {
+  boolean,
+  doublePrecision,
+  integer,
+  jsonb,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  uniqueIndex,
+} from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod/v4";
+import { categoriesTable } from "./categories";
+
+export type ProductImage = {
+  url: string;
+  alt: string;
+};
+
+export type ProductNote = {
+  type: "top" | "heart" | "base";
+  nameAr: string;
+  nameEn: string;
+};
+
+export const productsTable = pgTable("storefront_products", {
+  id: serial("id").primaryKey(),
+  nameAr: text("name_ar").notNull(),
+  nameEn: text("name_en").notNull(),
+  descriptionAr: text("description_ar").notNull().default(""),
+  descriptionEn: text("description_en").notNull().default(""),
+  slug: text("slug").notNull(),
+  price: doublePrecision("price").notNull(),
+  compareAtPrice: doublePrecision("compare_at_price"),
+  categoryId: integer("category_id").notNull().references(() => categoriesTable.id, { onDelete: "restrict" }),
+  images: jsonb("images").$type<ProductImage[]>().notNull().default([]),
+  notes: jsonb("notes").$type<ProductNote[]>().notNull().default([]),
+  stockQuantity: integer("stock_quantity").notNull().default(0),
+  sku: text("sku"),
+  isActive: boolean("is_active").notNull().default(true),
+  isFeatured: boolean("is_featured").notNull().default(false),
+  isBestseller: boolean("is_bestseller").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => [
+  uniqueIndex("storefront_products_slug_unique").on(table.slug),
+  uniqueIndex("storefront_products_sku_unique").on(table.sku),
+]);
+
+export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertProduct = z.infer<typeof insertProductSchema>;
+export type Product = typeof productsTable.$inferSelect;

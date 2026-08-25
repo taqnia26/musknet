@@ -4,11 +4,15 @@ import {
   addressesTable,
   cartItemsTable,
   cartsTable,
+  categoriesTable,
+  couponsTable,
   customersTable,
   db,
+  orderAddressesTable,
   orderItemsTable,
   ordersTable,
   otpRecordsTable,
+  productsTable,
 } from "@workspace/db";
 
 type ProductSeed = {
@@ -31,7 +35,7 @@ type ProductSeed = {
   notes: Array<{ type: "top" | "heart" | "base"; nameAr: string; nameEn: string }>;
 };
 
-export const categories = [
+const categorySeeds = [
   {
     id: 1,
     nameAr: "عطور",
@@ -48,7 +52,7 @@ export const categories = [
   },
 ];
 
-export const products: ProductSeed[] = [
+const productSeeds: ProductSeed[] = [
   {
     id: 1,
     nameAr: "سولين",
@@ -305,6 +309,130 @@ export function toProduct(product: ProductSeed) {
   return summary;
 }
 
+let catalogSeedPromise: Promise<void> | null = null;
+
+async function seedCatalog() {
+  await db
+    .insert(categoriesTable)
+    .values(categorySeeds.map(({ id, nameAr, nameEn, slug }) => ({
+      id,
+      nameAr,
+      nameEn,
+      slug,
+    })))
+    .onConflictDoNothing({ target: categoriesTable.slug });
+
+  const categoryRows = await db.select().from(categoriesTable);
+  const categoryIds = new Map(categoryRows.map((category) => [category.slug, category.id]));
+
+  await db
+    .insert(productsTable)
+    .values(productSeeds.map((product) => ({
+      id: product.id,
+      nameAr: product.nameAr,
+      nameEn: product.nameEn,
+      descriptionAr: product.descriptionAr,
+      descriptionEn: product.descriptionEn,
+      slug: product.slug,
+      price: product.price,
+      compareAtPrice: product.compareAtPrice,
+      categoryId: categoryIds.get(product.categorySlug)!,
+      images: product.images.map((url, index) => ({
+        url,
+        alt: index === 0 ? product.nameAr : `${product.nameAr} ${index + 1}`,
+      })),
+      notes: product.notes,
+      stockQuantity: product.stock,
+      isActive: true,
+      isFeatured: product.isFeatured,
+      isBestseller: product.isBestseller,
+    })))
+    .onConflictDoNothing({ target: productsTable.slug });
+
+  await db
+    .insert(couponsTable)
+    .values({
+      code: "ELLOLO10",
+      discountType: "percentage",
+      discountValue: 10,
+      usageLimit: null,
+      expiresAt: null,
+      isActive: true,
+    })
+    .onConflictDoNothing({ target: couponsTable.code });
+}
+
+async function ensureCatalogSeeded() {
+  catalogSeedPromise ??= seedCatalog().catch((error) => {
+    catalogSeedPromise = null;
+    throw error;
+  });
+  await catalogSeedPromise;
+}
+
+function mapDatabaseProduct(
+  product: typeof productsTable.$inferSelect,
+  category: typeof categoriesTable.$inferSelect,
+): ProductSeed {
+  const imageUrls = product.images.map(({ url }) => url);
+  return {
+    id: product.id,
+    nameAr: product.nameAr,
+    nameEn: product.nameEn,
+    slug: product.slug,
+    price: product.price,
+    compareAtPrice: product.compareAtPrice,
+    categorySlug: category.slug,
+    categoryNameAr: category.nameAr,
+    imageUrl: imageUrls[0] ?? "",
+    hoverImageUrl: imageUrls[1] ?? null,
+    isFeatured: product.isFeatured,
+    isBestseller: product.isBestseller,
+    stock: product.stockQuantity,
+    descriptionAr: product.descriptionAr,
+    descriptionEn: product.descriptionEn,
+    images: imageUrls,
+    notes: product.notes,
+  };
+}
+
+export async function listCatalogProducts() {
+  await ensureCatalogSeeded();
+  const rows = await db
+    .select({ product: productsTable, category: categoriesTable })
+    .from(productsTable)
+    .innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .where(eq(productsTable.isActive, true))
+    .orderBy(productsTable.id);
+  return rows.map(({ product, category }) => mapDatabaseProduct(product, category));
+}
+
+export async function listCatalogCategories() {
+  await ensureCatalogSeeded();
+  const [categoryRows, productRows] = await Promise.all([
+    db.select().from(categoriesTable).orderBy(categoriesTable.id),
+    db.select().from(productsTable).where(eq(productsTable.isActive, true)).orderBy(productsTable.id),
+  ]);
+  return categoryRows.map((category) => {
+    const firstProduct = productRows.find((product) => product.categoryId === category.id);
+    return {
+      id: category.id,
+      nameAr: category.nameAr,
+      nameEn: category.nameEn,
+      slug: category.slug,
+      imageUrl: firstProduct?.images[0]?.url ?? "",
+    };
+  });
+}
+
+export async function getCatalogProductBySlug(slug: string) {
+  return (await listCatalogProducts()).find((product) => product.slug === slug) ?? null;
+}
+
+async function getCatalogProductById(id: number) {
+  return (await listCatalogProducts()).find((product) => product.id === id) ?? null;
+}
+
 export type CustomerRecord = {
   id: number;
   phone: string;
@@ -413,7 +541,12 @@ export async function verifyDevelopmentOtp(phone: string, code: string, guestTok
           .onConflictDoUpdate({ target: cartsTable.userId, set: { updatedAt: new Date() } }).returning();
         const guestItems = await tx.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, guestCart.id));
         for (const item of guestItems) {
-          const stock = products.find((product) => product.id === item.productId)?.stock;
+          const [product] = await tx
+            .select({ stock: productsTable.stockQuantity })
+            .from(productsTable)
+            .where(and(eq(productsTable.id, item.productId), eq(productsTable.isActive, true)))
+            .limit(1);
+          const stock = product?.stock;
           if (!stock) continue;
           await tx.insert(cartItemsTable).values({ cartId: userCart.id, productId: item.productId, quantity: item.quantity })
             .onConflictDoUpdate({
@@ -453,6 +586,7 @@ export function createGuestCartToken() {
 export async function getCart(owner: CartOwner) {
   const cart = await ensureCart(owner);
   const records = await db.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id)).orderBy(cartItemsTable.id);
+  const products = await listCatalogProducts();
   const items = records.flatMap((item) => {
     const product = products.find((entry) => entry.id === item.productId);
     return product
@@ -476,7 +610,7 @@ export async function addToCart(userId: number, productId: number, quantity: num
 }
 
 export async function addToCartForOwner(owner: CartOwner, productId: number, quantity: number) {
-  const product = products.find((entry) => entry.id === productId);
+  const product = await getCatalogProductById(productId);
   if (!product || product.stock < quantity) return null;
   const cart = await ensureCart(owner);
   await db
@@ -501,7 +635,7 @@ export async function updateCartItemForOwner(owner: CartOwner, itemId: number, q
     .where(and(eq(cartItemsTable.id, itemId), ownerWhere(owner)))
     .limit(1);
   if (!item) return null;
-  const product = products.find((entry) => entry.id === item.productId);
+  const product = await getCatalogProductById(item.productId);
   if (!product) return null;
   await db.update(cartItemsTable).set({ quantity: Math.min(quantity, product.stock), updatedAt: new Date() }).where(eq(cartItemsTable.id, itemId));
   return getCart(owner);
@@ -529,7 +663,12 @@ export async function claimGuestCart(userId: number, guestToken: string) {
       .returning();
     const guestItems = await tx.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, guestCart.id));
     for (const item of guestItems) {
-      const stock = products.find((product) => product.id === item.productId)?.stock;
+      const [product] = await tx
+        .select({ stock: productsTable.stockQuantity })
+        .from(productsTable)
+        .where(and(eq(productsTable.id, item.productId), eq(productsTable.isActive, true)))
+        .limit(1);
+      const stock = product?.stock;
       if (!stock) continue;
       await tx.insert(cartItemsTable).values({ cartId: userCart.id, productId: item.productId, quantity: item.quantity })
         .onConflictDoUpdate({
@@ -578,16 +717,48 @@ export async function deleteAddress(userId: number, addressId: number) {
   return deleted.length > 0;
 }
 
-export function getCoupon(code: string, subtotal: number) {
-  if (code.trim().toUpperCase() === "ELLOLO10" && subtotal >= 200) {
-    return { valid: true, discount: Math.round(subtotal * 0.1 * 100) / 100, message: "تم تطبيق خصم 10٪", code: "ELLOLO10" };
+function couponResult(
+  coupon: typeof couponsTable.$inferSelect | undefined,
+  subtotal: number,
+) {
+  if (!coupon) {
+    return { valid: false, discount: 0, message: "كود الخصم غير صالح أو منتهي الصلاحية", code: null, couponId: null };
   }
-  return { valid: false, discount: 0, message: "كود الخصم غير صالح أو لا يطابق الحد الأدنى للطلب", code: null };
+  const rawDiscount = coupon.discountType === "percentage"
+    ? subtotal * coupon.discountValue / 100
+    : coupon.discountValue;
+  const discount = Math.min(subtotal, Math.round(rawDiscount * 100) / 100);
+  const suffix = coupon.discountType === "percentage"
+    ? `${coupon.discountValue}٪`
+    : `${coupon.discountValue} ر.س`;
+  return {
+    valid: true,
+    discount,
+    message: `تم تطبيق خصم ${suffix}`,
+    code: coupon.code,
+    couponId: coupon.id,
+  };
+}
+
+export async function getCoupon(code: string, subtotal: number) {
+  await ensureCatalogSeeded();
+  const normalizedCode = code.trim().toUpperCase();
+  const [coupon] = await db
+    .select()
+    .from(couponsTable)
+    .where(and(
+      eq(couponsTable.code, normalizedCode),
+      eq(couponsTable.isActive, true),
+      sql`(${couponsTable.expiresAt} is null or ${couponsTable.expiresAt} > now())`,
+      sql`(${couponsTable.usageLimit} is null or ${couponsTable.timesUsed} < ${couponsTable.usageLimit})`,
+    ))
+    .limit(1);
+  return couponResult(coupon, subtotal);
 }
 
 export async function getQuote(userId: number, city: string, couponCode?: string | null) {
   const cart = await getCartForUser(userId);
-  const coupon = couponCode ? getCoupon(couponCode, cart.subtotal) : { discount: 0 };
+  const coupon = couponCode ? await getCoupon(couponCode, cart.subtotal) : { discount: 0 };
   const shippingCost = city.trim().toLowerCase().includes("الرياض") || city.trim().toLowerCase().includes("riyadh") ? 20 : 30;
   const net = Math.max(0, cart.subtotal - coupon.discount);
   const tax = Math.round(net * 0.15 * 100) / 100;
@@ -619,6 +790,7 @@ export async function createOrderForUser(
   details: OrderInputDetails,
   couponCode?: string | null,
 ) {
+  const catalog = await listCatalogProducts();
   return db.transaction(async (tx) => {
     const [cart] = await tx.select().from(cartsTable).where(eq(cartsTable.userId, userId)).limit(1);
     if (!cart) return null;
@@ -626,12 +798,39 @@ export async function createOrderForUser(
     await tx.execute(sql`select id from ${cartItemsTable} where cart_id = ${cart.id} for update`);
     const records = await tx.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id)).orderBy(cartItemsTable.id);
     const items = records.flatMap((item) => {
-      const product = products.find((entry) => entry.id === item.productId);
+      const product = catalog.find((entry) => entry.id === item.productId);
       return product ? [{ record: item, product }] : [];
     });
     if (items.length === 0) return null;
     const subtotal = items.reduce((sum, item) => sum + item.product.price * item.record.quantity, 0);
-    const coupon = couponCode ? getCoupon(couponCode, subtotal) : { discount: 0 };
+    let coupon: ReturnType<typeof couponResult> = {
+      valid: false,
+      discount: 0,
+      message: "",
+      code: null,
+      couponId: null,
+    };
+    if (couponCode) {
+      const normalizedCode = couponCode.trim().toUpperCase();
+      await tx.execute(sql`select id from ${couponsTable} where ${couponsTable.code} = ${normalizedCode} for update`);
+      const [couponRecord] = await tx
+        .select()
+        .from(couponsTable)
+        .where(and(
+          eq(couponsTable.code, normalizedCode),
+          eq(couponsTable.isActive, true),
+          sql`(${couponsTable.expiresAt} is null or ${couponsTable.expiresAt} > now())`,
+          sql`(${couponsTable.usageLimit} is null or ${couponsTable.timesUsed} < ${couponsTable.usageLimit})`,
+        ))
+        .limit(1);
+      coupon = couponResult(couponRecord, subtotal);
+      if (coupon.couponId) {
+        await tx
+          .update(couponsTable)
+          .set({ timesUsed: sql`${couponsTable.timesUsed} + 1` })
+          .where(eq(couponsTable.id, coupon.couponId));
+      }
+    }
     const shippingCost = details.address.city.trim().toLowerCase().includes("الرياض") ||
       details.address.city.trim().toLowerCase().includes("riyadh") ? 20 : 30;
     const net = Math.max(0, subtotal - coupon.discount);
@@ -650,6 +849,16 @@ export async function createOrderForUser(
       shippingMethod: details.shippingMethod,
       paymentMethod: details.paymentMethod,
     }).returning();
+    await tx.insert(orderAddressesTable).values({
+      orderId: created.id,
+      label: details.address.label,
+      city: details.address.city,
+      district: details.address.district,
+      street: details.address.street,
+      buildingNo: details.address.buildingNo,
+      additionalInfo: details.address.additionalInfo,
+      isDefault: details.address.isDefault,
+    });
     const createdItems = await tx.insert(orderItemsTable).values(items.map(({ record, product }) => ({
       orderId: created.id,
       productId: product.id,

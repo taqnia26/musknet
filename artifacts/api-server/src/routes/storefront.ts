@@ -40,11 +40,11 @@ import {
 import {
   addAddress,
   addToCartForOwner,
-  categories,
   createGuestCartToken,
   createOrderForUser,
   deleteAddress,
   getAddresses,
+  getCatalogProductBySlug,
   getCart,
   getCoupon,
   getOrders,
@@ -52,7 +52,8 @@ import {
   getQuote,
   getUserFromToken,
   issueToken,
-  products,
+  listCatalogCategories,
+  listCatalogProducts,
   requestDevelopmentOtp,
   removeCartItemForOwner,
   toProduct,
@@ -105,11 +106,11 @@ async function cartOwner(req: Request, res: Response) {
   return { guestToken };
 }
 
-router.get("/categories", (_req, res) => {
-  res.json(ListCategoriesResponse.parse(categories));
-});
+router.get("/categories", asyncRoute(async (_req, res) => {
+  res.json(ListCategoriesResponse.parse(await listCatalogCategories()));
+}));
 
-router.get("/products", (req, res) => {
+router.get("/products", asyncRoute(async (req, res) => {
   const parsed = ListProductsQueryParams.safeParse(req.query);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -117,6 +118,7 @@ router.get("/products", (req, res) => {
   }
   const { category, sort, search, minPrice, maxPrice, limit } = parsed.data;
   const needle = search?.trim().toLowerCase();
+  const products = await listCatalogProducts();
   let entries = products.filter((product) => {
     const matchesCategory = !category || product.categorySlug === category;
     const matchesSearch =
@@ -131,39 +133,40 @@ router.get("/products", (req, res) => {
   if (sort === "price_desc") entries = [...entries].sort((a, b) => b.price - a.price);
   if (sort === "bestseller") entries = [...entries].sort((a, b) => Number(b.isBestseller) - Number(a.isBestseller));
   res.json(ListProductsResponse.parse(entries.slice(0, limit).map(toProduct)));
-});
+}));
 
-router.get("/products/:slug", (req, res) => {
+router.get("/products/:slug", asyncRoute(async (req, res) => {
   const parsed = GetProductParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const product = products.find((entry) => entry.slug === parsed.data.slug);
+  const product = await getCatalogProductBySlug(parsed.data.slug);
   if (!product) {
     res.status(404).json({ error: "المنتج غير موجود" });
     return;
   }
-  const relatedProducts = products
+  const relatedProducts = (await listCatalogProducts())
     .filter((entry) => entry.categorySlug === product.categorySlug && entry.id !== product.id)
     .map(toProduct);
   res.json(GetProductResponse.parse({ ...product, relatedProducts }));
-});
+}));
 
-router.get("/products/:slug/related", (req, res) => {
+router.get("/products/:slug/related", asyncRoute(async (req, res) => {
   const parsed = GetRelatedProductsParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const product = products.find((entry) => entry.slug === parsed.data.slug);
+  const product = await getCatalogProductBySlug(parsed.data.slug);
+  const products = product ? await listCatalogProducts() : [];
   const related = product
     ? products
         .filter((entry) => entry.categorySlug === product.categorySlug && entry.id !== product.id)
         .map(toProduct)
     : [];
   res.json(GetRelatedProductsResponse.parse(related));
-});
+}));
 
 router.get("/content/home", (_req, res) => {
   res.json(
@@ -268,14 +271,14 @@ router.delete("/cart/items/:itemId", asyncRoute(async (req, res) => {
   res.json(RemoveCartItemResponse.parse(await removeCartItemForOwner(await cartOwner(req, res), parsed.data.itemId)));
 }));
 
-router.post("/coupons/validate", (req, res) => {
+router.post("/coupons/validate", asyncRoute(async (req, res) => {
   const parsed = ValidateCouponBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  res.json(ValidateCouponResponse.parse(getCoupon(parsed.data.code, parsed.data.subtotal)));
-});
+  res.json(ValidateCouponResponse.parse(await getCoupon(parsed.data.code, parsed.data.subtotal)));
+}));
 
 router.post("/checkout/quote", asyncRoute(async (req, res) => {
   const user = await requireUser(req, res);
