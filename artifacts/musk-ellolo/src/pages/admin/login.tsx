@@ -56,10 +56,14 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-card p-8 rounded-xl shadow-sm border">
         <div className="mb-8 text-center">
-          <div className="w-12 h-12 bg-primary text-primary-foreground rounded-lg mx-auto flex items-center justify-center font-bold text-xl mb-4">
-            M
-          </div>
-          <h1 className="text-2xl font-bold">Musk Ellolo Operations</h1>
+          <img
+            src="/site-assets/admin-logo.png"
+            alt="Musk Ellolo"
+            className="h-28 w-auto max-w-full object-contain mx-auto mb-5"
+          />
+          <h1 className="text-2xl font-bold">
+            {t('إدارة النظام مسك اللولو', 'Musk Ellolo System Management')}
+          </h1>
           <p className="text-muted-foreground mt-2">{t('تسجيل الدخول للوحة التحكم', 'Sign in to admin panel')}</p>
         </div>
 
