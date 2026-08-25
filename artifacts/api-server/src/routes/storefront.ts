@@ -39,36 +39,38 @@ import {
 } from "@workspace/api-zod";
 import {
   addAddress,
-  addToCart,
+  addToCartForOwner,
   categories,
+  createGuestCartToken,
   createOrderForUser,
   deleteAddress,
   getAddresses,
-  getCartForUser,
+  getCart,
   getCoupon,
   getOrders,
+  getOrder,
   getQuote,
   getUserFromToken,
   issueToken,
   products,
   requestDevelopmentOtp,
-  removeCartItem,
+  removeCartItemForOwner,
   toProduct,
-  updateCartItem,
+  updateCartItemForOwner,
   updateCustomer,
   verifyDevelopmentOtp,
 } from "../lib/storefront";
 
 const router: IRouter = Router();
 
-function currentUser(req: Request) {
+async function currentUser(req: Request) {
   const header = req.header("authorization");
   const raw = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
   return getUserFromToken(raw);
 }
 
-function requireUser(req: Request, res: Response) {
-  const user = currentUser(req);
+async function requireUser(req: Request, res: Response) {
+  const user = await currentUser(req);
   if (!user) {
     res.status(401).json({ error: "يلزم تسجيل الدخول للمتابعة" });
     return null;
@@ -76,8 +78,31 @@ function requireUser(req: Request, res: Response) {
   return user;
 }
 
-function cartOwnerId(req: Request) {
-  return currentUser(req)?.id ?? 0;
+function asyncRoute(handler: (req: Request, res: Response) => Promise<void>) {
+  return (req: Request, res: Response, next: (error?: unknown) => void) => {
+    handler(req, res).catch(next);
+  };
+}
+
+const guestCartCookie = "musk_ellolo_guest_cart";
+const guestCartCookieOptions = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  maxAge: 1000 * 60 * 60 * 24 * 30,
+  path: "/api",
+};
+
+async function cartOwner(req: Request, res: Response) {
+  const user = await currentUser(req);
+  if (user) return { userId: user.id };
+  const existing = req.cookies?.[guestCartCookie];
+  if (typeof existing === "string" && /^[A-Za-z0-9_-]{43}$/.test(existing)) {
+    return { guestToken: existing };
+  }
+  const guestToken = createGuestCartToken();
+  res.cookie(guestCartCookie, guestToken, guestCartCookieOptions);
+  return { guestToken };
 }
 
 router.get("/categories", (_req, res) => {
@@ -161,56 +186,61 @@ router.get("/content/home", (_req, res) => {
   );
 });
 
-router.post("/auth/request-otp", (req, res) => {
+router.post("/auth/request-otp", asyncRoute(async (req, res) => {
   const parsed = RequestOtpBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const devCode = requestDevelopmentOtp(parsed.data.phone);
+  const devCode = await requestDevelopmentOtp(parsed.data.phone);
   req.log.info({ phoneSuffix: parsed.data.phone.slice(-4) }, "Development OTP issued");
   res.json(RequestOtpResponse.parse({ success: true, expiresInSeconds: 300, devCode }));
-});
+}));
 
-router.post("/auth/verify-otp", (req, res) => {
+router.post("/auth/verify-otp", asyncRoute(async (req, res) => {
   const parsed = VerifyOtpBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const user = verifyDevelopmentOtp(parsed.data.phone, parsed.data.code);
+  const guestToken = req.cookies?.[guestCartCookie];
+  const validGuestToken = typeof guestToken === "string" && /^[A-Za-z0-9_-]{43}$/.test(guestToken) ? guestToken : undefined;
+  const user = await verifyDevelopmentOtp(parsed.data.phone, parsed.data.code, validGuestToken);
   if (!user) {
     res.status(400).json({ error: "رمز التحقق غير صحيح أو انتهت صلاحيته" });
     return;
   }
+  if (validGuestToken) {
+    res.clearCookie(guestCartCookie, { path: "/api", httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production" });
+  }
   res.json(VerifyOtpResponse.parse({ token: issueToken(user.id), user }));
-});
+}));
 
-router.get("/auth/me", (req, res) => {
-  const user = requireUser(req, res);
+router.get("/auth/me", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
   res.json(GetCurrentUserResponse.parse(user));
-});
+}));
 
-router.get("/cart", (req, res) => {
-  res.json(GetCartResponse.parse(getCartForUser(cartOwnerId(req))));
-});
+router.get("/cart", asyncRoute(async (req, res) => {
+  res.json(GetCartResponse.parse(await getCart(await cartOwner(req, res))));
+}));
 
-router.post("/cart/items", (req, res) => {
+router.post("/cart/items", asyncRoute(async (req, res) => {
   const parsed = AddCartItemBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const cart = addToCart(cartOwnerId(req), parsed.data.productId, parsed.data.quantity);
+  const cart = await addToCartForOwner(await cartOwner(req, res), parsed.data.productId, parsed.data.quantity);
   if (!cart) {
     res.status(400).json({ error: "المنتج غير متوفر بالكمية المطلوبة" });
     return;
   }
   res.json(AddCartItemResponse.parse(cart));
-});
+}));
 
-router.patch("/cart/items/:itemId", (req, res) => {
+router.patch("/cart/items/:itemId", asyncRoute(async (req, res) => {
   const params = UpdateCartItemParams.safeParse(req.params);
   const body = UpdateCartItemBody.safeParse(req.body);
   if (!params.success) {
@@ -221,22 +251,22 @@ router.patch("/cart/items/:itemId", (req, res) => {
     res.status(400).json({ error: body.error.message });
     return;
   }
-  const cart = updateCartItem(cartOwnerId(req), params.data.itemId, body.data.quantity);
+  const cart = await updateCartItemForOwner(await cartOwner(req, res), params.data.itemId, body.data.quantity);
   if (!cart) {
     res.status(404).json({ error: "عنصر السلة غير موجود" });
     return;
   }
   res.json(UpdateCartItemResponse.parse(cart));
-});
+}));
 
-router.delete("/cart/items/:itemId", (req, res) => {
+router.delete("/cart/items/:itemId", asyncRoute(async (req, res) => {
   const parsed = RemoveCartItemParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  res.json(RemoveCartItemResponse.parse(removeCartItem(cartOwnerId(req), parsed.data.itemId)));
-});
+  res.json(RemoveCartItemResponse.parse(await removeCartItemForOwner(await cartOwner(req, res), parsed.data.itemId)));
+}));
 
 router.post("/coupons/validate", (req, res) => {
   const parsed = ValidateCouponBody.safeParse(req.body);
@@ -247,82 +277,94 @@ router.post("/coupons/validate", (req, res) => {
   res.json(ValidateCouponResponse.parse(getCoupon(parsed.data.code, parsed.data.subtotal)));
 });
 
-router.post("/checkout/quote", (req, res) => {
-  const user = requireUser(req, res);
+router.post("/checkout/quote", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
   const parsed = GetCheckoutQuoteBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  res.json(GetCheckoutQuoteResponse.parse(getQuote(user.id, parsed.data.city, parsed.data.couponCode)));
-});
+  res.json(GetCheckoutQuoteResponse.parse(await getQuote(user.id, parsed.data.city, parsed.data.couponCode)));
+}));
 
-router.get("/orders", (req, res) => {
-  const user = requireUser(req, res);
+router.get("/orders", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
-  res.json(ListOrdersResponse.parse(getOrders(user.id)));
-});
+  res.json(ListOrdersResponse.parse(await getOrders(user.id)));
+}));
 
-router.post("/orders", (req, res) => {
-  const user = requireUser(req, res);
+router.post("/orders", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const order = createOrderForUser(user.id, parsed.data.address.city, parsed.data.couponCode);
+  const order = await createOrderForUser(user.id, {
+    address: {
+      label: parsed.data.address.label,
+      city: parsed.data.address.city,
+      district: parsed.data.address.district,
+      street: parsed.data.address.street,
+      buildingNo: parsed.data.address.buildingNo,
+      additionalInfo: parsed.data.address.additionalInfo ?? null,
+      isDefault: parsed.data.address.isDefault ?? false,
+    },
+    shippingMethod: parsed.data.shippingMethod,
+    paymentMethod: parsed.data.paymentMethod,
+  }, parsed.data.couponCode);
   if (!order) {
     res.status(400).json({ error: "لا يمكن إنشاء طلب من سلة فارغة" });
     return;
   }
   res.status(201).json(CreateOrderResponse.parse(order));
-});
+}));
 
-router.get("/orders/:orderNumber", (req, res) => {
-  const user = requireUser(req, res);
+router.get("/orders/:orderNumber", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
   const parsed = GetOrderParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const order = getOrders(user.id).find((entry) => entry.orderNumber === parsed.data.orderNumber);
+  const order = await getOrder(user.id, parsed.data.orderNumber);
   if (!order) {
     res.status(404).json({ error: "الطلب غير موجود" });
     return;
   }
   res.json(GetOrderResponse.parse(order));
-});
+}));
 
-router.patch("/account/profile", (req, res) => {
-  const user = requireUser(req, res);
+router.patch("/account/profile", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
   const parsed = UpdateProfileBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const updated = updateCustomer(user.id, parsed.data.name, parsed.data.email);
+  const updated = await updateCustomer(user.id, parsed.data.name, parsed.data.email);
   res.json(UpdateProfileResponse.parse(updated));
-});
+}));
 
-router.get("/account/addresses", (req, res) => {
-  const user = requireUser(req, res);
+router.get("/account/addresses", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
-  res.json(ListAddressesResponse.parse(getAddresses(user.id)));
-});
+  res.json(ListAddressesResponse.parse(await getAddresses(user.id)));
+}));
 
-router.post("/account/addresses", (req, res) => {
-  const user = requireUser(req, res);
+router.post("/account/addresses", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
   const parsed = CreateAddressBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  const address = addAddress(user.id, {
+  const address = await addAddress(user.id, {
     label: parsed.data.label,
     city: parsed.data.city,
     district: parsed.data.district,
@@ -332,21 +374,21 @@ router.post("/account/addresses", (req, res) => {
     isDefault: parsed.data.isDefault ?? false,
   });
   res.status(201).json(CreateAddressResponse.parse(address));
-});
+}));
 
-router.delete("/account/addresses/:addressId", (req, res) => {
-  const user = requireUser(req, res);
+router.delete("/account/addresses/:addressId", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res);
   if (!user) return;
   const parsed = DeleteAddressParams.safeParse(req.params);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  if (!deleteAddress(user.id, parsed.data.addressId)) {
+  if (!await deleteAddress(user.id, parsed.data.addressId)) {
     res.status(404).json({ error: "العنوان غير موجود" });
     return;
   }
   res.status(204).send();
-});
+}));
 
 export default router;

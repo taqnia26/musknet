@@ -50,16 +50,18 @@ export default function Checkout() {
     }
   });
 
-  const checkoutQuote = useGetCheckoutQuote();
-  const quote = checkoutQuote.data;
-  const isLoadingQuote = checkoutQuote.isPending;
+  const {
+    data: quote,
+    isPending: isLoadingQuote,
+    mutate: requestCheckoutQuote,
+  } = useGetCheckoutQuote();
   const city = form.watch('city');
 
   useEffect(() => {
     if (cart && cart.items.length > 0 && city.trim().length >= 2) {
-      checkoutQuote.mutate({ data: { city, couponCode: activeCoupon } });
+      requestCheckoutQuote({ data: { city, couponCode: activeCoupon } });
     }
-  }, [activeCoupon, cart?.id, city, checkoutQuote]);
+  }, [activeCoupon, cart?.id, city, requestCheckoutQuote]);
 
   // Redirect if cart empty
   useEffect(() => {

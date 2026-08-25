@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "storefront_addresses_one_default_per_user" ON "storefront_addresses" USING btree ("user_id") WHERE "storefront_addresses"."is_default" = true;

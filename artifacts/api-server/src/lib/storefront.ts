@@ -1,4 +1,15 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import {
+  addressesTable,
+  cartItemsTable,
+  cartsTable,
+  customersTable,
+  db,
+  orderItemsTable,
+  ordersTable,
+  otpRecordsTable,
+} from "@workspace/db";
 
 type ProductSeed = {
   id: number;
@@ -294,7 +305,7 @@ export function toProduct(product: ProductSeed) {
   return summary;
 }
 
-type CustomerRecord = {
+export type CustomerRecord = {
   id: number;
   phone: string;
   name: string;
@@ -302,7 +313,6 @@ type CustomerRecord = {
   phoneVerified: boolean;
 };
 
-type CartRecord = { id: number; userId: number; items: Array<{ id: number; productId: number; quantity: number }> };
 type AddressRecord = {
   id: number;
   userId: number;
@@ -331,17 +341,6 @@ type OrderRecord = {
   createdAt: string;
 };
 
-const usersByPhone = new Map<string, CustomerRecord>();
-const cartsByUser = new Map<number, CartRecord>();
-const addressesByUser = new Map<number, AddressRecord[]>();
-const ordersByUser = new Map<number, OrderRecord[]>();
-const otpByPhone = new Map<string, { code: string; expiresAt: number }>();
-let nextUserId = 1;
-let nextCartId = 1;
-let nextItemId = 1;
-let nextAddressId = 1;
-let nextOrderId = 1;
-
 const tokenSecret = process.env.SESSION_SECRET ?? "musk-ellolo-development-session-secret";
 
 function sign(value: string) {
@@ -353,7 +352,7 @@ export function issueToken(userId: number) {
   return `${payload}.${sign(payload)}`;
 }
 
-export function getUserFromToken(rawToken: string | undefined) {
+export async function getUserFromToken(rawToken: string | undefined): Promise<CustomerRecord | null> {
   if (!rawToken) return null;
   const [userId, expiry, signature] = rawToken.split(".");
   if (!userId || !expiry || !signature || Number(expiry) < Date.now()) return null;
@@ -362,41 +361,99 @@ export function getUserFromToken(rawToken: string | undefined) {
   if (expected.length !== signature.length) return null;
   if (!timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return null;
 
-  return Array.from(usersByPhone.values()).find((user) => user.id === Number(userId)) ?? null;
+  const [user] = await db
+    .select({
+      id: customersTable.id,
+      phone: customersTable.phone,
+      name: customersTable.name,
+      email: customersTable.email,
+      phoneVerified: customersTable.phoneVerified,
+    })
+    .from(customersTable)
+    .where(eq(customersTable.id, Number(userId)))
+    .limit(1);
+  return user ?? null;
 }
 
-export function requestDevelopmentOtp(phone: string) {
+export async function requestDevelopmentOtp(phone: string) {
   const code = "123456";
-  otpByPhone.set(phone, { code, expiresAt: Date.now() + 1000 * 60 * 5 });
+  await db
+    .insert(otpRecordsTable)
+    .values({ phone, code, expiresAt: new Date(Date.now() + 1000 * 60 * 5) })
+    .onConflictDoUpdate({
+      target: otpRecordsTable.phone,
+      set: { code, expiresAt: new Date(Date.now() + 1000 * 60 * 5), createdAt: new Date() },
+    });
   return code;
 }
 
-export function verifyDevelopmentOtp(phone: string, code: string) {
-  const record = otpByPhone.get(phone);
-  if (!record || record.expiresAt < Date.now() || record.code !== code) return null;
-  otpByPhone.delete(phone);
-  let user = usersByPhone.get(phone);
-  if (!user) {
-    user = {
-      id: nextUserId++,
-      phone,
-      name: "عميل مسك اللولو",
-      email: null,
-      phoneVerified: true,
-    };
-    usersByPhone.set(phone, user);
-  }
-  return user;
+export async function verifyDevelopmentOtp(phone: string, code: string, guestToken?: string): Promise<CustomerRecord | null> {
+  return db.transaction(async (tx) => {
+    const [record] = await tx
+      .delete(otpRecordsTable)
+      .where(and(eq(otpRecordsTable.phone, phone), eq(otpRecordsTable.code, code), sql`${otpRecordsTable.expiresAt} > now()`))
+      .returning();
+    if (!record) return null;
+    const [user] = await tx
+      .insert(customersTable)
+      .values({ phone, name: "عميل مسك اللولو", email: null, phoneVerified: true })
+      .onConflictDoUpdate({ target: customersTable.phone, set: { phoneVerified: true, updatedAt: new Date() } })
+      .returning({
+        id: customersTable.id,
+        phone: customersTable.phone,
+        name: customersTable.name,
+        email: customersTable.email,
+        phoneVerified: customersTable.phoneVerified,
+      });
+    if (guestToken) {
+      const [guestCart] = await tx.select().from(cartsTable).where(eq(cartsTable.guestToken, guestToken)).limit(1);
+      if (guestCart) {
+        await tx.execute(sql`select id from ${cartsTable} where id = ${guestCart.id} for update`);
+        const [userCart] = await tx.insert(cartsTable).values({ userId: user.id })
+          .onConflictDoUpdate({ target: cartsTable.userId, set: { updatedAt: new Date() } }).returning();
+        const guestItems = await tx.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, guestCart.id));
+        for (const item of guestItems) {
+          const stock = products.find((product) => product.id === item.productId)?.stock;
+          if (!stock) continue;
+          await tx.insert(cartItemsTable).values({ cartId: userCart.id, productId: item.productId, quantity: item.quantity })
+            .onConflictDoUpdate({
+              target: [cartItemsTable.cartId, cartItemsTable.productId],
+              set: { quantity: sql`least(${cartItemsTable.quantity} + ${item.quantity}, ${stock})`, updatedAt: new Date() },
+            });
+        }
+        await tx.delete(cartsTable).where(eq(cartsTable.id, guestCart.id));
+      }
+    }
+    return user;
+  });
 }
 
-export function getCartForUser(userId: number) {
-  let cart = cartsByUser.get(userId);
-  if (!cart) {
-    cart = { id: nextCartId++, userId, items: [] };
-    cartsByUser.set(userId, cart);
-  }
+export type CartOwner = { userId: number } | { guestToken: string };
 
-  const items = cart.items.flatMap((item) => {
+function ownerWhere(owner: CartOwner) {
+  return "userId" in owner ? eq(cartsTable.userId, owner.userId) : eq(cartsTable.guestToken, owner.guestToken);
+}
+
+async function ensureCart(owner: CartOwner) {
+  const [cart] = await db
+    .insert(cartsTable)
+    .values(owner)
+    .onConflictDoUpdate({
+      target: "userId" in owner ? cartsTable.userId : cartsTable.guestToken,
+      set: { updatedAt: new Date() },
+    })
+    .returning({ id: cartsTable.id, userId: cartsTable.userId });
+  return cart;
+}
+
+export function createGuestCartToken() {
+  return randomBytes(32).toString("base64url");
+}
+
+export async function getCart(owner: CartOwner) {
+  const cart = await ensureCart(owner);
+  const records = await db.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id)).orderBy(cartItemsTable.id);
+  const items = records.flatMap((item) => {
     const product = products.find((entry) => entry.id === item.productId);
     return product
       ? [{ id: item.id, quantity: item.quantity, product: toProduct(product), lineTotal: product.price * item.quantity }]
@@ -410,56 +467,115 @@ export function getCartForUser(userId: number) {
   };
 }
 
-export function addToCart(userId: number, productId: number, quantity: number) {
-  const product = products.find((entry) => entry.id === productId);
-  if (!product || product.stock < quantity) return null;
-  let cart = cartsByUser.get(userId);
-  if (!cart) {
-    cart = { id: nextCartId++, userId, items: [] };
-    cartsByUser.set(userId, cart);
-  }
-  const existing = cart.items.find((item) => item.productId === productId);
-  if (existing) existing.quantity = Math.min(existing.quantity + quantity, product.stock);
-  else cart.items.push({ id: nextItemId++, productId, quantity });
-  return getCartForUser(userId);
+export async function getCartForUser(userId: number) {
+  return getCart({ userId });
 }
 
-export function updateCartItem(userId: number, itemId: number, quantity: number) {
-  const cart = cartsByUser.get(userId);
-  const item = cart?.items.find((entry) => entry.id === itemId);
+export async function addToCart(userId: number, productId: number, quantity: number) {
+  return addToCartForOwner({ userId }, productId, quantity);
+}
+
+export async function addToCartForOwner(owner: CartOwner, productId: number, quantity: number) {
+  const product = products.find((entry) => entry.id === productId);
+  if (!product || product.stock < quantity) return null;
+  const cart = await ensureCart(owner);
+  await db
+    .insert(cartItemsTable)
+    .values({ cartId: cart.id, productId, quantity })
+    .onConflictDoUpdate({
+      target: [cartItemsTable.cartId, cartItemsTable.productId],
+      set: { quantity: sql`least(${cartItemsTable.quantity} + ${quantity}, ${product.stock})`, updatedAt: new Date() },
+    });
+  return getCart(owner);
+}
+
+export async function updateCartItem(userId: number, itemId: number, quantity: number) {
+  return updateCartItemForOwner({ userId }, itemId, quantity);
+}
+
+export async function updateCartItemForOwner(owner: CartOwner, itemId: number, quantity: number) {
+  const [item] = await db
+    .select({ productId: cartItemsTable.productId })
+    .from(cartItemsTable)
+    .innerJoin(cartsTable, eq(cartItemsTable.cartId, cartsTable.id))
+    .where(and(eq(cartItemsTable.id, itemId), ownerWhere(owner)))
+    .limit(1);
   if (!item) return null;
   const product = products.find((entry) => entry.id === item.productId);
   if (!product) return null;
-  item.quantity = Math.min(quantity, product.stock);
-  return getCartForUser(userId);
+  await db.update(cartItemsTable).set({ quantity: Math.min(quantity, product.stock), updatedAt: new Date() }).where(eq(cartItemsTable.id, itemId));
+  return getCart(owner);
 }
 
-export function removeCartItem(userId: number, itemId: number) {
-  const cart = cartsByUser.get(userId);
-  if (!cart) return getCartForUser(userId);
-  cart.items = cart.items.filter((item) => item.id !== itemId);
-  return getCartForUser(userId);
+export async function removeCartItem(userId: number, itemId: number) {
+  return removeCartItemForOwner({ userId }, itemId);
 }
 
-export function getAddresses(userId: number) {
-  return addressesByUser.get(userId) ?? [];
+export async function removeCartItemForOwner(owner: CartOwner, itemId: number) {
+  const cart = await ensureCart(owner);
+  await db.delete(cartItemsTable).where(and(eq(cartItemsTable.id, itemId), eq(cartItemsTable.cartId, cart.id)));
+  return getCart(owner);
 }
 
-export function addAddress(userId: number, value: Omit<AddressRecord, "id" | "userId">) {
-  const addresses = addressesByUser.get(userId) ?? [];
-  if (value.isDefault) addresses.forEach((address) => (address.isDefault = false));
-  const address = { id: nextAddressId++, userId, ...value };
-  addresses.push(address);
-  addressesByUser.set(userId, addresses);
-  return address;
+export async function claimGuestCart(userId: number, guestToken: string) {
+  await db.transaction(async (tx) => {
+    const [guestCart] = await tx.select().from(cartsTable).where(eq(cartsTable.guestToken, guestToken)).limit(1);
+    if (!guestCart) return;
+    await tx.execute(sql`select id from ${cartsTable} where id = ${guestCart.id} for update`);
+    const [userCart] = await tx
+      .insert(cartsTable)
+      .values({ userId })
+      .onConflictDoUpdate({ target: cartsTable.userId, set: { updatedAt: new Date() } })
+      .returning();
+    const guestItems = await tx.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, guestCart.id));
+    for (const item of guestItems) {
+      const stock = products.find((product) => product.id === item.productId)?.stock;
+      if (!stock) continue;
+      await tx.insert(cartItemsTable).values({ cartId: userCart.id, productId: item.productId, quantity: item.quantity })
+        .onConflictDoUpdate({
+          target: [cartItemsTable.cartId, cartItemsTable.productId],
+          set: { quantity: sql`least(${cartItemsTable.quantity} + ${item.quantity}, ${stock})`, updatedAt: new Date() },
+        });
+    }
+    await tx.delete(cartsTable).where(eq(cartsTable.id, guestCart.id));
+  });
 }
 
-export function deleteAddress(userId: number, addressId: number) {
-  const addresses = addressesByUser.get(userId) ?? [];
-  const next = addresses.filter((address) => address.id !== addressId);
-  const deleted = next.length !== addresses.length;
-  addressesByUser.set(userId, next);
-  return deleted;
+export async function getAddresses(userId: number) {
+  return db
+    .select({
+      id: addressesTable.id,
+      userId: addressesTable.userId,
+      label: addressesTable.label,
+      city: addressesTable.city,
+      district: addressesTable.district,
+      street: addressesTable.street,
+      buildingNo: addressesTable.buildingNo,
+      additionalInfo: addressesTable.additionalInfo,
+      isDefault: addressesTable.isDefault,
+    })
+    .from(addressesTable)
+    .where(eq(addressesTable.userId, userId))
+    .orderBy(desc(addressesTable.isDefault), addressesTable.id);
+}
+
+export async function addAddress(userId: number, value: Omit<AddressRecord, "id" | "userId">) {
+  return db.transaction(async (tx) => {
+    if (value.isDefault) {
+      await tx.execute(sql`select id from ${customersTable} where ${customersTable.id} = ${userId} for update`);
+      await tx.update(addressesTable).set({ isDefault: false }).where(eq(addressesTable.userId, userId));
+    }
+    const [address] = await tx.insert(addressesTable).values({ userId, ...value }).returning();
+    return address;
+  });
+}
+
+export async function deleteAddress(userId: number, addressId: number) {
+  const deleted = await db
+    .delete(addressesTable)
+    .where(and(eq(addressesTable.id, addressId), eq(addressesTable.userId, userId)))
+    .returning({ id: addressesTable.id });
+  return deleted.length > 0;
 }
 
 export function getCoupon(code: string, subtotal: number) {
@@ -469,8 +585,8 @@ export function getCoupon(code: string, subtotal: number) {
   return { valid: false, discount: 0, message: "كود الخصم غير صالح أو لا يطابق الحد الأدنى للطلب", code: null };
 }
 
-export function getQuote(userId: number, city: string, couponCode?: string | null) {
-  const cart = getCartForUser(userId);
+export async function getQuote(userId: number, city: string, couponCode?: string | null) {
+  const cart = await getCartForUser(userId);
   const coupon = couponCode ? getCoupon(couponCode, cart.subtotal) : { discount: 0 };
   const shippingCost = city.trim().toLowerCase().includes("الرياض") || city.trim().toLowerCase().includes("riyadh") ? 20 : 30;
   const net = Math.max(0, cart.subtotal - coupon.discount);
@@ -492,48 +608,110 @@ export function getQuote(userId: number, city: string, couponCode?: string | nul
   };
 }
 
-export function createOrderForUser(
+type OrderInputDetails = {
+  address: Omit<AddressRecord, "id" | "userId">;
+  shippingMethod: string;
+  paymentMethod: string;
+};
+
+export async function createOrderForUser(
   userId: number,
-  city: string,
+  details: OrderInputDetails,
   couponCode?: string | null,
 ) {
-  const cart = getCartForUser(userId);
-  if (cart.items.length === 0) return null;
-  const quote = getQuote(userId, city, couponCode);
-  const order: OrderRecord = {
-    id: nextOrderId++,
-    userId,
-    orderNumber: `ME-${String(10000 + nextOrderId).slice(-5)}`,
-    subtotal: quote.subtotal,
-    shippingCost: quote.shippingCost,
-    discount: quote.discount,
-    tax: quote.tax,
-    total: quote.total,
-    status: "new",
-    paymentStatus: "pending",
-    trackingNumber: null,
-    items: cart.items.map((item) => ({
-      productName: item.product.nameAr,
-      quantity: item.quantity,
-      unitPrice: item.product.price,
-      totalPrice: item.lineTotal,
-      imageUrl: item.product.imageUrl,
+  return db.transaction(async (tx) => {
+    const [cart] = await tx.select().from(cartsTable).where(eq(cartsTable.userId, userId)).limit(1);
+    if (!cart) return null;
+    await tx.execute(sql`select id from ${cartsTable} where id = ${cart.id} for update`);
+    await tx.execute(sql`select id from ${cartItemsTable} where cart_id = ${cart.id} for update`);
+    const records = await tx.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id)).orderBy(cartItemsTable.id);
+    const items = records.flatMap((item) => {
+      const product = products.find((entry) => entry.id === item.productId);
+      return product ? [{ record: item, product }] : [];
+    });
+    if (items.length === 0) return null;
+    const subtotal = items.reduce((sum, item) => sum + item.product.price * item.record.quantity, 0);
+    const coupon = couponCode ? getCoupon(couponCode, subtotal) : { discount: 0 };
+    const shippingCost = details.address.city.trim().toLowerCase().includes("الرياض") ||
+      details.address.city.trim().toLowerCase().includes("riyadh") ? 20 : 30;
+    const net = Math.max(0, subtotal - coupon.discount);
+    const tax = Math.round(net * 0.15 * 100) / 100;
+    const total = Math.round((net + shippingCost + tax) * 100) / 100;
+    const orderNumber = `ME-${randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase()}`;
+    const [created] = await tx.insert(ordersTable).values({
+      userId,
+      orderNumber,
+      subtotal,
+      shippingCost,
+      discount: coupon.discount,
+      tax,
+      total,
+      address: JSON.stringify(details.address),
+      shippingMethod: details.shippingMethod,
+      paymentMethod: details.paymentMethod,
+    }).returning();
+    const createdItems = await tx.insert(orderItemsTable).values(items.map(({ record, product }) => ({
+      orderId: created.id,
+      productId: product.id,
+      productName: product.nameAr,
+      quantity: record.quantity,
+      unitPrice: product.price,
+      totalPrice: product.price * record.quantity,
+      imageUrl: product.imageUrl,
+    }))).returning();
+    await tx.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
+    return mapOrder(created, createdItems);
+  });
+}
+
+function mapOrder(
+  order: typeof ordersTable.$inferSelect,
+  items: Array<typeof orderItemsTable.$inferSelect>,
+): OrderRecord {
+  return {
+    id: order.id,
+    userId: order.userId,
+    orderNumber: order.orderNumber,
+    subtotal: order.subtotal,
+    shippingCost: order.shippingCost,
+    discount: order.discount,
+    tax: order.tax,
+    total: order.total,
+    status: order.status as OrderRecord["status"],
+    paymentStatus: order.paymentStatus as OrderRecord["paymentStatus"],
+    trackingNumber: order.trackingNumber,
+    items: items.map(({ productName, quantity, unitPrice, totalPrice, imageUrl }) => ({
+      productName, quantity, unitPrice, totalPrice, imageUrl,
     })),
-    createdAt: new Date().toISOString(),
+    createdAt: order.createdAt.toISOString(),
   };
-  ordersByUser.set(userId, [order, ...(ordersByUser.get(userId) ?? [])]);
-  cartsByUser.set(userId, { id: nextCartId++, userId, items: [] });
-  return order;
 }
 
-export function getOrders(userId: number) {
-  return ordersByUser.get(userId) ?? [];
+export async function getOrders(userId: number) {
+  const records = await db.select().from(ordersTable).where(eq(ordersTable.userId, userId)).orderBy(desc(ordersTable.createdAt));
+  if (records.length === 0) return [];
+  const items = await db.select().from(orderItemsTable).where(inArray(orderItemsTable.orderId, records.map((order) => order.id)));
+  return records.map((order) => mapOrder(order, items.filter((item) => item.orderId === order.id)));
 }
 
-export function updateCustomer(userId: number, name?: string, email?: string | null) {
-  const user = Array.from(usersByPhone.values()).find((entry) => entry.id === userId);
-  if (!user) return null;
-  if (typeof name === "string" && name.trim()) user.name = name.trim();
-  if (email !== undefined) user.email = email;
-  return user;
+export async function getOrder(userId: number, orderNumber: string) {
+  const [order] = await db.select().from(ordersTable)
+    .where(and(eq(ordersTable.userId, userId), eq(ordersTable.orderNumber, orderNumber))).limit(1);
+  if (!order) return null;
+  const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+  return mapOrder(order, items);
+}
+
+export async function updateCustomer(userId: number, name?: string, email?: string | null) {
+  const changes: { name?: string; email?: string | null; updatedAt: Date } = { updatedAt: new Date() };
+  if (typeof name === "string" && name.trim()) changes.name = name.trim();
+  if (email !== undefined) changes.email = email;
+  const [user] = await db.update(customersTable).set(changes).where(eq(customersTable.id, userId)).returning({
+    id: customersTable.id,
+    phone: customersTable.phone,
+    name: customersTable.name,
+    email: customersTable.email,
+    phoneVerified: customersTable.phoneVerified,
+  });
+  return user ?? null;
 }

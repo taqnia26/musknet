@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import path from "node:path";
 import router from "./routes";
@@ -27,6 +28,7 @@ app.use(
   }),
 );
 app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -39,5 +41,11 @@ app.use(
   express.static(path.resolve(import.meta.dirname, "../../musk-ellolo/public/site-assets")),
 );
 app.use("/api", router);
+app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  req.log.error({ err: error }, "Storefront request failed");
+  if (!res.headersSent) {
+    res.status(500).json({ error: "تعذر إكمال الطلب. يرجى المحاولة مرة أخرى" });
+  }
+});
 
 export default app;

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { KeyRound } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { saveAuthToken } from '@/lib/auth-token';
 
 export default function VerifyOtp() {
   const { t } = useLanguage();
@@ -36,15 +37,14 @@ export default function VerifyOtp() {
 
     verifyOtp.mutate({ data: { phone, code } }, {
       onSuccess: (res) => {
-        // Token is typically stored by the client layer or in cookies.
-        // Orval uses custom-fetch which handles credentials/cookies automatically.
+        saveAuthToken(res.token);
         toast({
           title: t('تم تسجيل الدخول بنجاح', 'Signed in successfully'),
           description: `${t('مرحباً بك', 'Welcome')} ${res.user.name || ''}`,
         });
         
         // Invalidate auth queries
-        queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+        queryClient.clear();
         
         setLocation('/account');
       },
