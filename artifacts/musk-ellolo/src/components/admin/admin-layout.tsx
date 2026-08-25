@@ -39,7 +39,7 @@ const navItems = [
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const { lang, setLang, t } = useLanguage();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   const hasToken = !!getAdminToken();
@@ -71,7 +71,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   const toggleLanguage = () => setLang(lang === 'ar' ? 'en' : 'ar');
-  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
@@ -153,7 +153,14 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             <Button variant="ghost" size="icon" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
               <Globe className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={toggleTheme} title={t('تغيير المظهر', 'Toggle Theme')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              title={t('تغيير المظهر', 'Toggle Theme')}
+              aria-label={t('تغيير المظهر', 'Toggle Theme')}
+              data-testid="button-toggle-theme"
+            >
               <Sun className="h-5 w-5 hidden dark:block" />
               <Moon className="h-5 w-5 block dark:hidden" />
             </Button>
