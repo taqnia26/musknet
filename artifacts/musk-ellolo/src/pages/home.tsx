@@ -10,9 +10,11 @@ export default function Home() {
     <div className="flex flex-col w-full min-h-screen bg-white">
       
       {/* Hero Video */}
-      <section className="relative w-full h-[60vh] md:h-[80vh] overflow-hidden">
+      <section className="relative w-full aspect-[427/240] overflow-hidden bg-black">
         <video 
-          className="w-full h-full object-cover" 
+          className="absolute inset-0 block w-full h-full object-cover" 
+          width="854"
+          height="480"
           autoPlay 
           muted 
           loop 
@@ -92,9 +94,11 @@ export default function Home() {
       </section>
 
       {/* Second Video Section */}
-      <section className="w-full mb-16">
+      <section className="relative w-full aspect-video mb-16 overflow-hidden bg-black">
         <video 
-          className="w-full h-auto object-cover" 
+          className="absolute inset-0 block w-full h-full object-cover" 
+          width="1920"
+          height="1080"
           autoPlay 
           muted 
           loop 
