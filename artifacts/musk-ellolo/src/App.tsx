@@ -21,6 +21,7 @@ import Addresses from '@/pages/account-addresses';
 import Profile from '@/pages/account-profile';
 import Login from '@/pages/auth-login';
 import VerifyOtp from '@/pages/auth-verify';
+import { SiteIntro } from '@/components/site-intro';
 
 import {
   Route,
@@ -85,9 +86,12 @@ function InitLanguage() {
 }
 
 function App() {
+  const showSiteIntro = !window.location.pathname.startsWith('/admin');
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        {showSiteIntro && <SiteIntro />}
         <InitLanguage />
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <RoutedErrorBoundary>

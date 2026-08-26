@@ -97,15 +97,19 @@ export default function Home() {
       <section className="relative w-full aspect-video mb-16 overflow-hidden bg-black">
         <video 
           className="absolute inset-0 block w-full h-full object-cover" 
-          width="1920"
-          height="1080"
+          width="1280"
+          height="720"
           autoPlay 
           muted 
           loop 
           playsInline 
-          preload="auto"
+          controls
+          preload="metadata"
+          poster={siteAsset('second-video-poster.jpg')}
         >
-          <source src={siteAsset('1-fe2d05ced1.mp4')} type="video/mp4" />
+          <source src={siteAsset('1-mobile.webm')} type="video/webm" />
+          <source src={siteAsset('1-mobile.mp4')} type="video/mp4" />
+          {t('متصفحك لا يدعم تشغيل الفيديو.', 'Your browser does not support video playback.')}
         </video>
       </section>
 

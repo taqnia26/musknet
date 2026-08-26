@@ -6,12 +6,7 @@ export default function About() {
 
   return (
     <div className="w-full bg-white min-h-screen">
-      <div className="container mx-auto px-4 py-16 md:py-24 max-w-4xl text-center flex flex-col items-center">
-        
-        <h1 className="text-2xl md:text-3xl font-bold mb-16 text-black">
-          {t('من نحن', 'About Us')}
-        </h1>
-
+      <div className="container mx-auto px-4 py-8 md:py-12 max-w-4xl text-center flex flex-col items-center">
         <div className="space-y-12 w-full">
           {/* Story */}
           <div className="space-y-4">
