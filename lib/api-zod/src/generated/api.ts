@@ -765,23 +765,27 @@ export const AdminUpdateProductParams = zod.object({
 
 
 
-export const adminUpdateProductBodyOneDescriptionArDefault = ``;
-export const adminUpdateProductBodyOneDescriptionEnDefault = ``;
-export const adminUpdateProductBodyOnePriceMin = 0;
+export const adminUpdateProductBodyPriceMin = 0;
 
-export const adminUpdateProductBodyOneStockQuantityMin = 0;
+export const adminUpdateProductBodyCompareAtPriceMin = 0;
+
+export const adminUpdateProductBodyStockQuantityMin = 0;
 
 
 
 export const AdminUpdateProductBody = zod.object({
-  "nameAr": zod.string().min(1),
-  "nameEn": zod.string().min(1),
-  "descriptionAr": zod.string().default(adminUpdateProductBodyOneDescriptionArDefault),
-  "descriptionEn": zod.string().default(adminUpdateProductBodyOneDescriptionEnDefault),
-  "slug": zod.string().min(1),
-  "price": zod.number().min(adminUpdateProductBodyOnePriceMin),
-  "compareAtPrice": zod.number().nullish(),
-  "categoryId": zod.number(),
+  "nameAr": zod.string().min(1).optional(),
+  "nameEn": zod.string().min(1).optional(),
+  "descriptionAr": zod.string().optional(),
+  "descriptionEn": zod.string().optional(),
+  "price": zod.number().min(adminUpdateProductBodyPriceMin).optional(),
+  "compareAtPrice": zod.number().min(adminUpdateProductBodyCompareAtPriceMin).nullish(),
+  "categoryId": zod.number().optional(),
+  "stockQuantity": zod.number().min(adminUpdateProductBodyStockQuantityMin).optional(),
+  "sku": zod.string().nullish(),
+  "isActive": zod.boolean().optional(),
+  "isFeatured": zod.boolean().optional(),
+  "isBestseller": zod.boolean().optional(),
   "images": zod.array(zod.object({
   "url": zod.string(),
   "alt": zod.string()
@@ -790,12 +794,7 @@ export const AdminUpdateProductBody = zod.object({
   "type": zod.enum(['top', 'heart', 'base']),
   "nameAr": zod.string(),
   "nameEn": zod.string()
-})).optional(),
-  "stockQuantity": zod.number().min(adminUpdateProductBodyOneStockQuantityMin).optional(),
-  "sku": zod.string().nullish(),
-  "isActive": zod.boolean().optional(),
-  "isFeatured": zod.boolean().optional(),
-  "isBestseller": zod.boolean().optional()
+})).optional()
 })
 
 export const AdminUpdateProductResponse = zod.object({
@@ -933,8 +932,8 @@ export const AdminListOrdersResponseItem = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.string(),
-  "paymentStatus": zod.string(),
+  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
   "shippingMethod": zod.string(),
@@ -959,8 +958,8 @@ export const AdminGetOrderResponse = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.string(),
-  "paymentStatus": zod.string(),
+  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
   "shippingMethod": zod.string(),
@@ -991,8 +990,8 @@ export const AdminUpdateOrderResponse = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.string(),
-  "paymentStatus": zod.string(),
+  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
   "shippingMethod": zod.string(),

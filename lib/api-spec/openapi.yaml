@@ -1249,7 +1249,22 @@ components:
         isFeatured: { type: boolean }
         isBestseller: { type: boolean }
     AdminProductUpdate:
-      allOf: [{ $ref: "#/components/schemas/AdminProductInput" }]
+      type: object
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        descriptionAr: { type: string }
+        descriptionEn: { type: string }
+        price: { type: number, minimum: 0 }
+        compareAtPrice: { type: [number, "null"], minimum: 0 }
+        categoryId: { type: number }
+        stockQuantity: { type: number, minimum: 0 }
+        sku: { type: [string, "null"] }
+        isActive: { type: boolean }
+        isFeatured: { type: boolean }
+        isBestseller: { type: boolean }
+        images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
+        notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
     AdminCategory:
       type: object
       required: [id, nameAr, nameEn, slug, isActive, createdAt]
@@ -1286,8 +1301,8 @@ components:
         discount: { type: number }
         tax: { type: number }
         total: { type: number }
-        status: { type: string }
-        paymentStatus: { type: string }
+        status: { type: string, enum: [new, processing, shipped, delivered, cancelled] }
+        paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
         trackingNumber: { type: [string, "null"] }
         address: { type: string }
         shippingMethod: { type: string }

@@ -35,6 +35,8 @@ export * from './adminListOrdersStatus';
 export * from './adminListProductsParams';
 export * from './adminLoginInput';
 export * from './adminOrder';
+export * from './adminOrderPaymentStatus';
+export * from './adminOrderStatus';
 export * from './adminOrderUpdate';
 export * from './adminOrderUpdatePaymentStatus';
 export * from './adminOrderUpdateStatus';

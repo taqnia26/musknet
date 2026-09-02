@@ -1,1 +1,2 @@
 - [Drizzle migration output](drizzle-migration-output.md) — keep migration output relative to the database package so later generations can read snapshots.
+- [PostgreSQL seed sequences](postgres-seed-sequences.md) — manually seeded IDs can leave serial sequences stale; synchronize them before relying on automatic IDs.

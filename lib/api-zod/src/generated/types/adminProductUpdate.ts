@@ -5,6 +5,31 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminProductInput } from './adminProductInput';
+import type { AdminProductImage } from './adminProductImage';
+import type { FragranceNote } from './fragranceNote';
 
-export type AdminProductUpdate = AdminProductInput;
+export interface AdminProductUpdate {
+  /** @minLength 1 */
+  nameAr?: string;
+  /** @minLength 1 */
+  nameEn?: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
+  /** @minimum 0 */
+  price?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  compareAtPrice?: number | null;
+  categoryId?: number;
+  /** @minimum 0 */
+  stockQuantity?: number;
+  /** @nullable */
+  sku?: string | null;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  isBestseller?: boolean;
+  images?: AdminProductImage[];
+  notes?: FragranceNote[];
+}

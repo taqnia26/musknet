@@ -5,6 +5,8 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminOrderPaymentStatus } from './adminOrderPaymentStatus';
+import type { AdminOrderStatus } from './adminOrderStatus';
 
 export interface AdminOrder {
   id: number;
@@ -15,8 +17,8 @@ export interface AdminOrder {
   discount: number;
   tax: number;
   total: number;
-  status: string;
-  paymentStatus: string;
+  status: AdminOrderStatus;
+  paymentStatus: AdminOrderPaymentStatus;
   /** @nullable */
   trackingNumber?: string | null;
   address?: string;

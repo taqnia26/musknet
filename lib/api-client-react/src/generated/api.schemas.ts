@@ -396,7 +396,31 @@ export interface AdminProductInput {
   isBestseller?: boolean;
 }
 
-export type AdminProductUpdate = AdminProductInput;
+export interface AdminProductUpdate {
+  /** @minLength 1 */
+  nameAr?: string;
+  /** @minLength 1 */
+  nameEn?: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
+  /** @minimum 0 */
+  price?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  compareAtPrice?: number | null;
+  categoryId?: number;
+  /** @minimum 0 */
+  stockQuantity?: number;
+  /** @nullable */
+  sku?: string | null;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  isBestseller?: boolean;
+  images?: AdminProductImage[];
+  notes?: FragranceNote[];
+}
 
 export interface AdminCategory {
   id: number;
@@ -427,6 +451,27 @@ export interface AdminCategoryInput {
 
 export type AdminCategoryUpdate = AdminCategoryInput;
 
+export type AdminOrderStatus = typeof AdminOrderStatus[keyof typeof AdminOrderStatus];
+
+
+export const AdminOrderStatus = {
+  new: 'new',
+  processing: 'processing',
+  shipped: 'shipped',
+  delivered: 'delivered',
+  cancelled: 'cancelled',
+} as const;
+
+export type AdminOrderPaymentStatus = typeof AdminOrderPaymentStatus[keyof typeof AdminOrderPaymentStatus];
+
+
+export const AdminOrderPaymentStatus = {
+  pending: 'pending',
+  paid: 'paid',
+  failed: 'failed',
+  refunded: 'refunded',
+} as const;
+
 export interface AdminOrder {
   id: number;
   userId: number;
@@ -436,8 +481,8 @@ export interface AdminOrder {
   discount: number;
   tax: number;
   total: number;
-  status: string;
-  paymentStatus: string;
+  status: AdminOrderStatus;
+  paymentStatus: AdminOrderPaymentStatus;
   /** @nullable */
   trackingNumber?: string | null;
   address?: string;

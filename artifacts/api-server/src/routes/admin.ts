@@ -152,9 +152,20 @@ router.get("/admin/products/:id", permit("products", "view"), route(async (req, 
 router.patch("/admin/products/:id", permit("products", "edit"), route(async (req, res) => {
   if (res.headersSent) return;
   const params = parse(Api.AdminUpdateProductParams, req.params, res);
-  const body = parse(Api.AdminUpdateProductBody.partial(), req.body, res); if (!params || !body) return;
+  const body = parse(Api.AdminUpdateProductBody, req.body, res); if (!params || !body) return;
+  const [existingProduct] = await db.select({ id: productsTable.id })
+    .from(productsTable)
+    .where(eq(productsTable.id, params.id))
+    .limit(1);
+  if (!existingProduct) { res.status(404).json({ error: "Product not found" }); return; }
+  if (body.categoryId !== undefined) {
+    const [category] = await db.select({ id: categoriesTable.id })
+      .from(categoriesTable)
+      .where(eq(categoriesTable.id, body.categoryId))
+      .limit(1);
+    if (!category) { res.status(400).json({ error: "Category not found" }); return; }
+  }
   const [row] = await db.update(productsTable).set(body).where(eq(productsTable.id, params.id)).returning();
-  if (!row) { res.status(404).json({ error: "Product not found" }); return; }
   res.json(Api.AdminUpdateProductResponse.parse(row));
 }));
 router.delete("/admin/products/:id", permit("products", "delete"), route(async (req, res) => {
@@ -207,8 +218,12 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
 router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateOrderParams, req.params, res);
   const body = parse(Api.AdminUpdateOrderBody, req.body, res); if (!params || !body) return;
+  const [existingOrder] = await db.select({ id: ordersTable.id })
+    .from(ordersTable)
+    .where(eq(ordersTable.id, params.id))
+    .limit(1);
+  if (!existingOrder) { res.status(404).json({ error: "Order not found" }); return; }
   const [row] = await db.update(ordersTable).set(body).where(eq(ordersTable.id, params.id)).returning();
-  if (!row) { res.status(404).json({ error: "Order not found" }); return; }
   res.json(Api.AdminUpdateOrderResponse.parse(row));
 }));
 
