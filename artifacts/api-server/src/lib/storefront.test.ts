@@ -4,6 +4,7 @@ import {
   customersTable,
   db,
   inventoryMovementsTable,
+  invoicesTable,
   orderAddressesTable,
   ordersTable,
   productsTable,
@@ -11,6 +12,7 @@ import {
 import {
   addAddress,
   addToCart,
+  completeStorefrontPayment,
   createOrderForUser,
   getAddresses,
   getCartForUser,
@@ -43,6 +45,11 @@ afterEach(async () => {
     const users = await db.select({ id: customersTable.id }).from(customersTable).where(inArray(customersTable.phone, phones));
     const ids = users.map(({ id }) => id);
     if (ids.length > 0) {
+      const orders = await db.select({ id: ordersTable.id }).from(ordersTable).where(inArray(ordersTable.userId, ids));
+      const orderIds = orders.map(({ id }) => id);
+      if (orderIds.length > 0) {
+        await db.delete(invoicesTable).where(inArray(invoicesTable.orderId, orderIds));
+      }
       await db.delete(ordersTable).where(inArray(ordersTable.userId, ids));
       await db.delete(customersTable).where(inArray(customersTable.id, ids));
     }
@@ -113,6 +120,34 @@ describe.sequential("persistent storefront carts and orders", () => {
     expect((await getOrders(owner.id)).map(({ orderNumber }) => orderNumber)).toContain(order!.orderNumber);
     expect(await getOrder(other.id, order!.orderNumber)).toBeNull();
     expect(await getOrders(other.id)).toEqual([]);
+  });
+
+  it("uses the shared atomic transition for a trusted storefront payment completion", async () => {
+    const owner = await createUser("6");
+    const [orderedProduct] = await db.select({ stockQuantity: productsTable.stockQuantity })
+      .from(productsTable).where(eq(productsTable.id, 4)).limit(1);
+    stockSnapshots.set(4, orderedProduct.stockQuantity);
+    await addToCart(owner.id, 4, 1);
+
+    const environment = { VAT_REGISTRATION_NUMBER: "300000000000003" };
+    const order = await createOrderForUser(owner.id, {
+      address: {
+        label: "المنزل",
+        city: "الرياض",
+        district: "العليا",
+        street: "الملك فهد",
+        buildingNo: "10",
+        additionalInfo: null,
+        isDefault: false,
+      },
+      shippingMethod: "storage-station-standard",
+      paymentMethod: "moyasar",
+    }, null, { confirmedByProvider: true, environment });
+
+    expect(order?.paymentStatus).toBe("paid");
+    await completeStorefrontPayment(owner.id, order!.orderNumber, environment);
+    const invoices = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, order!.id));
+    expect(invoices).toHaveLength(1);
   });
 
   it("keeps exactly one default address under concurrent writes", async () => {

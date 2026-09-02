@@ -44,6 +44,10 @@ app.use("/api", router);
 app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   req.log.error({ err: error }, "Storefront request failed");
   if (!res.headersSent) {
+    if (error instanceof Error && /^VAT_REGISTRATION_NUMBER/.test(error.message)) {
+      res.status(503).json({ error: error.message });
+      return;
+    }
     res.status(500).json({ error: "تعذر إكمال الطلب. يرجى المحاولة مرة أخرى" });
   }
 });

@@ -1030,6 +1030,41 @@ export const AdminUpdateOrderResponse = zod.object({
 })
 
 
+/**
+ * @summary List and search issued ZATCA invoices
+ */
+export const AdminListInvoicesQueryParams = zod.object({
+  "search": zod.coerce.string().optional()
+})
+
+export const AdminListInvoicesResponseItem = zod.object({
+  "id": zod.number(),
+  "orderId": zod.number().nullable(),
+  "orderNumber": zod.string().nullable(),
+  "sequenceNumber": zod.number(),
+  "invoiceNumber": zod.string(),
+  "sellerName": zod.string(),
+  "issueDatetime": zod.coerce.date(),
+  "sellerVatNumber": zod.string(),
+  "subtotal": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "qrCodeData": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListInvoicesResponse = zod.array(AdminListInvoicesResponseItem)
+
+
+/**
+ * @summary Render an invoice ZATCA QR code as PNG
+ */
+export const AdminGetInvoiceQrParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminGetInvoiceQrResponse = zod.unknown()
+
+
 export const adminListCouponsQueryStatusDefault = `all`;
 
 export const AdminListCouponsQueryParams = zod.object({

@@ -40,12 +40,14 @@ import type {
   AdminInventoryAdjustmentResult,
   AdminInventoryItem,
   AdminInventoryMovement,
+  AdminInvoice,
   AdminListCategoriesParams,
   AdminListCouponsParams,
   AdminListCustomersParams,
   AdminListDistributorsParams,
   AdminListEmployeesParams,
   AdminListInventoryParams,
+  AdminListInvoicesParams,
   AdminListOrdersParams,
   AdminListProductsParams,
   AdminLoginInput,
@@ -2879,6 +2881,167 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getAdminUpdateOrderMutationOptions(options));
     }
+
+export const getAdminListInvoicesUrl = (params?: AdminListInvoicesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/invoices?${stringifiedParams}` : `/api/admin/invoices`
+}
+
+/**
+ * @summary List and search issued ZATCA invoices
+ */
+export const adminListInvoices = async (params?: AdminListInvoicesParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoice[]> => {
+
+  return customFetch<AdminInvoice[]>(getAdminListInvoicesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListInvoicesQueryKey = (params?: AdminListInvoicesParams,) => {
+    return [
+    `/api/admin/invoices`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof adminListInvoices>>, TError = ErrorType<ForbiddenResponse>>(params?: AdminListInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListInvoicesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListInvoices>>> = ({ signal }) => adminListInvoices(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof adminListInvoices>>>
+export type AdminListInvoicesQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary List and search issued ZATCA invoices
+ */
+
+export function useAdminListInvoices<TData = Awaited<ReturnType<typeof adminListInvoices>>, TError = ErrorType<ForbiddenResponse>>(
+ params?: AdminListInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListInvoicesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminGetInvoiceQrUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/invoices/${id}/qr`
+}
+
+/**
+ * @summary Render an invoice ZATCA QR code as PNG
+ */
+export const adminGetInvoiceQr = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getAdminGetInvoiceQrUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetInvoiceQrQueryKey = (id: number,) => {
+    return [
+    `/api/admin/invoices/${id}/qr`
+    ] as const;
+    }
+
+
+export const getAdminGetInvoiceQrQueryOptions = <TData = Awaited<ReturnType<typeof adminGetInvoiceQr>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetInvoiceQr>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetInvoiceQrQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetInvoiceQr>>> = ({ signal }) => adminGetInvoiceQr(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetInvoiceQr>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetInvoiceQrQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetInvoiceQr>>>
+export type AdminGetInvoiceQrQueryError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary Render an invoice ZATCA QR code as PNG
+ */
+
+export function useAdminGetInvoiceQr<TData = Awaited<ReturnType<typeof adminGetInvoiceQr>>, TError = ErrorType<ForbiddenResponse | NotFoundResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetInvoiceQr>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetInvoiceQrQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getAdminListCouponsUrl = (params?: AdminListCouponsParams,) => {
   const normalizedParams = new URLSearchParams();

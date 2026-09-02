@@ -524,6 +524,24 @@ export interface AdminOrderUpdate {
   adminNotes?: string | null;
 }
 
+export interface AdminInvoice {
+  id: number;
+  /** @nullable */
+  orderId: number | null;
+  /** @nullable */
+  orderNumber: string | null;
+  sequenceNumber: number;
+  invoiceNumber: string;
+  sellerName: string;
+  issueDatetime: string;
+  sellerVatNumber: string;
+  subtotal: number;
+  vatAmount: number;
+  totalAmount: number;
+  qrCodeData: string;
+  createdAt: string;
+}
+
 export interface AdminOrderAddress {
   label: string;
   city: string;
@@ -1299,6 +1317,10 @@ export const AdminListOrdersStatus = {
   delivered: 'delivered',
   cancelled: 'cancelled',
 } as const;
+
+export type AdminListInvoicesParams = {
+search?: AdminSearchParameter;
+};
 
 export type AdminListCouponsParams = {
 search?: AdminSearchParameter;

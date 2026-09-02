@@ -10,7 +10,7 @@ import {
 } from "@workspace/db";
 
 const scrypt = promisify(nodeScrypt);
-const modules = ["dashboard", "products", "categories", "orders", "coupons", "customers", "inventory", "distributors", "staff", "hr", "finance", "manufacturing", "exhibitions"];
+const modules = ["dashboard", "products", "categories", "orders", "invoices", "coupons", "customers", "inventory", "distributors", "staff", "hr", "finance", "manufacturing", "exhibitions"];
 const actions = ["view", "edit", "delete"];
 
 export async function hashAdminPassword(password: string) {

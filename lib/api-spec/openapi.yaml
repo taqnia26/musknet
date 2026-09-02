@@ -554,6 +554,35 @@ paths:
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrderUpdate" } } } }
       responses: { "200": { description: Order, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrder" } } } } }
+  /admin/invoices:
+    get:
+      operationId: adminListInvoices
+      summary: List and search issued ZATCA invoices
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }]
+      responses:
+        "200":
+          description: Issued invoices
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/AdminInvoice" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/invoices/{id}/qr:
+    get:
+      operationId: adminGetInvoiceQr
+      summary: Render an invoice ZATCA QR code as PNG
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200":
+          description: QR code
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /admin/coupons:
     get:
       operationId: adminListCoupons
@@ -1531,6 +1560,23 @@ components:
         paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
         trackingNumber: { type: [string, "null"] }
         adminNotes: { type: [string, "null"] }
+    AdminInvoice:
+      type: object
+      required: [id, orderId, orderNumber, sequenceNumber, invoiceNumber, issueDatetime, sellerName, sellerVatNumber, subtotal, vatAmount, totalAmount, qrCodeData, createdAt]
+      properties:
+        id: { type: number }
+        orderId: { type: [number, "null"] }
+        orderNumber: { type: [string, "null"] }
+        sequenceNumber: { type: number }
+        invoiceNumber: { type: string }
+        sellerName: { type: string }
+        issueDatetime: { type: string, format: date-time }
+        sellerVatNumber: { type: string }
+        subtotal: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+        qrCodeData: { type: string }
+        createdAt: { type: string, format: date-time }
     AdminOrderAddress:
       type: object
       required: [label, city, district, street, buildingNo, additionalInfo, isDefault]

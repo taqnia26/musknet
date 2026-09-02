@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { and, count, eq, gte, lt, lte, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, lt, lte, or, sql, sum } from "drizzle-orm";
+import QRCode from "qrcode";
 import * as Api from "@workspace/api-zod";
 import {
   adminPermissionsTable,
@@ -19,6 +20,7 @@ import {
   exhibitionsTable,
   exhibitionProductsTable,
   inventoryMovementsTable,
+  invoicesTable,
   orderAddressesTable,
   orderItemsTable,
   ordersTable,
@@ -34,6 +36,7 @@ import {
   revokeAdminSession,
   verifyAdminPassword,
 } from "../lib/admin-auth";
+import { updateOrderAndIssueInvoice } from "../lib/invoices";
 
 const router: IRouter = Router();
 const bearer = (req: Request) => {
@@ -275,13 +278,51 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
 router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateOrderParams, req.params, res);
   const body = parse(Api.AdminUpdateOrderBody, req.body, res); if (!params || !body) return;
-  const [existingOrder] = await db.select({ id: ordersTable.id })
-    .from(ordersTable)
-    .where(eq(ordersTable.id, params.id))
-    .limit(1);
-  if (!existingOrder) { res.status(404).json({ error: "Order not found" }); return; }
-  const [row] = await db.update(ordersTable).set(body).where(eq(ordersTable.id, params.id)).returning();
+  const row = await updateOrderAndIssueInvoice(params.id, body);
+  if (!row) { res.status(404).json({ error: "Order not found" }); return; }
   res.json(Api.AdminUpdateOrderResponse.parse(row));
+}));
+
+router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res) => {
+  const query = parse(Api.AdminListInvoicesQueryParams, req.query, res); if (!query) return;
+  const search = query.search?.trim();
+  const rows = await db.select({
+    id: invoicesTable.id,
+    orderId: invoicesTable.orderId,
+    orderNumber: ordersTable.orderNumber,
+    sequenceNumber: invoicesTable.sequenceNumber,
+    invoiceNumber: invoicesTable.invoiceNumber,
+    sellerName: invoicesTable.sellerName,
+    issueDatetime: invoicesTable.issueDatetime,
+    sellerVatNumber: invoicesTable.sellerVatNumber,
+    subtotal: invoicesTable.subtotal,
+    vatAmount: invoicesTable.vatAmount,
+    totalAmount: invoicesTable.totalAmount,
+    qrCodeData: invoicesTable.qrCodeData,
+    createdAt: invoicesTable.createdAt,
+  }).from(invoicesTable)
+    .leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
+    .where(search ? or(
+      ilike(invoicesTable.invoiceNumber, `%${search}%`),
+      ilike(invoicesTable.sellerName, `%${search}%`),
+      ilike(invoicesTable.sellerVatNumber, `%${search}%`),
+      ilike(ordersTable.orderNumber, `%${search}%`),
+    ) : undefined)
+    .orderBy(desc(invoicesTable.sequenceNumber));
+  res.json(Api.AdminListInvoicesResponse.parse(rows));
+}));
+
+router.get("/admin/invoices/:id/qr", permit("invoices", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminGetInvoiceQrParams, req.params, res); if (!params) return;
+  const [invoice] = await db.select({ qrCodeBase64: invoicesTable.qrCodeData })
+    .from(invoicesTable).where(eq(invoicesTable.id, params.id)).limit(1);
+  if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
+  const png = await QRCode.toBuffer(invoice.qrCodeBase64, {
+    type: "png",
+    errorCorrectionLevel: "M",
+    margin: 2,
+  });
+  res.type("image/png").send(png);
 }));
 
 router.get("/admin/coupons", permit("coupons", "view"), route(async (req, res) => {

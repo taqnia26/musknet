@@ -15,6 +15,7 @@ import AdminHR from '@/pages/admin/hr';
 import AdminFinance from '@/pages/admin/finance';
 import AdminManufacturing from '@/pages/admin/manufacturing';
 import AdminExhibitions from '@/pages/admin/exhibitions';
+import AdminInvoices from '@/pages/admin/invoices';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
@@ -35,6 +36,7 @@ export default function AdminRoutes() {
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin/categories" component={AdminCategories} />
         <Route path="/admin/orders" component={AdminOrders} />
+        <Route path="/admin/invoices" component={AdminInvoices} />
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/customers" component={AdminCustomers} />
         <Route path="/admin/inventory" component={AdminInventory} />

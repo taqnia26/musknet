@@ -21,7 +21,8 @@ import {
   Globe,
   Menu,
   Moon,
-  Sun
+  Sun,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -33,6 +34,7 @@ const navItems = [
   { href: '/admin/products', icon: Package, labelEn: 'Products', labelAr: 'المنتجات', module: 'products' },
   { href: '/admin/categories', icon: Tags, labelEn: 'Categories', labelAr: 'الأقسام', module: 'categories' },
   { href: '/admin/orders', icon: ShoppingCart, labelEn: 'Orders', labelAr: 'الطلبات', module: 'orders' },
+  { href: '/admin/invoices', icon: FileText, labelEn: 'Tax Invoices', labelAr: 'الفواتير الضريبية', module: 'invoices' },
   { href: '/admin/coupons', icon: Ticket, labelEn: 'Coupons', labelAr: 'الكوبونات', module: 'coupons' },
   { href: '/admin/customers', icon: Users, labelEn: 'Customers', labelAr: 'العملاء', module: 'customers' },
   { href: '/admin/inventory', icon: Warehouse, labelEn: 'Inventory', labelAr: 'المخزون', module: 'inventory' },

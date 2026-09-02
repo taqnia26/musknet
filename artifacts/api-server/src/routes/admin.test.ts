@@ -10,6 +10,7 @@ import {
   customersTable,
   db,
   inventoryMovementsTable,
+  invoicesTable,
   orderAddressesTable,
   orderItemsTable,
   ordersTable,
@@ -32,6 +33,7 @@ let orderId: number;
 beforeAll(async () => {
   process.env.ADMIN_EMAIL = seedEmail;
   process.env.ADMIN_PASSWORD = "route-test-password";
+  process.env.VAT_REGISTRATION_NUMBER = "300000000000003";
 
   // The first request initializes the environment-backed super administrator.
   await request(app).get("/api/admin/dashboard").expect(401);
@@ -112,6 +114,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (orderId) await db.delete(invoicesTable).where(eq(invoicesTable.orderId, orderId));
   if (orderId) await db.delete(ordersTable).where(eq(ordersTable.id, orderId));
   if (productId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
   if (productId) await db.delete(productsTable).where(eq(productsTable.id, productId));
@@ -126,6 +129,7 @@ afterAll(async () => {
   }
   delete process.env.ADMIN_EMAIL;
   delete process.env.ADMIN_PASSWORD;
+  delete process.env.VAT_REGISTRATION_NUMBER;
 });
 
 describe.sequential("admin route authorization", () => {
@@ -202,6 +206,34 @@ describe.sequential("admin route authorization", () => {
     expect(response.body.orderAddress).toMatchObject({ city: "Riyadh", buildingNo: "10", additionalInfo: "Floor 2" });
     expect(response.body.items).toEqual([expect.objectContaining({ productId, quantity: 1, totalPrice: 100 })]);
     expect(response.body.coupon).toEqual({ code: "ADMIN10", discountType: "percentage", discountValue: 10 });
+  });
+
+  it("lists searchable invoices, renders trusted QR SVG, and enforces invoices:view", async () => {
+    const list = await request(app)
+      .get("/api/admin/invoices?search=INV-")
+      .set("Authorization", `Bearer ${superToken}`)
+      .expect(200);
+    const invoice = list.body.find((item: { orderId: number }) => item.orderId === orderId);
+    expect(invoice).toMatchObject({
+      orderNumber: expect.stringMatching(/^ADMIN-TEST-/),
+      sellerName: "مسك اللولو / Musk Ellolo",
+      sellerVatNumber: "300000000000003",
+      totalAmount: 100,
+      vatAmount: 0,
+    });
+    expect(Buffer.from(invoice.qrCodeData, "base64")[0]).toBe(1);
+
+    const qr = await request(app)
+      .get(`/api/admin/invoices/${invoice.id}/qr`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .expect("Content-Type", /image\/png/)
+      .expect(200);
+    expect(Buffer.from(qr.body).subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+
+    await request(app).get("/api/admin/invoices")
+      .set("Authorization", `Bearer ${viewerToken}`).expect(403);
+    await request(app).get(`/api/admin/invoices/${invoice.id}/qr`)
+      .set("Authorization", `Bearer ${viewerToken}`).expect(403);
   });
 
   it("rejects an invalid order status", async () => {

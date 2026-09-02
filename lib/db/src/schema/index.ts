@@ -37,3 +37,4 @@ export * from "./hr";
 export * from "./finance";
 export * from "./manufacturing";
 export * from "./exhibitions";
+export * from "./invoices";

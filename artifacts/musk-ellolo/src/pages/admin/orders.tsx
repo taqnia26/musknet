@@ -29,6 +29,7 @@ export default function AdminOrders() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<AdminListOrdersStatus>('all');
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [updateError, setUpdateError] = useState<string | null>(null);
   
   const queryClient = useQueryClient();
   const { data: currentUser } = useGetAdminMe();
@@ -46,24 +47,28 @@ export default function AdminOrders() {
   );
 
   const handleUpdateStatus = (id: number, status: string) => {
+    setUpdateError(null);
     updateMutation.mutate({ id, data: { status: status as AdminOrderUpdateStatus } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
         if (selectedOrderId === id) {
           queryClient.invalidateQueries({ queryKey: getAdminGetOrderQueryKey(id) });
         }
-      }
+      },
+      onError: (error) => setUpdateError(error instanceof Error ? error.message : t('تعذر تحديث الطلب', 'Unable to update order'))
     });
   };
 
   const handleUpdatePaymentStatus = (id: number, paymentStatus: string) => {
+    setUpdateError(null);
     updateMutation.mutate({ id, data: { paymentStatus: paymentStatus as AdminOrderUpdatePaymentStatus } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
         if (selectedOrderId === id) {
           queryClient.invalidateQueries({ queryKey: getAdminGetOrderQueryKey(id) });
         }
-      }
+      },
+      onError: (error) => setUpdateError(error instanceof Error ? error.message : t('تعذر تحديث حالة الدفع', 'Unable to update payment status'))
     });
   };
 
@@ -115,6 +120,13 @@ export default function AdminOrders() {
           </SelectContent>
         </Select>
       </div>
+
+      {updateError && (
+        <div role="alert" className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{updateError}</span>
+        </div>
+      )}
 
       <div className="border rounded-md bg-card shadow-sm">
         <Table>

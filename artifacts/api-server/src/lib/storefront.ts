@@ -15,6 +15,7 @@ import {
   otpRecordsTable,
   productsTable,
 } from "@workspace/db";
+import { updateOrderAndIssueInvoice } from "./invoices";
 
 type ProductSeed = {
   id: number;
@@ -790,8 +791,9 @@ export async function createOrderForUser(
   userId: number,
   details: OrderInputDetails,
   couponCode?: string | null,
+  trustedPayment?: { confirmedByProvider: true; environment?: NodeJS.ProcessEnv },
 ) {
-  return db.transaction(async (tx) => {
+  const createdOrder = await db.transaction(async (tx) => {
     const [cart] = await tx.select().from(cartsTable).where(eq(cartsTable.userId, userId)).limit(1);
     if (!cart) return null;
     await tx.execute(sql`select id from ${cartsTable} where id = ${cart.id} for update`);
@@ -900,6 +902,36 @@ export async function createOrderForUser(
     await tx.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
     return mapOrder(created, createdItems);
   });
+  if (!createdOrder || !trustedPayment?.confirmedByProvider) return createdOrder;
+  return completeStorefrontPayment(
+    userId,
+    createdOrder.orderNumber,
+    trustedPayment.environment,
+  );
+}
+
+/**
+ * Trusted payment adapters use this boundary after verifying the provider
+ * response. It is intentionally not exposed as a customer-facing route.
+ */
+export async function completeStorefrontPayment(
+  userId: number,
+  orderNumber: string,
+  environment: NodeJS.ProcessEnv = process.env,
+) {
+  const [order] = await db.select({ id: ordersTable.id })
+    .from(ordersTable)
+    .where(and(eq(ordersTable.userId, userId), eq(ordersTable.orderNumber, orderNumber)))
+    .limit(1);
+  if (!order) return null;
+  const updated = await updateOrderAndIssueInvoice(
+    order.id,
+    { paymentStatus: "paid" },
+    environment,
+  );
+  if (!updated) return null;
+  const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, updated.id));
+  return mapOrder(updated, items);
 }
 
 function mapOrder(
