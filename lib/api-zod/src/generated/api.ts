@@ -967,7 +967,35 @@ export const AdminGetOrderResponse = zod.object({
   "adminNotes": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
-})
+}).and(zod.object({
+  "customer": zod.object({
+  "name": zod.string(),
+  "phone": zod.string(),
+  "email": zod.string().nullable()
+}),
+  "orderAddress": zod.object({
+  "label": zod.string(),
+  "city": zod.string(),
+  "district": zod.string(),
+  "street": zod.string(),
+  "buildingNo": zod.string(),
+  "additionalInfo": zod.string().nullable(),
+  "isDefault": zod.boolean()
+}),
+  "items": zod.array(zod.object({
+  "productId": zod.number(),
+  "productName": zod.string(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "totalPrice": zod.number(),
+  "imageUrl": zod.string().nullable()
+})),
+  "coupon": zod.union([zod.object({
+  "code": zod.string(),
+  "discountType": zod.enum(['percentage', 'fixed']),
+  "discountValue": zod.number()
+}),zod.null()])
+}))
 
 
 export const AdminUpdateOrderParams = zod.object({
@@ -1164,6 +1192,27 @@ export const AdminListInventoryResponseItem = zod.object({
 export const AdminListInventoryResponse = zod.array(AdminListInventoryResponseItem)
 
 
+export const AdminListInventoryMovementsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminListInventoryMovementsResponseItem = zod.object({
+  "id": zod.number(),
+  "productId": zod.number(),
+  "movementType": zod.enum(['increase', 'decrease', 'adjustment']),
+  "quantityChange": zod.number(),
+  "quantityBefore": zod.number(),
+  "quantityAfter": zod.number(),
+  "reason": zod.string().nullable(),
+  "performedBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListInventoryMovementsResponse = zod.array(AdminListInventoryMovementsResponseItem)
+
+
+/**
+ * @deprecated
+ */
 export const AdminUpdateInventoryParams = zod.object({
   "id": zod.coerce.number()
 })
@@ -1172,17 +1221,69 @@ export const adminUpdateInventoryBodyStockQuantityMin = 0;
 
 
 
+
 export const AdminUpdateInventoryBody = zod.object({
-  "stockQuantity": zod.number().min(adminUpdateInventoryBodyStockQuantityMin)
+  "stockQuantity": zod.number().min(adminUpdateInventoryBodyStockQuantityMin),
+  "reason": zod.string().min(1)
 })
 
 export const AdminUpdateInventoryResponse = zod.object({
+  "item": zod.object({
   "id": zod.number(),
   "nameAr": zod.string(),
   "nameEn": zod.string(),
   "sku": zod.string().nullable(),
   "stockQuantity": zod.number(),
   "isActive": zod.boolean()
+}),
+  "movement": zod.object({
+  "id": zod.number(),
+  "productId": zod.number(),
+  "movementType": zod.enum(['increase', 'decrease', 'adjustment']),
+  "quantityChange": zod.number(),
+  "quantityBefore": zod.number(),
+  "quantityAfter": zod.number(),
+  "reason": zod.string().nullable(),
+  "performedBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+export const AdminAdjustInventoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminAdjustInventoryBodyStockQuantityMin = 0;
+
+
+
+
+export const AdminAdjustInventoryBody = zod.object({
+  "stockQuantity": zod.number().min(adminAdjustInventoryBodyStockQuantityMin),
+  "reason": zod.string().min(1)
+})
+
+export const AdminAdjustInventoryResponse = zod.object({
+  "item": zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "stockQuantity": zod.number(),
+  "isActive": zod.boolean()
+}),
+  "movement": zod.object({
+  "id": zod.number(),
+  "productId": zod.number(),
+  "movementType": zod.enum(['increase', 'decrease', 'adjustment']),
+  "quantityChange": zod.number(),
+  "quantityBefore": zod.number(),
+  "quantityAfter": zod.number(),
+  "reason": zod.string().nullable(),
+  "performedBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date()
+})
 })
 
 

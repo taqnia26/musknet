@@ -1,35 +1,56 @@
 import { useState } from 'react';
-import { useAdminListOrders, useAdminUpdateOrder, AdminListOrdersStatus, AdminOrderUpdateStatus, AdminOrderUpdatePaymentStatus, useGetAdminMe } from '@workspace/api-client-react';
+import { 
+  useAdminListOrders, 
+  useAdminUpdateOrder, 
+  AdminListOrdersStatus, 
+  AdminOrderUpdateStatus, 
+  AdminOrderUpdatePaymentStatus, 
+  useGetAdminMe,
+  useAdminGetOrder,
+  getAdminListOrdersQueryKey,
+  getAdminGetOrderQueryKey
+} from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye } from 'lucide-react';
+import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQueryClient } from '@tanstack/react-query';
-import { getAdminListOrdersQueryKey } from '@workspace/api-client-react';
 import { format } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 export default function AdminOrders() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<AdminListOrdersStatus>('all');
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   
   const queryClient = useQueryClient();
   const { data: currentUser } = useGetAdminMe();
   const { data: orders, isLoading } = useAdminListOrders({ search, status: statusFilter !== 'all' ? statusFilter : undefined });
   const updateMutation = useAdminUpdateOrder();
 
+  const { data: orderDetail, isLoading: isDetailLoading, isError: isDetailError } = useAdminGetOrder(
+    selectedOrderId as number, 
+    { 
+      query: { 
+        enabled: selectedOrderId !== null, 
+        queryKey: selectedOrderId ? getAdminGetOrderQueryKey(selectedOrderId) : ['admin-order-null']
+      } 
+    }
+  );
+
   const handleUpdateStatus = (id: number, status: string) => {
     updateMutation.mutate({ id, data: { status: status as AdminOrderUpdateStatus } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
-        if (selectedOrder && selectedOrder.id === id) {
-          setSelectedOrder({ ...selectedOrder, status });
+        if (selectedOrderId === id) {
+          queryClient.invalidateQueries({ queryKey: getAdminGetOrderQueryKey(id) });
         }
       }
     });
@@ -39,8 +60,8 @@ export default function AdminOrders() {
     updateMutation.mutate({ id, data: { paymentStatus: paymentStatus as AdminOrderUpdatePaymentStatus } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
-        if (selectedOrder && selectedOrder.id === id) {
-          setSelectedOrder({ ...selectedOrder, paymentStatus });
+        if (selectedOrderId === id) {
+          queryClient.invalidateQueries({ queryKey: getAdminGetOrderQueryKey(id) });
         }
       }
     });
@@ -95,7 +116,7 @@ export default function AdminOrders() {
         </Select>
       </div>
 
-      <div className="border rounded-md">
+      <div className="border rounded-md bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -104,7 +125,7 @@ export default function AdminOrders() {
               <TableHead>{t('الإجمالي', 'Total')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>
               <TableHead>{t('الدفع', 'Payment')}</TableHead>
-              <TableHead className="w-[100px]"></TableHead>
+              <TableHead className="w-[100px] text-end">{t('إجراءات', 'Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -117,7 +138,7 @@ export default function AdminOrders() {
                 <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
                   <TableCell className="font-medium">#{order.orderNumber}</TableCell>
                   <TableCell>{format(new Date(order.createdAt), 'yyyy-MM-dd')}</TableCell>
-                  <TableCell>{order.total} SAR</TableCell>
+                  <TableCell className="font-semibold">{order.total.toFixed(2)} {t('ر.س', 'SAR')}</TableCell>
                   <TableCell>
                     <Badge variant={statusMap[order.status]?.variant || 'default'} className={statusMap[order.status]?.className}>
                       {statusMap[order.status]?.label || order.status}
@@ -128,63 +149,227 @@ export default function AdminOrders() {
                       {paymentMap[order.paymentStatus]?.label || order.paymentStatus}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <Dialog open={selectedOrder?.id === order.id} onOpenChange={(v) => !v && setSelectedOrder(null)}>
+                  <TableCell className="text-end">
+                    <Dialog open={selectedOrderId === order.id} onOpenChange={(v) => !v && setSelectedOrderId(null)}>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedOrderId(order.id)} title={t('عرض التفاصيل', 'View Details')}>
                           <Eye className="h-4 w-4" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>{t('تفاصيل الطلب', 'Order Details')} #{selectedOrder?.orderNumber}</DialogTitle>
+                      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                        <DialogHeader className="px-6 py-4 border-b">
+                          <DialogTitle className="flex items-center gap-2 text-xl">
+                            <ShoppingBag className="h-5 w-5 text-primary" />
+                            {t('تفاصيل الطلب', 'Order Details')} <span className="text-muted-foreground">#{order.orderNumber}</span>
+                          </DialogTitle>
                         </DialogHeader>
-                        {selectedOrder && (
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <p className="text-muted-foreground mb-1">{t('تاريخ الطلب', 'Order Date')}</p>
-                                <p className="font-medium">{format(new Date(selectedOrder.createdAt), 'PPpp')}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground mb-1">{t('الإجمالي', 'Total')}</p>
-                                <p className="font-medium text-lg">{selectedOrder.total} SAR</p>
-                              </div>
+                        
+                        <ScrollArea className="flex-1 px-6 py-4">
+                          {isDetailLoading ? (
+                            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                              <p className="text-muted-foreground">{t('جاري جلب التفاصيل...', 'Fetching details...')}</p>
                             </div>
-                            
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <p className="text-sm font-medium">{t('تحديث حالة الطلب', 'Update Status')}</p>
-                                <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={selectedOrder.status} onValueChange={(v) => handleUpdateStatus(selectedOrder.id, v)}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="new">{t('جديد', 'New')}</SelectItem>
-                                    <SelectItem value="processing">{t('قيد التجهيز', 'Processing')}</SelectItem>
-                                    <SelectItem value="shipped">{t('مشحون', 'Shipped')}</SelectItem>
-                                    <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
-                                    <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="space-y-2">
-                                <p className="text-sm font-medium">{t('تحديث حالة الدفع', 'Update Payment')}</p>
-                                <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={selectedOrder.paymentStatus} onValueChange={(v) => handleUpdatePaymentStatus(selectedOrder.id, v)}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="pending">{t('قيد الانتظار', 'Pending')}</SelectItem>
-                                    <SelectItem value="paid">{t('مدفوع', 'Paid')}</SelectItem>
-                                    <SelectItem value="failed">{t('فشل', 'Failed')}</SelectItem>
-                                    <SelectItem value="refunded">{t('مسترجع', 'Refunded')}</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                          ) : isDetailError || !orderDetail ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-destructive">
+                              <AlertCircle className="h-12 w-12 mb-4 opacity-50" />
+                              <p className="text-lg font-medium">{t('حدث خطأ أثناء جلب التفاصيل', 'Error loading details')}</p>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <div className="space-y-8 pb-8">
+                              {/* Top Metrics & Actions */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="space-y-4 col-span-1 md:col-span-2">
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-muted/30 p-4 rounded-md border">
+                                      <p className="text-xs text-muted-foreground mb-1 font-medium">{t('تاريخ الطلب', 'Order Date')}</p>
+                                      <p className="font-semibold text-sm">{format(new Date(orderDetail.createdAt), 'PPpp')}</p>
+                                    </div>
+                                    <div className="bg-muted/30 p-4 rounded-md border">
+                                      <p className="text-xs text-muted-foreground mb-1 font-medium">{t('طريقة الشحن', 'Shipping Method')}</p>
+                                      <p className="font-semibold text-sm capitalize">{orderDetail.shippingMethod}</p>
+                                    </div>
+                                  </div>
+                                  {orderDetail.trackingNumber && (
+                                    <div className="bg-muted/30 p-4 rounded-md border flex items-center gap-3">
+                                      <Truck className="h-5 w-5 text-primary opacity-70" />
+                                      <div>
+                                        <p className="text-xs text-muted-foreground font-medium">{t('رقم التتبع', 'Tracking Number')}</p>
+                                        <p className="font-semibold text-sm">{orderDetail.trackingNumber}</p>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="space-y-3 bg-muted/20 p-4 rounded-md border">
+                                  <div className="space-y-1.5">
+                                    <p className="text-xs font-medium text-muted-foreground">{t('تحديث حالة الطلب', 'Update Status')}</p>
+                                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={orderDetail.status} onValueChange={(v) => handleUpdateStatus(orderDetail.id, v)}>
+                                      <SelectTrigger className="h-8 text-sm">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="new">{t('جديد', 'New')}</SelectItem>
+                                        <SelectItem value="processing">{t('قيد التجهيز', 'Processing')}</SelectItem>
+                                        <SelectItem value="shipped">{t('مشحون', 'Shipped')}</SelectItem>
+                                        <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
+                                        <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <p className="text-xs font-medium text-muted-foreground">{t('تحديث حالة الدفع', 'Update Payment')}</p>
+                                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={orderDetail.paymentStatus} onValueChange={(v) => handleUpdatePaymentStatus(orderDetail.id, v)}>
+                                      <SelectTrigger className="h-8 text-sm">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="pending">{t('قيد الانتظار', 'Pending')}</SelectItem>
+                                        <SelectItem value="paid">{t('مدفوع', 'Paid')}</SelectItem>
+                                        <SelectItem value="failed">{t('فشل', 'Failed')}</SelectItem>
+                                        <SelectItem value="refunded">{t('مسترجع', 'Refunded')}</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              {/* Customer & Address */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-4 text-primary">
+                                    <User className="h-4 w-4" />
+                                    <h3 className="font-bold text-sm tracking-wide uppercase">{t('بيانات العميل', 'Customer Info')}</h3>
+                                  </div>
+                                  <div className="space-y-3 text-sm">
+                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                      <span className="text-muted-foreground">{t('الاسم', 'Name')}:</span>
+                                      <span className="font-medium">{orderDetail.customer.name}</span>
+                                    </div>
+                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                      <span className="text-muted-foreground">{t('الهاتف', 'Phone')}:</span>
+                                      <span className="font-medium" dir="ltr">{orderDetail.customer.phone}</span>
+                                    </div>
+                                    {orderDetail.customer.email && (
+                                      <div className="grid grid-cols-[100px_1fr] gap-2">
+                                        <span className="text-muted-foreground">{t('البريد الإلكتروني', 'Email')}:</span>
+                                        <span className="font-medium">{orderDetail.customer.email}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <div className="flex items-center gap-2 mb-4 text-primary">
+                                    <MapPin className="h-4 w-4" />
+                                    <h3 className="font-bold text-sm tracking-wide uppercase">{t('عنوان الشحن', 'Shipping Address')}</h3>
+                                  </div>
+                                  <div className="space-y-3 text-sm">
+                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                      <span className="text-muted-foreground">{t('المدينة/الحي', 'City/District')}:</span>
+                                      <span className="font-medium">{orderDetail.orderAddress.city} - {orderDetail.orderAddress.district}</span>
+                                    </div>
+                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                      <span className="text-muted-foreground">{t('الشارع', 'Street')}:</span>
+                                      <span className="font-medium">{orderDetail.orderAddress.street}</span>
+                                    </div>
+                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                      <span className="text-muted-foreground">{t('المبنى', 'Building')}:</span>
+                                      <span className="font-medium">{orderDetail.orderAddress.buildingNo}</span>
+                                    </div>
+                                    {orderDetail.orderAddress.additionalInfo && (
+                                      <div className="grid grid-cols-[100px_1fr] gap-2">
+                                        <span className="text-muted-foreground">{t('معلومات إضافية', 'Additional Info')}:</span>
+                                        <span className="font-medium text-muted-foreground italic">{orderDetail.orderAddress.additionalInfo}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              {/* Items Table */}
+                              <div>
+                                <div className="flex items-center gap-2 mb-4 text-primary">
+                                  <Receipt className="h-4 w-4" />
+                                  <h3 className="font-bold text-sm tracking-wide uppercase">{t('المنتجات', 'Items')}</h3>
+                                </div>
+                                <div className="border rounded-md overflow-hidden">
+                                  <Table>
+                                    <TableHeader className="bg-muted/30">
+                                      <TableRow>
+                                        <TableHead>{t('المنتج', 'Product')}</TableHead>
+                                        <TableHead className="text-center">{t('الكمية', 'Qty')}</TableHead>
+                                        <TableHead className="text-end">{t('سعر الوحدة', 'Unit Price')}</TableHead>
+                                        <TableHead className="text-end">{t('المجموع', 'Total')}</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {orderDetail.items.map((item, idx) => (
+                                        <TableRow key={idx}>
+                                          <TableCell className="font-medium">
+                                            <div className="flex items-center gap-3">
+                                              {item.imageUrl ? (
+                                                <div className="w-10 h-10 rounded-md bg-muted overflow-hidden flex-shrink-0">
+                                                  <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                                                </div>
+                                              ) : (
+                                                <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                                                  <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                                                </div>
+                                              )}
+                                              <span>{item.productName}</span>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="text-center">{item.quantity}</TableCell>
+                                          <TableCell className="text-end">{item.unitPrice.toFixed(2)}</TableCell>
+                                          <TableCell className="text-end font-semibold">{item.totalPrice.toFixed(2)}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+
+                              {/* Financial Summary */}
+                              <div className="flex flex-col md:flex-row justify-end">
+                                <div className="w-full md:w-1/2 lg:w-1/3 bg-muted/10 p-5 rounded-md border space-y-3">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">{t('المجموع الفرعي', 'Subtotal')}</span>
+                                    <span className="font-medium">{orderDetail.subtotal.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">{t('تكلفة الشحن', 'Shipping')}</span>
+                                    <span className="font-medium">{orderDetail.shippingCost.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                  </div>
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">{t('الضريبة', 'Tax')}</span>
+                                    <span className="font-medium">{orderDetail.tax.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                  </div>
+                                  {orderDetail.discount > 0 && (
+                                    <div className="flex justify-between text-sm text-success font-medium">
+                                      <span>{t('الخصم', 'Discount')} {orderDetail.coupon ? `(${orderDetail.coupon.code})` : ''}</span>
+                                      <span>-{orderDetail.discount.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                    </div>
+                                  )}
+                                  <Separator className="my-2" />
+                                  <div className="flex justify-between items-center text-base font-bold text-primary">
+                                    <span>{t('الإجمالي النهائي', 'Total')}</span>
+                                    <span>{orderDetail.total.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-xs mt-2">
+                                    <span className="text-muted-foreground">{t('طريقة الدفع', 'Payment Method')}</span>
+                                    <span className="font-medium capitalize">{orderDetail.paymentMethod}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                            </div>
+                          )}
+                        </ScrollArea>
                       </DialogContent>
                     </Dialog>
                   </TableCell>
@@ -197,3 +382,4 @@ export default function AdminOrders() {
     </div>
   );
 }
+

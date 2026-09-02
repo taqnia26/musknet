@@ -9,6 +9,9 @@ import {
   categoriesTable,
   customersTable,
   db,
+  inventoryMovementsTable,
+  orderAddressesTable,
+  orderItemsTable,
   ordersTable,
   productsTable,
 } from "@workspace/db";
@@ -68,6 +71,9 @@ beforeAll(async () => {
     subtotal: 100,
     shippingCost: 0,
     discount: 0,
+    couponCode: "ADMIN10",
+    couponDiscountType: "percentage",
+    couponDiscountValue: 10,
     tax: 0,
     total: 100,
     address: "{}",
@@ -75,6 +81,27 @@ beforeAll(async () => {
     paymentMethod: "cod",
   }).returning();
   orderId = order.id;
+  await db.insert(orderAddressesTable).values({
+    id: testIdBase + 4,
+    orderId,
+    label: "Home",
+    city: "Riyadh",
+    district: "Olaya",
+    street: "King Fahd Road",
+    buildingNo: "10",
+    additionalInfo: "Floor 2",
+    isDefault: true,
+  });
+  await db.insert(orderItemsTable).values({
+    id: testIdBase + 5,
+    orderId,
+    productId,
+    productName: "منتج اختبار الإدارة",
+    quantity: 1,
+    unitPrice: 100,
+    totalPrice: 100,
+    imageUrl: "https://example.com/product.jpg",
+  });
   const activeSuperAdmins = await db.select({ id: adminUsersTable.id }).from(adminUsersTable)
     .where(and(eq(adminUsersTable.isSuperAdmin, true), eq(adminUsersTable.isActive, true)));
   temporarilyDisabledSuperIds.push(...activeSuperAdmins.filter((user) => user.id !== superId).map((user) => user.id));
@@ -86,6 +113,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (orderId) await db.delete(ordersTable).where(eq(ordersTable.id, orderId));
+  if (productId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
   if (productId) await db.delete(productsTable).where(eq(productsTable.id, productId));
   if (categoryId) await db.delete(categoriesTable).where(eq(categoriesTable.id, categoryId));
   if (customerId) await db.delete(customersTable).where(eq(customersTable.id, customerId));
@@ -114,13 +142,15 @@ describe.sequential("admin route authorization", () => {
       passwordHash: await hashAdminPassword("viewer-test-password"),
     }).returning();
     createdIds.push(viewer.id);
-    const [permission] = await db.select().from(adminPermissionsTable)
-      .where(eq(adminPermissionsTable.module, "products"))
-      .then((rows) => rows.filter((row) => row.action === "view"));
-    await db.insert(adminUserPermissionsTable).values({
-      adminUserId: viewer.id,
-      permissionId: permission.id,
-    });
+    const permissions = await db.select().from(adminPermissionsTable)
+      .where(inArray(adminPermissionsTable.module, ["products", "inventory"]));
+    const productView = permissions.find((permission) => permission.module === "products" && permission.action === "view");
+    const inventoryView = permissions.find((permission) => permission.module === "inventory" && permission.action === "view");
+    if (!productView || !inventoryView) throw new Error("Required view permissions were not seeded");
+    await db.insert(adminUserPermissionsTable).values([
+      { adminUserId: viewer.id, permissionId: productView.id },
+      { adminUserId: viewer.id, permissionId: inventoryView.id },
+    ]);
     viewerToken = await createAdminSession(viewer.id);
 
     await request(app).get("/api/admin/products").set("Authorization", `Bearer ${viewerToken}`).expect(200);
@@ -163,6 +193,17 @@ describe.sequential("admin route authorization", () => {
     expect(response.body.trackingNumber).toBeNull();
   });
 
+  it("returns complete order detail with address, items, customer, and coupon snapshot", async () => {
+    const response = await request(app)
+      .get(`/api/admin/orders/${orderId}`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .expect(200);
+    expect(response.body.customer).toMatchObject({ name: "Admin Route Test Customer", phone: expect.any(String), email: null });
+    expect(response.body.orderAddress).toMatchObject({ city: "Riyadh", buildingNo: "10", additionalInfo: "Floor 2" });
+    expect(response.body.items).toEqual([expect.objectContaining({ productId, quantity: 1, totalPrice: 100 })]);
+    expect(response.body.coupon).toEqual({ code: "ADMIN10", discountType: "percentage", discountValue: 10 });
+  });
+
   it("rejects an invalid order status", async () => {
     await request(app)
       .patch(`/api/admin/orders/${orderId}`)
@@ -176,6 +217,40 @@ describe.sequential("admin route authorization", () => {
       .patch(`/api/admin/orders/${orderId}`)
       .set("Authorization", `Bearer ${viewerToken}`)
       .send({ status: "processing" })
+      .expect(403);
+    expect(response.body.error).toMatch(/permission/i);
+  });
+
+  it("creates an auditable inventory adjustment and exposes its movement", async () => {
+    const response = await request(app)
+      .post(`/api/admin/inventory/${productId}/adjust`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({ stockQuantity: 12, reason: "Cycle count correction" })
+      .expect(200);
+    expect(response.body.item.stockQuantity).toBe(12);
+    expect(response.body.movement).toMatchObject({
+      productId,
+      movementType: "increase",
+      quantityBefore: 5,
+      quantityAfter: 12,
+      quantityChange: 7,
+      reason: "Cycle count correction",
+      performedBy: superId,
+    });
+    const movements = await request(app)
+      .get(`/api/admin/inventory/${productId}/movements`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .expect(200);
+    expect(movements.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: response.body.movement.id })]));
+  });
+
+  it("allows inventory viewers to read but rejects adjustments", async () => {
+    await request(app).get(`/api/admin/inventory/${productId}/movements`)
+      .set("Authorization", `Bearer ${viewerToken}`).expect(200);
+    const response = await request(app)
+      .post(`/api/admin/inventory/${productId}/adjust`)
+      .set("Authorization", `Bearer ${viewerToken}`)
+      .send({ stockQuantity: 0, reason: "Forbidden" })
       .expect(403);
     expect(response.body.error).toMatch(/permission/i);
   });

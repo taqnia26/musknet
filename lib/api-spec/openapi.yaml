@@ -546,7 +546,7 @@ paths:
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
-      responses: { "200": { description: Order, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrder" } } } } }
+      responses: { "200": { description: Order, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrderDetail" } } } } }
     patch:
       operationId: adminUpdateOrder
       tags: [admin]
@@ -610,13 +610,28 @@ paths:
       parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { name: lowStock, in: query, schema: { type: boolean } }]
       responses: { "200": { description: Inventory, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminInventoryItem" } } } } } }
   /admin/inventory/{id}:
+    get:
+      operationId: adminListInventoryMovements
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Inventory movements, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminInventoryMovement" } } } } } }
     patch:
       operationId: adminUpdateInventory
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
+      deprecated: true
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryUpdate" } } } }
-      responses: { "200": { description: Inventory item, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryItem" } } } } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryAdjustment" } } } }
+      responses: { "200": { description: Inventory adjustment, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryAdjustmentResult" } } } } }
+  /admin/inventory/{id}/adjust:
+    post:
+      operationId: adminAdjustInventory
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryAdjustment" } } } }
+      responses: { "200": { description: Inventory adjustment, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryAdjustmentResult" } } } } }
   /admin/distributors:
     get:
       operationId: adminListDistributors
@@ -1317,6 +1332,51 @@ components:
         paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
         trackingNumber: { type: [string, "null"] }
         adminNotes: { type: [string, "null"] }
+    AdminOrderAddress:
+      type: object
+      required: [label, city, district, street, buildingNo, additionalInfo, isDefault]
+      properties:
+        label: { type: string }
+        city: { type: string }
+        district: { type: string }
+        street: { type: string }
+        buildingNo: { type: string }
+        additionalInfo: { type: [string, "null"] }
+        isDefault: { type: boolean }
+    AdminOrderCustomer:
+      type: object
+      required: [name, phone, email]
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        email: { type: [string, "null"] }
+    AdminOrderItem:
+      type: object
+      required: [productId, productName, quantity, unitPrice, totalPrice, imageUrl]
+      properties:
+        productId: { type: number }
+        productName: { type: string }
+        quantity: { type: number }
+        unitPrice: { type: number }
+        totalPrice: { type: number }
+        imageUrl: { type: [string, "null"] }
+    AdminOrderCoupon:
+      type: object
+      required: [code, discountType, discountValue]
+      properties:
+        code: { type: string }
+        discountType: { type: string, enum: [percentage, fixed] }
+        discountValue: { type: number }
+    AdminOrderDetail:
+      allOf:
+        - $ref: "#/components/schemas/AdminOrder"
+        - type: object
+          required: [customer, orderAddress, items, coupon]
+          properties:
+            customer: { $ref: "#/components/schemas/AdminOrderCustomer" }
+            orderAddress: { $ref: "#/components/schemas/AdminOrderAddress" }
+            items: { type: array, items: { $ref: "#/components/schemas/AdminOrderItem" } }
+            coupon: { oneOf: [{ $ref: "#/components/schemas/AdminOrderCoupon" }, { type: "null" }] }
     AdminCoupon:
       type: object
       required: [id, code, discountType, discountValue, timesUsed, isActive, createdAt]
@@ -1370,11 +1430,31 @@ components:
         sku: { type: [string, "null"] }
         stockQuantity: { type: number }
         isActive: { type: boolean }
-    AdminInventoryUpdate:
+    AdminInventoryAdjustment:
       type: object
-      required: [stockQuantity]
+      required: [stockQuantity, reason]
       properties:
         stockQuantity: { type: number, minimum: 0 }
+        reason: { type: string, minLength: 1 }
+    AdminInventoryMovement:
+      type: object
+      required: [id, productId, movementType, quantityChange, quantityBefore, quantityAfter, reason, performedBy, createdAt]
+      properties:
+        id: { type: number }
+        productId: { type: number }
+        movementType: { type: string, enum: [increase, decrease, adjustment] }
+        quantityChange: { type: number }
+        quantityBefore: { type: number }
+        quantityAfter: { type: number }
+        reason: { type: [string, "null"] }
+        performedBy: { type: [number, "null"] }
+        createdAt: { type: string, format: date-time }
+    AdminInventoryAdjustmentResult:
+      type: object
+      required: [item, movement]
+      properties:
+        item: { $ref: "#/components/schemas/AdminInventoryItem" }
+        movement: { $ref: "#/components/schemas/AdminInventoryMovement" }
     AdminDistributor:
       type: object
       required: [id, companyName, contactName, phone, isActive, createdAt, updatedAt]

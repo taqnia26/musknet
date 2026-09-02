@@ -10,6 +10,9 @@ import {
   couponsTable,
   customersTable,
   db,
+  inventoryMovementsTable,
+  orderAddressesTable,
+  orderItemsTable,
   ordersTable,
   productsTable,
   wholesaleDistributorsTable,
@@ -213,7 +216,44 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
   const params = parse(Api.AdminGetOrderParams, req.params, res); if (!params) return;
   const [row] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.id)).limit(1);
   if (!row) { res.status(404).json({ error: "Order not found" }); return; }
-  res.json(Api.AdminGetOrderResponse.parse(row));
+  const [[customer], [orderAddress], items] = await Promise.all([
+    db.select({ name: customersTable.name, phone: customersTable.phone, email: customersTable.email })
+      .from(customersTable).where(eq(customersTable.id, row.userId)).limit(1),
+    db.select().from(orderAddressesTable).where(eq(orderAddressesTable.orderId, row.id)).limit(1),
+    db.select({
+      productId: orderItemsTable.productId,
+      productName: orderItemsTable.productName,
+      quantity: orderItemsTable.quantity,
+      unitPrice: orderItemsTable.unitPrice,
+      totalPrice: orderItemsTable.totalPrice,
+      imageUrl: orderItemsTable.imageUrl,
+    }).from(orderItemsTable).where(eq(orderItemsTable.orderId, row.id)).orderBy(orderItemsTable.id),
+  ]);
+  if (!customer) { res.status(404).json({ error: "Order customer not found" }); return; }
+  let legacyAddress: Record<string, unknown> = {};
+  try { legacyAddress = JSON.parse(row.address) as Record<string, unknown>; } catch { /* legacy address is optional */ }
+  const address = orderAddress ?? {
+    label: typeof legacyAddress.label === "string" ? legacyAddress.label : "",
+    city: typeof legacyAddress.city === "string" ? legacyAddress.city : "",
+    district: typeof legacyAddress.district === "string" ? legacyAddress.district : "",
+    street: typeof legacyAddress.street === "string" ? legacyAddress.street : "",
+    buildingNo: typeof legacyAddress.buildingNo === "string" ? legacyAddress.buildingNo : "",
+    additionalInfo: typeof legacyAddress.additionalInfo === "string" ? legacyAddress.additionalInfo : null,
+    isDefault: typeof legacyAddress.isDefault === "boolean" ? legacyAddress.isDefault : false,
+  };
+  const coupon = row.couponCode && row.couponDiscountType && row.couponDiscountValue != null
+    ? { code: row.couponCode, discountType: row.couponDiscountType, discountValue: row.couponDiscountValue }
+    : null;
+  res.json(Api.AdminGetOrderResponse.parse({
+    ...row,
+    customer,
+    orderAddress: {
+      label: address.label, city: address.city, district: address.district, street: address.street,
+      buildingNo: address.buildingNo, additionalInfo: address.additionalInfo, isDefault: address.isDefault,
+    },
+    items,
+    coupon,
+  }));
 }));
 router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateOrderParams, req.params, res);
@@ -280,15 +320,63 @@ router.get("/admin/inventory", permit("inventory", "view"), route(async (req, re
   if (query.lowStock) rows = rows.filter((row) => row.stockQuantity <= 10);
   res.json(Api.AdminListInventoryResponse.parse(rows));
 }));
+router.get("/admin/inventory/:id/movements", permit("inventory", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminListInventoryMovementsParams, req.params, res); if (!params) return;
+  const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, params.id)).limit(1);
+  if (!product) { res.status(404).json({ error: "Product not found" }); return; }
+  const movements = await db.select().from(inventoryMovementsTable)
+    .where(eq(inventoryMovementsTable.productId, params.id))
+    .orderBy(sql`${inventoryMovementsTable.createdAt} desc`, sql`${inventoryMovementsTable.id} desc`);
+  res.json(Api.AdminListInventoryMovementsResponse.parse(movements));
+}));
+
+async function adjustInventory(productId: number, stockQuantity: number, reason: string, performedBy: number) {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${productId} for update`);
+    const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, productId)).limit(1);
+    if (!product) return null;
+    const quantityBefore = product.stockQuantity;
+    const quantityChange = stockQuantity - quantityBefore;
+    const movementType = quantityChange > 0 ? "increase" : quantityChange < 0 ? "decrease" : "adjustment";
+    const [updated] = await tx.update(productsTable).set({ stockQuantity }).where(eq(productsTable.id, productId)).returning({
+      id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
+      sku: productsTable.sku, stockQuantity: productsTable.stockQuantity, isActive: productsTable.isActive,
+    });
+    const [movement] = await tx.insert(inventoryMovementsTable).values({
+      productId,
+      movementType,
+      quantityChange,
+      quantityBefore,
+      quantityAfter: stockQuantity,
+      reason,
+      performedBy,
+    }).returning();
+    return { item: updated, movement };
+  });
+}
+
+async function handleInventoryAdjustment(
+  params: { id: number },
+  body: { stockQuantity: number; reason: string },
+  res: Response,
+  response: { parse(value: unknown): unknown },
+) {
+  const reason = body.reason.trim();
+  if (!reason) { res.status(400).json({ error: "Adjustment reason is required" }); return; }
+  const result = await adjustInventory(params.id, body.stockQuantity, reason, res.locals.admin.id);
+  if (!result) { res.status(404).json({ error: "Product not found" }); return; }
+  res.json(response.parse(result));
+}
+
+router.post("/admin/inventory/:id/adjust", permit("inventory", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminAdjustInventoryParams, req.params, res);
+  const body = parse(Api.AdminAdjustInventoryBody, req.body, res); if (!params || !body) return;
+  await handleInventoryAdjustment(params, body, res, Api.AdminAdjustInventoryResponse);
+}));
 router.patch("/admin/inventory/:id", permit("inventory", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateInventoryParams, req.params, res);
   const body = parse(Api.AdminUpdateInventoryBody, req.body, res); if (!params || !body) return;
-  const [row] = await db.update(productsTable).set(body).where(eq(productsTable.id, params.id)).returning({
-    id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
-    sku: productsTable.sku, stockQuantity: productsTable.stockQuantity, isActive: productsTable.isActive,
-  });
-  if (!row) { res.status(404).json({ error: "Product not found" }); return; }
-  res.json(Api.AdminUpdateInventoryResponse.parse(row));
+  await handleInventoryAdjustment(params, body, res, Api.AdminUpdateInventoryResponse);
 }));
 
 router.get("/admin/distributors", permit("distributors", "view"), route(async (req, res) => {

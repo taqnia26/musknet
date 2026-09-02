@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AdminInventoryUpdate {
+export interface AdminInventoryAdjustment {
   /** @minimum 0 */
   stockQuantity: number;
+  /** @minLength 1 */
+  reason: string;
 }

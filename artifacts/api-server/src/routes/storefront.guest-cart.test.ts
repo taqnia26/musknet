@@ -1,7 +1,7 @@
 import request from "supertest";
 import { afterEach, describe, expect, it } from "vitest";
-import { inArray } from "drizzle-orm";
-import { customersTable, db, ordersTable } from "@workspace/db";
+import { eq, inArray } from "drizzle-orm";
+import { customersTable, db, ordersTable, productsTable } from "@workspace/db";
 import app from "../app";
 import { addToCart } from "../lib/storefront";
 
@@ -35,6 +35,9 @@ describe.sequential("guest cart routes", () => {
   });
 
   it("merges into an existing customer cart without duplicates and caps quantity at stock", async () => {
+    const [product] = await db.select({ stockQuantity: productsTable.stockQuantity })
+      .from(productsTable).where(eq(productsTable.id, 2)).limit(1);
+    const existingQuantity = Math.max(1, product.stockQuantity - 5);
     const phone = `+966599${Date.now()}`;
     phones.push(phone);
     await request(app).post("/api/auth/request-otp").send({ phone }).expect(200);
@@ -42,7 +45,7 @@ describe.sequential("guest cart routes", () => {
       .post("/api/auth/verify-otp")
       .send({ phone, code: "123456" })
       .expect(200);
-    await addToCart(initialLogin.body.user.id, 2, 95);
+    await addToCart(initialLogin.body.user.id, 2, existingQuantity);
 
     const otherPhone = `+966598${Date.now()}`;
     phones.push(otherPhone);
@@ -61,9 +64,9 @@ describe.sequential("guest cart routes", () => {
     expect(String(verified.headers["set-cookie"])).toMatch(/musk_ellolo_guest_cart=;/);
     const cart = await request(app).get("/api/cart").set("Authorization", `Bearer ${verified.body.token}`).expect(200);
     expect(cart.body.items).toHaveLength(1);
-    expect(cart.body.itemCount).toBe(100);
+    expect(cart.body.itemCount).toBe(product.stockQuantity);
     expect(cart.body.items[0].product.id).toBe(2);
-    expect(cart.body.items[0].quantity).toBe(100);
+    expect(cart.body.items[0].quantity).toBe(product.stockQuantity);
 
     const otherCart = await request(app)
       .get("/api/cart")

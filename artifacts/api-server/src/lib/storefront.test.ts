@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
-import { customersTable, db, orderAddressesTable, ordersTable } from "@workspace/db";
+import {
+  customersTable,
+  db,
+  inventoryMovementsTable,
+  orderAddressesTable,
+  ordersTable,
+  productsTable,
+} from "@workspace/db";
 import {
   addAddress,
   addToCart,
@@ -16,6 +23,8 @@ import {
 } from "./storefront";
 
 const phones: string[] = [];
+const movementReasons: string[] = [];
+const stockSnapshots = new Map<number, number>();
 
 async function createUser(suffix: string) {
   const phone = `+9665000${Date.now()}${suffix}`;
@@ -27,14 +36,23 @@ async function createUser(suffix: string) {
 }
 
 afterEach(async () => {
-  if (phones.length === 0) return;
-  const users = await db.select({ id: customersTable.id }).from(customersTable).where(inArray(customersTable.phone, phones));
-  const ids = users.map(({ id }) => id);
-  if (ids.length > 0) {
-    await db.delete(ordersTable).where(inArray(ordersTable.userId, ids));
-    await db.delete(customersTable).where(inArray(customersTable.id, ids));
+  if (movementReasons.length > 0) {
+    await db.delete(inventoryMovementsTable).where(inArray(inventoryMovementsTable.reason, movementReasons));
+  }
+  if (phones.length > 0) {
+    const users = await db.select({ id: customersTable.id }).from(customersTable).where(inArray(customersTable.phone, phones));
+    const ids = users.map(({ id }) => id);
+    if (ids.length > 0) {
+      await db.delete(ordersTable).where(inArray(ordersTable.userId, ids));
+      await db.delete(customersTable).where(inArray(customersTable.id, ids));
+    }
+  }
+  for (const [productId, stockQuantity] of stockSnapshots) {
+    await db.update(productsTable).set({ stockQuantity }).where(eq(productsTable.id, productId));
   }
   phones.length = 0;
+  movementReasons.length = 0;
+  stockSnapshots.clear();
 });
 
 describe.sequential("persistent storefront carts and orders", () => {
@@ -56,6 +74,9 @@ describe.sequential("persistent storefront carts and orders", () => {
   it("atomically snapshots an order, clears only its owner's cart, and isolates reads", async () => {
     const owner = await createUser("3");
     const other = await createUser("4");
+    const [orderedProduct] = await db.select({ stockQuantity: productsTable.stockQuantity })
+      .from(productsTable).where(eq(productsTable.id, 2)).limit(1);
+    stockSnapshots.set(2, orderedProduct.stockQuantity);
     await addToCart(owner.id, 2, 1);
     await addToCart(other.id, 3, 1);
 
@@ -72,6 +93,7 @@ describe.sequential("persistent storefront carts and orders", () => {
       shippingMethod: "storage-station-standard",
       paymentMethod: "moyasar",
     });
+    movementReasons.push(`Order ${order!.orderNumber}`);
 
     expect(order?.items).toHaveLength(1);
     const [addressSnapshot] = await db

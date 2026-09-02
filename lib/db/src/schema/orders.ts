@@ -2,6 +2,7 @@ import { doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { customersTable } from "./customers";
+import { couponDiscountTypeEnum } from "./coupons";
 
 export const ordersTable = pgTable("storefront_orders", {
   id: serial("id").primaryKey(),
@@ -10,6 +11,9 @@ export const ordersTable = pgTable("storefront_orders", {
   subtotal: doublePrecision("subtotal").notNull(),
   shippingCost: doublePrecision("shipping_cost").notNull(),
   discount: doublePrecision("discount").notNull(),
+  couponCode: text("coupon_code"),
+  couponDiscountType: couponDiscountTypeEnum("coupon_discount_type"),
+  couponDiscountValue: doublePrecision("coupon_discount_value"),
   tax: doublePrecision("tax").notNull(),
   total: doublePrecision("total").notNull(),
   status: text("status").notNull().default("new"),

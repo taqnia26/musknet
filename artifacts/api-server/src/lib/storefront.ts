@@ -8,6 +8,7 @@ import {
   couponsTable,
   customersTable,
   db,
+  inventoryMovementsTable,
   orderAddressesTable,
   orderItemsTable,
   ordersTable,
@@ -790,18 +791,24 @@ export async function createOrderForUser(
   details: OrderInputDetails,
   couponCode?: string | null,
 ) {
-  const catalog = await listCatalogProducts();
   return db.transaction(async (tx) => {
     const [cart] = await tx.select().from(cartsTable).where(eq(cartsTable.userId, userId)).limit(1);
     if (!cart) return null;
     await tx.execute(sql`select id from ${cartsTable} where id = ${cart.id} for update`);
     await tx.execute(sql`select id from ${cartItemsTable} where cart_id = ${cart.id} for update`);
     const records = await tx.select().from(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id)).orderBy(cartItemsTable.id);
-    const items = records.flatMap((item) => {
-      const product = catalog.find((entry) => entry.id === item.productId);
-      return product ? [{ record: item, product }] : [];
-    });
-    if (items.length === 0) return null;
+    if (records.length === 0) return null;
+    const items: Array<{ record: typeof records[number]; product: typeof productsTable.$inferSelect }> = [];
+    for (const record of [...records].sort((left, right) => left.productId - right.productId)) {
+      await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${record.productId} for update`);
+      const [product] = await tx.select().from(productsTable)
+        .where(and(eq(productsTable.id, record.productId), eq(productsTable.isActive, true)))
+        .limit(1);
+      if (!product || product.stockQuantity < record.quantity) {
+        throw new Error("Insufficient stock to complete this order");
+      }
+      items.push({ record, product });
+    }
     const subtotal = items.reduce((sum, item) => sum + item.product.price * item.record.quantity, 0);
     let coupon: ReturnType<typeof couponResult> = {
       valid: false,
@@ -810,10 +817,11 @@ export async function createOrderForUser(
       code: null,
       couponId: null,
     };
+    let couponRecord: typeof couponsTable.$inferSelect | undefined;
     if (couponCode) {
       const normalizedCode = couponCode.trim().toUpperCase();
       await tx.execute(sql`select id from ${couponsTable} where ${couponsTable.code} = ${normalizedCode} for update`);
-      const [couponRecord] = await tx
+      [couponRecord] = await tx
         .select()
         .from(couponsTable)
         .where(and(
@@ -843,6 +851,9 @@ export async function createOrderForUser(
       subtotal,
       shippingCost,
       discount: coupon.discount,
+      couponCode: couponRecord?.code ?? null,
+      couponDiscountType: couponRecord?.discountType ?? null,
+      couponDiscountValue: couponRecord?.discountValue ?? null,
       tax,
       total,
       address: JSON.stringify(details.address),
@@ -866,8 +877,26 @@ export async function createOrderForUser(
       quantity: record.quantity,
       unitPrice: product.price,
       totalPrice: product.price * record.quantity,
-      imageUrl: product.imageUrl,
+      imageUrl: product.images[0]?.url ?? null,
     }))).returning();
+    for (const { record, product } of items) {
+      const quantityBefore = product.stockQuantity;
+      const quantityAfter = quantityBefore - record.quantity;
+      const [updatedProduct] = await tx.update(productsTable)
+        .set({ stockQuantity: quantityAfter })
+        .where(and(eq(productsTable.id, product.id), eq(productsTable.stockQuantity, quantityBefore)))
+        .returning({ id: productsTable.id });
+      if (!updatedProduct) throw new Error("Inventory changed while completing order");
+      await tx.insert(inventoryMovementsTable).values({
+        productId: product.id,
+        movementType: "decrease",
+        quantityChange: -record.quantity,
+        quantityBefore,
+        quantityAfter,
+        reason: `Order ${orderNumber}`,
+        performedBy: null,
+      });
+    }
     await tx.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
     return mapOrder(created, createdItems);
   });

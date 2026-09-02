@@ -524,6 +524,55 @@ export interface AdminOrderUpdate {
   adminNotes?: string | null;
 }
 
+export interface AdminOrderAddress {
+  label: string;
+  city: string;
+  district: string;
+  street: string;
+  buildingNo: string;
+  /** @nullable */
+  additionalInfo: string | null;
+  isDefault: boolean;
+}
+
+export interface AdminOrderCustomer {
+  name: string;
+  phone: string;
+  /** @nullable */
+  email: string | null;
+}
+
+export interface AdminOrderItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  /** @nullable */
+  imageUrl: string | null;
+}
+
+export type AdminOrderCouponDiscountType = typeof AdminOrderCouponDiscountType[keyof typeof AdminOrderCouponDiscountType];
+
+
+export const AdminOrderCouponDiscountType = {
+  percentage: 'percentage',
+  fixed: 'fixed',
+} as const;
+
+export interface AdminOrderCoupon {
+  code: string;
+  discountType: AdminOrderCouponDiscountType;
+  discountValue: number;
+}
+
+export type AdminOrderDetail = AdminOrder & ({
+  customer: AdminOrderCustomer;
+  orderAddress: AdminOrderAddress;
+  items: AdminOrderItem[];
+  coupon: AdminOrderCoupon | null;
+});
+
 export type AdminCouponDiscountType = typeof AdminCouponDiscountType[keyof typeof AdminCouponDiscountType];
 
 
@@ -601,9 +650,39 @@ export interface AdminInventoryItem {
   isActive: boolean;
 }
 
-export interface AdminInventoryUpdate {
+export interface AdminInventoryAdjustment {
   /** @minimum 0 */
   stockQuantity: number;
+  /** @minLength 1 */
+  reason: string;
+}
+
+export type AdminInventoryMovementMovementType = typeof AdminInventoryMovementMovementType[keyof typeof AdminInventoryMovementMovementType];
+
+
+export const AdminInventoryMovementMovementType = {
+  increase: 'increase',
+  decrease: 'decrease',
+  adjustment: 'adjustment',
+} as const;
+
+export interface AdminInventoryMovement {
+  id: number;
+  productId: number;
+  movementType: AdminInventoryMovementMovementType;
+  quantityChange: number;
+  quantityBefore: number;
+  quantityAfter: number;
+  /** @nullable */
+  reason: string | null;
+  /** @nullable */
+  performedBy: number | null;
+  createdAt: string;
+}
+
+export interface AdminInventoryAdjustmentResult {
+  item: AdminInventoryItem;
+  movement: AdminInventoryMovement;
 }
 
 export interface AdminDistributor {
