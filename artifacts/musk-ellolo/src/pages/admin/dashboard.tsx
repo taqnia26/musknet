@@ -20,8 +20,8 @@ export default function AdminDashboard() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1,2,3,4,5,6,7,8].map(i => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader className="h-14 bg-muted/50 rounded-t-lg" />
+          <Card key={i} className="animate-pulse shadow-sm">
+            <CardHeader className="h-14 bg-muted/30 rounded-t-lg" />
             <CardContent className="h-20" />
           </Card>
         ))}
@@ -30,14 +30,14 @@ export default function AdminDashboard() {
   }
 
   const stats = [
-    { labelAr: 'الإيرادات', labelEn: 'Revenue', value: `${data.revenue} SAR`, icon: DollarSign, color: 'text-green-500' },
-    { labelAr: 'الطلبات', labelEn: 'Orders', value: data.orders, icon: ShoppingCart, color: 'text-blue-500' },
-    { labelAr: 'العملاء', labelEn: 'Customers', value: data.customers, icon: Users, color: 'text-purple-500' },
-    { labelAr: 'المنتجات', labelEn: 'Products', value: data.products, icon: Package, color: 'text-orange-500' },
-    { labelAr: 'طلبات قيد الانتظار', labelEn: 'Pending Orders', value: data.pendingOrders, icon: Clock, color: 'text-amber-500' },
-    { labelAr: 'مخزون منخفض', labelEn: 'Low Stock', value: data.lowStock, icon: AlertTriangle, color: 'text-red-500' },
-    { labelAr: 'كوبونات نشطة', labelEn: 'Active Coupons', value: data.activeCoupons, icon: Ticket, color: 'text-teal-500' },
-    { labelAr: 'الموزعين', labelEn: 'Distributors', value: data.distributors, icon: Truck, color: 'text-indigo-500' },
+    { labelAr: 'الإيرادات', labelEn: 'Revenue', value: `${data.revenue} SAR`, icon: DollarSign, color: 'text-success' },
+    { labelAr: 'الطلبات', labelEn: 'Orders', value: data.orders, icon: ShoppingCart, color: 'text-primary' },
+    { labelAr: 'العملاء', labelEn: 'Customers', value: data.customers, icon: Users, color: 'text-secondary-foreground' },
+    { labelAr: 'المنتجات', labelEn: 'Products', value: data.products, icon: Package, color: 'text-ring' },
+    { labelAr: 'طلبات قيد الانتظار', labelEn: 'Pending Orders', value: data.pendingOrders, icon: Clock, color: 'text-ring' },
+    { labelAr: 'مخزون منخفض', labelEn: 'Low Stock', value: data.lowStock, icon: AlertTriangle, color: 'text-destructive' },
+    { labelAr: 'كوبونات نشطة', labelEn: 'Active Coupons', value: data.activeCoupons, icon: Ticket, color: 'text-success' },
+    { labelAr: 'الموزعين', labelEn: 'Distributors', value: data.distributors, icon: Truck, color: 'text-primary' },
   ];
 
   return (

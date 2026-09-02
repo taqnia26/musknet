@@ -177,9 +177,9 @@ export default function AdminDistributors() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : distributors?.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t('لا يوجد موزعين', 'No distributors found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{t('لا يوجد موزعين', 'No distributors found')}</TableCell></TableRow>
             ) : (
               distributors?.map((distributor) => (
                 <TableRow key={distributor.id} data-testid={`row-distributor-${distributor.id}`}>
@@ -188,7 +188,7 @@ export default function AdminDistributors() {
                   <TableCell dir="ltr" className="text-right rtl:text-left">{distributor.phone}</TableCell>
                   <TableCell>{distributor.city || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant={distributor.isActive ? "default" : "secondary"}>
+                    <Badge variant={distributor.isActive ? "default" : "secondary"} className={distributor.isActive ? "bg-success text-success-foreground hover:bg-success/90" : "bg-muted text-muted-foreground"}>
                       {distributor.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
                     </Badge>
                   </TableCell>

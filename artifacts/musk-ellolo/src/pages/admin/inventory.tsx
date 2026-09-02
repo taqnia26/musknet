@@ -88,9 +88,9 @@ export default function AdminInventory() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : inventory?.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('لا توجد منتجات', 'No products found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{t('لا توجد منتجات', 'No products found')}</TableCell></TableRow>
             ) : (
               inventory?.map((item) => {
                 const isEditing = editingStocks[item.id] !== undefined;
@@ -103,12 +103,12 @@ export default function AdminInventory() {
                     <TableCell>{item.sku || '-'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {isLow && <AlertTriangle className="h-4 w-4 text-red-500" />}
+                        {isLow && <AlertTriangle className="h-4 w-4 text-destructive" />}
                         {item.stockQuantity}
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={isLow ? "destructive" : "default"}>
+                      <Badge variant={isLow ? "destructive" : "default"} className={!isLow ? "bg-success text-success-foreground hover:bg-success/90" : ""}>
                         {isLow ? t('منخفض', 'Low') : t('متوفر', 'In Stock')}
                       </Badge>
                     </TableCell>
@@ -123,7 +123,7 @@ export default function AdminInventory() {
                           />
                           {isEditing && currentStockVal !== item.stockQuantity && (
                             <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => handleSaveStock(item.id)}>
-                              <Save className="h-4 w-4 text-green-600" />
+                              <Save className="h-4 w-4 text-success" />
                             </Button>
                           )}
                         </div>

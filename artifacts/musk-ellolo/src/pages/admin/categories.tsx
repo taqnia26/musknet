@@ -147,16 +147,16 @@ export default function AdminCategories() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-8">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : categories?.length === 0 ? (
-              <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">{t('لا توجد أقسام', 'No categories found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={4} className="text-center py-12 text-muted-foreground">{t('لا توجد أقسام', 'No categories found')}</TableCell></TableRow>
             ) : (
               categories?.map((category) => (
                 <TableRow key={category.id} data-testid={`row-category-${category.id}`}>
                   <TableCell className="font-medium">{lang === 'ar' ? category.nameAr : category.nameEn}</TableCell>
                   <TableCell>{category.slug}</TableCell>
                   <TableCell>
-                    <Badge variant={category.isActive ? "default" : "secondary"}>
+                    <Badge variant={category.isActive ? "default" : "secondary"} className={category.isActive ? "bg-success text-success-foreground hover:bg-success/90" : "bg-muted text-muted-foreground"}>
                       {category.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
                     </Badge>
                   </TableCell>

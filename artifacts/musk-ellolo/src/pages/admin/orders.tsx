@@ -46,19 +46,19 @@ export default function AdminOrders() {
     });
   };
 
-  const statusMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    'new': { label: t('جديد', 'New'), variant: 'default' },
-    'processing': { label: t('قيد التجهيز', 'Processing'), variant: 'secondary' },
-    'shipped': { label: t('مشحون', 'Shipped'), variant: 'outline' },
-    'delivered': { label: t('تم التوصيل', 'Delivered'), variant: 'outline' },
+  const statusMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
+    'new': { label: t('جديد', 'New'), variant: 'default', className: 'bg-primary text-primary-foreground' },
+    'processing': { label: t('قيد التجهيز', 'Processing'), variant: 'secondary', className: 'bg-accent text-accent-foreground' },
+    'shipped': { label: t('مشحون', 'Shipped'), variant: 'outline', className: 'border-primary text-primary' },
+    'delivered': { label: t('تم التوصيل', 'Delivered'), variant: 'default', className: 'bg-success text-success-foreground hover:bg-success/90' },
     'cancelled': { label: t('ملغي', 'Cancelled'), variant: 'destructive' },
   };
 
-  const paymentMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    'pending': { label: t('قيد الانتظار', 'Pending'), variant: 'secondary' },
-    'paid': { label: t('مدفوع', 'Paid'), variant: 'default' },
+  const paymentMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
+    'pending': { label: t('قيد الانتظار', 'Pending'), variant: 'secondary', className: 'bg-accent text-accent-foreground' },
+    'paid': { label: t('مدفوع', 'Paid'), variant: 'default', className: 'bg-success text-success-foreground hover:bg-success/90' },
     'failed': { label: t('فشل', 'Failed'), variant: 'destructive' },
-    'refunded': { label: t('مسترجع', 'Refunded'), variant: 'outline' },
+    'refunded': { label: t('مسترجع', 'Refunded'), variant: 'outline', className: 'border-destructive text-destructive' },
   };
 
   return (
@@ -109,9 +109,9 @@ export default function AdminOrders() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : orders?.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{t('لا توجد طلبات', 'No orders found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{t('لا توجد طلبات', 'No orders found')}</TableCell></TableRow>
             ) : (
               orders?.map((order) => (
                 <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
@@ -119,12 +119,12 @@ export default function AdminOrders() {
                   <TableCell>{format(new Date(order.createdAt), 'yyyy-MM-dd')}</TableCell>
                   <TableCell>{order.total} SAR</TableCell>
                   <TableCell>
-                    <Badge variant={statusMap[order.status]?.variant || 'default'}>
+                    <Badge variant={statusMap[order.status]?.variant || 'default'} className={statusMap[order.status]?.className}>
                       {statusMap[order.status]?.label || order.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={paymentMap[order.paymentStatus]?.variant || 'default'}>
+                    <Badge variant={paymentMap[order.paymentStatus]?.variant || 'default'} className={paymentMap[order.paymentStatus]?.className}>
                       {paymentMap[order.paymentStatus]?.label || order.paymentStatus}
                     </Badge>
                   </TableCell>

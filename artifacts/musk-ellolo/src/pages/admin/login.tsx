@@ -53,18 +53,18 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-card p-8 rounded-xl shadow-sm border">
+    <div className="admin-theme font-sans min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-card p-8 rounded-xl shadow-sm border border-border">
         <div className="mb-8 text-center">
           <img
             src="/site-assets/admin-logo.png"
             alt="Musk Ellolo"
-            className="h-28 w-auto max-w-full object-contain mx-auto mb-5"
+            className="h-28 w-auto max-w-full object-contain mx-auto mb-5 dark:invert"
           />
-          <h1 className="text-2xl font-bold">
-            {t('إدارة النظام مسك اللولو', 'Musk Ellolo System Management')}
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t('إدارة النظام مسك اللولو', 'Musk Ellolo Atelier')}
           </h1>
-          <p className="text-muted-foreground mt-2">{t('تسجيل الدخول للوحة التحكم', 'Sign in to admin panel')}</p>
+          <p className="text-muted-foreground mt-2 text-sm">{t('تسجيل الدخول للوحة التحكم', 'Sign in to admin panel')}</p>
         </div>
 
         <Form {...form}>

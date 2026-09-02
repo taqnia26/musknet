@@ -88,8 +88,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         return (
           <Link key={item.href} href={item.href}>
             <span
-              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer ${
-                isActive ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all cursor-pointer ${
+                isActive 
+                  ? 'bg-[#FDC87F] text-[#313031] font-semibold shadow-sm' 
+                  : 'text-[#E9E6DF]/80 hover:bg-[#FDC87F]/15 hover:text-[#FDC87F]'
               }`}
               onClick={() => setIsOpen(false)}
             >
@@ -103,19 +105,18 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="flex h-screen bg-muted/20">
+    <div className="admin-theme font-sans bg-background text-foreground flex h-screen">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-e bg-card px-4 py-6">
-        <div className="flex items-center gap-2 mb-8 px-2">
-          <div className="w-8 h-8 rounded bg-primary text-primary-foreground flex items-center justify-center font-bold">M</div>
-          <div className="font-bold text-lg">Musk Ellolo Admin</div>
+      <aside className="hidden md:flex flex-col w-64 border-e border-[#D1CABE]/25 bg-[#3D3D3D] text-[#E9E6DF] px-4 py-6 shadow-xl shadow-[#313031]/10">
+        <div className="flex items-center justify-center mb-8 px-2">
+          <img src="/site-assets/admin-logo.png" alt="Musk Ellolo" className="h-20 w-auto object-contain brightness-0 invert opacity-90" />
         </div>
         <div className="flex-1 overflow-y-auto">
           <NavLinks />
         </div>
         <div className="pt-4 mt-auto border-t space-y-2">
-          <div className="px-3 py-2 text-sm font-medium truncate">{user.name}</div>
-          <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleLogout} data-testid="button-admin-logout">
+          <div className="px-3 py-2 text-sm font-medium truncate text-[#E9E6DF]/70">{user.name}</div>
+          <Button variant="ghost" className="w-full justify-start gap-2 text-[#E9E6DF] hover:bg-[#731323]/35 hover:text-white" onClick={handleLogout} data-testid="button-admin-logout">
             <LogOut className="h-4 w-4" />
             {t('تسجيل الخروج', 'Logout')}
           </Button>
@@ -132,21 +133,23 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-64 p-4 flex flex-col">
-                <div className="font-bold text-lg mb-6">Musk Ellolo Admin</div>
+              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-64 p-4 flex flex-col admin-theme font-sans border-[#D1CABE]/25 bg-[#3D3D3D] text-[#E9E6DF]">
+                <div className="flex items-center justify-center mb-6 mt-4 px-2">
+                  <img src="/site-assets/admin-logo.png" alt="Musk Ellolo" className="h-20 w-auto object-contain brightness-0 invert opacity-90" />
+                </div>
                 <div className="flex-1 overflow-y-auto">
                   <NavLinks />
                 </div>
                 <div className="pt-4 border-t space-y-2">
-                  <div className="px-3 py-2 text-sm font-medium truncate">{user.name}</div>
-                  <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleLogout}>
+                  <div className="px-3 py-2 text-sm font-medium truncate text-[#E9E6DF]/70">{user.name}</div>
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-[#E9E6DF] hover:bg-[#731323]/35 hover:text-white" onClick={handleLogout}>
                     <LogOut className="h-4 w-4" />
                     {t('تسجيل الخروج', 'Logout')}
                   </Button>
                 </div>
               </SheetContent>
             </Sheet>
-            <span className="font-bold text-lg">Musk Ellolo</span>
+            <span className="font-bold text-lg tracking-wider">MUSK ELLOLO</span>
           </div>
 
           <div className="flex items-center gap-2 ms-auto">

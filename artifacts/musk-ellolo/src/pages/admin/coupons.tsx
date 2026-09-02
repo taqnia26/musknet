@@ -176,9 +176,9 @@ export default function AdminCoupons() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : coupons?.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('لا توجد كوبونات', 'No coupons found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{t('لا توجد كوبونات', 'No coupons found')}</TableCell></TableRow>
             ) : (
               coupons?.map((coupon) => (
                 <TableRow key={coupon.id} data-testid={`row-coupon-${coupon.id}`}>
@@ -186,7 +186,7 @@ export default function AdminCoupons() {
                   <TableCell>{coupon.discountValue} {coupon.discountType === 'percentage' ? '%' : 'SAR'}</TableCell>
                   <TableCell>{coupon.timesUsed} / {coupon.usageLimit || '∞'}</TableCell>
                   <TableCell>
-                    <Badge variant={coupon.isActive ? "default" : "secondary"}>
+                    <Badge variant={coupon.isActive ? "default" : "secondary"} className={coupon.isActive ? "bg-success text-success-foreground hover:bg-success/90" : "bg-muted text-muted-foreground"}>
                       {coupon.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
                     </Badge>
                   </TableCell>

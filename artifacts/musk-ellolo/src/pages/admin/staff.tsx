@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ShieldAlert } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -127,10 +127,10 @@ export default function AdminStaff() {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="text-center space-y-4">
-          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-            <span className="text-2xl font-bold text-muted-foreground">!</span>
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+            <ShieldAlert className="h-8 w-8 text-destructive" />
           </div>
-          <h2 className="text-2xl font-bold">{t('غير مصرح لك', 'Access Denied')}</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t('غير مصرح لك', 'Access Denied')}</h2>
           <p className="text-muted-foreground">{t('هذه الصفحة متاحة فقط للمدراء العامين', 'This page is only available to super admins')}</p>
         </div>
       </div>
@@ -259,21 +259,21 @@ export default function AdminStaff() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : filteredStaff?.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('لا يوجد مستخدمين', 'No users found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{t('لا يوجد مستخدمين', 'No users found')}</TableCell></TableRow>
             ) : (
               filteredStaff?.map((user) => (
                 <TableRow key={user.id} data-testid={`row-staff-${user.id}`}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <Badge variant={user.isSuperAdmin ? "default" : "secondary"}>
+                    <Badge variant="secondary" className={user.isSuperAdmin ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}>
                       {user.isSuperAdmin ? t('مدير عام', 'Super Admin') : t('مستخدم', 'User')}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.isActive ? "default" : "destructive"}>
+                    <Badge variant={user.isActive ? "default" : "destructive"} className={user.isActive ? "bg-success text-success-foreground hover:bg-success/90" : ""}>
                       {user.isActive ? t('نشط', 'Active') : t('موقوف', 'Suspended')}
                     </Badge>
                   </TableCell>

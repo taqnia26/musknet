@@ -113,9 +113,9 @@ export default function AdminCustomers() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : customers?.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('لا يوجد عملاء', 'No customers found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{t('لا يوجد عملاء', 'No customers found')}</TableCell></TableRow>
             ) : (
               customers?.map((customer) => (
                 <TableRow key={customer.id} data-testid={`row-customer-${customer.id}`}>
@@ -123,7 +123,7 @@ export default function AdminCustomers() {
                   <TableCell dir="ltr" className="text-right rtl:text-left">{customer.phone}</TableCell>
                   <TableCell>{customer.email || '-'}</TableCell>
                   <TableCell>
-                    <Badge variant={customer.isActive ? "default" : "destructive"}>
+                    <Badge variant={customer.isActive ? "default" : "destructive"} className={customer.isActive ? "bg-success text-success-foreground hover:bg-success/90" : ""}>
                       {customer.isActive ? t('نشط', 'Active') : t('موقوف', 'Suspended')}
                     </Badge>
                   </TableCell>

@@ -169,9 +169,9 @@ export default function AdminProducts() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : products?.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{t('لا توجد منتجات', 'No products found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{t('لا توجد منتجات', 'No products found')}</TableCell></TableRow>
             ) : (
               products?.map((product) => (
                 <TableRow key={product.id} data-testid={`row-product-${product.id}`}>
@@ -179,7 +179,7 @@ export default function AdminProducts() {
                   <TableCell>{product.price} SAR</TableCell>
                   <TableCell>{product.stockQuantity}</TableCell>
                   <TableCell>
-                    <Badge variant={product.isActive ? "default" : "secondary"}>
+                    <Badge variant={product.isActive ? "default" : "secondary"} className={product.isActive ? "bg-success text-success-foreground hover:bg-success/90" : "bg-muted text-muted-foreground"}>
                       {product.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
                     </Badge>
                   </TableCell>
