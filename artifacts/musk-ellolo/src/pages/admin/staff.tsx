@@ -27,6 +27,24 @@ const staffSchema = z.object({
   permissionIds: z.array(z.number()).default([]),
 });
 
+const permissionModuleLabels: Record<string, { ar: string; en: string }> = {
+  dashboard: { ar: 'لوحة القيادة', en: 'Dashboard' },
+  products: { ar: 'المنتجات', en: 'Products' },
+  categories: { ar: 'الأقسام', en: 'Categories' },
+  orders: { ar: 'الطلبات', en: 'Orders' },
+  coupons: { ar: 'الكوبونات', en: 'Coupons' },
+  customers: { ar: 'العملاء', en: 'Customers' },
+  inventory: { ar: 'المخزون', en: 'Inventory' },
+  distributors: { ar: 'الموزعين', en: 'Distributors' },
+  staff: { ar: 'فريق العمل', en: 'Staff' },
+};
+
+const permissionActionLabels: Record<string, { ar: string; en: string }> = {
+  view: { ar: 'مشاهدة', en: 'View' },
+  edit: { ar: 'تعديل', en: 'Edit' },
+  delete: { ar: 'حذف', en: 'Delete' },
+};
+
 export default function AdminStaff() {
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -214,7 +232,10 @@ export default function AdminStaff() {
                                   />
                                 </FormControl>
                                 <FormLabel className="font-normal cursor-pointer text-xs">
-                                  {perm.module} - {perm.action}
+                                  {t(
+                                    `${permissionModuleLabels[perm.module]?.ar ?? perm.module} - ${permissionActionLabels[perm.action]?.ar ?? perm.action}`,
+                                    `${permissionModuleLabels[perm.module]?.en ?? perm.module} - ${permissionActionLabels[perm.action]?.en ?? perm.action}`,
+                                  )}
                                 </FormLabel>
                               </FormItem>
                             )

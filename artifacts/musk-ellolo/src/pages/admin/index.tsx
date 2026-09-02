@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Route, Switch, useLocation } from 'wouter';
 import { AdminLayout } from '@/components/admin/admin-layout';
 import AdminLogin from '@/pages/admin/login';
@@ -13,6 +14,11 @@ import AdminStaff from '@/pages/admin/staff';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
+
+  useEffect(() => {
+    document.documentElement.classList.add('admin-route');
+    return () => document.documentElement.classList.remove('admin-route');
+  }, []);
 
   if (location === '/admin/login') {
     return <AdminLogin />;

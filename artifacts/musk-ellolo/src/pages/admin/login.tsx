@@ -53,7 +53,7 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="admin-theme font-sans min-h-screen bg-background text-foreground flex items-center justify-center p-4">
+    <div className="admin-theme min-h-screen bg-background text-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-card p-8 rounded-xl shadow-sm border border-border">
         <div className="mb-8 text-center">
           <img

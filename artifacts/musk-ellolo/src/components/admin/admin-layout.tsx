@@ -88,9 +88,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         return (
           <Link key={item.href} href={item.href}>
             <span
-              className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all cursor-pointer ${
+              data-active={isActive}
+              className={`admin-nav-item flex items-center gap-3 px-3 py-2 rounded-md transition-all cursor-pointer ${
                 isActive 
-                  ? 'bg-[#FDC87F] text-[#313031] font-semibold shadow-sm' 
+                  ? 'bg-[#FDC87F] text-[#313031] shadow-sm' 
                   : 'text-[#E9E6DF]/80 hover:bg-[#FDC87F]/15 hover:text-[#FDC87F]'
               }`}
               onClick={() => setIsOpen(false)}
@@ -105,7 +106,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   );
 
   return (
-    <div className="admin-theme font-sans bg-background text-foreground flex h-screen">
+    <div className="admin-theme bg-background text-foreground flex h-screen">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-e border-[#D1CABE]/25 bg-[#3D3D3D] text-[#E9E6DF] px-4 py-6 shadow-xl shadow-[#313031]/10">
         <div className="flex items-center justify-center mb-8 px-2">
@@ -133,7 +134,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-64 p-4 flex flex-col admin-theme font-sans border-[#D1CABE]/25 bg-[#3D3D3D] text-[#E9E6DF]">
+              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-64 p-4 flex flex-col admin-theme border-[#D1CABE]/25 bg-[#3D3D3D] text-[#E9E6DF]">
                 <div className="flex items-center justify-center mb-6 mt-4 px-2">
                   <img src="/site-assets/admin-logo.png" alt="Musk Ellolo" className="h-20 w-auto object-contain brightness-0 invert opacity-90" />
                 </div>

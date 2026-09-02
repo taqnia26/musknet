@@ -249,11 +249,29 @@
   html[lang="ar"] .admin-theme,
   .admin-theme[dir="rtl"] {
     --font-sans: 'Tajawal', 'Open Sans', sans-serif;
+    font-family: 'Tajawal', 'Open Sans', sans-serif;
+  }
+
+  html.admin-route[lang="ar"] body {
+    font-family: 'Tajawal', 'Open Sans', sans-serif;
   }
 
   html[lang="en"] .admin-theme,
   .admin-theme[dir="ltr"] {
     --font-sans: 'Open Sans', 'Tajawal', sans-serif;
+    font-family: 'Open Sans', 'Tajawal', sans-serif;
+  }
+
+  html.admin-route[lang="en"] body {
+    font-family: 'Open Sans', 'Tajawal', sans-serif;
+  }
+
+  .admin-nav-item {
+    font-weight: 400;
+  }
+
+  .admin-nav-item[data-active="true"] {
+    font-weight: 700;
   }
 
   .dark .admin-theme, .admin-theme.dark {
