@@ -700,6 +700,205 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminPermissionAssignment" } } } }
       responses: { "200": { description: Staff, content: { application/json: { schema: { $ref: "#/components/schemas/AdminUser" } } } } }
 
+  /admin/hr/employees:
+    get:
+      operationId: adminListEmployees
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { $ref: "#/components/parameters/AdminStatus" }]
+      responses: { "200": { description: Employees, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Employee" } } } } } }
+    post:
+      operationId: adminCreateEmployee
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/EmployeeInput" } } } }
+      responses: { "201": { description: Employee, content: { application/json: { schema: { $ref: "#/components/schemas/Employee" } } } } }
+  /admin/hr/employees/{id}:
+    patch:
+      operationId: adminUpdateEmployee
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/EmployeeUpdate" } } } }
+      responses: { "200": { description: Employee, content: { application/json: { schema: { $ref: "#/components/schemas/Employee" } } } } }
+    delete:
+      operationId: adminDisableEmployee
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Employee soft-disabled } }
+  /admin/hr/attendance:
+    get:
+      operationId: adminListAttendance
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Attendance, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AttendanceRecord" } } } } } }
+    post:
+      operationId: adminCreateAttendance
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AttendanceInput" } } } }
+      responses: { "201": { description: Attendance, content: { application/json: { schema: { $ref: "#/components/schemas/AttendanceRecord" } } } } }
+  /admin/hr/leave-requests:
+    get:
+      operationId: adminListLeaveRequests
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Leave requests, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/LeaveRequest" } } } } } }
+    post:
+      operationId: adminCreateLeaveRequest
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/LeaveRequestInput" } } } }
+      responses: { "201": { description: Leave request, content: { application/json: { schema: { $ref: "#/components/schemas/LeaveRequest" } } } } }
+  /admin/hr/leave-requests/{id}:
+    patch:
+      operationId: adminUpdateLeaveRequest
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/LeaveRequestUpdate" } } } }
+      responses: { "200": { description: Leave request, content: { application/json: { schema: { $ref: "#/components/schemas/LeaveRequest" } } } } }
+  /admin/hr/payroll:
+    get:
+      operationId: adminListPayroll
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Payroll, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PayrollRecord" } } } } } }
+    post:
+      operationId: adminCreatePayroll
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PayrollInput" } } } }
+      responses: { "201": { description: Payroll, content: { application/json: { schema: { $ref: "#/components/schemas/PayrollRecord" } } } } }
+
+  /admin/finance/expenses:
+    get:
+      operationId: adminListExpenses
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Expenses, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Expense" } } } } } }
+    post:
+      operationId: adminCreateExpense
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseInput" } } } }
+      responses: { "201": { description: Expense, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } } }
+  /admin/finance/expenses/{id}:
+    get:
+      operationId: adminGetExpense
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Expense, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } } }
+    patch:
+      operationId: adminUpdateExpense
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseUpdate" } } } }
+      responses: { "200": { description: Expense, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } } }
+    delete:
+      operationId: adminDeleteExpense
+      summary: Permanently delete an expense
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Expense permanently deleted } }
+  /admin/finance/reports/summary:
+    get:
+      operationId: adminGetFinanceSummary
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: from, in: query, required: true, schema: { type: string, format: date } }, { name: to, in: query, required: true, schema: { type: string, format: date } }]
+      responses: { "200": { description: Financial summary, content: { application/json: { schema: { $ref: "#/components/schemas/FinanceMetrics" } } } } }
+  /admin/finance/reports/monthly:
+    get:
+      operationId: adminGetFinanceMonthly
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Previous twelve calendar months, content: { application/json: { schema: { type: array, minItems: 12, maxItems: 12, items: { $ref: "#/components/schemas/MonthlyFinanceMetrics" } } } } } }
+
+  /admin/manufacturing/batches:
+    get:
+      operationId: adminListManufacturingBatches
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Batches, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ManufacturingBatch" } } } } } }
+    post:
+      operationId: adminCreateManufacturingBatch
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ManufacturingBatchInput" } } } }
+      responses: { "201": { description: Batch, content: { application/json: { schema: { $ref: "#/components/schemas/ManufacturingBatch" } } } } }
+  /admin/manufacturing/batches/{id}:
+    get:
+      operationId: adminGetManufacturingBatch
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Batch, content: { application/json: { schema: { $ref: "#/components/schemas/ManufacturingBatch" } } } } }
+    patch:
+      operationId: adminUpdateManufacturingBatch
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ManufacturingBatchUpdate" } } } }
+      responses: { "200": { description: Batch, content: { application/json: { schema: { $ref: "#/components/schemas/ManufacturingBatch" } } } } }
+    delete:
+      operationId: adminDeleteManufacturingBatch
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Batch permanently deleted } }
+
+  /admin/exhibitions:
+    get:
+      operationId: adminListExhibitions
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Exhibitions, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Exhibition" } } } } } }
+    post:
+      operationId: adminCreateExhibition
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExhibitionInput" } } } }
+      responses: { "201": { description: Exhibition, content: { application/json: { schema: { $ref: "#/components/schemas/Exhibition" } } } } }
+  /admin/exhibitions/{id}:
+    get:
+      operationId: adminGetExhibition
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Exhibition, content: { application/json: { schema: { $ref: "#/components/schemas/Exhibition" } } } } }
+    patch:
+      operationId: adminUpdateExhibition
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExhibitionUpdate" } } } }
+      responses: { "200": { description: Exhibition, content: { application/json: { schema: { $ref: "#/components/schemas/Exhibition" } } } } }
+    delete:
+      operationId: adminDeleteExhibition
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Exhibition permanently deleted } }
+  /admin/exhibitions/{id}/products:
+    get:
+      operationId: adminListExhibitionProducts
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Allocated products, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ExhibitionProduct" } } } } } }
+    post:
+      operationId: adminCreateExhibitionProduct
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExhibitionProductInput" } } } }
+      responses: { "201": { description: Allocated product, content: { application/json: { schema: { $ref: "#/components/schemas/ExhibitionProduct" } } } } }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1509,3 +1708,233 @@ components:
       required: [permissionIds]
       properties:
         permissionIds: { type: array, items: { type: number } }
+    Employee:
+      type: object
+      required: [id, name, nationalId, phone, email, position, department, salary, hireDate, isActive, adminUserId]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        nationalId: { type: string }
+        phone: { type: string }
+        email: { type: [string, "null"] }
+        position: { type: string }
+        department: { type: string }
+        salary: { type: number, minimum: 0 }
+        hireDate: { type: string, format: date }
+        isActive: { type: boolean }
+        adminUserId: { type: [number, "null"] }
+    EmployeeInput:
+      type: object
+      required: [name, nationalId, phone, position, department, salary, hireDate]
+      properties:
+        name: { type: string, minLength: 1 }
+        nationalId: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 1 }
+        email: { type: [string, "null"] }
+        position: { type: string, minLength: 1 }
+        department: { type: string, minLength: 1 }
+        salary: { type: number, minimum: 0 }
+        hireDate: { type: string, format: date }
+        isActive: { type: boolean }
+        adminUserId: { type: [number, "null"] }
+    EmployeeUpdate:
+      allOf: [{ $ref: "#/components/schemas/EmployeeInput" }]
+    AttendanceRecord:
+      type: object
+      required: [id, employeeId, date, checkInTime, checkOutTime, status, notes]
+      properties:
+        id: { type: number }
+        employeeId: { type: number }
+        date: { type: string, format: date }
+        checkInTime: { type: [string, "null"] }
+        checkOutTime: { type: [string, "null"] }
+        status: { type: string, enum: [present, absent, late, on_leave] }
+        notes: { type: [string, "null"] }
+    AttendanceInput:
+      type: object
+      required: [employeeId, date, status]
+      properties:
+        employeeId: { type: number }
+        date: { type: string, format: date }
+        checkInTime: { type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$" }
+        checkOutTime: { type: [string, "null"], pattern: "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$" }
+        status: { type: string, enum: [present, absent, late, on_leave] }
+        notes: { type: [string, "null"] }
+    LeaveRequest:
+      type: object
+      required: [id, employeeId, leaveType, startDate, endDate, status, reason, approvedBy]
+      properties:
+        id: { type: number }
+        employeeId: { type: number }
+        leaveType: { type: string, enum: [annual, sick, emergency, unpaid] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        status: { type: string, enum: [pending, approved, rejected] }
+        reason: { type: string }
+        approvedBy: { type: [number, "null"] }
+    LeaveRequestInput:
+      type: object
+      required: [employeeId, leaveType, startDate, endDate, reason]
+      properties:
+        employeeId: { type: number }
+        leaveType: { type: string, enum: [annual, sick, emergency, unpaid] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        status: { type: string, enum: [pending, approved, rejected], default: pending }
+        reason: { type: string, minLength: 1 }
+    LeaveRequestUpdate:
+      type: object
+      properties:
+        employeeId: { type: number }
+        leaveType: { type: string, enum: [annual, sick, emergency, unpaid] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        status: { type: string, enum: [pending, approved, rejected] }
+        reason: { type: string, minLength: 1 }
+    PayrollRecord:
+      type: object
+      required: [id, employeeId, month, year, baseSalary, deductions, bonuses, netSalary, paymentDate, paymentStatus]
+      properties:
+        id: { type: number }
+        employeeId: { type: number }
+        month: { type: number, multipleOf: 1, minimum: 1, maximum: 12 }
+        year: { type: number, multipleOf: 1, minimum: 1900, maximum: 2200 }
+        baseSalary: { type: number, minimum: 0 }
+        deductions: { type: number, minimum: 0 }
+        bonuses: { type: number, minimum: 0 }
+        netSalary: { type: number, minimum: 0 }
+        paymentDate: { type: [string, "null"], format: date }
+        paymentStatus: { type: string, enum: [pending, paid] }
+    PayrollInput:
+      type: object
+      required: [employeeId, month, year, baseSalary, deductions, bonuses]
+      properties:
+        employeeId: { type: number }
+        month: { type: number, multipleOf: 1, minimum: 1, maximum: 12 }
+        year: { type: number, multipleOf: 1, minimum: 1900, maximum: 2200 }
+        baseSalary: { type: number, minimum: 0 }
+        deductions: { type: number, minimum: 0 }
+        bonuses: { type: number, minimum: 0 }
+        paymentDate: { type: [string, "null"], format: date }
+        paymentStatus: { type: string, enum: [pending, paid], default: pending }
+    Expense:
+      type: object
+      required: [id, category, amount, description, expenseDate, receiptUrl, createdBy, createdAt]
+      properties:
+        id: { type: number }
+        category: { type: string, enum: [rent, salaries, utilities, marketing, shipping, other] }
+        amount: { type: number, exclusiveMinimum: 0 }
+        description: { type: string }
+        expenseDate: { type: string, format: date }
+        receiptUrl: { type: [string, "null"] }
+        createdBy: { type: number }
+        createdAt: { type: string, format: date-time }
+    ExpenseInput:
+      type: object
+      required: [category, amount, description, expenseDate]
+      properties:
+        category: { type: string, enum: [rent, salaries, utilities, marketing, shipping, other] }
+        amount: { type: number, exclusiveMinimum: 0 }
+        description: { type: string, minLength: 1 }
+        expenseDate: { type: string, format: date }
+        receiptUrl: { type: [string, "null"] }
+    ExpenseUpdate:
+      allOf: [{ $ref: "#/components/schemas/ExpenseInput" }]
+    FinanceMetrics:
+      type: object
+      required: [from, to, revenue, expenses, netProfit, paidOrderCount, averageOrderValue]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        revenue: { type: number }
+        expenses: { type: number }
+        netProfit: { type: number }
+        paidOrderCount: { type: number }
+        averageOrderValue: { type: number }
+    FinancialPeriod:
+      type: object
+      required: [id, periodStart, periodEnd, totalRevenue, totalExpenses, netProfit, status]
+      properties:
+        id: { type: number }
+        periodStart: { type: string, format: date }
+        periodEnd: { type: string, format: date }
+        totalRevenue: { type: number, minimum: 0 }
+        totalExpenses: { type: number, minimum: 0 }
+        netProfit: { type: number }
+        status: { type: string, enum: [draft, closed] }
+    MonthlyFinanceMetrics:
+      allOf:
+        - $ref: "#/components/schemas/FinanceMetrics"
+        - type: object
+          required: [month]
+          properties:
+            month: { type: string, pattern: "^\\d{4}-\\d{2}$" }
+    ManufacturingBatch:
+      type: object
+      required: [id, batchNumber, productId, quantityProduced, productionDate, expiryDate, costPerUnit, status]
+      properties:
+        id: { type: number }
+        batchNumber: { type: string }
+        productId: { type: number }
+        quantityProduced: { type: number, multipleOf: 1, minimum: 1 }
+        productionDate: { type: string, format: date }
+        expiryDate: { type: [string, "null"], format: date }
+        costPerUnit: { type: number, minimum: 0 }
+        status: { type: string, enum: [in_production, completed, quality_check, approved, rejected] }
+    ManufacturingBatchInput:
+      type: object
+      required: [batchNumber, productId, quantityProduced, productionDate, costPerUnit, status]
+      properties:
+        batchNumber: { type: string, minLength: 1 }
+        productId: { type: number }
+        quantityProduced: { type: number, multipleOf: 1, minimum: 1 }
+        productionDate: { type: string, format: date }
+        expiryDate: { type: [string, "null"], format: date }
+        costPerUnit: { type: number, minimum: 0 }
+        status: { type: string, enum: [in_production, completed, quality_check, approved, rejected] }
+    ManufacturingBatchUpdate:
+      allOf: [{ $ref: "#/components/schemas/ManufacturingBatchInput" }]
+    Exhibition:
+      type: object
+      required: [id, name, location, startDate, endDate, budget, status, notes]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        location: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        budget: { type: number, minimum: 0 }
+        status: { type: string, enum: [planned, ongoing, completed, cancelled] }
+        notes: { type: [string, "null"] }
+    ExhibitionInput:
+      type: object
+      required: [name, location, startDate, endDate, budget, status]
+      properties:
+        name: { type: string, minLength: 1 }
+        location: { type: string, minLength: 1 }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        budget: { type: number, minimum: 0 }
+        status: { type: string, enum: [planned, ongoing, completed, cancelled] }
+        notes: { type: [string, "null"] }
+    ExhibitionUpdate:
+      allOf: [{ $ref: "#/components/schemas/ExhibitionInput" }]
+    ExhibitionProduct:
+      type: object
+      required: [id, exhibitionId, productId, quantityAllocated, quantitySold, productNameAr, productNameEn, productSku]
+      properties:
+        id: { type: number }
+        exhibitionId: { type: number }
+        productId: { type: number }
+        quantityAllocated: { type: number, multipleOf: 1, minimum: 0 }
+        quantitySold: { type: number, multipleOf: 1, minimum: 0 }
+        productNameAr: { type: string }
+        productNameEn: { type: string }
+        productSku: { type: [string, "null"] }
+    ExhibitionProductInput:
+      type: object
+      required: [productId, quantityAllocated]
+      properties:
+        productId: { type: number }
+        quantityAllocated: { type: number, multipleOf: 1, minimum: 0 }
+        quantitySold: { type: number, multipleOf: 1, minimum: 0, default: 0 }

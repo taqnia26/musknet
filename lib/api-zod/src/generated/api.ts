@@ -1492,3 +1492,753 @@ export const AdminSetStaffPermissionsResponse = zod.object({
 })
 
 
+export const adminListEmployeesQueryStatusDefault = `all`;
+
+export const AdminListEmployeesQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "status": zod.enum(['active', 'inactive', 'all']).default(adminListEmployeesQueryStatusDefault)
+})
+
+export const adminListEmployeesResponseSalaryMin = 0;
+
+
+
+export const AdminListEmployeesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "nationalId": zod.string(),
+  "phone": zod.string(),
+  "email": zod.string().nullable(),
+  "position": zod.string(),
+  "department": zod.string(),
+  "salary": zod.number().min(adminListEmployeesResponseSalaryMin),
+  "hireDate": zod.coerce.date(),
+  "isActive": zod.boolean(),
+  "adminUserId": zod.number().nullable()
+})
+export const AdminListEmployeesResponse = zod.array(AdminListEmployeesResponseItem)
+
+
+
+
+
+
+
+export const adminCreateEmployeeBodySalaryMin = 0;
+
+
+
+export const AdminCreateEmployeeBody = zod.object({
+  "name": zod.string().min(1),
+  "nationalId": zod.string().min(1),
+  "phone": zod.string().min(1),
+  "email": zod.string().nullish(),
+  "position": zod.string().min(1),
+  "department": zod.string().min(1),
+  "salary": zod.number().min(adminCreateEmployeeBodySalaryMin),
+  "hireDate": zod.coerce.date(),
+  "isActive": zod.boolean().optional(),
+  "adminUserId": zod.number().nullish()
+})
+
+export const adminCreateEmployeeResponseSalaryMin = 0;
+
+
+
+export const AdminCreateEmployeeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "nationalId": zod.string(),
+  "phone": zod.string(),
+  "email": zod.string().nullable(),
+  "position": zod.string(),
+  "department": zod.string(),
+  "salary": zod.number().min(adminCreateEmployeeResponseSalaryMin),
+  "hireDate": zod.coerce.date(),
+  "isActive": zod.boolean(),
+  "adminUserId": zod.number().nullable()
+})
+
+
+export const AdminUpdateEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const adminUpdateEmployeeBodyOneSalaryMin = 0;
+
+
+
+export const AdminUpdateEmployeeBody = zod.object({
+  "name": zod.string().min(1),
+  "nationalId": zod.string().min(1),
+  "phone": zod.string().min(1),
+  "email": zod.string().nullish(),
+  "position": zod.string().min(1),
+  "department": zod.string().min(1),
+  "salary": zod.number().min(adminUpdateEmployeeBodyOneSalaryMin),
+  "hireDate": zod.coerce.date(),
+  "isActive": zod.boolean().optional(),
+  "adminUserId": zod.number().nullish()
+})
+
+export const adminUpdateEmployeeResponseSalaryMin = 0;
+
+
+
+export const AdminUpdateEmployeeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "nationalId": zod.string(),
+  "phone": zod.string(),
+  "email": zod.string().nullable(),
+  "position": zod.string(),
+  "department": zod.string(),
+  "salary": zod.number().min(adminUpdateEmployeeResponseSalaryMin),
+  "hireDate": zod.coerce.date(),
+  "isActive": zod.boolean(),
+  "adminUserId": zod.number().nullable()
+})
+
+
+export const AdminDisableEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDisableEmployeeResponse = zod.void()
+
+
+export const AdminListAttendanceResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "date": zod.coerce.date(),
+  "checkInTime": zod.string().nullable(),
+  "checkOutTime": zod.string().nullable(),
+  "status": zod.enum(['present', 'absent', 'late', 'on_leave']),
+  "notes": zod.string().nullable()
+})
+export const AdminListAttendanceResponse = zod.array(AdminListAttendanceResponseItem)
+
+
+export const adminCreateAttendanceBodyCheckInTimeRegExp = new RegExp('^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$');
+export const adminCreateAttendanceBodyCheckOutTimeRegExp = new RegExp('^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$');
+
+
+export const AdminCreateAttendanceBody = zod.object({
+  "employeeId": zod.number(),
+  "date": zod.coerce.date(),
+  "checkInTime": zod.string().regex(adminCreateAttendanceBodyCheckInTimeRegExp).nullish(),
+  "checkOutTime": zod.string().regex(adminCreateAttendanceBodyCheckOutTimeRegExp).nullish(),
+  "status": zod.enum(['present', 'absent', 'late', 'on_leave']),
+  "notes": zod.string().nullish()
+})
+
+export const AdminCreateAttendanceResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "date": zod.coerce.date(),
+  "checkInTime": zod.string().nullable(),
+  "checkOutTime": zod.string().nullable(),
+  "status": zod.enum(['present', 'absent', 'late', 'on_leave']),
+  "notes": zod.string().nullable()
+})
+
+
+export const AdminListLeaveRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "leaveType": zod.enum(['annual', 'sick', 'emergency', 'unpaid']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "reason": zod.string(),
+  "approvedBy": zod.number().nullable()
+})
+export const AdminListLeaveRequestsResponse = zod.array(AdminListLeaveRequestsResponseItem)
+
+
+export const adminCreateLeaveRequestBodyStatusDefault = `pending`;
+
+
+export const AdminCreateLeaveRequestBody = zod.object({
+  "employeeId": zod.number(),
+  "leaveType": zod.enum(['annual', 'sick', 'emergency', 'unpaid']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "status": zod.enum(['pending', 'approved', 'rejected']).default(adminCreateLeaveRequestBodyStatusDefault),
+  "reason": zod.string().min(1)
+})
+
+export const AdminCreateLeaveRequestResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "leaveType": zod.enum(['annual', 'sick', 'emergency', 'unpaid']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "reason": zod.string(),
+  "approvedBy": zod.number().nullable()
+})
+
+
+export const AdminUpdateLeaveRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const AdminUpdateLeaveRequestBody = zod.object({
+  "employeeId": zod.number().optional(),
+  "leaveType": zod.enum(['annual', 'sick', 'emergency', 'unpaid']).optional(),
+  "startDate": zod.coerce.date().optional(),
+  "endDate": zod.coerce.date().optional(),
+  "status": zod.enum(['pending', 'approved', 'rejected']).optional(),
+  "reason": zod.string().min(1).optional()
+})
+
+export const AdminUpdateLeaveRequestResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "leaveType": zod.enum(['annual', 'sick', 'emergency', 'unpaid']),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "status": zod.enum(['pending', 'approved', 'rejected']),
+  "reason": zod.string(),
+  "approvedBy": zod.number().nullable()
+})
+
+
+export const adminListPayrollResponseMonthMax = 12;
+export const adminListPayrollResponseMonthMultipleOf = 1;
+
+export const adminListPayrollResponseYearMin = 1900;
+export const adminListPayrollResponseYearMax = 2200;
+export const adminListPayrollResponseYearMultipleOf = 1;
+
+export const adminListPayrollResponseBaseSalaryMin = 0;
+
+export const adminListPayrollResponseDeductionsMin = 0;
+
+export const adminListPayrollResponseBonusesMin = 0;
+
+export const adminListPayrollResponseNetSalaryMin = 0;
+
+
+
+export const AdminListPayrollResponseItem = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "month": zod.number().min(1).max(adminListPayrollResponseMonthMax).multipleOf(adminListPayrollResponseMonthMultipleOf),
+  "year": zod.number().min(adminListPayrollResponseYearMin).max(adminListPayrollResponseYearMax).multipleOf(adminListPayrollResponseYearMultipleOf),
+  "baseSalary": zod.number().min(adminListPayrollResponseBaseSalaryMin),
+  "deductions": zod.number().min(adminListPayrollResponseDeductionsMin),
+  "bonuses": zod.number().min(adminListPayrollResponseBonusesMin),
+  "netSalary": zod.number().min(adminListPayrollResponseNetSalaryMin),
+  "paymentDate": zod.coerce.date().nullable(),
+  "paymentStatus": zod.enum(['pending', 'paid'])
+})
+export const AdminListPayrollResponse = zod.array(AdminListPayrollResponseItem)
+
+
+export const adminCreatePayrollBodyMonthMax = 12;
+export const adminCreatePayrollBodyMonthMultipleOf = 1;
+
+export const adminCreatePayrollBodyYearMin = 1900;
+export const adminCreatePayrollBodyYearMax = 2200;
+export const adminCreatePayrollBodyYearMultipleOf = 1;
+
+export const adminCreatePayrollBodyBaseSalaryMin = 0;
+
+export const adminCreatePayrollBodyDeductionsMin = 0;
+
+export const adminCreatePayrollBodyBonusesMin = 0;
+
+export const adminCreatePayrollBodyPaymentStatusDefault = `pending`;
+
+export const AdminCreatePayrollBody = zod.object({
+  "employeeId": zod.number(),
+  "month": zod.number().min(1).max(adminCreatePayrollBodyMonthMax).multipleOf(adminCreatePayrollBodyMonthMultipleOf),
+  "year": zod.number().min(adminCreatePayrollBodyYearMin).max(adminCreatePayrollBodyYearMax).multipleOf(adminCreatePayrollBodyYearMultipleOf),
+  "baseSalary": zod.number().min(adminCreatePayrollBodyBaseSalaryMin),
+  "deductions": zod.number().min(adminCreatePayrollBodyDeductionsMin),
+  "bonuses": zod.number().min(adminCreatePayrollBodyBonusesMin),
+  "paymentDate": zod.coerce.date().nullish(),
+  "paymentStatus": zod.enum(['pending', 'paid']).default(adminCreatePayrollBodyPaymentStatusDefault)
+})
+
+export const adminCreatePayrollResponseMonthMax = 12;
+export const adminCreatePayrollResponseMonthMultipleOf = 1;
+
+export const adminCreatePayrollResponseYearMin = 1900;
+export const adminCreatePayrollResponseYearMax = 2200;
+export const adminCreatePayrollResponseYearMultipleOf = 1;
+
+export const adminCreatePayrollResponseBaseSalaryMin = 0;
+
+export const adminCreatePayrollResponseDeductionsMin = 0;
+
+export const adminCreatePayrollResponseBonusesMin = 0;
+
+export const adminCreatePayrollResponseNetSalaryMin = 0;
+
+
+
+export const AdminCreatePayrollResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "month": zod.number().min(1).max(adminCreatePayrollResponseMonthMax).multipleOf(adminCreatePayrollResponseMonthMultipleOf),
+  "year": zod.number().min(adminCreatePayrollResponseYearMin).max(adminCreatePayrollResponseYearMax).multipleOf(adminCreatePayrollResponseYearMultipleOf),
+  "baseSalary": zod.number().min(adminCreatePayrollResponseBaseSalaryMin),
+  "deductions": zod.number().min(adminCreatePayrollResponseDeductionsMin),
+  "bonuses": zod.number().min(adminCreatePayrollResponseBonusesMin),
+  "netSalary": zod.number().min(adminCreatePayrollResponseNetSalaryMin),
+  "paymentDate": zod.coerce.date().nullable(),
+  "paymentStatus": zod.enum(['pending', 'paid'])
+})
+
+
+export const adminListExpensesResponseAmountExclusiveMin = 0;
+
+
+
+export const AdminListExpensesResponseItem = zod.object({
+  "id": zod.number(),
+  "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
+  "amount": zod.number().gt(adminListExpensesResponseAmountExclusiveMin),
+  "description": zod.string(),
+  "expenseDate": zod.coerce.date(),
+  "receiptUrl": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListExpensesResponse = zod.array(AdminListExpensesResponseItem)
+
+
+export const adminCreateExpenseBodyAmountExclusiveMin = 0;
+
+
+
+
+export const AdminCreateExpenseBody = zod.object({
+  "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
+  "amount": zod.number().gt(adminCreateExpenseBodyAmountExclusiveMin),
+  "description": zod.string().min(1),
+  "expenseDate": zod.coerce.date(),
+  "receiptUrl": zod.string().nullish()
+})
+
+export const adminCreateExpenseResponseAmountExclusiveMin = 0;
+
+
+
+export const AdminCreateExpenseResponse = zod.object({
+  "id": zod.number(),
+  "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
+  "amount": zod.number().gt(adminCreateExpenseResponseAmountExclusiveMin),
+  "description": zod.string(),
+  "expenseDate": zod.coerce.date(),
+  "receiptUrl": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminGetExpenseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminGetExpenseResponseAmountExclusiveMin = 0;
+
+
+
+export const AdminGetExpenseResponse = zod.object({
+  "id": zod.number(),
+  "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
+  "amount": zod.number().gt(adminGetExpenseResponseAmountExclusiveMin),
+  "description": zod.string(),
+  "expenseDate": zod.coerce.date(),
+  "receiptUrl": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateExpenseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminUpdateExpenseBodyOneAmountExclusiveMin = 0;
+
+
+
+
+export const AdminUpdateExpenseBody = zod.object({
+  "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
+  "amount": zod.number().gt(adminUpdateExpenseBodyOneAmountExclusiveMin),
+  "description": zod.string().min(1),
+  "expenseDate": zod.coerce.date(),
+  "receiptUrl": zod.string().nullish()
+})
+
+export const adminUpdateExpenseResponseAmountExclusiveMin = 0;
+
+
+
+export const AdminUpdateExpenseResponse = zod.object({
+  "id": zod.number(),
+  "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
+  "amount": zod.number().gt(adminUpdateExpenseResponseAmountExclusiveMin),
+  "description": zod.string(),
+  "expenseDate": zod.coerce.date(),
+  "receiptUrl": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Permanently delete an expense
+ */
+export const AdminDeleteExpenseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDeleteExpenseResponse = zod.void()
+
+
+export const AdminGetFinanceSummaryQueryParams = zod.object({
+  "from": zod.date(),
+  "to": zod.date()
+})
+
+export const AdminGetFinanceSummaryResponse = zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date(),
+  "revenue": zod.number(),
+  "expenses": zod.number(),
+  "netProfit": zod.number(),
+  "paidOrderCount": zod.number(),
+  "averageOrderValue": zod.number()
+})
+
+
+export const adminGetFinanceMonthlyResponseTwoMonthRegExp = new RegExp('^\\d{4}-\\d{2}$');
+
+
+export const AdminGetFinanceMonthlyResponseItem = zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date(),
+  "revenue": zod.number(),
+  "expenses": zod.number(),
+  "netProfit": zod.number(),
+  "paidOrderCount": zod.number(),
+  "averageOrderValue": zod.number()
+}).and(zod.object({
+  "month": zod.string().regex(adminGetFinanceMonthlyResponseTwoMonthRegExp)
+}))
+export const AdminGetFinanceMonthlyResponse = zod.array(AdminGetFinanceMonthlyResponseItem).min(12).max(12)
+
+
+export const adminListManufacturingBatchesResponseQuantityProducedMultipleOf = 1;
+
+export const adminListManufacturingBatchesResponseCostPerUnitMin = 0;
+
+
+
+export const AdminListManufacturingBatchesResponseItem = zod.object({
+  "id": zod.number(),
+  "batchNumber": zod.string(),
+  "productId": zod.number(),
+  "quantityProduced": zod.number().min(1).multipleOf(adminListManufacturingBatchesResponseQuantityProducedMultipleOf),
+  "productionDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
+  "costPerUnit": zod.number().min(adminListManufacturingBatchesResponseCostPerUnitMin),
+  "status": zod.enum(['in_production', 'completed', 'quality_check', 'approved', 'rejected'])
+})
+export const AdminListManufacturingBatchesResponse = zod.array(AdminListManufacturingBatchesResponseItem)
+
+
+
+export const adminCreateManufacturingBatchBodyQuantityProducedMultipleOf = 1;
+
+export const adminCreateManufacturingBatchBodyCostPerUnitMin = 0;
+
+
+
+export const AdminCreateManufacturingBatchBody = zod.object({
+  "batchNumber": zod.string().min(1),
+  "productId": zod.number(),
+  "quantityProduced": zod.number().min(1).multipleOf(adminCreateManufacturingBatchBodyQuantityProducedMultipleOf),
+  "productionDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
+  "costPerUnit": zod.number().min(adminCreateManufacturingBatchBodyCostPerUnitMin),
+  "status": zod.enum(['in_production', 'completed', 'quality_check', 'approved', 'rejected'])
+})
+
+export const adminCreateManufacturingBatchResponseQuantityProducedMultipleOf = 1;
+
+export const adminCreateManufacturingBatchResponseCostPerUnitMin = 0;
+
+
+
+export const AdminCreateManufacturingBatchResponse = zod.object({
+  "id": zod.number(),
+  "batchNumber": zod.string(),
+  "productId": zod.number(),
+  "quantityProduced": zod.number().min(1).multipleOf(adminCreateManufacturingBatchResponseQuantityProducedMultipleOf),
+  "productionDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
+  "costPerUnit": zod.number().min(adminCreateManufacturingBatchResponseCostPerUnitMin),
+  "status": zod.enum(['in_production', 'completed', 'quality_check', 'approved', 'rejected'])
+})
+
+
+export const AdminGetManufacturingBatchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminGetManufacturingBatchResponseQuantityProducedMultipleOf = 1;
+
+export const adminGetManufacturingBatchResponseCostPerUnitMin = 0;
+
+
+
+export const AdminGetManufacturingBatchResponse = zod.object({
+  "id": zod.number(),
+  "batchNumber": zod.string(),
+  "productId": zod.number(),
+  "quantityProduced": zod.number().min(1).multipleOf(adminGetManufacturingBatchResponseQuantityProducedMultipleOf),
+  "productionDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
+  "costPerUnit": zod.number().min(adminGetManufacturingBatchResponseCostPerUnitMin),
+  "status": zod.enum(['in_production', 'completed', 'quality_check', 'approved', 'rejected'])
+})
+
+
+export const AdminUpdateManufacturingBatchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const adminUpdateManufacturingBatchBodyOneQuantityProducedMultipleOf = 1;
+
+export const adminUpdateManufacturingBatchBodyOneCostPerUnitMin = 0;
+
+
+
+export const AdminUpdateManufacturingBatchBody = zod.object({
+  "batchNumber": zod.string().min(1),
+  "productId": zod.number(),
+  "quantityProduced": zod.number().min(1).multipleOf(adminUpdateManufacturingBatchBodyOneQuantityProducedMultipleOf),
+  "productionDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullish(),
+  "costPerUnit": zod.number().min(adminUpdateManufacturingBatchBodyOneCostPerUnitMin),
+  "status": zod.enum(['in_production', 'completed', 'quality_check', 'approved', 'rejected'])
+})
+
+export const adminUpdateManufacturingBatchResponseQuantityProducedMultipleOf = 1;
+
+export const adminUpdateManufacturingBatchResponseCostPerUnitMin = 0;
+
+
+
+export const AdminUpdateManufacturingBatchResponse = zod.object({
+  "id": zod.number(),
+  "batchNumber": zod.string(),
+  "productId": zod.number(),
+  "quantityProduced": zod.number().min(1).multipleOf(adminUpdateManufacturingBatchResponseQuantityProducedMultipleOf),
+  "productionDate": zod.coerce.date(),
+  "expiryDate": zod.coerce.date().nullable(),
+  "costPerUnit": zod.number().min(adminUpdateManufacturingBatchResponseCostPerUnitMin),
+  "status": zod.enum(['in_production', 'completed', 'quality_check', 'approved', 'rejected'])
+})
+
+
+export const AdminDeleteManufacturingBatchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDeleteManufacturingBatchResponse = zod.void()
+
+
+export const adminListExhibitionsResponseBudgetMin = 0;
+
+
+
+export const AdminListExhibitionsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "budget": zod.number().min(adminListExhibitionsResponseBudgetMin),
+  "status": zod.enum(['planned', 'ongoing', 'completed', 'cancelled']),
+  "notes": zod.string().nullable()
+})
+export const AdminListExhibitionsResponse = zod.array(AdminListExhibitionsResponseItem)
+
+
+
+
+export const adminCreateExhibitionBodyBudgetMin = 0;
+
+
+
+export const AdminCreateExhibitionBody = zod.object({
+  "name": zod.string().min(1),
+  "location": zod.string().min(1),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "budget": zod.number().min(adminCreateExhibitionBodyBudgetMin),
+  "status": zod.enum(['planned', 'ongoing', 'completed', 'cancelled']),
+  "notes": zod.string().nullish()
+})
+
+export const adminCreateExhibitionResponseBudgetMin = 0;
+
+
+
+export const AdminCreateExhibitionResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "budget": zod.number().min(adminCreateExhibitionResponseBudgetMin),
+  "status": zod.enum(['planned', 'ongoing', 'completed', 'cancelled']),
+  "notes": zod.string().nullable()
+})
+
+
+export const AdminGetExhibitionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminGetExhibitionResponseBudgetMin = 0;
+
+
+
+export const AdminGetExhibitionResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "budget": zod.number().min(adminGetExhibitionResponseBudgetMin),
+  "status": zod.enum(['planned', 'ongoing', 'completed', 'cancelled']),
+  "notes": zod.string().nullable()
+})
+
+
+export const AdminUpdateExhibitionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+export const adminUpdateExhibitionBodyOneBudgetMin = 0;
+
+
+
+export const AdminUpdateExhibitionBody = zod.object({
+  "name": zod.string().min(1),
+  "location": zod.string().min(1),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "budget": zod.number().min(adminUpdateExhibitionBodyOneBudgetMin),
+  "status": zod.enum(['planned', 'ongoing', 'completed', 'cancelled']),
+  "notes": zod.string().nullish()
+})
+
+export const adminUpdateExhibitionResponseBudgetMin = 0;
+
+
+
+export const AdminUpdateExhibitionResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "location": zod.string(),
+  "startDate": zod.coerce.date(),
+  "endDate": zod.coerce.date(),
+  "budget": zod.number().min(adminUpdateExhibitionResponseBudgetMin),
+  "status": zod.enum(['planned', 'ongoing', 'completed', 'cancelled']),
+  "notes": zod.string().nullable()
+})
+
+
+export const AdminDeleteExhibitionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDeleteExhibitionResponse = zod.void()
+
+
+export const AdminListExhibitionProductsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminListExhibitionProductsResponseQuantityAllocatedMin = 0;
+export const adminListExhibitionProductsResponseQuantityAllocatedMultipleOf = 1;
+
+export const adminListExhibitionProductsResponseQuantitySoldMin = 0;
+export const adminListExhibitionProductsResponseQuantitySoldMultipleOf = 1;
+
+
+
+export const AdminListExhibitionProductsResponseItem = zod.object({
+  "id": zod.number(),
+  "exhibitionId": zod.number(),
+  "productId": zod.number(),
+  "quantityAllocated": zod.number().min(adminListExhibitionProductsResponseQuantityAllocatedMin).multipleOf(adminListExhibitionProductsResponseQuantityAllocatedMultipleOf),
+  "quantitySold": zod.number().min(adminListExhibitionProductsResponseQuantitySoldMin).multipleOf(adminListExhibitionProductsResponseQuantitySoldMultipleOf),
+  "productNameAr": zod.string(),
+  "productNameEn": zod.string(),
+  "productSku": zod.string().nullable()
+})
+export const AdminListExhibitionProductsResponse = zod.array(AdminListExhibitionProductsResponseItem)
+
+
+export const AdminCreateExhibitionProductParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminCreateExhibitionProductBodyQuantityAllocatedMin = 0;
+export const adminCreateExhibitionProductBodyQuantityAllocatedMultipleOf = 1;
+
+export const adminCreateExhibitionProductBodyQuantitySoldDefault = 0;
+export const adminCreateExhibitionProductBodyQuantitySoldMin = 0;
+export const adminCreateExhibitionProductBodyQuantitySoldMultipleOf = 1;
+
+
+
+export const AdminCreateExhibitionProductBody = zod.object({
+  "productId": zod.number(),
+  "quantityAllocated": zod.number().min(adminCreateExhibitionProductBodyQuantityAllocatedMin).multipleOf(adminCreateExhibitionProductBodyQuantityAllocatedMultipleOf),
+  "quantitySold": zod.number().min(adminCreateExhibitionProductBodyQuantitySoldMin).multipleOf(adminCreateExhibitionProductBodyQuantitySoldMultipleOf).default(adminCreateExhibitionProductBodyQuantitySoldDefault)
+})
+
+export const adminCreateExhibitionProductResponseQuantityAllocatedMin = 0;
+export const adminCreateExhibitionProductResponseQuantityAllocatedMultipleOf = 1;
+
+export const adminCreateExhibitionProductResponseQuantitySoldMin = 0;
+export const adminCreateExhibitionProductResponseQuantitySoldMultipleOf = 1;
+
+
+
+export const AdminCreateExhibitionProductResponse = zod.object({
+  "id": zod.number(),
+  "exhibitionId": zod.number(),
+  "productId": zod.number(),
+  "quantityAllocated": zod.number().min(adminCreateExhibitionProductResponseQuantityAllocatedMin).multipleOf(adminCreateExhibitionProductResponseQuantityAllocatedMultipleOf),
+  "quantitySold": zod.number().min(adminCreateExhibitionProductResponseQuantitySoldMin).multipleOf(adminCreateExhibitionProductResponseQuantitySoldMultipleOf),
+  "productNameAr": zod.string(),
+  "productNameEn": zod.string(),
+  "productSku": zod.string().nullable()
+})
+
+

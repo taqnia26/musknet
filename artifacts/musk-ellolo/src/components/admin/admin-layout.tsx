@@ -12,6 +12,10 @@ import {
   Users, 
   Warehouse, 
   Truck, 
+  Briefcase,
+  Banknote,
+  Factory,
+  Store,
   UserCog, 
   LogOut, 
   Globe,
@@ -33,6 +37,10 @@ const navItems = [
   { href: '/admin/customers', icon: Users, labelEn: 'Customers', labelAr: 'العملاء', module: 'customers' },
   { href: '/admin/inventory', icon: Warehouse, labelEn: 'Inventory', labelAr: 'المخزون', module: 'inventory' },
   { href: '/admin/distributors', icon: Truck, labelEn: 'Distributors', labelAr: 'الموزعين', module: 'distributors' },
+  { href: '/admin/hr', icon: Briefcase, labelEn: 'HR', labelAr: 'الموارد البشرية', module: 'hr' },
+  { href: '/admin/finance', icon: Banknote, labelEn: 'Finance', labelAr: 'المالية', module: 'finance' },
+  { href: '/admin/manufacturing', icon: Factory, labelEn: 'Manufacturing', labelAr: 'التصنيع', module: 'manufacturing' },
+  { href: '/admin/exhibitions', icon: Store, labelEn: 'Exhibitions', labelAr: 'المعارض', module: 'exhibitions' },
   { href: '/admin/staff', icon: UserCog, labelEn: 'Staff', labelAr: 'فريق العمل', superAdminOnly: true },
 ];
 

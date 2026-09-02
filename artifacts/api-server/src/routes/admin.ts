@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { and, count, eq, sql, sum } from "drizzle-orm";
+import { and, count, eq, gte, lt, lte, sql, sum } from "drizzle-orm";
 import * as Api from "@workspace/api-zod";
 import {
   adminPermissionsTable,
@@ -10,6 +10,14 @@ import {
   couponsTable,
   customersTable,
   db,
+  employeesTable,
+  attendanceRecordsTable,
+  leaveRequestsTable,
+  payrollRecordsTable,
+  expensesTable,
+  manufacturingBatchesTable,
+  exhibitionsTable,
+  exhibitionProductsTable,
   inventoryMovementsTable,
   orderAddressesTable,
   orderItemsTable,
@@ -90,6 +98,15 @@ const statusFilter = <T extends { isActive: boolean }>(rows: T[], status?: strin
 const searchFilter = <T>(rows: T[], search: string | undefined, fields: Array<keyof T>) => {
   const needle = search?.trim().toLocaleLowerCase();
   return needle ? rows.filter((row) => fields.some((field) => String(row[field] ?? "").toLocaleLowerCase().includes(needle))) : rows;
+};
+
+const isoDate = (value: unknown) => value instanceof Date
+  ? value.toISOString().slice(0, 10)
+  : String(value).slice(0, 10);
+const validDateRange = (start: unknown, end: unknown) => isoDate(end) >= isoDate(start);
+const parsedJson = (schema: { parse(value: unknown): unknown }, value: unknown, res: Response, status = 200) => {
+  schema.parse(value);
+  res.status(status).json(value);
 };
 
 router.post("/admin/auth/login", route(async (req, res) => {
@@ -400,6 +417,297 @@ router.patch("/admin/distributors/:id", permit("distributors", "edit"), route(as
 router.delete("/admin/distributors/:id", permit("distributors", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDisableDistributorParams, req.params, res); if (!params) return;
   await db.update(wholesaleDistributorsTable).set({ isActive: false }).where(eq(wholesaleDistributorsTable.id, params.id)); res.sendStatus(204);
+}));
+
+router.get("/admin/hr/employees", permit("hr", "view"), route(async (req, res) => {
+  const query = parse(Api.AdminListEmployeesQueryParams, req.query, res); if (!query) return;
+  let rows = await db.select().from(employeesTable).orderBy(employeesTable.id);
+  rows = statusFilter(searchFilter(rows, query.search, ["name", "nationalId", "phone", "email", "position", "department"]), query.status);
+  parsedJson(Api.AdminListEmployeesResponse, rows, res);
+}));
+router.post("/admin/hr/employees", permit("hr", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateEmployeeBody, req.body, res); if (!body) return;
+  if (body.adminUserId != null) {
+    const [admin] = await db.select({ id: adminUsersTable.id }).from(adminUsersTable).where(eq(adminUsersTable.id, body.adminUserId)).limit(1);
+    if (!admin) { res.status(400).json({ error: "Admin user not found" }); return; }
+  }
+  const [row] = await db.insert(employeesTable).values({ ...body, hireDate: isoDate(body.hireDate) }).returning();
+  parsedJson(Api.AdminCreateEmployeeResponse, row, res, 201);
+}));
+router.patch("/admin/hr/employees/:id", permit("hr", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateEmployeeParams, req.params, res);
+  const body = parse(Api.AdminUpdateEmployeeBody.partial(), req.body, res); if (!params || !body) return;
+  if (body.adminUserId != null) {
+    const [admin] = await db.select({ id: adminUsersTable.id }).from(adminUsersTable).where(eq(adminUsersTable.id, body.adminUserId)).limit(1);
+    if (!admin) { res.status(400).json({ error: "Admin user not found" }); return; }
+  }
+  const { hireDate, ...employeeValues } = body;
+  const values = { ...employeeValues, ...(hireDate ? { hireDate: isoDate(hireDate) } : {}) };
+  const [row] = await db.update(employeesTable).set(values).where(eq(employeesTable.id, params.id)).returning();
+  if (!row) { res.status(404).json({ error: "Employee not found" }); return; }
+  parsedJson(Api.AdminUpdateEmployeeResponse, row, res);
+}));
+router.delete("/admin/hr/employees/:id", permit("hr", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminDisableEmployeeParams, req.params, res); if (!params) return;
+  const [row] = await db.update(employeesTable).set({ isActive: false }).where(eq(employeesTable.id, params.id)).returning({ id: employeesTable.id });
+  if (!row) { res.status(404).json({ error: "Employee not found" }); return; }
+  res.sendStatus(204);
+}));
+
+router.get("/admin/hr/attendance", permit("hr", "view"), route(async (_req, res) => {
+  const rows = await db.select().from(attendanceRecordsTable).orderBy(sql`${attendanceRecordsTable.date} desc`, attendanceRecordsTable.id);
+  parsedJson(Api.AdminListAttendanceResponse, rows, res);
+}));
+router.post("/admin/hr/attendance", permit("hr", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateAttendanceBody, req.body, res); if (!body) return;
+  const [employee] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, body.employeeId)).limit(1);
+  if (!employee) { res.status(400).json({ error: "Employee not found" }); return; }
+  const [duplicate] = await db.select({ id: attendanceRecordsTable.id }).from(attendanceRecordsTable)
+    .where(and(eq(attendanceRecordsTable.employeeId, body.employeeId), eq(attendanceRecordsTable.date, isoDate(body.date)))).limit(1);
+  if (duplicate) { res.status(409).json({ error: "Attendance already exists for employee and date" }); return; }
+  const [row] = await db.insert(attendanceRecordsTable).values({ ...body, date: isoDate(body.date) }).returning();
+  parsedJson(Api.AdminCreateAttendanceResponse, row, res, 201);
+}));
+
+router.get("/admin/hr/leave-requests", permit("hr", "view"), route(async (_req, res) => {
+  const rows = await db.select().from(leaveRequestsTable).orderBy(sql`${leaveRequestsTable.startDate} desc`, leaveRequestsTable.id);
+  parsedJson(Api.AdminListLeaveRequestsResponse, rows, res);
+}));
+router.post("/admin/hr/leave-requests", permit("hr", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateLeaveRequestBody, req.body, res); if (!body) return;
+  if (!validDateRange(body.startDate, body.endDate)) { res.status(400).json({ error: "Leave end date cannot precede start date" }); return; }
+  const [employee] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, body.employeeId)).limit(1);
+  if (!employee) { res.status(400).json({ error: "Employee not found" }); return; }
+  const approvedBy = body.status === "pending" ? null : res.locals.admin.id;
+  const [row] = await db.insert(leaveRequestsTable).values({
+    ...body, startDate: isoDate(body.startDate), endDate: isoDate(body.endDate), approvedBy,
+  }).returning();
+  parsedJson(Api.AdminCreateLeaveRequestResponse, row, res, 201);
+}));
+router.patch("/admin/hr/leave-requests/:id", permit("hr", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateLeaveRequestParams, req.params, res);
+  const body = parse(Api.AdminUpdateLeaveRequestBody, req.body, res); if (!params || !body) return;
+  const [existing] = await db.select().from(leaveRequestsTable).where(eq(leaveRequestsTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Leave request not found" }); return; }
+  const startDate = body.startDate ? isoDate(body.startDate) : existing.startDate;
+  const endDate = body.endDate ? isoDate(body.endDate) : existing.endDate;
+  if (!validDateRange(startDate, endDate)) { res.status(400).json({ error: "Leave end date cannot precede start date" }); return; }
+  if (body.employeeId !== undefined) {
+    const [employee] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, body.employeeId)).limit(1);
+    if (!employee) { res.status(400).json({ error: "Employee not found" }); return; }
+  }
+  const status = body.status ?? existing.status;
+  const [row] = await db.update(leaveRequestsTable).set({
+    ...body, startDate, endDate, approvedBy: status === "pending" ? null : res.locals.admin.id,
+  }).where(eq(leaveRequestsTable.id, params.id)).returning();
+  parsedJson(Api.AdminUpdateLeaveRequestResponse, row, res);
+}));
+
+router.get("/admin/hr/payroll", permit("hr", "view"), route(async (_req, res) => {
+  const rows = await db.select().from(payrollRecordsTable).orderBy(sql`${payrollRecordsTable.year} desc`, sql`${payrollRecordsTable.month} desc`);
+  parsedJson(Api.AdminListPayrollResponse, rows, res);
+}));
+router.post("/admin/hr/payroll", permit("hr", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreatePayrollBody, req.body, res); if (!body) return;
+  const [employee] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, body.employeeId)).limit(1);
+  if (!employee) { res.status(400).json({ error: "Employee not found" }); return; }
+  const netSalary = body.baseSalary + body.bonuses - body.deductions;
+  if (netSalary < 0) { res.status(400).json({ error: "Computed net salary cannot be negative" }); return; }
+  const [duplicate] = await db.select({ id: payrollRecordsTable.id }).from(payrollRecordsTable).where(and(
+    eq(payrollRecordsTable.employeeId, body.employeeId), eq(payrollRecordsTable.month, body.month), eq(payrollRecordsTable.year, body.year),
+  )).limit(1);
+  if (duplicate) { res.status(409).json({ error: "Payroll already exists for employee and period" }); return; }
+  const [row] = await db.insert(payrollRecordsTable).values({
+    ...body, paymentDate: body.paymentDate ? isoDate(body.paymentDate) : null, netSalary,
+  }).returning();
+  parsedJson(Api.AdminCreatePayrollResponse, row, res, 201);
+}));
+
+router.get("/admin/finance/expenses", permit("finance", "view"), route(async (_req, res) => {
+  const rows = await db.select().from(expensesTable).orderBy(sql`${expensesTable.expenseDate} desc`, expensesTable.id);
+  parsedJson(Api.AdminListExpensesResponse, rows, res);
+}));
+router.post("/admin/finance/expenses", permit("finance", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateExpenseBody, req.body, res); if (!body) return;
+  const [row] = await db.insert(expensesTable).values({ ...body, expenseDate: isoDate(body.expenseDate), createdBy: res.locals.admin.id }).returning();
+  parsedJson(Api.AdminCreateExpenseResponse, row, res, 201);
+}));
+router.get("/admin/finance/expenses/:id", permit("finance", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminGetExpenseParams, req.params, res); if (!params) return;
+  const [row] = await db.select().from(expensesTable).where(eq(expensesTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Expense not found" }); return; }
+  parsedJson(Api.AdminGetExpenseResponse, row, res);
+}));
+router.patch("/admin/finance/expenses/:id", permit("finance", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateExpenseParams, req.params, res);
+  const body = parse(Api.AdminUpdateExpenseBody.partial(), req.body, res); if (!params || !body) return;
+  const { expenseDate, ...expenseValues } = body;
+  const values = { ...expenseValues, ...(expenseDate ? { expenseDate: isoDate(expenseDate) } : {}) };
+  const [row] = await db.update(expensesTable).set(values).where(eq(expensesTable.id, params.id)).returning();
+  if (!row) { res.status(404).json({ error: "Expense not found" }); return; }
+  parsedJson(Api.AdminUpdateExpenseResponse, row, res);
+}));
+router.delete("/admin/finance/expenses/:id", permit("finance", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminDeleteExpenseParams, req.params, res); if (!params) return;
+  const [row] = await db.delete(expensesTable).where(eq(expensesTable.id, params.id)).returning({ id: expensesTable.id });
+  if (!row) { res.status(404).json({ error: "Expense not found" }); return; }
+  res.sendStatus(204);
+}));
+
+function utcDateString(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+function nextUtcDate(dateString: string) {
+  const date = new Date(`${dateString}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date;
+}
+async function financeMetrics(from: string, to: string) {
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const endExclusive = nextUtcDate(to);
+  const [[orders], [expenses]] = await Promise.all([
+    db.select({ revenue: sum(ordersTable.total), orderCount: count() }).from(ordersTable)
+      .where(and(eq(ordersTable.paymentStatus, "paid"), gte(ordersTable.createdAt, start), lt(ordersTable.createdAt, endExclusive))),
+    db.select({ value: sum(expensesTable.amount) }).from(expensesTable)
+      .where(and(gte(expensesTable.expenseDate, from), lte(expensesTable.expenseDate, to))),
+  ]);
+  const revenue = Number(orders.revenue ?? 0);
+  const expenseTotal = Number(expenses.value ?? 0);
+  const paidOrderCount = orders.orderCount;
+  return { from, to, revenue, expenses: expenseTotal, netProfit: revenue - expenseTotal, paidOrderCount, averageOrderValue: paidOrderCount ? revenue / paidOrderCount : 0 };
+}
+router.get("/admin/finance/reports/summary", permit("finance", "view"), route(async (req, res) => {
+  const query = parse(Api.AdminGetFinanceSummaryQueryParams, {
+    from: typeof req.query.from === "string" ? new Date(`${req.query.from}T00:00:00.000Z`) : req.query.from,
+    to: typeof req.query.to === "string" ? new Date(`${req.query.to}T00:00:00.000Z`) : req.query.to,
+  }, res); if (!query) return;
+  const from = isoDate(query.from); const to = isoDate(query.to);
+  if (from > to) { res.status(400).json({ error: "from cannot be after to" }); return; }
+  const result = await financeMetrics(from, to);
+  parsedJson(Api.AdminGetFinanceSummaryResponse, result, res);
+}));
+router.get("/admin/finance/reports/monthly", permit("finance", "view"), route(async (_req, res) => {
+  const now = new Date();
+  const first = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11, 1));
+  const months = Array.from({ length: 12 }, (_, index) => {
+    const start = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + index, 1));
+    const next = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
+    const end = new Date(next); end.setUTCDate(0);
+    return { month: utcDateString(start).slice(0, 7), from: utcDateString(start), to: utcDateString(end) };
+  });
+  const rows = await Promise.all(months.map(async (month) => ({ ...await financeMetrics(month.from, month.to), month: month.month })));
+  parsedJson(Api.AdminGetFinanceMonthlyResponse, rows, res);
+}));
+
+router.get("/admin/manufacturing/batches", permit("manufacturing", "view"), route(async (_req, res) => {
+  const rows = await db.select().from(manufacturingBatchesTable).orderBy(sql`${manufacturingBatchesTable.productionDate} desc`, manufacturingBatchesTable.id);
+  parsedJson(Api.AdminListManufacturingBatchesResponse, rows, res);
+}));
+router.post("/admin/manufacturing/batches", permit("manufacturing", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateManufacturingBatchBody, req.body, res); if (!body) return;
+  if (body.expiryDate && !validDateRange(body.productionDate, body.expiryDate)) { res.status(400).json({ error: "Expiry date cannot precede production date" }); return; }
+  const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, body.productId)).limit(1);
+  if (!product) { res.status(400).json({ error: "Product not found" }); return; }
+  const [row] = await db.insert(manufacturingBatchesTable).values({
+    ...body, productionDate: isoDate(body.productionDate), expiryDate: body.expiryDate ? isoDate(body.expiryDate) : null,
+  }).returning();
+  parsedJson(Api.AdminCreateManufacturingBatchResponse, row, res, 201);
+}));
+router.get("/admin/manufacturing/batches/:id", permit("manufacturing", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminGetManufacturingBatchParams, req.params, res); if (!params) return;
+  const [row] = await db.select().from(manufacturingBatchesTable).where(eq(manufacturingBatchesTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Manufacturing batch not found" }); return; }
+  parsedJson(Api.AdminGetManufacturingBatchResponse, row, res);
+}));
+router.patch("/admin/manufacturing/batches/:id", permit("manufacturing", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateManufacturingBatchParams, req.params, res);
+  const body = parse(Api.AdminUpdateManufacturingBatchBody.partial(), req.body, res); if (!params || !body) return;
+  const [existing] = await db.select().from(manufacturingBatchesTable).where(eq(manufacturingBatchesTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Manufacturing batch not found" }); return; }
+  const productionDate = body.productionDate ? isoDate(body.productionDate) : existing.productionDate;
+  const expiryDate = body.expiryDate === null ? null : body.expiryDate ? isoDate(body.expiryDate) : existing.expiryDate;
+  if (expiryDate && !validDateRange(productionDate, expiryDate)) { res.status(400).json({ error: "Expiry date cannot precede production date" }); return; }
+  if (body.productId !== undefined) {
+    const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, body.productId)).limit(1);
+    if (!product) { res.status(400).json({ error: "Product not found" }); return; }
+  }
+  const [row] = await db.update(manufacturingBatchesTable).set({ ...body, productionDate, expiryDate })
+    .where(eq(manufacturingBatchesTable.id, params.id)).returning();
+  parsedJson(Api.AdminUpdateManufacturingBatchResponse, row, res);
+}));
+router.delete("/admin/manufacturing/batches/:id", permit("manufacturing", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminDeleteManufacturingBatchParams, req.params, res); if (!params) return;
+  const [row] = await db.delete(manufacturingBatchesTable).where(eq(manufacturingBatchesTable.id, params.id)).returning({ id: manufacturingBatchesTable.id });
+  if (!row) { res.status(404).json({ error: "Manufacturing batch not found" }); return; }
+  res.sendStatus(204);
+}));
+
+router.get("/admin/exhibitions", permit("exhibitions", "view"), route(async (_req, res) => {
+  const rows = await db.select().from(exhibitionsTable).orderBy(sql`${exhibitionsTable.startDate} desc`, exhibitionsTable.id);
+  parsedJson(Api.AdminListExhibitionsResponse, rows, res);
+}));
+router.post("/admin/exhibitions", permit("exhibitions", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateExhibitionBody, req.body, res); if (!body) return;
+  if (!validDateRange(body.startDate, body.endDate)) { res.status(400).json({ error: "Exhibition end date cannot precede start date" }); return; }
+  const [row] = await db.insert(exhibitionsTable).values({ ...body, startDate: isoDate(body.startDate), endDate: isoDate(body.endDate) }).returning();
+  parsedJson(Api.AdminCreateExhibitionResponse, row, res, 201);
+}));
+router.get("/admin/exhibitions/:id", permit("exhibitions", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminGetExhibitionParams, req.params, res); if (!params) return;
+  const [row] = await db.select().from(exhibitionsTable).where(eq(exhibitionsTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Exhibition not found" }); return; }
+  parsedJson(Api.AdminGetExhibitionResponse, row, res);
+}));
+router.patch("/admin/exhibitions/:id", permit("exhibitions", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateExhibitionParams, req.params, res);
+  const body = parse(Api.AdminUpdateExhibitionBody.partial(), req.body, res); if (!params || !body) return;
+  const [existing] = await db.select().from(exhibitionsTable).where(eq(exhibitionsTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Exhibition not found" }); return; }
+  const startDate = body.startDate ? isoDate(body.startDate) : existing.startDate;
+  const endDate = body.endDate ? isoDate(body.endDate) : existing.endDate;
+  if (!validDateRange(startDate, endDate)) { res.status(400).json({ error: "Exhibition end date cannot precede start date" }); return; }
+  const [row] = await db.update(exhibitionsTable).set({ ...body, startDate, endDate }).where(eq(exhibitionsTable.id, params.id)).returning();
+  parsedJson(Api.AdminUpdateExhibitionResponse, row, res);
+}));
+router.delete("/admin/exhibitions/:id", permit("exhibitions", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminDeleteExhibitionParams, req.params, res); if (!params) return;
+  const [dependent] = await db.select({ id: exhibitionProductsTable.id }).from(exhibitionProductsTable).where(eq(exhibitionProductsTable.exhibitionId, params.id)).limit(1);
+  if (dependent) { res.status(409).json({ error: "Exhibition has allocated products" }); return; }
+  const [row] = await db.delete(exhibitionsTable).where(eq(exhibitionsTable.id, params.id)).returning({ id: exhibitionsTable.id });
+  if (!row) { res.status(404).json({ error: "Exhibition not found" }); return; }
+  res.sendStatus(204);
+}));
+router.get("/admin/exhibitions/:id/products", permit("exhibitions", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminListExhibitionProductsParams, req.params, res); if (!params) return;
+  const [exhibition] = await db.select({ id: exhibitionsTable.id }).from(exhibitionsTable).where(eq(exhibitionsTable.id, params.id)).limit(1);
+  if (!exhibition) { res.status(404).json({ error: "Exhibition not found" }); return; }
+  const rows = await db.select({
+    id: exhibitionProductsTable.id, exhibitionId: exhibitionProductsTable.exhibitionId,
+    productId: exhibitionProductsTable.productId, quantityAllocated: exhibitionProductsTable.quantityAllocated,
+    quantitySold: exhibitionProductsTable.quantitySold, productNameAr: productsTable.nameAr,
+    productNameEn: productsTable.nameEn, productSku: productsTable.sku,
+  }).from(exhibitionProductsTable).innerJoin(productsTable, eq(exhibitionProductsTable.productId, productsTable.id))
+    .where(eq(exhibitionProductsTable.exhibitionId, params.id)).orderBy(exhibitionProductsTable.id);
+  parsedJson(Api.AdminListExhibitionProductsResponse, rows, res);
+}));
+router.post("/admin/exhibitions/:id/products", permit("exhibitions", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminCreateExhibitionProductParams, req.params, res);
+  const body = parse(Api.AdminCreateExhibitionProductBody, req.body, res); if (!params || !body) return;
+  if (body.quantitySold > body.quantityAllocated) { res.status(400).json({ error: "Quantity sold cannot exceed quantity allocated" }); return; }
+  const [[exhibition], [product]] = await Promise.all([
+    db.select({ id: exhibitionsTable.id }).from(exhibitionsTable).where(eq(exhibitionsTable.id, params.id)).limit(1),
+    db.select({ id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn, sku: productsTable.sku })
+      .from(productsTable).where(eq(productsTable.id, body.productId)).limit(1),
+  ]);
+  if (!exhibition) { res.status(404).json({ error: "Exhibition not found" }); return; }
+  if (!product) { res.status(400).json({ error: "Product not found" }); return; }
+  const [duplicate] = await db.select({ id: exhibitionProductsTable.id }).from(exhibitionProductsTable).where(and(
+    eq(exhibitionProductsTable.exhibitionId, params.id), eq(exhibitionProductsTable.productId, body.productId),
+  )).limit(1);
+  if (duplicate) { res.status(409).json({ error: "Product is already allocated to exhibition" }); return; }
+  const [row] = await db.insert(exhibitionProductsTable).values({ ...body, exhibitionId: params.id }).returning();
+  const response = { ...row, productNameAr: product.nameAr, productNameEn: product.nameEn, productSku: product.sku };
+  parsedJson(Api.AdminCreateExhibitionProductResponse, response, res, 201);
 }));
 
 router.get("/admin/staff", superOnly, route(async (_req, res) => {

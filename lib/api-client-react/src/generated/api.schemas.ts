@@ -752,6 +752,459 @@ export interface AdminPermissionAssignment {
   permissionIds: number[];
 }
 
+export interface Employee {
+  id: number;
+  name: string;
+  nationalId: string;
+  phone: string;
+  /** @nullable */
+  email: string | null;
+  position: string;
+  department: string;
+  /** @minimum 0 */
+  salary: number;
+  hireDate: string;
+  isActive: boolean;
+  /** @nullable */
+  adminUserId: number | null;
+}
+
+export interface EmployeeInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  nationalId: string;
+  /** @minLength 1 */
+  phone: string;
+  /** @nullable */
+  email?: string | null;
+  /** @minLength 1 */
+  position: string;
+  /** @minLength 1 */
+  department: string;
+  /** @minimum 0 */
+  salary: number;
+  hireDate: string;
+  isActive?: boolean;
+  /** @nullable */
+  adminUserId?: number | null;
+}
+
+export type EmployeeUpdate = EmployeeInput;
+
+export type AttendanceRecordStatus = typeof AttendanceRecordStatus[keyof typeof AttendanceRecordStatus];
+
+
+export const AttendanceRecordStatus = {
+  present: 'present',
+  absent: 'absent',
+  late: 'late',
+  on_leave: 'on_leave',
+} as const;
+
+export interface AttendanceRecord {
+  id: number;
+  employeeId: number;
+  date: string;
+  /** @nullable */
+  checkInTime: string | null;
+  /** @nullable */
+  checkOutTime: string | null;
+  status: AttendanceRecordStatus;
+  /** @nullable */
+  notes: string | null;
+}
+
+export type AttendanceInputStatus = typeof AttendanceInputStatus[keyof typeof AttendanceInputStatus];
+
+
+export const AttendanceInputStatus = {
+  present: 'present',
+  absent: 'absent',
+  late: 'late',
+  on_leave: 'on_leave',
+} as const;
+
+export interface AttendanceInput {
+  employeeId: number;
+  date: string;
+  /**
+     * @nullable
+     * @pattern ^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$
+     */
+  checkInTime?: string | null;
+  /**
+     * @nullable
+     * @pattern ^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$
+     */
+  checkOutTime?: string | null;
+  status: AttendanceInputStatus;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type LeaveRequestLeaveType = typeof LeaveRequestLeaveType[keyof typeof LeaveRequestLeaveType];
+
+
+export const LeaveRequestLeaveType = {
+  annual: 'annual',
+  sick: 'sick',
+  emergency: 'emergency',
+  unpaid: 'unpaid',
+} as const;
+
+export type LeaveRequestStatus = typeof LeaveRequestStatus[keyof typeof LeaveRequestStatus];
+
+
+export const LeaveRequestStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface LeaveRequest {
+  id: number;
+  employeeId: number;
+  leaveType: LeaveRequestLeaveType;
+  startDate: string;
+  endDate: string;
+  status: LeaveRequestStatus;
+  reason: string;
+  /** @nullable */
+  approvedBy: number | null;
+}
+
+export type LeaveRequestInputLeaveType = typeof LeaveRequestInputLeaveType[keyof typeof LeaveRequestInputLeaveType];
+
+
+export const LeaveRequestInputLeaveType = {
+  annual: 'annual',
+  sick: 'sick',
+  emergency: 'emergency',
+  unpaid: 'unpaid',
+} as const;
+
+export type LeaveRequestInputStatus = typeof LeaveRequestInputStatus[keyof typeof LeaveRequestInputStatus];
+
+
+export const LeaveRequestInputStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface LeaveRequestInput {
+  employeeId: number;
+  leaveType: LeaveRequestInputLeaveType;
+  startDate: string;
+  endDate: string;
+  status?: LeaveRequestInputStatus;
+  /** @minLength 1 */
+  reason: string;
+}
+
+export type LeaveRequestUpdateLeaveType = typeof LeaveRequestUpdateLeaveType[keyof typeof LeaveRequestUpdateLeaveType];
+
+
+export const LeaveRequestUpdateLeaveType = {
+  annual: 'annual',
+  sick: 'sick',
+  emergency: 'emergency',
+  unpaid: 'unpaid',
+} as const;
+
+export type LeaveRequestUpdateStatus = typeof LeaveRequestUpdateStatus[keyof typeof LeaveRequestUpdateStatus];
+
+
+export const LeaveRequestUpdateStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface LeaveRequestUpdate {
+  employeeId?: number;
+  leaveType?: LeaveRequestUpdateLeaveType;
+  startDate?: string;
+  endDate?: string;
+  status?: LeaveRequestUpdateStatus;
+  /** @minLength 1 */
+  reason?: string;
+}
+
+export type PayrollRecordPaymentStatus = typeof PayrollRecordPaymentStatus[keyof typeof PayrollRecordPaymentStatus];
+
+
+export const PayrollRecordPaymentStatus = {
+  pending: 'pending',
+  paid: 'paid',
+} as const;
+
+export interface PayrollRecord {
+  id: number;
+  employeeId: number;
+  /**
+     * @minimum 1
+     * @maximum 12
+     */
+  month: number;
+  /**
+     * @minimum 1900
+     * @maximum 2200
+     */
+  year: number;
+  /** @minimum 0 */
+  baseSalary: number;
+  /** @minimum 0 */
+  deductions: number;
+  /** @minimum 0 */
+  bonuses: number;
+  /** @minimum 0 */
+  netSalary: number;
+  /** @nullable */
+  paymentDate: string | null;
+  paymentStatus: PayrollRecordPaymentStatus;
+}
+
+export type PayrollInputPaymentStatus = typeof PayrollInputPaymentStatus[keyof typeof PayrollInputPaymentStatus];
+
+
+export const PayrollInputPaymentStatus = {
+  pending: 'pending',
+  paid: 'paid',
+} as const;
+
+export interface PayrollInput {
+  employeeId: number;
+  /**
+     * @minimum 1
+     * @maximum 12
+     */
+  month: number;
+  /**
+     * @minimum 1900
+     * @maximum 2200
+     */
+  year: number;
+  /** @minimum 0 */
+  baseSalary: number;
+  /** @minimum 0 */
+  deductions: number;
+  /** @minimum 0 */
+  bonuses: number;
+  /** @nullable */
+  paymentDate?: string | null;
+  paymentStatus?: PayrollInputPaymentStatus;
+}
+
+export type ExpenseCategory = typeof ExpenseCategory[keyof typeof ExpenseCategory];
+
+
+export const ExpenseCategory = {
+  rent: 'rent',
+  salaries: 'salaries',
+  utilities: 'utilities',
+  marketing: 'marketing',
+  shipping: 'shipping',
+  other: 'other',
+} as const;
+
+export interface Expense {
+  id: number;
+  category: ExpenseCategory;
+  /** @exclusiveMinimum 0 */
+  amount: number;
+  description: string;
+  expenseDate: string;
+  /** @nullable */
+  receiptUrl: string | null;
+  createdBy: number;
+  createdAt: string;
+}
+
+export type ExpenseInputCategory = typeof ExpenseInputCategory[keyof typeof ExpenseInputCategory];
+
+
+export const ExpenseInputCategory = {
+  rent: 'rent',
+  salaries: 'salaries',
+  utilities: 'utilities',
+  marketing: 'marketing',
+  shipping: 'shipping',
+  other: 'other',
+} as const;
+
+export interface ExpenseInput {
+  category: ExpenseInputCategory;
+  /** @exclusiveMinimum 0 */
+  amount: number;
+  /** @minLength 1 */
+  description: string;
+  expenseDate: string;
+  /** @nullable */
+  receiptUrl?: string | null;
+}
+
+export type ExpenseUpdate = ExpenseInput;
+
+export interface FinanceMetrics {
+  from: string;
+  to: string;
+  revenue: number;
+  expenses: number;
+  netProfit: number;
+  paidOrderCount: number;
+  averageOrderValue: number;
+}
+
+export type FinancialPeriodStatus = typeof FinancialPeriodStatus[keyof typeof FinancialPeriodStatus];
+
+
+export const FinancialPeriodStatus = {
+  draft: 'draft',
+  closed: 'closed',
+} as const;
+
+export interface FinancialPeriod {
+  id: number;
+  periodStart: string;
+  periodEnd: string;
+  /** @minimum 0 */
+  totalRevenue: number;
+  /** @minimum 0 */
+  totalExpenses: number;
+  netProfit: number;
+  status: FinancialPeriodStatus;
+}
+
+export type MonthlyFinanceMetrics = FinanceMetrics & {
+  /** @pattern ^\d{4}-\d{2}$ */
+  month: string;
+};
+
+export type ManufacturingBatchStatus = typeof ManufacturingBatchStatus[keyof typeof ManufacturingBatchStatus];
+
+
+export const ManufacturingBatchStatus = {
+  in_production: 'in_production',
+  completed: 'completed',
+  quality_check: 'quality_check',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface ManufacturingBatch {
+  id: number;
+  batchNumber: string;
+  productId: number;
+  /** @minimum 1 */
+  quantityProduced: number;
+  productionDate: string;
+  /** @nullable */
+  expiryDate: string | null;
+  /** @minimum 0 */
+  costPerUnit: number;
+  status: ManufacturingBatchStatus;
+}
+
+export type ManufacturingBatchInputStatus = typeof ManufacturingBatchInputStatus[keyof typeof ManufacturingBatchInputStatus];
+
+
+export const ManufacturingBatchInputStatus = {
+  in_production: 'in_production',
+  completed: 'completed',
+  quality_check: 'quality_check',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface ManufacturingBatchInput {
+  /** @minLength 1 */
+  batchNumber: string;
+  productId: number;
+  /** @minimum 1 */
+  quantityProduced: number;
+  productionDate: string;
+  /** @nullable */
+  expiryDate?: string | null;
+  /** @minimum 0 */
+  costPerUnit: number;
+  status: ManufacturingBatchInputStatus;
+}
+
+export type ManufacturingBatchUpdate = ManufacturingBatchInput;
+
+export type ExhibitionStatus = typeof ExhibitionStatus[keyof typeof ExhibitionStatus];
+
+
+export const ExhibitionStatus = {
+  planned: 'planned',
+  ongoing: 'ongoing',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface Exhibition {
+  id: number;
+  name: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  /** @minimum 0 */
+  budget: number;
+  status: ExhibitionStatus;
+  /** @nullable */
+  notes: string | null;
+}
+
+export type ExhibitionInputStatus = typeof ExhibitionInputStatus[keyof typeof ExhibitionInputStatus];
+
+
+export const ExhibitionInputStatus = {
+  planned: 'planned',
+  ongoing: 'ongoing',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface ExhibitionInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  location: string;
+  startDate: string;
+  endDate: string;
+  /** @minimum 0 */
+  budget: number;
+  status: ExhibitionInputStatus;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type ExhibitionUpdate = ExhibitionInput;
+
+export interface ExhibitionProduct {
+  id: number;
+  exhibitionId: number;
+  productId: number;
+  /** @minimum 0 */
+  quantityAllocated: number;
+  /** @minimum 0 */
+  quantitySold: number;
+  productNameAr: string;
+  productNameEn: string;
+  /** @nullable */
+  productSku: string | null;
+}
+
+export interface ExhibitionProductInput {
+  productId: number;
+  /** @minimum 0 */
+  quantityAllocated: number;
+  /** @minimum 0 */
+  quantitySold?: number;
+}
+
 /**
  * Invalid request
  */
@@ -865,5 +1318,15 @@ lowStock?: boolean;
 export type AdminListDistributorsParams = {
 search?: AdminSearchParameter;
 status?: AdminStatusParameter;
+};
+
+export type AdminListEmployeesParams = {
+search?: AdminSearchParameter;
+status?: AdminStatusParameter;
+};
+
+export type AdminGetFinanceSummaryParams = {
+from: string;
+to: string;
 };
 

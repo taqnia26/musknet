@@ -11,6 +11,10 @@ import AdminCustomers from '@/pages/admin/customers';
 import AdminInventory from '@/pages/admin/inventory';
 import AdminDistributors from '@/pages/admin/distributors';
 import AdminStaff from '@/pages/admin/staff';
+import AdminHR from '@/pages/admin/hr';
+import AdminFinance from '@/pages/admin/finance';
+import AdminManufacturing from '@/pages/admin/manufacturing';
+import AdminExhibitions from '@/pages/admin/exhibitions';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
@@ -35,6 +39,10 @@ export default function AdminRoutes() {
         <Route path="/admin/customers" component={AdminCustomers} />
         <Route path="/admin/inventory" component={AdminInventory} />
         <Route path="/admin/distributors" component={AdminDistributors} />
+        <Route path="/admin/hr" component={AdminHR} />
+        <Route path="/admin/finance" component={AdminFinance} />
+        <Route path="/admin/manufacturing" component={AdminManufacturing} />
+        <Route path="/admin/exhibitions" component={AdminExhibitions} />
         <Route path="/admin/staff" component={AdminStaff} />
       </Switch>
     </AdminLayout>

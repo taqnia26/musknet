@@ -33,3 +33,7 @@ export * from "./admin-sessions";
 export * from "./admin-permissions";
 export * from "./wholesale-distributors";
 export * from "./inventory-movements";
+export * from "./hr";
+export * from "./finance";
+export * from "./manufacturing";
+export * from "./exhibitions";
