@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { encodeZatcaPhaseOne, zatcaPhaseOneBase64 } from "./zatca";
+import { encodeZatcaPhaseOne, zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 
 describe("ZATCA Phase-1 TLV", () => {
   it("encodes Arabic field lengths as UTF-8 bytes and emits all five tags", () => {
@@ -22,5 +22,19 @@ describe("ZATCA Phase-1 TLV", () => {
     }
     expect(tags).toEqual([1, 2, 3, 4, 5]);
     expect(Buffer.from(zatcaPhaseOneBase64(fields), "base64")).toEqual(Buffer.from(bytes));
+  });
+
+  it("requires the legal seller name and VAT registration number from the environment", () => {
+    expect(() => zatcaSellerConfiguration({
+      VAT_REGISTRATION_NUMBER: "300000000000003",
+    })).toThrow(/VAT_SELLER_LEGAL_NAME/);
+
+    expect(zatcaSellerConfiguration({
+      VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
+      VAT_REGISTRATION_NUMBER: "300000000000003",
+    })).toEqual({
+      sellerName: "مؤسسة مسك اللولو للتجارة",
+      vatRegistrationNumber: "300000000000003",
+    });
   });
 });

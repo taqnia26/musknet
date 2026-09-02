@@ -129,7 +129,10 @@ describe.sequential("persistent storefront carts and orders", () => {
     stockSnapshots.set(4, orderedProduct.stockQuantity);
     await addToCart(owner.id, 4, 1);
 
-    const environment = { VAT_REGISTRATION_NUMBER: "300000000000003" };
+    const environment = {
+      VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
+      VAT_REGISTRATION_NUMBER: "300000000000003",
+    };
     const order = await createOrderForUser(owner.id, {
       address: {
         label: "المنزل",

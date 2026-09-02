@@ -44,7 +44,7 @@ app.use("/api", router);
 app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   req.log.error({ err: error }, "Storefront request failed");
   if (!res.headersSent) {
-    if (error instanceof Error && /^VAT_REGISTRATION_NUMBER/.test(error.message)) {
+    if (error instanceof Error && /^VAT_(?:SELLER_LEGAL_NAME|REGISTRATION_NUMBER)/.test(error.message)) {
       res.status(503).json({ error: error.message });
       return;
     }

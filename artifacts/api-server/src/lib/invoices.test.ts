@@ -37,7 +37,7 @@ describe.sequential("atomic invoice issuance", () => {
     await expect(updateOrderAndIssueInvoice(
       orderIds[0],
       { paymentStatus: "paid" },
-      {},
+      { VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة" },
     ))
       .rejects.toThrow(/VAT_REGISTRATION_NUMBER/);
     const [unchanged] = await db.select().from(ordersTable).where(eq(ordersTable.id, orderIds[0]));
@@ -47,7 +47,10 @@ describe.sequential("atomic invoice issuance", () => {
   });
 
   it("is idempotent under concurrent calls and allocates consecutive successful numbers", async () => {
-    const env = { VAT_REGISTRATION_NUMBER: "300000000000003" };
+    const env = {
+      VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
+      VAT_REGISTRATION_NUMBER: "300000000000003",
+    };
     await Promise.all([
       updateOrderAndIssueInvoice(orderIds[0], { paymentStatus: "paid" }, env),
       updateOrderAndIssueInvoice(orderIds[0], { paymentStatus: "paid" }, env),

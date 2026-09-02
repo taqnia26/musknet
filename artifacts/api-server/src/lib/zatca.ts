@@ -41,8 +41,9 @@ export function zatcaPhaseOneBase64(fields: ZatcaPhaseOneFields): string {
 }
 
 export function zatcaSellerConfiguration(env: NodeJS.ProcessEnv = process.env) {
-  const sellerName = "مسك اللولو / Musk Ellolo";
+  const sellerName = env.VAT_SELLER_LEGAL_NAME?.trim();
   const vatRegistrationNumber = env.VAT_REGISTRATION_NUMBER?.trim();
+  if (!sellerName) throw new Error("VAT_SELLER_LEGAL_NAME is required to issue a ZATCA invoice");
   if (!vatRegistrationNumber) throw new Error("VAT_REGISTRATION_NUMBER is required to issue a ZATCA invoice");
   if (!/^\d{15}$/.test(vatRegistrationNumber)) {
     throw new Error("VAT_REGISTRATION_NUMBER must contain exactly 15 digits");

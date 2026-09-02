@@ -29,3 +29,8 @@ externalPort = 80
 [[ports]]
 localPort = 19126
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+VAT_SELLER_LEGAL_NAME = "مؤسسة مسك اللولو للتجارة"

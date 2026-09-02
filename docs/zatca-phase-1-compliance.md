@@ -12,8 +12,9 @@ ISO-8601 timestamp, VAT-inclusive total, VAT total). Length octets are computed
 from UTF-8 bytes, and the resulting TLV bytes are Base64-encoded and stored with
 the immutable invoice snapshot. Fields longer than one-octet TLV permits are
 rejected. QR PNG rendering uses the established `qrcode` npm package rather
-than handwritten QR generation. The seller name is the required product identity,
-`مسك اللولو / Musk Ellolo`; only the VAT registration number is environment-backed.
+than handwritten QR generation. Both registered seller fields are environment-backed:
+`VAT_SELLER_LEGAL_NAME` supplies the legal seller name and
+`VAT_REGISTRATION_NUMBER` supplies the 15-digit VAT registration number.
 
 Invoice numbers are allocated with `pg_advisory_xact_lock` plus `MAX + 1` in
 the same database transaction as invoice creation and the payment transition.

@@ -34,6 +34,7 @@ beforeAll(async () => {
   process.env.ADMIN_EMAIL = seedEmail;
   process.env.ADMIN_PASSWORD = "route-test-password";
   process.env.VAT_REGISTRATION_NUMBER = "300000000000003";
+  process.env.VAT_SELLER_LEGAL_NAME = "مؤسسة مسك اللولو للتجارة";
 
   // The first request initializes the environment-backed super administrator.
   await request(app).get("/api/admin/dashboard").expect(401);
@@ -130,6 +131,7 @@ afterAll(async () => {
   delete process.env.ADMIN_EMAIL;
   delete process.env.ADMIN_PASSWORD;
   delete process.env.VAT_REGISTRATION_NUMBER;
+  delete process.env.VAT_SELLER_LEGAL_NAME;
 });
 
 describe.sequential("admin route authorization", () => {
@@ -216,7 +218,7 @@ describe.sequential("admin route authorization", () => {
     const invoice = list.body.find((item: { orderId: number }) => item.orderId === orderId);
     expect(invoice).toMatchObject({
       orderNumber: expect.stringMatching(/^ADMIN-TEST-/),
-      sellerName: "مسك اللولو / Musk Ellolo",
+      sellerName: "مؤسسة مسك اللولو للتجارة",
       sellerVatNumber: "300000000000003",
       totalAmount: 100,
       vatAmount: 0,
