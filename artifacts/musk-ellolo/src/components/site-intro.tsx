@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const logoSrc = `${import.meta.env.BASE_URL}site-assets/Ca44RuZ7R2vL2wTsJKCO2bG6rWGMyqxB0CVdsvxb-63014f950a.png`;
+const logoSrc = `${import.meta.env.BASE_URL}site-assets/admin-logo.png`;
 
 export function SiteIntro() {
   const [isVisible, setIsVisible] = useState(true);

@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: #fff;
   opacity: 1;
   visibility: visible;
   transition: opacity 550ms ease, visibility 550ms ease;
@@ -23,9 +23,8 @@
   width: min(58vw, 520px);
   height: auto;
   object-fit: contain;
-  filter: invert(1) brightness(2);
-  opacity: 0;
-  transform: scale(0.96);
+  opacity: 0.25;
+  transform: scale(0.98);
   animation: site-intro-logo 1100ms ease-out 120ms forwards;
 }
 
@@ -37,20 +36,18 @@
 
 .site-intro--leaving .site-intro__logo {
   transform: scale(1.02);
-  filter: invert(1) brightness(2) blur(4px);
-  transition: transform 550ms ease, filter 550ms ease;
+  opacity: 0;
+  transition: transform 550ms ease, opacity 550ms ease;
 }
 
 @keyframes site-intro-logo {
   from {
-    opacity: 0;
-    transform: scale(0.96);
-    filter: invert(1) brightness(2) blur(8px);
+    opacity: 0.25;
+    transform: scale(0.98);
   }
   to {
     opacity: 1;
     transform: scale(1);
-    filter: invert(1) brightness(2) blur(0);
   }
 }
 
