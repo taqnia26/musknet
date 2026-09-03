@@ -338,7 +338,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="hidden lg:flex items-center text-sm font-medium text-muted-foreground">
-            {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
 
           <div className="ms-auto flex items-center gap-2">

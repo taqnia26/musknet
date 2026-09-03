@@ -71,6 +71,13 @@
       "when": 1788438742204,
       "tag": "0009_cloudy_the_hand",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788442673620,
+      "tag": "0010_friendly_lockjaw",
+      "breakpoints": true
     }
   ]
 }

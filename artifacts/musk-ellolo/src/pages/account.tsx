@@ -67,7 +67,7 @@ export default function Account() {
                 <div key={order.id} className="flex justify-between items-center p-4 bg-background rounded-xl border">
                   <div>
                     <p className="font-bold">#{order.orderNumber}</p>
-                    <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString('en-GB')}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold">{order.total} {t('ر.س', 'SAR')}</p>

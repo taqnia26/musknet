@@ -15,6 +15,8 @@ export interface AdminProductUpdate {
   nameEn?: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  /** @minLength 1 */
+  slug?: string;
   /** @minimum 0 */
   price?: number;
   /**

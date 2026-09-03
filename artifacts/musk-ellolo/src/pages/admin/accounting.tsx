@@ -54,7 +54,7 @@ const journalSchema = z.object({
 type JournalForm = z.infer<typeof journalSchema>;
 
 function money(value: string) {
-  return Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+  return Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 }
 
 function errorMessage(error: unknown) {

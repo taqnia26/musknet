@@ -136,7 +136,7 @@ export default function OwnerPortal() {
   };
 
   const formatDate = (value: string | Date) => new Intl.DateTimeFormat(
-    lang === 'ar' ? 'ar-SA' : 'en-GB',
+    lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB',
     { dateStyle: 'medium', timeStyle: 'short' },
   ).format(new Date(value));
 

@@ -717,6 +717,55 @@ export const GetAdminDashboardResponse = zod.object({
 })
 
 
+export const AdminListIntegrationsResponseItem = zod.object({
+  "providerId": zod.string(),
+  "status": zod.enum(['configured']),
+  "accountLabel": zod.string().nullish(),
+  "apiBaseUrl": zod.string().nullish(),
+  "configuredAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListIntegrationsResponse = zod.array(AdminListIntegrationsResponseItem)
+
+
+export const adminConfigureIntegrationPathProviderIdRegExp = new RegExp('^[a-z0-9-]+$');
+
+
+export const AdminConfigureIntegrationParams = zod.object({
+  "providerId": zod.coerce.string().regex(adminConfigureIntegrationPathProviderIdRegExp)
+})
+
+export const adminConfigureIntegrationBodyAccountLabelMax = 120;
+
+export const adminConfigureIntegrationBodyApiBaseUrlMax = 500;
+
+
+
+export const AdminConfigureIntegrationBody = zod.object({
+  "accountLabel": zod.string().max(adminConfigureIntegrationBodyAccountLabelMax).nullish(),
+  "apiBaseUrl": zod.string().max(adminConfigureIntegrationBodyApiBaseUrlMax).nullish()
+})
+
+export const AdminConfigureIntegrationResponse = zod.object({
+  "providerId": zod.string(),
+  "status": zod.enum(['configured']),
+  "accountLabel": zod.string().nullish(),
+  "apiBaseUrl": zod.string().nullish(),
+  "configuredAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const adminDisconnectIntegrationPathProviderIdRegExp = new RegExp('^[a-z0-9-]+$');
+
+
+export const AdminDisconnectIntegrationParams = zod.object({
+  "providerId": zod.coerce.string().regex(adminDisconnectIntegrationPathProviderIdRegExp)
+})
+
+export const AdminDisconnectIntegrationResponse = zod.void()
+
+
 export const adminListProductsQueryStatusDefault = `all`;
 
 export const AdminListProductsQueryParams = zod.object({
@@ -818,6 +867,25 @@ export const AdminCreateProductResponse = zod.object({
 })
 
 
+export const adminRequestProductImageUploadBodyNameMax = 255;
+
+export const adminRequestProductImageUploadBodySizeMax = 8388608;
+
+
+
+export const AdminRequestProductImageUploadBody = zod.object({
+  "name": zod.string().min(1).max(adminRequestProductImageUploadBodyNameMax),
+  "size": zod.number().min(1).max(adminRequestProductImageUploadBodySizeMax),
+  "contentType": zod.enum(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'])
+})
+
+export const AdminRequestProductImageUploadResponse = zod.object({
+  "uploadUrl": zod.string(),
+  "objectPath": zod.string(),
+  "imageUrl": zod.string()
+})
+
+
 export const AdminGetProductParams = zod.object({
   "id": zod.coerce.number()
 })
@@ -857,6 +925,7 @@ export const AdminUpdateProductParams = zod.object({
 
 
 
+
 export const adminUpdateProductBodyPriceMin = 0;
 
 export const adminUpdateProductBodyCompareAtPriceMin = 0;
@@ -870,6 +939,7 @@ export const AdminUpdateProductBody = zod.object({
   "nameEn": zod.string().min(1).optional(),
   "descriptionAr": zod.string().optional(),
   "descriptionEn": zod.string().optional(),
+  "slug": zod.string().min(1).optional(),
   "price": zod.number().min(adminUpdateProductBodyPriceMin).optional(),
   "compareAtPrice": zod.number().min(adminUpdateProductBodyCompareAtPriceMin).nullish(),
   "categoryId": zod.number().optional(),

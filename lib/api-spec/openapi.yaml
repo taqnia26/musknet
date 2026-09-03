@@ -520,6 +520,26 @@ paths:
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       responses: { "200": { description: Metrics, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDashboard" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /admin/integrations:
+    get:
+      operationId: adminListIntegrations
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Saved integration settings, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminIntegration" } } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /admin/integrations/{providerId}:
+    put:
+      operationId: adminConfigureIntegration
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminIntegrationProviderId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminIntegrationInput" } } } }
+      responses: { "200": { description: Integration settings saved, content: { application/json: { schema: { $ref: "#/components/schemas/AdminIntegration" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+    delete:
+      operationId: adminDisconnectIntegration
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminIntegrationProviderId" }]
+      responses: { "204": { description: Integration settings removed }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
   /admin/products:
     get:
       operationId: adminListProducts
@@ -533,6 +553,13 @@ paths:
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProductInput" } } } }
       responses: { "201": { description: Product, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProduct" } } } } }
+  /admin/products/images/upload-url:
+    post:
+      operationId: adminRequestProductImageUpload
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProductImageUploadInput" } } } }
+      responses: { "200": { description: Presigned product image upload, content: { application/json: { schema: { $ref: "#/components/schemas/AdminProductImageUpload" } } } } }
   /admin/products/{id}:
     get:
       operationId: adminGetProduct
@@ -1110,6 +1137,11 @@ components:
       name: status
       in: query
       schema: { type: string, enum: [active, inactive, all], default: all }
+    AdminIntegrationProviderId:
+      name: providerId
+      in: path
+      required: true
+      schema: { type: string, pattern: "^[a-z0-9-]+$" }
     OwnerSessionId:
       name: id
       in: path
@@ -1663,6 +1695,21 @@ components:
         pendingOrders: { type: number }
         activeCoupons: { type: number }
         distributors: { type: number }
+    AdminIntegration:
+      type: object
+      required: [providerId, status, configuredAt, updatedAt]
+      properties:
+        providerId: { type: string }
+        status: { type: string, enum: [configured] }
+        accountLabel: { type: ["string", "null"] }
+        apiBaseUrl: { type: ["string", "null"] }
+        configuredAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminIntegrationInput:
+      type: object
+      properties:
+        accountLabel: { type: ["string", "null"], maxLength: 120 }
+        apiBaseUrl: { type: ["string", "null"], maxLength: 500 }
     AdminProduct:
       type: object
       required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, isActive, isFeatured, isBestseller, createdAt, updatedAt]
@@ -1691,6 +1738,20 @@ components:
       properties:
         url: { type: string }
         alt: { type: string }
+    AdminProductImageUploadInput:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        size: { type: number, minimum: 1, maximum: 8388608 }
+        contentType: { type: string, enum: [image/jpeg, image/png, image/webp, image/avif, image/gif] }
+    AdminProductImageUpload:
+      type: object
+      required: [uploadUrl, objectPath, imageUrl]
+      properties:
+        uploadUrl: { type: string }
+        objectPath: { type: string }
+        imageUrl: { type: string }
     AdminProductInput:
       type: object
       required: [nameAr, nameEn, slug, price, categoryId]
@@ -1717,6 +1778,7 @@ components:
         nameEn: { type: string, minLength: 1 }
         descriptionAr: { type: string }
         descriptionEn: { type: string }
+        slug: { type: string, minLength: 1 }
         price: { type: number, minimum: 0 }
         compareAtPrice: { type: [number, "null"], minimum: 0 }
         categoryId: { type: number }

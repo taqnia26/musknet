@@ -42,3 +42,4 @@ export * from "./manufacturing";
 export * from "./exhibitions";
 export * from "./invoices";
 export * from "./accounting";
+export * from "./admin-integrations";

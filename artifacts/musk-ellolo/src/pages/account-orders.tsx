@@ -57,7 +57,7 @@ export default function Orders() {
                 <div className="flex flex-wrap justify-between items-start gap-4 pb-4 border-b">
                   <div>
                     <h3 className="font-bold text-lg">#{order.orderNumber}</h3>
-                    <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString('en-GB')}</p>
                   </div>
                   <div className="text-right">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getStatusColor(order.status)}`}>

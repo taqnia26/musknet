@@ -386,6 +386,37 @@ export interface AdminDashboard {
   distributors: number;
 }
 
+export type AdminIntegrationStatus = typeof AdminIntegrationStatus[keyof typeof AdminIntegrationStatus];
+
+
+export const AdminIntegrationStatus = {
+  configured: 'configured',
+} as const;
+
+export interface AdminIntegration {
+  providerId: string;
+  status: AdminIntegrationStatus;
+  /** @nullable */
+  accountLabel?: string | null;
+  /** @nullable */
+  apiBaseUrl?: string | null;
+  configuredAt: string;
+  updatedAt: string;
+}
+
+export interface AdminIntegrationInput {
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  accountLabel?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  apiBaseUrl?: string | null;
+}
+
 export interface AdminProductImage {
   url: string;
   alt: string;
@@ -412,6 +443,37 @@ export interface AdminProduct {
   isBestseller: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export type AdminProductImageUploadInputContentType = typeof AdminProductImageUploadInputContentType[keyof typeof AdminProductImageUploadInputContentType];
+
+
+export const AdminProductImageUploadInputContentType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+  'image/avif': 'image/avif',
+  'image/gif': 'image/gif',
+} as const;
+
+export interface AdminProductImageUploadInput {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 8388608
+     */
+  size: number;
+  contentType: AdminProductImageUploadInputContentType;
+}
+
+export interface AdminProductImageUpload {
+  uploadUrl: string;
+  objectPath: string;
+  imageUrl: string;
 }
 
 export interface AdminProductInput {
@@ -446,6 +508,8 @@ export interface AdminProductUpdate {
   nameEn?: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  /** @minLength 1 */
+  slug?: string;
   /** @minimum 0 */
   price?: number;
   /**

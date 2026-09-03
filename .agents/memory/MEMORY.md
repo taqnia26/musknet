@@ -4,3 +4,4 @@
 - [Playwright on NixOS](playwright-nixos-runtime.md) — downloaded Chromium still needs its shared libraries declared in the workspace Nix configuration.
 - [OpenAPI email validation](openapi-email-validation.md) — use a pattern instead of format: email until the Orval/Zod generator versions are aligned.
 - [Lazy video request tests](lazy-video-request-tests.md) — currentSrc can be selected without a fetch; assert actual requests and readyState when testing preload="none".
+- [Integration readiness states](integration-readiness-states.md) — distinguish saved setup from a verified live connection, and never persist provider secrets in app tables.

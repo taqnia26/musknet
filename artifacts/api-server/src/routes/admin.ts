@@ -5,6 +5,7 @@ import * as Api from "@workspace/api-zod";
 import {
   adminPermissionsTable,
   adminSessionsTable,
+  adminIntegrationsTable,
   adminUserPermissionsTable,
   adminUsersTable,
   categoriesTable,
@@ -51,8 +52,18 @@ import {
   reverseJournalEntry,
   trialBalance,
 } from "../lib/accounting";
+import { ObjectStorageService } from "../lib/object-storage";
 
 const router: IRouter = Router();
+const objectStorage = new ObjectStorageService();
+const integrationProviderIds = new Set([
+  "zatca",
+  "moyasar",
+  "tabby",
+  "smsa",
+  "odoo",
+  "storage-station",
+]);
 const bearer = (req: Request) => {
   const header = req.header("authorization");
   return header?.startsWith("Bearer ") ? header.slice(7) : undefined;
@@ -166,6 +177,60 @@ router.get("/admin/dashboard", permit("dashboard", "view"), route(async (_req, r
   }));
 }));
 
+router.get("/admin/integrations", superOnly, route(async (_req, res) => {
+  const rows = await db.select().from(adminIntegrationsTable).orderBy(adminIntegrationsTable.providerId);
+  res.json(Api.AdminListIntegrationsResponse.parse(rows));
+}));
+router.put("/admin/integrations/:providerId", superOnly, route(async (req, res) => {
+  const params = parse(Api.AdminConfigureIntegrationParams, req.params, res);
+  const body = parse(Api.AdminConfigureIntegrationBody, req.body, res);
+  if (!params || !body) return;
+  if (!integrationProviderIds.has(params.providerId)) {
+    res.status(400).json({ error: "Unsupported integration provider" });
+    return;
+  }
+
+  const accountLabel = body.accountLabel?.trim() || null;
+  const apiBaseUrl = body.apiBaseUrl?.trim() || null;
+  if (apiBaseUrl) {
+    try {
+      const url = new URL(apiBaseUrl);
+      if (url.protocol !== "https:" && url.protocol !== "http:") throw new Error("Unsupported URL scheme");
+    } catch {
+      res.status(400).json({ error: "API base URL must be a valid HTTP or HTTPS URL" });
+      return;
+    }
+  }
+
+  const [row] = await db.insert(adminIntegrationsTable).values({
+    providerId: params.providerId,
+    status: "configured",
+    accountLabel,
+    apiBaseUrl,
+    configuredBy: (res.locals.admin as typeof adminUsersTable.$inferSelect).id,
+  }).onConflictDoUpdate({
+    target: adminIntegrationsTable.providerId,
+    set: {
+      status: "configured",
+      accountLabel,
+      apiBaseUrl,
+      configuredBy: (res.locals.admin as typeof adminUsersTable.$inferSelect).id,
+      updatedAt: new Date(),
+    },
+  }).returning();
+  res.json(Api.AdminConfigureIntegrationResponse.parse(row));
+}));
+router.delete("/admin/integrations/:providerId", superOnly, route(async (req, res) => {
+  const params = parse(Api.AdminDisconnectIntegrationParams, req.params, res);
+  if (!params) return;
+  if (!integrationProviderIds.has(params.providerId)) {
+    res.status(400).json({ error: "Unsupported integration provider" });
+    return;
+  }
+  await db.delete(adminIntegrationsTable).where(eq(adminIntegrationsTable.providerId, params.providerId));
+  res.sendStatus(204);
+}));
+
 router.get("/admin/products", permit("products", "view"), route(async (req, res) => {
   if (res.headersSent) return;
   const query = parse(Api.AdminListProductsQueryParams, req.query, res); if (!query) return;
@@ -176,8 +241,31 @@ router.get("/admin/products", permit("products", "view"), route(async (req, res)
 router.post("/admin/products", permit("products", "edit"), route(async (req, res) => {
   if (res.headersSent) return;
   const body = parse(Api.AdminCreateProductBody, req.body, res); if (!body) return;
+  const [category] = await db.select({ id: categoriesTable.id })
+    .from(categoriesTable)
+    .where(eq(categoriesTable.id, body.categoryId))
+    .limit(1);
+  if (!category) { res.status(400).json({ error: "Category not found" }); return; }
   const [row] = await db.insert(productsTable).values(body).returning();
   res.status(201).json(Api.AdminCreateProductResponse.parse(row));
+}));
+router.post("/admin/products/images/upload-url", permit("products", "edit"), route(async (req, res) => {
+  if (res.headersSent) return;
+  const body = parse(Api.AdminRequestProductImageUploadBody, req.body, res); if (!body) return;
+  const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]);
+  if (!allowedTypes.has(body.contentType)) {
+    res.status(400).json({ error: "Unsupported image type" });
+    return;
+  }
+  if (body.size > 8 * 1024 * 1024) {
+    res.status(400).json({ error: "Image must be 8 MB or smaller" });
+    return;
+  }
+  const upload = await objectStorage.createProductImageUpload();
+  res.json(Api.AdminRequestProductImageUploadResponse.parse({
+    ...upload,
+    imageUrl: `/api/storage${upload.objectPath}`,
+  }));
 }));
 router.get("/admin/products/:id", permit("products", "view"), route(async (req, res) => {
   if (res.headersSent) return;

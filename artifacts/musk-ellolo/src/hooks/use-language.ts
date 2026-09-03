@@ -31,7 +31,7 @@ languageState = {
     };
     if (typeof document !== 'undefined') {
       document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-      document.documentElement.lang = lang;
+      document.documentElement.lang = lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en';
     }
     notify();
   },
@@ -40,7 +40,7 @@ languageState = {
 
 if (typeof document !== 'undefined') {
   document.documentElement.dir = initialLang === 'ar' ? 'rtl' : 'ltr';
-  document.documentElement.lang = initialLang;
+  document.documentElement.lang = initialLang === 'ar' ? 'ar-SA-u-nu-latn' : 'en';
 }
 
 function subscribe(listener: () => void) {

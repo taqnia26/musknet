@@ -16,7 +16,7 @@ import {
 } from 'recharts';
 
 const monthName = (month: string, lang: string) => new Intl.DateTimeFormat(
-  lang === 'ar' ? 'ar-SA' : 'en-US',
+  lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US',
   { month: 'short', timeZone: 'UTC' },
 ).format(new Date(`${month}-01T00:00:00Z`));
 

@@ -38,6 +38,8 @@ import type {
   AdminDistributorUpdate,
   AdminGetFinanceSummaryParams,
   AdminGetTrialBalanceParams,
+  AdminIntegration,
+  AdminIntegrationInput,
   AdminInventoryAdjustment,
   AdminInventoryAdjustmentResult,
   AdminInventoryItem,
@@ -61,6 +63,8 @@ import type {
   AdminPermission,
   AdminPermissionAssignment,
   AdminProduct,
+  AdminProductImageUpload,
+  AdminProductImageUploadInput,
   AdminProductInput,
   AdminProductUpdate,
   AdminStaffInput,
@@ -2600,6 +2604,208 @@ export function useGetAdminDashboard<TData = Awaited<ReturnType<typeof getAdminD
 
 
 
+export const getAdminListIntegrationsUrl = () => {
+
+
+
+
+  return `/api/admin/integrations`
+}
+
+export const adminListIntegrations = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminIntegration[]> => {
+
+  return customFetch<AdminIntegration[]>(getAdminListIntegrationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListIntegrationsQueryKey = () => {
+    return [
+    `/api/admin/integrations`
+    ] as const;
+    }
+
+
+export const getAdminListIntegrationsQueryOptions = <TData = Awaited<ReturnType<typeof adminListIntegrations>>, TError = ErrorType<ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListIntegrations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListIntegrationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListIntegrations>>> = ({ signal }) => adminListIntegrations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListIntegrations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListIntegrationsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListIntegrations>>>
+export type AdminListIntegrationsQueryError = ErrorType<ForbiddenResponse>
+
+
+
+export function useAdminListIntegrations<TData = Awaited<ReturnType<typeof adminListIntegrations>>, TError = ErrorType<ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListIntegrations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListIntegrationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminConfigureIntegrationUrl = (providerId: string,) => {
+
+
+
+
+  return `/api/admin/integrations/${providerId}`
+}
+
+export const adminConfigureIntegration = async (providerId: string,
+    adminIntegrationInput: AdminIntegrationInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminIntegration> => {
+
+  return customFetch<AdminIntegration>(getAdminConfigureIntegrationUrl(providerId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminIntegrationInput)
+  }
+);}
+
+
+
+
+
+export const getAdminConfigureIntegrationMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminConfigureIntegration>>, TError,{providerId: string;data: BodyType<AdminIntegrationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminConfigureIntegration>>, TError,{providerId: string;data: BodyType<AdminIntegrationInput>}, TContext> => {
+
+const mutationKey = ['adminConfigureIntegration'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminConfigureIntegration>>, {providerId: string;data: BodyType<AdminIntegrationInput>}> = (props) => {
+          const {providerId,data} = props ?? {};
+
+          return  adminConfigureIntegration(providerId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminConfigureIntegrationMutationResult = NonNullable<Awaited<ReturnType<typeof adminConfigureIntegration>>>
+    export type AdminConfigureIntegrationMutationBody = BodyType<AdminIntegrationInput>
+    export type AdminConfigureIntegrationMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    export const useAdminConfigureIntegration = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminConfigureIntegration>>, TError,{providerId: string;data: BodyType<AdminIntegrationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminConfigureIntegration>>,
+        TError,
+        {providerId: string;data: BodyType<AdminIntegrationInput>},
+        TContext
+      > => {
+      return useMutation(getAdminConfigureIntegrationMutationOptions(options));
+    }
+
+export const getAdminDisconnectIntegrationUrl = (providerId: string,) => {
+
+
+
+
+  return `/api/admin/integrations/${providerId}`
+}
+
+export const adminDisconnectIntegration = async (providerId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDisconnectIntegrationUrl(providerId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDisconnectIntegrationMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDisconnectIntegration>>, TError,{providerId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDisconnectIntegration>>, TError,{providerId: string}, TContext> => {
+
+const mutationKey = ['adminDisconnectIntegration'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDisconnectIntegration>>, {providerId: string}> = (props) => {
+          const {providerId} = props ?? {};
+
+          return  adminDisconnectIntegration(providerId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDisconnectIntegrationMutationResult = NonNullable<Awaited<ReturnType<typeof adminDisconnectIntegration>>>
+
+    export type AdminDisconnectIntegrationMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    export const useAdminDisconnectIntegration = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDisconnectIntegration>>, TError,{providerId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDisconnectIntegration>>,
+        TError,
+        {providerId: string},
+        TContext
+      > => {
+      return useMutation(getAdminDisconnectIntegrationMutationOptions(options));
+    }
+
 export const getAdminListProductsUrl = (params?: AdminListProductsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -2741,6 +2947,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminCreateProductMutationOptions(options));
+    }
+
+export const getAdminRequestProductImageUploadUrl = () => {
+
+
+
+
+  return `/api/admin/products/images/upload-url`
+}
+
+export const adminRequestProductImageUpload = async (adminProductImageUploadInput: AdminProductImageUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminProductImageUpload> => {
+
+  return customFetch<AdminProductImageUpload>(getAdminRequestProductImageUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminProductImageUploadInput)
+  }
+);}
+
+
+
+
+
+export const getAdminRequestProductImageUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRequestProductImageUpload>>, TError,{data: BodyType<AdminProductImageUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRequestProductImageUpload>>, TError,{data: BodyType<AdminProductImageUploadInput>}, TContext> => {
+
+const mutationKey = ['adminRequestProductImageUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRequestProductImageUpload>>, {data: BodyType<AdminProductImageUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminRequestProductImageUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRequestProductImageUploadMutationResult = NonNullable<Awaited<ReturnType<typeof adminRequestProductImageUpload>>>
+    export type AdminRequestProductImageUploadMutationBody = BodyType<AdminProductImageUploadInput>
+    export type AdminRequestProductImageUploadMutationError = ErrorType<unknown>
+
+    export const useAdminRequestProductImageUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRequestProductImageUpload>>, TError,{data: BodyType<AdminProductImageUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRequestProductImageUpload>>,
+        TError,
+        {data: BodyType<AdminProductImageUploadInput>},
+        TContext
+      > => {
+      return useMutation(getAdminRequestProductImageUploadMutationOptions(options));
     }
 
 export const getAdminGetProductUrl = (id: number,) => {
