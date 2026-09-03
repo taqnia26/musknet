@@ -819,6 +819,30 @@ paths:
                 items: { $ref: "#/components/schemas/AccountingAccount" }
         "403": { $ref: "#/components/responses/Forbidden" }
   /admin/accounting/journal-entries:
+    get:
+      operationId: adminListJournalEntries
+      summary: List historical posted journal entries with lines and actors
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Journal entries ordered newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AdminJournalEntry" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       operationId: adminCreateJournalEntry
       summary: Create and post a balanced manual journal entry
@@ -2024,6 +2048,21 @@ components:
           type: array
           minItems: 2
           items: { $ref: "#/components/schemas/JournalEntryLine" }
+    JournalEntryActor:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        name: { type: string }
+        email: { type: string }
+    AdminJournalEntry:
+      allOf:
+        - { $ref: "#/components/schemas/JournalEntry" }
+        - type: object
+          required: [creator, poster]
+          properties:
+            creator: { $ref: "#/components/schemas/JournalEntryActor" }
+            poster: { $ref: "#/components/schemas/JournalEntryActor" }
     TrialBalanceAccount:
       type: object
       required: [accountId, accountCode, accountNameAr, accountNameEn, accountType, normalBalance, openingBalance, totalDebit, totalCredit, closingBalance]

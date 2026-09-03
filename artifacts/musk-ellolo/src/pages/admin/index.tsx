@@ -18,6 +18,7 @@ import AdminExhibitions from '@/pages/admin/exhibitions';
 import AdminInvoices from '@/pages/admin/invoices';
 import AdminChatbot from '@/pages/admin/chatbot';
 import AdminIntegrations from '@/pages/admin/integrations';
+import AdminAccounting from '@/pages/admin/accounting';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
@@ -45,6 +46,7 @@ export default function AdminRoutes() {
         <Route path="/admin/distributors" component={AdminDistributors} />
         <Route path="/admin/hr" component={AdminHR} />
         <Route path="/admin/finance" component={AdminFinance} />
+        <Route path="/admin/accounting" component={AdminAccounting} />
         <Route path="/admin/manufacturing" component={AdminManufacturing} />
         <Route path="/admin/exhibitions" component={AdminExhibitions} />
         <Route path="/admin/staff" component={AdminStaff} />

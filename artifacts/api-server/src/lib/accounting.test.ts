@@ -137,6 +137,27 @@ describe.sequential("exact double-entry accounting", () => {
     expect(reversalRetry.body.lines).toHaveLength(2);
   });
 
+  it("lists historical journal details with source and posting actors", async () => {
+    const entry = await postJournalEntry(journal(`history-${suffix}`, "42.5000"));
+    const response = await request(app)
+      .get(`/api/admin/accounting/journal-entries?from=${postingDate}&to=${postingDate}`)
+      .set({ Authorization: `Bearer ${token}` })
+      .expect(200);
+    const listed = response.body.find((item: { id: number }) => item.id === entry.id);
+    expect(listed).toMatchObject({
+      sourceType: "accounting_test",
+      sourceId: `history-${suffix}`,
+      creator: { id: actorId, name: "Accounting Actor" },
+      poster: { id: actorId, name: "Accounting Actor" },
+      lines: expect.any(Array),
+    });
+    expect(listed.lines).toHaveLength(2);
+    await request(app)
+      .get(`/api/admin/accounting/journal-entries?from=${postingDate}&to=2000-01-01`)
+      .set({ Authorization: `Bearer ${token}` })
+      .expect(400);
+  });
+
   it("posts sales, expense, and paid payroll atomically and balances mixed exact amounts", async () => {
     const before = await trialBalance(mixedPostingDate, mixedPostingDate);
     await db.transaction((tx) => postSalesJournal({

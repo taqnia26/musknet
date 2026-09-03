@@ -28,6 +28,7 @@ import {
   wholesaleDistributorsTable,
   accountingAccountsTable,
   journalEntriesTable,
+  journalEntryLinesTable,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -663,7 +664,46 @@ router.get("/admin/finance/reports/monthly", permit("finance", "view"), route(as
 router.get("/admin/accounting/accounts", permit("accounting", "view"), route(async (_req, res) => {
   await ensureStandardAccountingChart();
   const rows = await db.select().from(accountingAccountsTable).orderBy(accountingAccountsTable.code);
-  res.json(rows);
+  parsedJson(Api.AdminListAccountingAccountsResponse, rows, res);
+}));
+
+router.get("/admin/accounting/journal-entries", permit("accounting", "view"), route(async (req, res) => {
+  const query = parse(Api.AdminListJournalEntriesQueryParams, {
+    from: typeof req.query.from === "string" ? new Date(`${req.query.from}T00:00:00.000Z`) : req.query.from,
+    to: typeof req.query.to === "string" ? new Date(`${req.query.to}T00:00:00.000Z`) : req.query.to,
+  }, res); if (!query) return;
+  const from = query.from ? isoDate(query.from) : undefined;
+  const to = query.to ? isoDate(query.to) : undefined;
+  if (from && to && from > to) { res.status(400).json({ error: "from cannot be after to" }); return; }
+  const conditions = [
+    inArray(journalEntriesTable.status, ["posted", "reversed"]),
+    from ? gte(journalEntriesTable.entryDate, from) : undefined,
+    to ? lte(journalEntriesTable.entryDate, to) : undefined,
+  ].filter((condition): condition is NonNullable<typeof condition> => condition != null);
+  const entries = await db.select().from(journalEntriesTable)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(journalEntriesTable.entryDate), desc(journalEntriesTable.id));
+  if (!entries.length) {
+    parsedJson(Api.AdminListJournalEntriesResponse, [], res);
+    return;
+  }
+  const entryIds = entries.map((entry) => entry.id);
+  const actorIds = [...new Set(entries.flatMap((entry) => [entry.createdBy, entry.postedBy]).filter((id): id is number => id != null))];
+  const [lines, actors] = await Promise.all([
+    db.select().from(journalEntryLinesTable)
+      .where(inArray(journalEntryLinesTable.journalEntryId, entryIds))
+      .orderBy(journalEntryLinesTable.journalEntryId, journalEntryLinesTable.lineNumber),
+    db.select({ id: adminUsersTable.id, name: adminUsersTable.name, email: adminUsersTable.email })
+      .from(adminUsersTable).where(inArray(adminUsersTable.id, actorIds)),
+  ]);
+  const actorById = new Map(actors.map((actor) => [actor.id, actor]));
+  const result = entries.map((entry) => ({
+    ...entry,
+    lines: lines.filter((line) => line.journalEntryId === entry.id),
+    creator: actorById.get(entry.createdBy),
+    poster: entry.postedBy == null ? undefined : actorById.get(entry.postedBy),
+  }));
+  parsedJson(Api.AdminListJournalEntriesResponse, result, res);
 }));
 
 router.post("/admin/accounting/journal-entries", permit("accounting", "edit"), route(async (req, res) => {

@@ -1870,6 +1870,81 @@ export const AdminListAccountingAccountsResponse = zod.array(AdminListAccounting
 
 
 /**
+ * @summary List historical posted journal entries with lines and actors
+ */
+export const AdminListJournalEntriesQueryParams = zod.object({
+  "from": zod.date().optional(),
+  "to": zod.date().optional()
+})
+
+export const adminListJournalEntriesResponseOneIdMultipleOf = 1;
+
+
+
+export const adminListJournalEntriesResponseOneReversalOfEntryIdMultipleOf = 1;
+
+export const adminListJournalEntriesResponseOneCreatedByMultipleOf = 1;
+
+export const adminListJournalEntriesResponseOnePostedByMultipleOf = 1;
+
+export const adminListJournalEntriesResponseOneLinesItemIdMultipleOf = 1;
+
+export const adminListJournalEntriesResponseOneLinesItemJournalEntryIdMultipleOf = 1;
+
+export const adminListJournalEntriesResponseOneLinesItemLineNumberMultipleOf = 1;
+
+export const adminListJournalEntriesResponseOneLinesItemAccountIdMultipleOf = 1;
+
+export const adminListJournalEntriesResponseOneLinesItemDebitRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminListJournalEntriesResponseOneLinesItemCreditRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminListJournalEntriesResponseOneLinesMin = 2;
+
+export const adminListJournalEntriesResponseTwoCreatorIdMultipleOf = 1;
+
+export const adminListJournalEntriesResponseTwoPosterIdMultipleOf = 1;
+
+
+
+export const AdminListJournalEntriesResponseItem = zod.object({
+  "id": zod.number().multipleOf(adminListJournalEntriesResponseOneIdMultipleOf),
+  "entryNumber": zod.string().min(1),
+  "entryDate": zod.coerce.date(),
+  "description": zod.string().min(1),
+  "status": zod.enum(['posted', 'reversed']),
+  "sourceType": zod.string().nullable(),
+  "sourceId": zod.string().nullable(),
+  "reversalOfEntryId": zod.number().multipleOf(adminListJournalEntriesResponseOneReversalOfEntryIdMultipleOf).nullable(),
+  "createdBy": zod.number().multipleOf(adminListJournalEntriesResponseOneCreatedByMultipleOf),
+  "postedBy": zod.number().multipleOf(adminListJournalEntriesResponseOnePostedByMultipleOf),
+  "postedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(adminListJournalEntriesResponseOneLinesItemIdMultipleOf),
+  "journalEntryId": zod.number().multipleOf(adminListJournalEntriesResponseOneLinesItemJournalEntryIdMultipleOf),
+  "lineNumber": zod.number().min(1).multipleOf(adminListJournalEntriesResponseOneLinesItemLineNumberMultipleOf),
+  "accountId": zod.number().multipleOf(adminListJournalEntriesResponseOneLinesItemAccountIdMultipleOf),
+  "description": zod.string().nullable(),
+  "debit": zod.string().regex(adminListJournalEntriesResponseOneLinesItemDebitRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "credit": zod.string().regex(adminListJournalEntriesResponseOneLinesItemCreditRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "createdAt": zod.coerce.date()
+})).min(adminListJournalEntriesResponseOneLinesMin)
+}).and(zod.object({
+  "creator": zod.object({
+  "id": zod.number().multipleOf(adminListJournalEntriesResponseTwoCreatorIdMultipleOf),
+  "name": zod.string(),
+  "email": zod.string()
+}),
+  "poster": zod.object({
+  "id": zod.number().multipleOf(adminListJournalEntriesResponseTwoPosterIdMultipleOf),
+  "name": zod.string(),
+  "email": zod.string()
+})
+}))
+export const AdminListJournalEntriesResponse = zod.array(AdminListJournalEntriesResponseItem)
+
+
+/**
  * Creates an immutable posted journal entry. The request is rejected unless total debits equal total credits exactly.
  * @summary Create and post a balanced manual journal entry
  */

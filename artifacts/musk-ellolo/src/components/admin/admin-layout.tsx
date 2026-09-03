@@ -91,9 +91,10 @@ const navStructure = [
     ]
   },
   {
-    labelEn: 'Finance', labelAr: 'المالية', icon: FileText, module: 'finance',
+    labelEn: 'Finance', labelAr: 'المالية', icon: FileText,
     children: [
-      { href: '/admin/finance', labelEn: 'Expenses & Reports', labelAr: 'المصروفات والتقارير' },
+      { href: '/admin/finance', labelEn: 'Expenses & Reports', labelAr: 'المصروفات والتقارير', module: 'finance' },
+      { href: '/admin/accounting', labelEn: 'Accounting', labelAr: 'المحاسبة', module: 'accounting' },
     ]
   },
   {

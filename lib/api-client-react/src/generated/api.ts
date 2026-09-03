@@ -43,6 +43,7 @@ import type {
   AdminInventoryItem,
   AdminInventoryMovement,
   AdminInvoice,
+  AdminJournalEntry,
   AdminListCategoriesParams,
   AdminListCouponsParams,
   AdminListCustomersParams,
@@ -50,6 +51,7 @@ import type {
   AdminListEmployeesParams,
   AdminListInventoryParams,
   AdminListInvoicesParams,
+  AdminListJournalEntriesParams,
   AdminListOrdersParams,
   AdminListProductsParams,
   AdminLoginInput,
@@ -5323,6 +5325,90 @@ export function useAdminListAccountingAccounts<TData = Awaited<ReturnType<typeof
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getAdminListAccountingAccountsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminListJournalEntriesUrl = (params?: AdminListJournalEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/accounting/journal-entries?${stringifiedParams}` : `/api/admin/accounting/journal-entries`
+}
+
+/**
+ * @summary List historical posted journal entries with lines and actors
+ */
+export const adminListJournalEntries = async (params?: AdminListJournalEntriesParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminJournalEntry[]> => {
+
+  return customFetch<AdminJournalEntry[]>(getAdminListJournalEntriesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListJournalEntriesQueryKey = (params?: AdminListJournalEntriesParams,) => {
+    return [
+    `/api/admin/accounting/journal-entries`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListJournalEntriesQueryOptions = <TData = Awaited<ReturnType<typeof adminListJournalEntries>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse>>(params?: AdminListJournalEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListJournalEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListJournalEntriesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListJournalEntries>>> = ({ signal }) => adminListJournalEntries(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListJournalEntries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListJournalEntriesQueryResult = NonNullable<Awaited<ReturnType<typeof adminListJournalEntries>>>
+export type AdminListJournalEntriesQueryError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+
+/**
+ * @summary List historical posted journal entries with lines and actors
+ */
+
+export function useAdminListJournalEntries<TData = Awaited<ReturnType<typeof adminListJournalEntries>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse>>(
+ params?: AdminListJournalEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListJournalEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListJournalEntriesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

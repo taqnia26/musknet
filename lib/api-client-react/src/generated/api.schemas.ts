@@ -1130,6 +1130,17 @@ export interface JournalEntry {
   lines: JournalEntryLine[];
 }
 
+export interface JournalEntryActor {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export type AdminJournalEntry = JournalEntry & {
+  creator: JournalEntryActor;
+  poster: JournalEntryActor;
+};
+
 export type TrialBalanceAccountAccountType = typeof TrialBalanceAccountAccountType[keyof typeof TrialBalanceAccountAccountType];
 
 
@@ -1500,6 +1511,11 @@ status?: AdminStatusParameter;
 export type AdminListEmployeesParams = {
 search?: AdminSearchParameter;
 status?: AdminStatusParameter;
+};
+
+export type AdminListJournalEntriesParams = {
+from?: string;
+to?: string;
 };
 
 export type AdminGetTrialBalanceParams = {
