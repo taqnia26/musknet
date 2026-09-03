@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { db, invoicesTable, ordersTable } from "@workspace/db";
+import { AccountingConflictError, ensureStandardAccountingChart, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
@@ -10,11 +11,23 @@ export async function updateOrderAndIssueInvoice(
   orderId: number,
   values: Partial<typeof ordersTable.$inferInsert>,
   environment: NodeJS.ProcessEnv = process.env,
+  actorId?: number,
 ) {
+  if (actorId !== undefined) await ensureStandardAccountingChart();
   return db.transaction(async (tx) => {
     await tx.execute(sql`select id from ${ordersTable} where ${ordersTable.id} = ${orderId} for update`);
     const [order] = await tx.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
     if (!order) return null;
+    if (order.paymentStatus === "paid") {
+      if (values.paymentStatus !== undefined && values.paymentStatus !== "paid") {
+        throw new AccountingConflictError("A paid order cannot be changed back to unpaid");
+      }
+      for (const field of ["subtotal", "shippingCost", "discount", "tax", "total"] as const) {
+        if (values[field] !== undefined && values[field] !== order[field]) {
+          throw new AccountingConflictError(`A posted paid order's ${field} cannot be changed`);
+        }
+      }
+    }
 
     const willBePaid = values.paymentStatus === "paid" || (values.paymentStatus === undefined && order.paymentStatus === "paid");
     if (willBePaid) {
@@ -59,6 +72,7 @@ export async function updateOrderAndIssueInvoice(
     }
     const [updated] = await tx.update(ordersTable).set(values)
       .where(eq(ordersTable.id, order.id)).returning();
+    if (willBePaid && actorId !== undefined) await postSalesJournal(updated, actorId, tx);
     return updated;
   });
 }

@@ -796,10 +796,89 @@ paths:
       responses: { "200": { description: Payroll, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PayrollRecord" } } } } } }
     post:
       operationId: adminCreatePayroll
+      summary: Create a payroll record
+      description: A payroll record submitted with paymentStatus set to paid is paid and posted to accounting atomically when it is created.
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PayrollInput" } } } }
       responses: { "201": { description: Payroll, content: { application/json: { schema: { $ref: "#/components/schemas/PayrollRecord" } } } } }
+
+  /admin/accounting/accounts:
+    get:
+      operationId: adminListAccountingAccounts
+      summary: List the chart of accounts
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses:
+        "200":
+          description: Chart of accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AccountingAccount" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/accounting/journal-entries:
+    post:
+      operationId: adminCreateJournalEntry
+      summary: Create and post a balanced manual journal entry
+      description: Creates an immutable posted journal entry. The request is rejected unless total debits equal total credits exactly.
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ManualJournalEntryInput" }
+      responses:
+        "201":
+          description: Posted journal entry
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JournalEntry" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/accounting/journal-entries/{id}/reverse:
+    post:
+      operationId: adminReverseJournalEntry
+      summary: Reverse a posted journal entry
+      description: Posts a new journal entry with debits and credits swapped. Posted entries are never edited or deleted.
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JournalEntryReversalInput" }
+      responses:
+        "201":
+          description: Posted reversing journal entry
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/JournalEntry" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/accounting/trial-balance:
+    get:
+      operationId: adminGetTrialBalance
+      summary: Get the trial balance as of a date
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - name: as_of
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: Trial balance calculated from posted journal entry lines through the requested date
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TrialBalance" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /admin/finance/expenses:
     get:
@@ -1863,6 +1942,113 @@ components:
         bonuses: { type: number, minimum: 0 }
         paymentDate: { type: [string, "null"], format: date }
         paymentStatus: { type: string, enum: [pending, paid], default: pending }
+    AccountingAmount:
+      type: string
+      description: Exact decimal monetary amount with no more than four fractional digits.
+      pattern: "^-?\\d{1,15}(?:\\.\\d{1,4})?$"
+      examples: ["0", "1250.5000", "-25.75"]
+    AccountingUnsignedAmount:
+      type: string
+      description: Exact non-negative decimal monetary amount with no more than four fractional digits.
+      pattern: "^\\d{1,15}(?:\\.\\d{1,4})?$"
+      examples: ["0", "1250.5000"]
+    AccountingAccount:
+      type: object
+      required: [id, code, nameAr, nameEn, accountType, normalBalance, parentId, isPosting, isActive, createdAt, updatedAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        code: { type: string, minLength: 1 }
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        accountType: { type: string, enum: [asset, liability, equity, revenue, expense] }
+        normalBalance: { type: string, enum: [debit, credit] }
+        parentId: { type: [number, "null"], multipleOf: 1 }
+        isPosting: { type: boolean }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ManualJournalEntryLineInput:
+      type: object
+      required: [accountId, debit, credit]
+      properties:
+        accountId: { type: number, multipleOf: 1 }
+        description: { type: [string, "null"] }
+        debit: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        credit: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+    ManualJournalEntryInput:
+      type: object
+      required: [entryDate, description, lines]
+      properties:
+        entryDate: { type: string, format: date }
+        description: { type: string, minLength: 1 }
+        lines:
+          type: array
+          minItems: 2
+          items: { $ref: "#/components/schemas/ManualJournalEntryLineInput" }
+    JournalEntryReversalInput:
+      type: object
+      required: [entryDate, description]
+      properties:
+        entryDate: { type: string, format: date }
+        description: { type: string, minLength: 1 }
+    JournalEntryLine:
+      type: object
+      required: [id, journalEntryId, lineNumber, accountId, description, debit, credit, createdAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        journalEntryId: { type: number, multipleOf: 1 }
+        lineNumber: { type: number, multipleOf: 1, minimum: 1 }
+        accountId: { type: number, multipleOf: 1 }
+        description: { type: [string, "null"] }
+        debit: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        credit: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        createdAt: { type: string, format: date-time }
+    JournalEntry:
+      type: object
+      required: [id, entryNumber, entryDate, description, status, sourceType, sourceId, reversalOfEntryId, createdBy, postedBy, postedAt, createdAt, updatedAt, lines]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        entryNumber: { type: string, minLength: 1 }
+        entryDate: { type: string, format: date }
+        description: { type: string, minLength: 1 }
+        status: { type: string, enum: [posted, reversed] }
+        sourceType: { type: [string, "null"] }
+        sourceId: { type: [string, "null"] }
+        reversalOfEntryId: { type: [number, "null"], multipleOf: 1 }
+        createdBy: { type: number, multipleOf: 1 }
+        postedBy: { type: number, multipleOf: 1 }
+        postedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        lines:
+          type: array
+          minItems: 2
+          items: { $ref: "#/components/schemas/JournalEntryLine" }
+    TrialBalanceAccount:
+      type: object
+      required: [accountId, accountCode, accountNameAr, accountNameEn, accountType, normalBalance, openingBalance, totalDebit, totalCredit, closingBalance]
+      properties:
+        accountId: { type: number, multipleOf: 1 }
+        accountCode: { type: string }
+        accountNameAr: { type: string }
+        accountNameEn: { type: string }
+        accountType: { type: string, enum: [asset, liability, equity, revenue, expense] }
+        normalBalance: { type: string, enum: [debit, credit] }
+        openingBalance: { $ref: "#/components/schemas/AccountingAmount" }
+        totalDebit: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        totalCredit: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        closingBalance: { $ref: "#/components/schemas/AccountingAmount" }
+    TrialBalance:
+      type: object
+      required: [asOf, accounts, totalDebit, totalCredit, isBalanced]
+      properties:
+        asOf: { type: string, format: date }
+        accounts:
+          type: array
+          items: { $ref: "#/components/schemas/TrialBalanceAccount" }
+        totalDebit: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        totalCredit: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        isBalanced: { type: boolean }
     Expense:
       type: object
       required: [id, category, amount, description, expenseDate, receiptUrl, createdBy, createdAt]

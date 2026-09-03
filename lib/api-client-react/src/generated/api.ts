@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccountingAccount,
   Address,
   AddressInput,
   AdminAuthSession,
@@ -36,6 +37,7 @@ import type {
   AdminDistributorInput,
   AdminDistributorUpdate,
   AdminGetFinanceSummaryParams,
+  AdminGetTrialBalanceParams,
   AdminInventoryAdjustment,
   AdminInventoryAdjustmentResult,
   AdminInventoryItem,
@@ -90,10 +92,13 @@ import type {
   ForbiddenResponse,
   HealthStatus,
   HomeContent,
+  JournalEntry,
+  JournalEntryReversalInput,
   LeaveRequest,
   LeaveRequestInput,
   LeaveRequestUpdate,
   ListProductsParams,
+  ManualJournalEntryInput,
   ManufacturingBatch,
   ManufacturingBatchInput,
   ManufacturingBatchUpdate,
@@ -110,6 +115,7 @@ import type {
   ProductDetails,
   ProfileUpdate,
   RateLimitedResponse,
+  TrialBalance,
   UnauthorizedResponse
 } from './api.schemas';
 
@@ -5188,6 +5194,10 @@ export const getAdminCreatePayrollUrl = () => {
   return `/api/admin/hr/payroll`
 }
 
+/**
+ * A payroll record submitted with paymentStatus set to paid is paid and posted to accounting atomically when it is created.
+ * @summary Create a payroll record
+ */
 export const adminCreatePayroll = async (payrollInput: PayrollInput, options?: Parameters<typeof customFetch>[1]): Promise<PayrollRecord> => {
 
   return customFetch<PayrollRecord>(getAdminCreatePayrollUrl(),
@@ -5234,7 +5244,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type AdminCreatePayrollMutationBody = BodyType<PayrollInput>
     export type AdminCreatePayrollMutationError = ErrorType<unknown>
 
-    export const useAdminCreatePayroll = <TError = ErrorType<unknown>,
+    /**
+ * @summary Create a payroll record
+ */
+export const useAdminCreatePayroll = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreatePayroll>>, TError,{data: BodyType<PayrollInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof adminCreatePayroll>>,
@@ -5244,6 +5257,312 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getAdminCreatePayrollMutationOptions(options));
     }
+
+export const getAdminListAccountingAccountsUrl = () => {
+
+
+
+
+  return `/api/admin/accounting/accounts`
+}
+
+/**
+ * @summary List the chart of accounts
+ */
+export const adminListAccountingAccounts = async ( options?: Parameters<typeof customFetch>[1]): Promise<AccountingAccount[]> => {
+
+  return customFetch<AccountingAccount[]>(getAdminListAccountingAccountsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListAccountingAccountsQueryKey = () => {
+    return [
+    `/api/admin/accounting/accounts`
+    ] as const;
+    }
+
+
+export const getAdminListAccountingAccountsQueryOptions = <TData = Awaited<ReturnType<typeof adminListAccountingAccounts>>, TError = ErrorType<ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListAccountingAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListAccountingAccountsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListAccountingAccounts>>> = ({ signal }) => adminListAccountingAccounts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListAccountingAccounts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListAccountingAccountsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListAccountingAccounts>>>
+export type AdminListAccountingAccountsQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary List the chart of accounts
+ */
+
+export function useAdminListAccountingAccounts<TData = Awaited<ReturnType<typeof adminListAccountingAccounts>>, TError = ErrorType<ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListAccountingAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListAccountingAccountsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateJournalEntryUrl = () => {
+
+
+
+
+  return `/api/admin/accounting/journal-entries`
+}
+
+/**
+ * Creates an immutable posted journal entry. The request is rejected unless total debits equal total credits exactly.
+ * @summary Create and post a balanced manual journal entry
+ */
+export const adminCreateJournalEntry = async (manualJournalEntryInput: ManualJournalEntryInput, options?: Parameters<typeof customFetch>[1]): Promise<JournalEntry> => {
+
+  return customFetch<JournalEntry>(getAdminCreateJournalEntryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(manualJournalEntryInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateJournalEntryMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateJournalEntry>>, TError,{data: BodyType<ManualJournalEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateJournalEntry>>, TError,{data: BodyType<ManualJournalEntryInput>}, TContext> => {
+
+const mutationKey = ['adminCreateJournalEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateJournalEntry>>, {data: BodyType<ManualJournalEntryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateJournalEntry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateJournalEntryMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateJournalEntry>>>
+    export type AdminCreateJournalEntryMutationBody = BodyType<ManualJournalEntryInput>
+    export type AdminCreateJournalEntryMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    /**
+ * @summary Create and post a balanced manual journal entry
+ */
+export const useAdminCreateJournalEntry = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateJournalEntry>>, TError,{data: BodyType<ManualJournalEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateJournalEntry>>,
+        TError,
+        {data: BodyType<ManualJournalEntryInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateJournalEntryMutationOptions(options));
+    }
+
+export const getAdminReverseJournalEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/accounting/journal-entries/${id}/reverse`
+}
+
+/**
+ * Posts a new journal entry with debits and credits swapped. Posted entries are never edited or deleted.
+ * @summary Reverse a posted journal entry
+ */
+export const adminReverseJournalEntry = async (id: number,
+    journalEntryReversalInput: JournalEntryReversalInput, options?: Parameters<typeof customFetch>[1]): Promise<JournalEntry> => {
+
+  return customFetch<JournalEntry>(getAdminReverseJournalEntryUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(journalEntryReversalInput)
+  }
+);}
+
+
+
+
+
+export const getAdminReverseJournalEntryMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReverseJournalEntry>>, TError,{id: number;data: BodyType<JournalEntryReversalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminReverseJournalEntry>>, TError,{id: number;data: BodyType<JournalEntryReversalInput>}, TContext> => {
+
+const mutationKey = ['adminReverseJournalEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminReverseJournalEntry>>, {id: number;data: BodyType<JournalEntryReversalInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminReverseJournalEntry(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminReverseJournalEntryMutationResult = NonNullable<Awaited<ReturnType<typeof adminReverseJournalEntry>>>
+    export type AdminReverseJournalEntryMutationBody = BodyType<JournalEntryReversalInput>
+    export type AdminReverseJournalEntryMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Reverse a posted journal entry
+ */
+export const useAdminReverseJournalEntry = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReverseJournalEntry>>, TError,{id: number;data: BodyType<JournalEntryReversalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminReverseJournalEntry>>,
+        TError,
+        {id: number;data: BodyType<JournalEntryReversalInput>},
+        TContext
+      > => {
+      return useMutation(getAdminReverseJournalEntryMutationOptions(options));
+    }
+
+export const getAdminGetTrialBalanceUrl = (params: AdminGetTrialBalanceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/accounting/trial-balance?${stringifiedParams}` : `/api/admin/accounting/trial-balance`
+}
+
+/**
+ * @summary Get the trial balance as of a date
+ */
+export const adminGetTrialBalance = async (params: AdminGetTrialBalanceParams, options?: Parameters<typeof customFetch>[1]): Promise<TrialBalance> => {
+
+  return customFetch<TrialBalance>(getAdminGetTrialBalanceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetTrialBalanceQueryKey = (params?: AdminGetTrialBalanceParams,) => {
+    return [
+    `/api/admin/accounting/trial-balance`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminGetTrialBalanceQueryOptions = <TData = Awaited<ReturnType<typeof adminGetTrialBalance>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse>>(params: AdminGetTrialBalanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetTrialBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetTrialBalanceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetTrialBalance>>> = ({ signal }) => adminGetTrialBalance(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetTrialBalance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetTrialBalanceQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetTrialBalance>>>
+export type AdminGetTrialBalanceQueryError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+
+/**
+ * @summary Get the trial balance as of a date
+ */
+
+export function useAdminGetTrialBalance<TData = Awaited<ReturnType<typeof adminGetTrialBalance>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse>>(
+ params: AdminGetTrialBalanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetTrialBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetTrialBalanceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getAdminListExpensesUrl = () => {
 

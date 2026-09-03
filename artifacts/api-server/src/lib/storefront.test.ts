@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
-import { eq, inArray } from "drizzle-orm";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   customersTable,
   db,
   inventoryMovementsTable,
   invoicesTable,
+  journalEntriesTable,
   orderAddressesTable,
   ordersTable,
   productsTable,
@@ -26,7 +27,12 @@ import {
 
 const phones: string[] = [];
 const movementReasons: string[] = [];
-const stockSnapshots = new Map<number, number>();
+const productSnapshots = new Map<number, { stockQuantity: number; price: number }>();
+
+beforeAll(async () => {
+  process.env.ADMIN_EMAIL = `storefront-accounting-${Date.now()}@example.com`;
+  process.env.ADMIN_PASSWORD = "storefront-accounting-password";
+});
 
 async function createUser(suffix: string) {
   const phone = `+9665000${Date.now()}${suffix}`;
@@ -54,12 +60,12 @@ afterEach(async () => {
       await db.delete(customersTable).where(inArray(customersTable.id, ids));
     }
   }
-  for (const [productId, stockQuantity] of stockSnapshots) {
-    await db.update(productsTable).set({ stockQuantity }).where(eq(productsTable.id, productId));
+  for (const [productId, snapshot] of productSnapshots) {
+    await db.update(productsTable).set(snapshot).where(eq(productsTable.id, productId));
   }
   phones.length = 0;
   movementReasons.length = 0;
-  stockSnapshots.clear();
+  productSnapshots.clear();
 });
 
 describe.sequential("persistent storefront carts and orders", () => {
@@ -81,9 +87,12 @@ describe.sequential("persistent storefront carts and orders", () => {
   it("atomically snapshots an order, clears only its owner's cart, and isolates reads", async () => {
     const owner = await createUser("3");
     const other = await createUser("4");
-    const [orderedProduct] = await db.select({ stockQuantity: productsTable.stockQuantity })
+    const [orderedProduct] = await db.select({
+      stockQuantity: productsTable.stockQuantity,
+      price: productsTable.price,
+    })
       .from(productsTable).where(eq(productsTable.id, 2)).limit(1);
-    stockSnapshots.set(2, orderedProduct.stockQuantity);
+    productSnapshots.set(2, orderedProduct);
     await addToCart(owner.id, 2, 1);
     await addToCart(other.id, 3, 1);
 
@@ -124,10 +133,14 @@ describe.sequential("persistent storefront carts and orders", () => {
 
   it("uses the shared atomic transition for a trusted storefront payment completion", async () => {
     const owner = await createUser("6");
-    const [orderedProduct] = await db.select({ stockQuantity: productsTable.stockQuantity })
+    const [orderedProduct] = await db.select({
+      stockQuantity: productsTable.stockQuantity,
+      price: productsTable.price,
+    })
       .from(productsTable).where(eq(productsTable.id, 4)).limit(1);
-    stockSnapshots.set(4, orderedProduct.stockQuantity);
-    await addToCart(owner.id, 4, 1);
+    productSnapshots.set(4, orderedProduct);
+    await db.update(productsTable).set({ price: 4.99 }).where(eq(productsTable.id, 4));
+    await addToCart(owner.id, 4, 7);
 
     const environment = {
       VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
@@ -148,9 +161,16 @@ describe.sequential("persistent storefront carts and orders", () => {
     }, null, { confirmedByProvider: true, environment });
 
     expect(order?.paymentStatus).toBe("paid");
+    expect(order?.subtotal).toBeCloseTo(34.93, 2);
     await completeStorefrontPayment(owner.id, order!.orderNumber, environment);
     const invoices = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, order!.id));
     expect(invoices).toHaveLength(1);
+    const journals = await db.select().from(journalEntriesTable).where(and(
+      eq(journalEntriesTable.sourceType, "order"),
+      eq(journalEntriesTable.sourceId, String(order!.id)),
+    ));
+    expect(journals).toHaveLength(1);
+    expect(journals[0]?.status).toBe("posted");
   });
 
   it("keeps exactly one default address under concurrent writes", async () => {

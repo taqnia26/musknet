@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { and, count, desc, eq, gte, ilike, lt, lte, or, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, lt, lte, or, sql, sum } from "drizzle-orm";
 import QRCode from "qrcode";
 import * as Api from "@workspace/api-zod";
 import {
@@ -26,6 +26,8 @@ import {
   ordersTable,
   productsTable,
   wholesaleDistributorsTable,
+  accountingAccountsTable,
+  journalEntriesTable,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -37,6 +39,17 @@ import {
   verifyAdminPassword,
 } from "../lib/admin-auth";
 import { updateOrderAndIssueInvoice } from "../lib/invoices";
+import {
+  AccountingConflictError,
+  AccountingNotFoundError,
+  AccountingValidationError,
+  createExpenseWithJournal,
+  createPayrollWithJournal,
+  ensureStandardAccountingChart,
+  postJournalEntry,
+  reverseJournalEntry,
+  trialBalance,
+} from "../lib/accounting";
 
 const router: IRouter = Router();
 const bearer = (req: Request) => {
@@ -278,7 +291,7 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
 router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateOrderParams, req.params, res);
   const body = parse(Api.AdminUpdateOrderBody, req.body, res); if (!params || !body) return;
-  const row = await updateOrderAndIssueInvoice(params.id, body);
+  const row = await updateOrderAndIssueInvoice(params.id, body, process.env, res.locals.admin.id);
   if (!row) { res.status(404).json({ error: "Order not found" }); return; }
   res.json(Api.AdminUpdateOrderResponse.parse(row));
 }));
@@ -554,13 +567,9 @@ router.post("/admin/hr/payroll", permit("hr", "edit"), route(async (req, res) =>
   if (!employee) { res.status(400).json({ error: "Employee not found" }); return; }
   const netSalary = body.baseSalary + body.bonuses - body.deductions;
   if (netSalary < 0) { res.status(400).json({ error: "Computed net salary cannot be negative" }); return; }
-  const [duplicate] = await db.select({ id: payrollRecordsTable.id }).from(payrollRecordsTable).where(and(
-    eq(payrollRecordsTable.employeeId, body.employeeId), eq(payrollRecordsTable.month, body.month), eq(payrollRecordsTable.year, body.year),
-  )).limit(1);
-  if (duplicate) { res.status(409).json({ error: "Payroll already exists for employee and period" }); return; }
-  const [row] = await db.insert(payrollRecordsTable).values({
+  const row = await createPayrollWithJournal({
     ...body, paymentDate: body.paymentDate ? isoDate(body.paymentDate) : null, netSalary,
-  }).returning();
+  }, res.locals.admin.id);
   parsedJson(Api.AdminCreatePayrollResponse, row, res, 201);
 }));
 
@@ -570,7 +579,10 @@ router.get("/admin/finance/expenses", permit("finance", "view"), route(async (_r
 }));
 router.post("/admin/finance/expenses", permit("finance", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateExpenseBody, req.body, res); if (!body) return;
-  const [row] = await db.insert(expensesTable).values({ ...body, expenseDate: isoDate(body.expenseDate), createdBy: res.locals.admin.id }).returning();
+  const row = await createExpenseWithJournal(
+    { ...body, expenseDate: isoDate(body.expenseDate), createdBy: res.locals.admin.id },
+    req.header("idempotency-key"),
+  );
   parsedJson(Api.AdminCreateExpenseResponse, row, res, 201);
 }));
 router.get("/admin/finance/expenses/:id", permit("finance", "view"), route(async (req, res) => {
@@ -582,6 +594,10 @@ router.get("/admin/finance/expenses/:id", permit("finance", "view"), route(async
 router.patch("/admin/finance/expenses/:id", permit("finance", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateExpenseParams, req.params, res);
   const body = parse(Api.AdminUpdateExpenseBody.partial(), req.body, res); if (!params || !body) return;
+  const [posted] = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable).where(and(
+    eq(journalEntriesTable.sourceType, "expense"), eq(journalEntriesTable.sourceId, String(params.id)),
+  )).limit(1);
+  if (posted) { res.status(409).json({ error: "A posted expense is immutable; reverse its journal entry instead" }); return; }
   const { expenseDate, ...expenseValues } = body;
   const values = { ...expenseValues, ...(expenseDate ? { expenseDate: isoDate(expenseDate) } : {}) };
   const [row] = await db.update(expensesTable).set(values).where(eq(expensesTable.id, params.id)).returning();
@@ -590,6 +606,10 @@ router.patch("/admin/finance/expenses/:id", permit("finance", "edit"), route(asy
 }));
 router.delete("/admin/finance/expenses/:id", permit("finance", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDeleteExpenseParams, req.params, res); if (!params) return;
+  const [posted] = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable).where(and(
+    eq(journalEntriesTable.sourceType, "expense"), eq(journalEntriesTable.sourceId, String(params.id)),
+  )).limit(1);
+  if (posted) { res.status(409).json({ error: "A posted expense cannot be deleted; reverse its journal entry instead" }); return; }
   const [row] = await db.delete(expensesTable).where(eq(expensesTable.id, params.id)).returning({ id: expensesTable.id });
   if (!row) { res.status(404).json({ error: "Expense not found" }); return; }
   res.sendStatus(204);
@@ -638,6 +658,59 @@ router.get("/admin/finance/reports/monthly", permit("finance", "view"), route(as
   });
   const rows = await Promise.all(months.map(async (month) => ({ ...await financeMetrics(month.from, month.to), month: month.month })));
   parsedJson(Api.AdminGetFinanceMonthlyResponse, rows, res);
+}));
+
+router.get("/admin/accounting/accounts", permit("accounting", "view"), route(async (_req, res) => {
+  await ensureStandardAccountingChart();
+  const rows = await db.select().from(accountingAccountsTable).orderBy(accountingAccountsTable.code);
+  res.json(rows);
+}));
+
+router.post("/admin/accounting/journal-entries", permit("accounting", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateJournalEntryBody, req.body, res); if (!body) return;
+  const accounts = await db.select({ id: accountingAccountsTable.id, code: accountingAccountsTable.code })
+    .from(accountingAccountsTable).where(inArray(accountingAccountsTable.id, body.lines.map((line) => line.accountId)));
+  const accountCodes = new Map(accounts.map((account) => [account.id, account.code]));
+  if (accountCodes.size !== new Set(body.lines.map((line) => line.accountId)).size) {
+    res.status(400).json({ error: "One or more accounting accounts were not found" }); return;
+  }
+  const entry = await postJournalEntry({
+    entryDate: isoDate(body.entryDate),
+    description: body.description,
+    createdBy: res.locals.admin.id,
+    lines: body.lines.map((line) => ({
+      accountCode: accountCodes.get(line.accountId)!,
+      debit: line.debit,
+      credit: line.credit,
+      description: line.description ?? undefined,
+    })),
+  });
+  parsedJson(Api.AdminCreateJournalEntryResponse, entry, res, 201);
+}));
+
+router.post(
+  "/admin/accounting/journal-entries/:id/reverse",
+  permit("accounting", "edit"),
+  route(async (req, res) => {
+  const params = parse(Api.AdminReverseJournalEntryParams, req.params, res);
+  const body = parse(Api.AdminReverseJournalEntryBody, req.body, res); if (!params || !body) return;
+  const entry = await reverseJournalEntry(params.id, res.locals.admin.id, body.description, isoDate(body.entryDate));
+  parsedJson(Api.AdminReverseJournalEntryResponse, entry, res, 201);
+}));
+
+router.get("/admin/accounting/trial-balance", permit("accounting", "view"), route(async (req, res) => {
+  const asOf = typeof req.query.as_of === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.as_of)
+    ? req.query.as_of
+    : null;
+  if (!asOf) { res.status(400).json({ error: "as_of is required and must be a date" }); return; }
+  const balance = await trialBalance(undefined, asOf);
+  parsedJson(Api.AdminGetTrialBalanceResponse, {
+    asOf,
+    accounts: balance.accounts,
+    totalDebit: balance.totals.debit,
+    totalCredit: balance.totals.credit,
+    isBalanced: balance.totals.difference === "0.0000",
+  }, res);
 }));
 
 router.get("/admin/manufacturing/batches", permit("manufacturing", "view"), route(async (_req, res) => {

@@ -2,6 +2,7 @@ import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   addressesTable,
+  adminUsersTable,
   cartItemsTable,
   cartsTable,
   categoriesTable,
@@ -15,6 +16,7 @@ import {
   otpRecordsTable,
   productsTable,
 } from "@workspace/db";
+import { ensureAdminSeeded } from "./admin-auth";
 import { updateOrderAndIssueInvoice } from "./invoices";
 
 type ProductSeed = {
@@ -919,6 +921,23 @@ export async function completeStorefrontPayment(
   orderNumber: string,
   environment: NodeJS.ProcessEnv = process.env,
 ) {
+  await ensureAdminSeeded();
+  const configuredEmail = (
+    environment.ACCOUNTING_SYSTEM_ADMIN_EMAIL ??
+    environment.ADMIN_EMAIL ??
+    process.env.ACCOUNTING_SYSTEM_ADMIN_EMAIL ??
+    process.env.ADMIN_EMAIL
+  )?.trim().toLowerCase();
+  if (!configuredEmail) {
+    throw new Error("ACCOUNTING_SYSTEM_ADMIN_EMAIL or ADMIN_EMAIL must be configured for storefront payment posting");
+  }
+  const [actor] = await db.select({ id: adminUsersTable.id }).from(adminUsersTable).where(and(
+    eq(adminUsersTable.email, configuredEmail),
+    eq(adminUsersTable.isActive, true),
+  )).limit(1);
+  if (!actor) {
+    throw new Error(`Configured accounting system actor ${configuredEmail} does not exist or is inactive`);
+  }
   const [order] = await db.select({ id: ordersTable.id })
     .from(ordersTable)
     .where(and(eq(ordersTable.userId, userId), eq(ordersTable.orderNumber, orderNumber)))
@@ -928,6 +947,7 @@ export async function completeStorefrontPayment(
     order.id,
     { paymentStatus: "paid" },
     environment,
+    actor.id,
   );
   if (!updated) return null;
   const items = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, updated.id));

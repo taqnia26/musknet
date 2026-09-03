@@ -36,6 +36,20 @@
       "when": 1788379892344,
       "tag": "0004_nifty_vanisher",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788432134721,
+      "tag": "0005_famous_ego",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788432485868,
+      "tag": "0006_loving_shape",
+      "breakpoints": true
     }
   ]
 }

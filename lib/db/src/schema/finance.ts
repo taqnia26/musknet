@@ -1,4 +1,4 @@
-import { check, date, doublePrecision, integer, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { check, date, doublePrecision, integer, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { adminUsersTable } from "./admin-users";
@@ -13,9 +13,13 @@ export const expensesTable = pgTable("expenses", {
   description: text("description").notNull(),
   expenseDate: date("expense_date", { mode: "string" }).notNull(),
   receiptUrl: text("receipt_url"),
+  idempotencyKey: text("idempotency_key"),
   createdBy: integer("created_by").notNull().references(() => adminUsersTable.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [check("expenses_amount_positive", sql`${table.amount} > 0`)]);
+}, (table) => [
+  uniqueIndex("expenses_idempotency_key_unique").on(table.idempotencyKey),
+  check("expenses_amount_positive", sql`${table.amount} > 0`),
+]);
 
 export const financialPeriodsTable = pgTable("financial_periods", {
   id: serial("id").primaryKey(),

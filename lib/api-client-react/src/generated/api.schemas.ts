@@ -1015,6 +1015,161 @@ export interface PayrollInput {
   paymentStatus?: PayrollInputPaymentStatus;
 }
 
+/**
+ * Exact decimal monetary amount with no more than four fractional digits.
+ * @pattern ^-?\d{1,15}(?:\.\d{1,4})?$
+ */
+export type AccountingAmount = string;
+
+/**
+ * Exact non-negative decimal monetary amount with no more than four fractional digits.
+ * @pattern ^\d{1,15}(?:\.\d{1,4})?$
+ */
+export type AccountingUnsignedAmount = string;
+
+export type AccountingAccountAccountType = typeof AccountingAccountAccountType[keyof typeof AccountingAccountAccountType];
+
+
+export const AccountingAccountAccountType = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+export type AccountingAccountNormalBalance = typeof AccountingAccountNormalBalance[keyof typeof AccountingAccountNormalBalance];
+
+
+export const AccountingAccountNormalBalance = {
+  debit: 'debit',
+  credit: 'credit',
+} as const;
+
+export interface AccountingAccount {
+  id: number;
+  /** @minLength 1 */
+  code: string;
+  /** @minLength 1 */
+  nameAr: string;
+  /** @minLength 1 */
+  nameEn: string;
+  accountType: AccountingAccountAccountType;
+  normalBalance: AccountingAccountNormalBalance;
+  /** @nullable */
+  parentId: number | null;
+  isPosting: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManualJournalEntryLineInput {
+  accountId: number;
+  /** @nullable */
+  description?: string | null;
+  debit: AccountingUnsignedAmount;
+  credit: AccountingUnsignedAmount;
+}
+
+export interface ManualJournalEntryInput {
+  entryDate: string;
+  /** @minLength 1 */
+  description: string;
+  /** @minItems 2 */
+  lines: ManualJournalEntryLineInput[];
+}
+
+export interface JournalEntryReversalInput {
+  entryDate: string;
+  /** @minLength 1 */
+  description: string;
+}
+
+export interface JournalEntryLine {
+  id: number;
+  journalEntryId: number;
+  /** @minimum 1 */
+  lineNumber: number;
+  accountId: number;
+  /** @nullable */
+  description: string | null;
+  debit: AccountingUnsignedAmount;
+  credit: AccountingUnsignedAmount;
+  createdAt: string;
+}
+
+export type JournalEntryStatus = typeof JournalEntryStatus[keyof typeof JournalEntryStatus];
+
+
+export const JournalEntryStatus = {
+  posted: 'posted',
+  reversed: 'reversed',
+} as const;
+
+export interface JournalEntry {
+  id: number;
+  /** @minLength 1 */
+  entryNumber: string;
+  entryDate: string;
+  /** @minLength 1 */
+  description: string;
+  status: JournalEntryStatus;
+  /** @nullable */
+  sourceType: string | null;
+  /** @nullable */
+  sourceId: string | null;
+  /** @nullable */
+  reversalOfEntryId: number | null;
+  createdBy: number;
+  postedBy: number;
+  postedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  /** @minItems 2 */
+  lines: JournalEntryLine[];
+}
+
+export type TrialBalanceAccountAccountType = typeof TrialBalanceAccountAccountType[keyof typeof TrialBalanceAccountAccountType];
+
+
+export const TrialBalanceAccountAccountType = {
+  asset: 'asset',
+  liability: 'liability',
+  equity: 'equity',
+  revenue: 'revenue',
+  expense: 'expense',
+} as const;
+
+export type TrialBalanceAccountNormalBalance = typeof TrialBalanceAccountNormalBalance[keyof typeof TrialBalanceAccountNormalBalance];
+
+
+export const TrialBalanceAccountNormalBalance = {
+  debit: 'debit',
+  credit: 'credit',
+} as const;
+
+export interface TrialBalanceAccount {
+  accountId: number;
+  accountCode: string;
+  accountNameAr: string;
+  accountNameEn: string;
+  accountType: TrialBalanceAccountAccountType;
+  normalBalance: TrialBalanceAccountNormalBalance;
+  openingBalance: AccountingAmount;
+  totalDebit: AccountingUnsignedAmount;
+  totalCredit: AccountingUnsignedAmount;
+  closingBalance: AccountingAmount;
+}
+
+export interface TrialBalance {
+  asOf: string;
+  accounts: TrialBalanceAccount[];
+  totalDebit: AccountingUnsignedAmount;
+  totalCredit: AccountingUnsignedAmount;
+  isBalanced: boolean;
+}
+
 export type ExpenseCategory = typeof ExpenseCategory[keyof typeof ExpenseCategory];
 
 
@@ -1345,6 +1500,10 @@ status?: AdminStatusParameter;
 export type AdminListEmployeesParams = {
 search?: AdminSearchParameter;
 status?: AdminStatusParameter;
+};
+
+export type AdminGetTrialBalanceParams = {
+as_of: string;
 };
 
 export type AdminGetFinanceSummaryParams = {

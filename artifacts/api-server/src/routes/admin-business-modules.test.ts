@@ -72,7 +72,9 @@ afterAll(async () => {
   await db.delete(productsTable).where(eq(productsTable.id, productId));
   await db.delete(categoriesTable).where(eq(categoriesTable.id, base + 2));
   await db.delete(adminSessionsTable).where(inArray(adminSessionsTable.adminUserId, [superId, viewerId]));
-  await db.delete(adminUsersTable).where(inArray(adminUsersTable.id, [superId, viewerId]));
+  // The super-admin remains as immutable accounting audit attribution for the
+  // expense posted by this suite; the read-only viewer has no such references.
+  await db.delete(adminUsersTable).where(eq(adminUsersTable.id, viewerId));
   delete process.env.ADMIN_EMAIL;
   delete process.env.ADMIN_PASSWORD;
 });

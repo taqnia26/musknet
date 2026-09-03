@@ -126,7 +126,10 @@ afterAll(async () => {
       .where(inArray(adminUsersTable.id, temporarilyDisabledSuperIds));
   }
   if (createdIds.length) {
-    await db.delete(adminUsersTable).where(inArray(adminUsersTable.id, createdIds));
+    // The super-admin remains as immutable accounting audit attribution for the
+    // paid-order journal created by this suite. Other temporary admins are safe
+    // to remove because they never post accounting entries.
+    await db.delete(adminUsersTable).where(inArray(adminUsersTable.id, createdIds.filter((id) => id !== superId)));
   }
   delete process.env.ADMIN_EMAIL;
   delete process.env.ADMIN_PASSWORD;

@@ -12,6 +12,11 @@ import {
 const scrypt = promisify(nodeScrypt);
 const modules = ["dashboard", "products", "categories", "orders", "invoices", "coupons", "customers", "inventory", "distributors", "staff", "hr", "finance", "manufacturing", "exhibitions"];
 const actions = ["view", "edit", "delete"];
+const permissionSpecs = [
+  ...modules.flatMap((module) => actions.map((action) => ({ module, action }))),
+  { module: "accounting", action: "view" },
+  { module: "accounting", action: "edit" },
+];
 
 export async function hashAdminPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -37,7 +42,7 @@ export function ensureAdminSeeded() {
     if (!email || !password) throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD must be configured");
     if (password.length < 8) throw new Error("ADMIN_PASSWORD must be at least 8 characters");
     await db.insert(adminPermissionsTable).values(
-      modules.flatMap((module) => actions.map((action) => ({ module, action }))),
+      permissionSpecs,
     ).onConflictDoNothing();
     const existing = await db.select({ id: adminUsersTable.id }).from(adminUsersTable)
       .where(eq(adminUsersTable.email, email)).limit(1);
@@ -58,7 +63,7 @@ export function ensureAdminSeeded() {
 }
 
 export async function permissionsFor(userId: number, superAdmin: boolean) {
-  if (superAdmin) return modules.flatMap((module) => actions.map((action) => `${module}:${action}`));
+  if (superAdmin) return permissionSpecs.map(({ module, action }) => `${module}:${action}`);
   const rows = await db.select({ module: adminPermissionsTable.module, action: adminPermissionsTable.action })
     .from(adminUserPermissionsTable)
     .innerJoin(adminPermissionsTable, eq(adminUserPermissionsTable.permissionId, adminPermissionsTable.id))

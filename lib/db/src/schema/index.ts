@@ -38,3 +38,4 @@ export * from "./finance";
 export * from "./manufacturing";
 export * from "./exhibitions";
 export * from "./invoices";
+export * from "./accounting";

@@ -1780,6 +1780,10 @@ export const AdminListPayrollResponseItem = zod.object({
 export const AdminListPayrollResponse = zod.array(AdminListPayrollResponseItem)
 
 
+/**
+ * A payroll record submitted with paymentStatus set to paid is paid and posted to accounting atomically when it is created.
+ * @summary Create a payroll record
+ */
 export const adminCreatePayrollBodyMonthMax = 12;
 export const adminCreatePayrollBodyMonthMultipleOf = 1;
 
@@ -1834,6 +1838,213 @@ export const AdminCreatePayrollResponse = zod.object({
   "netSalary": zod.number().min(adminCreatePayrollResponseNetSalaryMin),
   "paymentDate": zod.coerce.date().nullable(),
   "paymentStatus": zod.enum(['pending', 'paid'])
+})
+
+
+/**
+ * @summary List the chart of accounts
+ */
+export const adminListAccountingAccountsResponseIdMultipleOf = 1;
+
+
+
+
+export const adminListAccountingAccountsResponseParentIdMultipleOf = 1;
+
+
+
+export const AdminListAccountingAccountsResponseItem = zod.object({
+  "id": zod.number().multipleOf(adminListAccountingAccountsResponseIdMultipleOf),
+  "code": zod.string().min(1),
+  "nameAr": zod.string().min(1),
+  "nameEn": zod.string().min(1),
+  "accountType": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
+  "normalBalance": zod.enum(['debit', 'credit']),
+  "parentId": zod.number().multipleOf(adminListAccountingAccountsResponseParentIdMultipleOf).nullable(),
+  "isPosting": zod.boolean(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListAccountingAccountsResponse = zod.array(AdminListAccountingAccountsResponseItem)
+
+
+/**
+ * Creates an immutable posted journal entry. The request is rejected unless total debits equal total credits exactly.
+ * @summary Create and post a balanced manual journal entry
+ */
+
+export const adminCreateJournalEntryBodyLinesItemAccountIdMultipleOf = 1;
+
+export const adminCreateJournalEntryBodyLinesItemDebitRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminCreateJournalEntryBodyLinesItemCreditRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminCreateJournalEntryBodyLinesMin = 2;
+
+
+
+export const AdminCreateJournalEntryBody = zod.object({
+  "entryDate": zod.coerce.date(),
+  "description": zod.string().min(1),
+  "lines": zod.array(zod.object({
+  "accountId": zod.number().multipleOf(adminCreateJournalEntryBodyLinesItemAccountIdMultipleOf),
+  "description": zod.string().nullish(),
+  "debit": zod.string().regex(adminCreateJournalEntryBodyLinesItemDebitRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "credit": zod.string().regex(adminCreateJournalEntryBodyLinesItemCreditRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.')
+})).min(adminCreateJournalEntryBodyLinesMin)
+})
+
+export const adminCreateJournalEntryResponseIdMultipleOf = 1;
+
+
+
+export const adminCreateJournalEntryResponseReversalOfEntryIdMultipleOf = 1;
+
+export const adminCreateJournalEntryResponseCreatedByMultipleOf = 1;
+
+export const adminCreateJournalEntryResponsePostedByMultipleOf = 1;
+
+export const adminCreateJournalEntryResponseLinesItemIdMultipleOf = 1;
+
+export const adminCreateJournalEntryResponseLinesItemJournalEntryIdMultipleOf = 1;
+
+export const adminCreateJournalEntryResponseLinesItemLineNumberMultipleOf = 1;
+
+export const adminCreateJournalEntryResponseLinesItemAccountIdMultipleOf = 1;
+
+export const adminCreateJournalEntryResponseLinesItemDebitRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminCreateJournalEntryResponseLinesItemCreditRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminCreateJournalEntryResponseLinesMin = 2;
+
+
+
+export const AdminCreateJournalEntryResponse = zod.object({
+  "id": zod.number().multipleOf(adminCreateJournalEntryResponseIdMultipleOf),
+  "entryNumber": zod.string().min(1),
+  "entryDate": zod.coerce.date(),
+  "description": zod.string().min(1),
+  "status": zod.enum(['posted', 'reversed']),
+  "sourceType": zod.string().nullable(),
+  "sourceId": zod.string().nullable(),
+  "reversalOfEntryId": zod.number().multipleOf(adminCreateJournalEntryResponseReversalOfEntryIdMultipleOf).nullable(),
+  "createdBy": zod.number().multipleOf(adminCreateJournalEntryResponseCreatedByMultipleOf),
+  "postedBy": zod.number().multipleOf(adminCreateJournalEntryResponsePostedByMultipleOf),
+  "postedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(adminCreateJournalEntryResponseLinesItemIdMultipleOf),
+  "journalEntryId": zod.number().multipleOf(adminCreateJournalEntryResponseLinesItemJournalEntryIdMultipleOf),
+  "lineNumber": zod.number().min(1).multipleOf(adminCreateJournalEntryResponseLinesItemLineNumberMultipleOf),
+  "accountId": zod.number().multipleOf(adminCreateJournalEntryResponseLinesItemAccountIdMultipleOf),
+  "description": zod.string().nullable(),
+  "debit": zod.string().regex(adminCreateJournalEntryResponseLinesItemDebitRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "credit": zod.string().regex(adminCreateJournalEntryResponseLinesItemCreditRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "createdAt": zod.coerce.date()
+})).min(adminCreateJournalEntryResponseLinesMin)
+})
+
+
+/**
+ * Posts a new journal entry with debits and credits swapped. Posted entries are never edited or deleted.
+ * @summary Reverse a posted journal entry
+ */
+export const AdminReverseJournalEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const AdminReverseJournalEntryBody = zod.object({
+  "entryDate": zod.coerce.date(),
+  "description": zod.string().min(1)
+})
+
+export const adminReverseJournalEntryResponseIdMultipleOf = 1;
+
+
+
+export const adminReverseJournalEntryResponseReversalOfEntryIdMultipleOf = 1;
+
+export const adminReverseJournalEntryResponseCreatedByMultipleOf = 1;
+
+export const adminReverseJournalEntryResponsePostedByMultipleOf = 1;
+
+export const adminReverseJournalEntryResponseLinesItemIdMultipleOf = 1;
+
+export const adminReverseJournalEntryResponseLinesItemJournalEntryIdMultipleOf = 1;
+
+export const adminReverseJournalEntryResponseLinesItemLineNumberMultipleOf = 1;
+
+export const adminReverseJournalEntryResponseLinesItemAccountIdMultipleOf = 1;
+
+export const adminReverseJournalEntryResponseLinesItemDebitRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminReverseJournalEntryResponseLinesItemCreditRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminReverseJournalEntryResponseLinesMin = 2;
+
+
+
+export const AdminReverseJournalEntryResponse = zod.object({
+  "id": zod.number().multipleOf(adminReverseJournalEntryResponseIdMultipleOf),
+  "entryNumber": zod.string().min(1),
+  "entryDate": zod.coerce.date(),
+  "description": zod.string().min(1),
+  "status": zod.enum(['posted', 'reversed']),
+  "sourceType": zod.string().nullable(),
+  "sourceId": zod.string().nullable(),
+  "reversalOfEntryId": zod.number().multipleOf(adminReverseJournalEntryResponseReversalOfEntryIdMultipleOf).nullable(),
+  "createdBy": zod.number().multipleOf(adminReverseJournalEntryResponseCreatedByMultipleOf),
+  "postedBy": zod.number().multipleOf(adminReverseJournalEntryResponsePostedByMultipleOf),
+  "postedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(adminReverseJournalEntryResponseLinesItemIdMultipleOf),
+  "journalEntryId": zod.number().multipleOf(adminReverseJournalEntryResponseLinesItemJournalEntryIdMultipleOf),
+  "lineNumber": zod.number().min(1).multipleOf(adminReverseJournalEntryResponseLinesItemLineNumberMultipleOf),
+  "accountId": zod.number().multipleOf(adminReverseJournalEntryResponseLinesItemAccountIdMultipleOf),
+  "description": zod.string().nullable(),
+  "debit": zod.string().regex(adminReverseJournalEntryResponseLinesItemDebitRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "credit": zod.string().regex(adminReverseJournalEntryResponseLinesItemCreditRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "createdAt": zod.coerce.date()
+})).min(adminReverseJournalEntryResponseLinesMin)
+})
+
+
+/**
+ * @summary Get the trial balance as of a date
+ */
+export const AdminGetTrialBalanceQueryParams = zod.object({
+  "as_of": zod.date()
+})
+
+export const adminGetTrialBalanceResponseAccountsItemAccountIdMultipleOf = 1;
+
+export const adminGetTrialBalanceResponseAccountsItemOpeningBalanceRegExp = new RegExp('^-?\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminGetTrialBalanceResponseAccountsItemTotalDebitRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminGetTrialBalanceResponseAccountsItemTotalCreditRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminGetTrialBalanceResponseAccountsItemClosingBalanceRegExp = new RegExp('^-?\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminGetTrialBalanceResponseTotalDebitRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+export const adminGetTrialBalanceResponseTotalCreditRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+
+
+export const AdminGetTrialBalanceResponse = zod.object({
+  "asOf": zod.coerce.date(),
+  "accounts": zod.array(zod.object({
+  "accountId": zod.number().multipleOf(adminGetTrialBalanceResponseAccountsItemAccountIdMultipleOf),
+  "accountCode": zod.string(),
+  "accountNameAr": zod.string(),
+  "accountNameEn": zod.string(),
+  "accountType": zod.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
+  "normalBalance": zod.enum(['debit', 'credit']),
+  "openingBalance": zod.string().regex(adminGetTrialBalanceResponseAccountsItemOpeningBalanceRegExp).describe('Exact decimal monetary amount with no more than four fractional digits.'),
+  "totalDebit": zod.string().regex(adminGetTrialBalanceResponseAccountsItemTotalDebitRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "totalCredit": zod.string().regex(adminGetTrialBalanceResponseAccountsItemTotalCreditRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "closingBalance": zod.string().regex(adminGetTrialBalanceResponseAccountsItemClosingBalanceRegExp).describe('Exact decimal monetary amount with no more than four fractional digits.')
+})),
+  "totalDebit": zod.string().regex(adminGetTrialBalanceResponseTotalDebitRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "totalCredit": zod.string().regex(adminGetTrialBalanceResponseTotalCreditRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "isBalanced": zod.boolean()
 })
 
 

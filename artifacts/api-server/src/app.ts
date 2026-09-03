@@ -5,6 +5,11 @@ import pinoHttp from "pino-http";
 import path from "node:path";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import {
+  AccountingConflictError,
+  AccountingNotFoundError,
+  AccountingValidationError,
+} from "./lib/accounting";
 
 const app: Express = express();
 
@@ -44,6 +49,18 @@ app.use("/api", router);
 app.use((error: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   req.log.error({ err: error }, "Storefront request failed");
   if (!res.headersSent) {
+    if (error instanceof AccountingValidationError) {
+      res.status(400).json({ error: error.message });
+      return;
+    }
+    if (error instanceof AccountingConflictError) {
+      res.status(409).json({ error: error.message });
+      return;
+    }
+    if (error instanceof AccountingNotFoundError) {
+      res.status(404).json({ error: error.message });
+      return;
+    }
     if (error instanceof Error && /^VAT_(?:SELLER_LEGAL_NAME|REGISTRATION_NUMBER)/.test(error.message)) {
       res.status(503).json({ error: error.message });
       return;
