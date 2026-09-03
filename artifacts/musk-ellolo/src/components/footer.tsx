@@ -13,16 +13,16 @@ export function Footer() {
       <div className="container mx-auto grid min-w-0 grid-cols-1 gap-8 px-4 md:grid-cols-4 md:gap-12 lg:grid-cols-6 lg:gap-8">
         
         {/* Logo and Socials */}
-        <div className="lg:col-span-2 space-y-6 text-center md:text-start">
+        <div className="lg:col-span-2 space-y-8 text-center">
           <Link href="/">
             <img 
               src={siteAsset('Ca44RuZ7R2vL2wTsJKCO2bG6rWGMyqxB0CVdsvxb-63014f950a.png')} 
               alt="Musk Ellolo" 
-              className="h-16 object-contain invert brightness-0 filter cursor-pointer mx-auto md:mx-0"
+              className="mx-auto h-16 object-contain invert brightness-0 filter cursor-pointer"
             />
           </Link>
           
-          <div className="flex justify-center gap-3 md:justify-start">
+          <div className="flex translate-y-1 justify-center gap-3">
             <a href="https://www.instagram.com/muskellolo" target="_blank" rel="noopener noreferrer" className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20">
               <Instagram className="w-5 h-5" />
             </a>
@@ -39,7 +39,7 @@ export function Footer() {
         </div>
 
         {/* Links 1 */}
-        <div className="space-y-4 text-center md:text-start">
+        <div className="space-y-4 text-center">
           <h3 className="font-bold text-lg">{t('روابط مهمة', 'Important Links')}</h3>
           <ul className="space-y-3 text-sm text-gray-400">
             <li><Link href="/about"><span className="hover:text-white transition-colors cursor-pointer">{t('من نحن', 'About Us')}</span></Link></li>
@@ -52,23 +52,23 @@ export function Footer() {
         </div>
 
         {/* Links 2 */}
-        <div className="space-y-4 text-center md:text-start">
+        <div className="space-y-4 text-center">
           <h3 className="font-bold text-lg">{t('تواصل معنا', 'Contact Us')}</h3>
           <ul className="space-y-3 text-sm text-gray-400">
-            <li className="flex items-center justify-center md:justify-start gap-2" dir="ltr">
+            <li className="flex items-center justify-center gap-2" dir="ltr">
               <span>+966580008874</span>
             </li>
-            <li className="flex items-center justify-center md:justify-start gap-2">
+            <li className="flex items-center justify-center gap-2">
               <span>info@muskellolo.com</span>
             </li>
           </ul>
         </div>
 
         {/* Store Info */}
-        <div className="lg:col-span-2 space-y-4 text-center md:text-start">
+        <div className="lg:col-span-2 space-y-4 text-center">
           <div className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-lg bg-white/5 p-4 md:flex-row md:justify-start md:gap-4">
             <img src={siteAsset('tax-6d0afa4ab2.png')} alt="Tax" className="w-10 h-10 object-contain bg-white rounded p-1" />
-            <div className="min-w-0 text-center md:text-start">
+            <div className="min-w-0 text-center">
               <p className="text-sm font-bold text-gray-300">{t('الرقم الضريبي', 'Tax Number')}</p>
               <p className="text-sm">310076823100003</p>
             </div>
@@ -76,7 +76,7 @@ export function Footer() {
           
           <div className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-lg bg-white/5 p-4 md:flex-row md:justify-start md:gap-4">
             <img src={siteAsset('commercial-register-dd3f1b86d3.png')} alt="CR" className="w-10 h-10 object-contain bg-white rounded p-1" />
-            <div className="min-w-0 text-center md:text-start">
+            <div className="min-w-0 text-center">
               <p className="text-sm font-bold text-gray-300">{t('السجل التجاري', 'Commercial Register')}</p>
               <p className="text-sm">1010311811</p>
             </div>
