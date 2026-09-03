@@ -3,48 +3,190 @@ import { useLocation, Link } from 'wouter';
 import { useGetAdminMe, useAdminLogout, getGetAdminMeQueryKey } from '@workspace/api-client-react';
 import { getAdminToken, removeAdminToken } from '@/lib/auth-token';
 import { useLanguage } from '@/hooks/use-language';
-import { 
-  LayoutDashboard, 
-  Package, 
-  Tags, 
-  ShoppingCart, 
-  Ticket, 
-  Users, 
-  Warehouse, 
-  Truck, 
+import {
+  LayoutDashboard,
+  Package,
+  Tags,
+  ShoppingCart,
+  Ticket,
+  Users,
+  Warehouse,
+  Truck,
   Briefcase,
   Banknote,
   Factory,
   Store,
-  UserCog, 
-  LogOut, 
+  UserCog,
+  LogOut,
   Globe,
   Menu,
   Moon,
   Sun,
-  FileText
+  FileText,
+  ChevronDown,
+  MessageCircle,
+  Network
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useTheme } from 'next-themes';
 import { hasPermission } from '@/lib/permissions';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { cn } from '@/lib/utils';
 
-const navItems = [
-  { href: '/admin', icon: LayoutDashboard, labelEn: 'Dashboard', labelAr: 'لوحة القيادة', module: 'dashboard' },
-  { href: '/admin/products', icon: Package, labelEn: 'Products', labelAr: 'المنتجات', module: 'products' },
-  { href: '/admin/categories', icon: Tags, labelEn: 'Categories', labelAr: 'الأقسام', module: 'categories' },
-  { href: '/admin/orders', icon: ShoppingCart, labelEn: 'Orders', labelAr: 'الطلبات', module: 'orders' },
-  { href: '/admin/invoices', icon: FileText, labelEn: 'Tax Invoices', labelAr: 'الفواتير الضريبية', module: 'invoices' },
-  { href: '/admin/coupons', icon: Ticket, labelEn: 'Coupons', labelAr: 'الكوبونات', module: 'coupons' },
-  { href: '/admin/customers', icon: Users, labelEn: 'Customers', labelAr: 'العملاء', module: 'customers' },
-  { href: '/admin/inventory', icon: Warehouse, labelEn: 'Inventory', labelAr: 'المخزون', module: 'inventory' },
-  { href: '/admin/distributors', icon: Truck, labelEn: 'Distributors', labelAr: 'الموزعين', module: 'distributors' },
-  { href: '/admin/hr', icon: Briefcase, labelEn: 'HR', labelAr: 'الموارد البشرية', module: 'hr' },
-  { href: '/admin/finance', icon: Banknote, labelEn: 'Finance', labelAr: 'المالية', module: 'finance' },
-  { href: '/admin/manufacturing', icon: Factory, labelEn: 'Manufacturing', labelAr: 'التصنيع', module: 'manufacturing' },
-  { href: '/admin/exhibitions', icon: Store, labelEn: 'Exhibitions', labelAr: 'المعارض', module: 'exhibitions' },
-  { href: '/admin/staff', icon: UserCog, labelEn: 'Staff', labelAr: 'فريق العمل', superAdminOnly: true },
+// Hierarchical Navigation matching requirements
+const navStructure = [
+  { href: '/admin', icon: LayoutDashboard, labelEn: 'Dashboard', labelAr: 'لوحة المتابعة', module: 'dashboard', direct: true },
+  { href: '/admin/orders', icon: ShoppingCart, labelEn: 'Orders', labelAr: 'الطلبات', module: 'orders', direct: true },
+  {
+    labelEn: 'Products', labelAr: 'المنتجات', icon: Package, module: 'products',
+    children: [
+      { href: '/admin/products', labelEn: 'Manage Products', labelAr: 'إدارة المنتجات' },
+      { href: '/admin/categories', labelEn: 'Categories', labelAr: 'الفئات', module: 'categories' },
+      { href: '/admin/inventory', labelEn: 'Inventory', labelAr: 'المخزون', module: 'inventory' },
+    ]
+  },
+  {
+    labelEn: 'Customers', labelAr: 'العملاء', icon: Users, module: 'customers',
+    children: [
+      { href: '/admin/customers', labelEn: 'Manage Customers', labelAr: 'إدارة العملاء' },
+    ]
+  },
+  {
+    labelEn: 'HR', labelAr: 'شؤون الموظفين', icon: Briefcase, module: 'hr',
+    children: [
+      { href: '/admin/staff', labelEn: 'Manage Staff', labelAr: 'إدارة الموظفين', superAdminOnly: true },
+      { href: '/admin/hr', labelEn: 'Attendance & Leaves', labelAr: 'الحضور والإجازات' },
+    ]
+  },
+  {
+    labelEn: 'Sales', labelAr: 'المبيعات', icon: Banknote, module: 'orders',
+    children: [
+      { href: '/admin/coupons', labelEn: 'Coupons', labelAr: 'الكوبونات', module: 'coupons' },
+      { href: '/admin/invoices', labelEn: 'Invoices', labelAr: 'الفواتير', module: 'invoices' },
+      { href: '/admin/exhibitions', labelEn: 'Exhibitions', labelAr: 'المعارض', module: 'exhibitions' },
+    ]
+  },
+  {
+    labelEn: 'Marketing', labelAr: 'التسويق', icon: Tags, module: 'dashboard',
+    children: [
+      // Placeholder for now
+    ]
+  },
+  {
+    labelEn: 'WhatsApp', labelAr: 'الواتساب', icon: MessageCircle, module: 'dashboard',
+    children: [
+      // Placeholder for now
+    ]
+  },
+  { href: '/admin/chatbot', icon: MessageCircle, labelEn: 'Chatbot', labelAr: 'الشات بوت', module: 'dashboard', direct: true },
+  {
+    labelEn: 'Procurement', labelAr: 'المشتريات', icon: Truck, module: 'inventory',
+    children: [
+      { href: '/admin/manufacturing', labelEn: 'Manufacturing', labelAr: 'التصنيع', module: 'manufacturing' },
+    ]
+  },
+  {
+    labelEn: 'Finance', labelAr: 'المالية', icon: FileText, module: 'finance',
+    children: [
+      { href: '/admin/finance', labelEn: 'Expenses & Reports', labelAr: 'المصروفات والتقارير' },
+    ]
+  },
+  {
+    labelEn: 'B2B', labelAr: 'الجملة B2B', icon: Warehouse, module: 'distributors',
+    children: [
+      { href: '/admin/distributors', labelEn: 'Distributors', labelAr: 'الموزعين' },
+    ]
+  },
+  {
+    labelEn: 'Integrations', labelAr: 'التكاملات', icon: Network, module: 'dashboard',
+    children: [
+      { href: '/admin/integrations', labelEn: 'Integrations Shell', labelAr: 'واجهة التكاملات' },
+    ]
+  },
 ];
+
+function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any, location: string, lang: string, setOpen?: (open: boolean) => void }) {
+  const [isOpen, setIsOpen] = useState(
+    item.children?.some((child: any) => location === child.href || (child.href !== '/admin' && location.startsWith(child.href)))
+  );
+
+  if (item.superAdminOnly && !user.isSuperAdmin) return null;
+  if (item.module && item.module !== 'dashboard' && !hasPermission(user, item.module, 'view')) return null;
+
+  if (item.direct) {
+    const isActive = location === item.href || (item.href !== '/admin' && location.startsWith(item.href));
+    return (
+      <Link href={item.href}>
+        <span
+          data-active={isActive}
+          className={cn(
+            "admin-nav-item flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all cursor-pointer",
+            isActive
+              ? "bg-primary text-primary-foreground shadow-sm font-semibold"
+              : "text-sidebar-foreground hover:bg-white/10"
+          )}
+          onClick={() => setOpen?.(false)}
+        >
+          <item.icon className="h-5 w-5 shrink-0" />
+          {lang === 'ar' ? item.labelAr : item.labelEn}
+        </span>
+      </Link>
+    );
+  }
+
+  // Filter children based on permissions
+  const validChildren = item.children?.filter((child: any) => {
+    if (child.superAdminOnly && !user.isSuperAdmin) return false;
+    if (child.module && child.module !== 'dashboard' && !hasPermission(user, child.module, 'view')) return false;
+    return true;
+  });
+
+  if (!validChildren || validChildren.length === 0) return null;
+
+  const hasActiveChild = validChildren.some((child: any) => location === child.href || (child.href !== '/admin' && location.startsWith(child.href)));
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+      <CollapsibleTrigger asChild>
+        <div className={cn(
+          "flex items-center justify-between px-4 py-2.5 rounded-xl transition-all cursor-pointer text-sidebar-foreground hover:bg-white/10",
+          hasActiveChild && "text-primary font-medium"
+        )}>
+          <div className="flex items-center gap-3">
+            <item.icon className={cn("h-5 w-5 shrink-0", hasActiveChild && "text-primary")} />
+            {lang === 'ar' ? item.labelAr : item.labelEn}
+          </div>
+          <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pl-6 rtl:pl-0 rtl:pr-6 space-y-1 mt-1 overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+        {validChildren.map((child: any) => {
+          const isChildActive = location === child.href || (child.href !== '/admin' && location.startsWith(child.href));
+          return (
+            <Link key={child.href} href={child.href}>
+              <span
+                className={cn(
+                  "block px-4 py-2 text-sm rounded-lg transition-colors cursor-pointer",
+                  isChildActive
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-sidebar-foreground/80 hover:bg-white/5 hover:text-white"
+                )}
+                onClick={() => setOpen?.(false)}
+              >
+                {lang === 'ar' ? child.labelAr : child.labelEn}
+              </span>
+            </Link>
+          );
+        })}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -89,45 +231,41 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   if (!user) return null;
 
-  const NavLinks = () => (
-    <nav className="space-y-1">
-      {navItems.map((item) => {
-        if (item.superAdminOnly && !user.isSuperAdmin) return null;
-        if (item.module && item.module !== 'dashboard' && !hasPermission(user, item.module, 'view')) return null;
-        const isActive = location === item.href || (item.href !== '/admin' && location.startsWith(item.href));
-        return (
-          <Link key={item.href} href={item.href}>
-            <span
-              data-active={isActive}
-              className={`admin-nav-item flex items-center gap-3 px-3 py-2 rounded-md transition-all cursor-pointer ${
-                isActive 
-                  ? 'bg-[#FDC87F] text-[#313031] shadow-sm' 
-                  : 'text-[#E9E6DF]/80 hover:bg-[#FDC87F]/15 hover:text-[#FDC87F]'
-              }`}
-              onClick={() => setIsOpen(false)}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {lang === 'ar' ? item.labelAr : item.labelEn}
-            </span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
-
   return (
-    <div className="admin-theme bg-background text-foreground flex h-screen">
+    <div className="admin-theme bg-background text-foreground flex h-screen font-sans">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-e border-[#D1CABE]/25 bg-[#3D3D3D] text-[#E9E6DF] px-4 py-6 shadow-xl shadow-[#313031]/10">
-        <div className="flex items-center justify-center mb-8 px-2">
-          <img src="/site-assets/admin-logo.png" alt="Musk Ellolo" className="h-20 w-auto object-contain brightness-0 invert opacity-90" />
+      <aside className="hidden lg:flex flex-col w-72 bg-sidebar border-e border-white/10 shadow-xl z-10">
+        <div className="flex items-center gap-3 px-6 py-8">
+          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-xl">
+            M
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-lg text-white tracking-wide">MUSK ELLOLO</span>
+            <span className="text-xs text-white/50">{t('لوحة الإدارة', 'Admin Panel')}</span>
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
-          <NavLinks />
+
+        <div className="flex-1 overflow-y-auto px-4 pb-6 scrollbar-thin">
+          <nav className="space-y-1.5">
+            {navStructure.map((item, i) => (
+              <NavItem key={i} item={item} user={user} location={location} lang={lang} />
+            ))}
+          </nav>
         </div>
-        <div className="pt-4 mt-auto border-t space-y-2">
-          <div className="px-3 py-2 text-sm font-medium truncate text-[#E9E6DF]/70">{user.name}</div>
-          <Button variant="ghost" className="w-full justify-start gap-2 text-[#E9E6DF] hover:bg-[#731323]/35 hover:text-white" onClick={handleLogout} data-testid="button-admin-logout">
+
+        <div className="p-4 mt-auto border-t border-white/10">
+          <div className="bg-white/5 rounded-xl p-3 mb-3">
+            <div className="text-sm font-medium text-white truncate">{user.name}</div>
+            <div className="text-xs text-white/50 truncate">{user.email}</div>
+          </div>
+          <Link href="/">
+            <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-white/10 hover:text-white mb-1">
+              <Store className="h-4 w-4" />
+              {t('العودة للمتجر', 'Back to Store')}
+            </Button>
+          </Link>
+          <div className="h-px bg-white/10 my-1 mx-2"></div>
+          <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
             {t('تسجيل الخروج', 'Logout')}
           </Button>
@@ -136,44 +274,64 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b bg-card flex items-center justify-between px-4 lg:px-8">
-          <div className="flex items-center gap-2 md:hidden">
+        <header className="h-16 border-b bg-card flex items-center justify-between px-4 lg:px-8 shrink-0 z-20">
+          <div className="flex items-center gap-2 lg:hidden">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="hover:bg-muted">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-64 p-4 flex flex-col admin-theme border-[#D1CABE]/25 bg-[#3D3D3D] text-[#E9E6DF]">
-                <div className="flex items-center justify-center mb-6 mt-4 px-2">
-                  <img src="/site-assets/admin-logo.png" alt="Musk Ellolo" className="h-20 w-auto object-contain brightness-0 invert opacity-90" />
+              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-72 p-0 flex flex-col admin-theme bg-sidebar border-white/10">
+                <div className="flex items-center gap-3 px-6 py-8 border-b border-white/10">
+                  <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-xl">
+                    M
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-lg text-white tracking-wide">MUSK ELLOLO</span>
+                    <span className="text-xs text-white/50">{t('لوحة الإدارة', 'Admin Panel')}</span>
+                  </div>
                 </div>
-                <div className="flex-1 overflow-y-auto">
-                  <NavLinks />
+
+                <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
+                  <nav className="space-y-1.5">
+                    {navStructure.map((item, i) => (
+                      <NavItem key={i} item={item} user={user} location={location} lang={lang} setOpen={setIsOpen} />
+                    ))}
+                  </nav>
                 </div>
-                <div className="pt-4 border-t space-y-2">
-                  <div className="px-3 py-2 text-sm font-medium truncate text-[#E9E6DF]/70">{user.name}</div>
-                  <Button variant="ghost" className="w-full justify-start gap-2 text-[#E9E6DF] hover:bg-[#731323]/35 hover:text-white" onClick={handleLogout}>
+
+                <div className="p-4 border-t border-white/10">
+                  <Link href="/">
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-white/10 hover:text-white mb-1" onClick={() => setIsOpen(false)}>
+                      <Store className="h-4 w-4" />
+                      {t('العودة للمتجر', 'Back to Store')}
+                    </Button>
+                  </Link>
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
                     <LogOut className="h-4 w-4" />
                     {t('تسجيل الخروج', 'Logout')}
                   </Button>
                 </div>
               </SheetContent>
             </Sheet>
-            <span className="font-bold text-lg tracking-wider">MUSK ELLOLO</span>
+            <span className="font-bold text-lg tracking-wider ms-2">MUSK ELLOLO</span>
+          </div>
+
+          <div className="hidden lg:flex items-center text-sm font-medium text-muted-foreground">
+            {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
 
           <div className="flex items-center gap-2 ms-auto">
-            <Button variant="ghost" size="icon" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
               <Globe className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
+              className="rounded-full"
               onClick={toggleTheme}
               title={t('تغيير المظهر', 'Toggle Theme')}
-              aria-label={t('تغيير المظهر', 'Toggle Theme')}
-              data-testid="button-toggle-theme"
             >
               <Sun className="h-5 w-5 hidden dark:block" />
               <Moon className="h-5 w-5 block dark:hidden" />
@@ -182,8 +340,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          {children}
+        <div className="flex-1 overflow-y-auto bg-background/50">
+          <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+            {children}
+          </div>
         </div>
       </main>
     </div>

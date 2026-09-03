@@ -73,11 +73,11 @@ export default function AdminOrders() {
   };
 
   const statusMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
-    'new': { label: t('جديد', 'New'), variant: 'default', className: 'bg-primary text-primary-foreground' },
-    'processing': { label: t('قيد التجهيز', 'Processing'), variant: 'secondary', className: 'bg-accent text-accent-foreground' },
-    'shipped': { label: t('مشحون', 'Shipped'), variant: 'outline', className: 'border-primary text-primary' },
-    'delivered': { label: t('تم التوصيل', 'Delivered'), variant: 'default', className: 'bg-success text-success-foreground hover:bg-success/90' },
-    'cancelled': { label: t('ملغي', 'Cancelled'), variant: 'destructive' },
+    'new': { label: t('جديد', 'New'), variant: 'default', className: 'bg-primary/20 text-primary hover:bg-primary/30' },
+    'processing': { label: t('قيد التجهيز', 'Processing'), variant: 'secondary', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-200' },
+    'shipped': { label: t('مشحون', 'Shipped'), variant: 'outline', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500 hover:bg-blue-200 border-none' },
+    'delivered': { label: t('تم التوصيل', 'Delivered'), variant: 'default', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500 hover:bg-green-200' },
+    'cancelled': { label: t('ملغي', 'Cancelled'), variant: 'destructive', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500 hover:bg-red-200' },
   };
 
   const paymentMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
@@ -152,9 +152,18 @@ export default function AdminOrders() {
                   <TableCell>{format(new Date(order.createdAt), 'yyyy-MM-dd')}</TableCell>
                   <TableCell className="font-semibold">{order.total.toFixed(2)} {t('ر.س', 'SAR')}</TableCell>
                   <TableCell>
-                    <Badge variant={statusMap[order.status]?.variant || 'default'} className={statusMap[order.status]?.className}>
-                      {statusMap[order.status]?.label || order.status}
-                    </Badge>
+                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={order.status} onValueChange={(v) => handleUpdateStatus(order.id, v)}>
+                      <SelectTrigger className={`h-8 text-xs font-semibold ${statusMap[order.status]?.className || ''} border-0 ring-offset-transparent focus:ring-0 focus:ring-offset-0`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">{t('جديد', 'New')}</SelectItem>
+                        <SelectItem value="processing">{t('قيد التجهيز', 'Processing')}</SelectItem>
+                        <SelectItem value="shipped">{t('مشحون', 'Shipped')}</SelectItem>
+                        <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
+                        <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     <Badge variant={paymentMap[order.paymentStatus]?.variant || 'default'} className={paymentMap[order.paymentStatus]?.className}>

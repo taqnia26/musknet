@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { 
-  useAdminListEmployees, 
-  useAdminCreateEmployee, 
-  useAdminUpdateEmployee, 
+import {
+  useAdminListEmployees,
+  useAdminCreateEmployee,
+  useAdminUpdateEmployee,
   useGetAdminMe,
   useAdminListAttendance,
   useAdminCreateAttendance,
@@ -80,9 +80,9 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
       <div className="flex justify-between items-center gap-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground rtl:right-2.5 rtl:left-auto" />
-          <Input 
-            placeholder={t('البحث عن موظف...', 'Search employees...')} 
-            className="pl-9 rtl:pr-9 rtl:pl-3" 
+          <Input
+            placeholder={t('البحث عن موظف...', 'Search employees...')}
+            className="pl-9 rtl:pr-9 rtl:pl-3 bg-card"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -90,7 +90,7 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
         {canEdit && (
           <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if (!v) setEditingEmployee(null); }}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 me-2" />{t('إضافة موظف', 'Add Employee')}</Button>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90"><Plus className="h-4 w-4 me-2" />{t('إضافة موظف', 'Add Employee')}</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
@@ -148,38 +148,40 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
           </Dialog>
         )}
       </div>
-      <div className="border rounded-md">
+      <div className="border rounded-md bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>{t('الاسم', 'Name')}</TableHead>
+              <TableHead>{t('تاريخ الانضمام', 'Join Date')}</TableHead>
               <TableHead>{t('المنصب', 'Position')}</TableHead>
               <TableHead>{t('القسم', 'Department')}</TableHead>
+              <TableHead>{t('التواصل', 'Contact')}</TableHead>
               <TableHead>{t('الراتب', 'Salary')}</TableHead>
-              <TableHead>{t('تاريخ التعيين', 'Hire Date')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>
-              <TableHead></TableHead>
+              <TableHead className="text-end"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={7} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> : 
-             !employees?.length ? <TableRow><TableCell colSpan={7} className="text-center">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
+            {isLoading ? <TableRow><TableCell colSpan={8} className="text-center py-12 animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
+             !employees?.length ? <TableRow><TableCell colSpan={8} className="text-center py-12">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
              employees.map(emp => (
                <TableRow key={emp.id}>
                  <TableCell className="font-medium">{emp.name}</TableCell>
+                 <TableCell>{emp.hireDate ? format(new Date(emp.hireDate), 'yyyy-MM-dd') : '-'}</TableCell>
                  <TableCell>{emp.position}</TableCell>
                  <TableCell>{emp.department}</TableCell>
+                 <TableCell dir="ltr" className="text-right rtl:text-left">{emp.phone}</TableCell>
                  <TableCell>{emp.salary}</TableCell>
-                 <TableCell>{emp.hireDate ? format(new Date(emp.hireDate), 'yyyy-MM-dd') : '-'}</TableCell>
                  <TableCell>
-                    <Badge variant={emp.isActive ? 'default' : 'secondary'} className={emp.isActive ? 'bg-success text-success-foreground' : ''}>
+                    <Badge variant={emp.isActive ? 'default' : 'secondary'} className={emp.isActive ? 'bg-success hover:bg-success/90' : ''}>
                       {emp.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
                     </Badge>
                  </TableCell>
                  <TableCell className="text-end">
                    {canEdit && (
                      <Button variant="ghost" size="icon" onClick={() => { setEditingEmployee(emp); setIsOpen(true); }}>
-                       <Edit2 className="h-4 w-4" />
+                       <Edit2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
                      </Button>
                    )}
                  </TableCell>
@@ -290,7 +292,7 @@ function AttendanceTab({ canEdit }: { canEdit: boolean }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> : 
+            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
              !attendance?.length ? <TableRow><TableCell colSpan={5} className="text-center">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
              attendance.map(record => (
                <TableRow key={record.id}>
@@ -412,7 +414,7 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> : 
+            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
              !requests?.length ? <TableRow><TableCell colSpan={5} className="text-center">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
              requests.map(req => (
                <TableRow key={req.id}>
@@ -571,7 +573,7 @@ function PayrollTab({ canEdit }: { canEdit: boolean }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> : 
+            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
              !payroll?.length ? <TableRow><TableCell colSpan={5} className="text-center">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
              payroll.map(p => (
                <TableRow key={p.id}>

@@ -171,28 +171,32 @@ export default function AdminDistributors() {
               <TableHead>{t('المسؤول', 'Contact')}</TableHead>
               <TableHead>{t('الهاتف', 'Phone')}</TableHead>
               <TableHead>{t('المدينة', 'City')}</TableHead>
+              <TableHead>{t('حد الائتمان', 'Credit Limit')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>
               <TableHead className="w-[100px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : distributors?.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{t('لا يوجد موزعين', 'No distributors found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t('لا يوجد موزعين', 'No distributors found')}</TableCell></TableRow>
             ) : (
               distributors?.map((distributor) => (
-                <TableRow key={distributor.id} data-testid={`row-distributor-${distributor.id}`}>
-                  <TableCell className="font-medium">{distributor.companyName}</TableCell>
-                  <TableCell>{distributor.contactName}</TableCell>
-                  <TableCell dir="ltr" className="text-right rtl:text-left">{distributor.phone}</TableCell>
-                  <TableCell>{distributor.city || '-'}</TableCell>
-                  <TableCell>
-                    <Badge variant={distributor.isActive ? "default" : "secondary"} className={distributor.isActive ? "bg-success text-success-foreground hover:bg-success/90" : "bg-muted text-muted-foreground"}>
-                      {distributor.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
+                  <TableRow key={distributor.id} data-testid={`row-distributor-${distributor.id}`}>
+                    <TableCell className="font-medium">{distributor.companyName}</TableCell>
+                    <TableCell>{distributor.contactName}</TableCell>
+                    <TableCell dir="ltr" className="text-right rtl:text-left">{distributor.phone}</TableCell>
+                    <TableCell>{distributor.city || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {t('غير متاح', 'Not available')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={distributor.isActive ? "default" : "secondary"} className={distributor.isActive ? "bg-success text-success-foreground hover:bg-success/90" : "bg-muted text-muted-foreground"}>
+                        {distributor.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                     <div className="flex justify-end gap-1">
                       {hasPermission(currentUser, 'distributors', 'edit') && (
                         <Button variant="ghost" size="icon" onClick={() => handleEdit(distributor)} data-testid={`btn-edit-distributor-${distributor.id}`}>

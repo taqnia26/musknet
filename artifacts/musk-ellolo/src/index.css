@@ -126,9 +126,9 @@
 :root {
   --background: 0 0% 100%;
   --foreground: 0 0% 0%;
-  
+
   --border: 0 0% 90%;
-  
+
   --card: 0 0% 100%;
   --card-foreground: 0 0% 0%;
   --card-border: 0 0% 90%;
@@ -158,16 +158,16 @@
   --app-font-sans: 'Ping AR LT', 'Tajawal', sans-serif;
   --app-font-serif: 'Ping AR LT', 'Tajawal', sans-serif;
   --app-font-mono: Menlo, monospace;
-  
+
   --radius: 0.25rem;
 }
 
 .dark {
   --background: 0 0% 3.9%;
   --foreground: 0 0% 98%;
-  
+
   --border: 0 0% 14.9%;
-  
+
   --card: 0 0% 3.9%;
   --card-foreground: 0 0% 98%;
   --card-border: 0 0% 14.9%;
@@ -207,43 +207,45 @@
 
   /* Admin Theme Scoped Overrides */
   .admin-theme {
-    --background: 42 17% 89%; /* Pearl Beige #E9E6DF */
-    --foreground: 0 0% 24%; /* Charcoal #3D3D3D */
-    
-    --card: 0 0% 99%;
-    --card-foreground: 0 0% 24%;
-    --card-border: 38 17% 78%; /* Taupe #D1CABE */
+    --background: 42 33% 96%; /* #FAF7F2 - Very light cream/beige */
+    --foreground: 0 0% 10%; /* Dark text */
 
-    --popover: 0 0% 99%;
-    --popover-foreground: 0 0% 24%;
-    --popover-border: 38 17% 78%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --card-border: 42 10% 90%;
 
-    --border: 38 17% 78%;
-    --input: 38 17% 78%;
-    
-    --primary: 0 0% 24%; /* Charcoal #3D3D3D */
-    --primary-foreground: 0 0% 100%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --popover-border: 42 10% 90%;
 
-    --secondary: 35 97% 75%; /* Peach Gold #FDC87F */
-    --secondary-foreground: 0 0% 24%;
+    --border: 42 10% 90%;
+    --input: 42 10% 90%;
 
-    --muted: 180 1% 85%; /* Light Grey #D8D9D9 */
+    --primary: 42 86% 55%; /* #F0B429 Amber/Gold */
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 42 15% 92%;
+    --secondary-foreground: 0 0% 10%;
+
+    --muted: 42 10% 95%;
     --muted-foreground: 0 0% 40%;
 
-    --accent: 35 97% 75%; /* Peach Gold */
-    --accent-foreground: 0 0% 24%;
+    --accent: 42 86% 55%;
+    --accent-foreground: 0 0% 10%;
 
-    --destructive: 350 72% 26%; /* Deep Maroon */
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 187 92% 10%; /* Deep Teal */
+    --success: 142 71% 29%;
     --success-foreground: 0 0% 100%;
 
-    --ring: 35 97% 75%; /* Peach Gold */
+    --ring: 42 86% 55%;
+
+    --sidebar: 0 0% 11%;
+    --sidebar-foreground: 40 20% 95%;
 
     --font-sans: 'Open Sans', 'Tajawal', sans-serif;
-
-    --radius: 0.3rem;
+    --radius: 0.75rem;
   }
 
   html[lang="ar"] .admin-theme,
@@ -267,7 +269,7 @@
   }
 
   .admin-nav-item {
-    font-weight: 400;
+    font-weight: 500;
   }
 
   .admin-nav-item[data-active="true"] {
@@ -275,38 +277,41 @@
   }
 
   .dark .admin-theme, .admin-theme.dark {
-    --background: 300 1% 19%; /* Near Black #313031 */
-    --foreground: 42 17% 89%; /* Pearl Beige #E9E6DF */
-    
-    --card: 0 0% 24%; /* Charcoal #3D3D3D */
-    --card-foreground: 42 17% 89%;
-    --card-border: 0 0% 30%;
+    --background: 0 0% 10%;
+    --foreground: 42 33% 96%;
 
-    --popover: 0 0% 24%;
-    --popover-foreground: 42 17% 89%;
-    --popover-border: 0 0% 30%;
+    --card: 0 0% 13%;
+    --card-foreground: 42 33% 96%;
+    --card-border: 0 0% 20%;
 
-    --border: 0 0% 30%;
-    --input: 0 0% 30%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 42 33% 96%;
+    --popover-border: 0 0% 20%;
 
-    --primary: 25 54% 52%; /* Terracotta #C47B47 */
-    --primary-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
 
-    --secondary: 35 97% 75%; /* Peach Gold #FDC87F */
-    --secondary-foreground: 0 0% 24%;
+    --primary: 42 86% 55%; /* #F0B429 Amber/Gold */
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 42 33% 96%;
 
     --muted: 0 0% 20%;
     --muted-foreground: 0 0% 70%;
 
-    --accent: 6 81% 70%; /* Coral #EF8275 */
+    --accent: 42 86% 55%;
     --accent-foreground: 0 0% 10%;
 
-    --destructive: 350 72% 26%; /* Deep Maroon */
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
 
-    --success: 187 92% 10%; /* Deep Teal */
+    --success: 142 71% 29%;
     --success-foreground: 0 0% 100%;
 
-    --ring: 35 97% 75%; /* Peach Gold */
+    --ring: 42 86% 55%;
+
+    --sidebar: 0 0% 11%;
+    --sidebar-foreground: 40 20% 95%;
   }
 }
