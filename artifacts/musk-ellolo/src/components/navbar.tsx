@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { Button } from './ui/button';
 import { ShoppingBag, User, Search, Menu, X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
-import { useGetCart } from '@workspace/api-client-react';
+import { useGetCart, useListCategories } from '@workspace/api-client-react';
 
 const siteAsset = (filename: string) => `${import.meta.env.BASE_URL}site-assets/${filename}`;
 
@@ -12,6 +12,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [location] = useLocation();
   const { data: cart } = useGetCart();
+  const { data: categories } = useListCategories();
 
   const cartItemCount = cart?.itemCount || 0;
 
@@ -19,16 +20,19 @@ export function Navbar() {
     setLang(lang === 'ar' ? 'en' : 'ar');
   };
 
+  const categoryLinks = (categories ?? []).map((category) => ({
+    href: `/categories/${category.slug}`,
+    ar: category.nameAr,
+    en: category.nameEn,
+  }));
+
   const navLinks = [
     { href: '/about', ar: 'من نحن', en: 'About Us' },
     {
       href: '/products',
       ar: 'المنتجات',
       en: 'Products',
-      children: [
-        { href: '/categories/perfumes', ar: 'عطور', en: 'Perfumes' },
-        { href: '/categories/hair-mists', ar: 'عطور الشعر', en: 'Hair Perfumes' },
-      ],
+      children: categoryLinks,
     },
     { href: '/guarantee', ar: 'الضمان', en: 'Guarantee' },
     { href: '/', ar: 'وجهاتنا الحصرية', en: 'Exclusive Destinations' },
@@ -98,7 +102,7 @@ export function Navbar() {
                   </span>
                 </Link>
                 {link.children && (
-                  <div className="invisible absolute right-0 top-full min-w-44 border border-gray-100 bg-white py-2 opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
+                  <div className="invisible absolute right-0 top-full max-h-80 min-w-52 overflow-y-auto border border-gray-100 bg-white py-2 opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
                     {link.children.map((child) => (
                       <Link key={child.href} href={child.href} className="block px-5 py-3 text-sm text-black hover:bg-gray-50">
                         {t(child.ar, child.en)}

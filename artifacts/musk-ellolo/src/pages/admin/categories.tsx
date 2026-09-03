@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useQueryClient } from '@tanstack/react-query';
-import { getAdminListCategoriesQueryKey } from '@workspace/api-client-react';
+import { getAdminListCategoriesQueryKey, getListCategoriesQueryKey } from '@workspace/api-client-react';
 
 const categorySchema = z.object({
   nameAr: z.string().min(1),
@@ -41,6 +41,7 @@ export default function AdminCategories() {
       disableMutation.mutate({ id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListCategoriesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
         }
       });
     }
@@ -56,6 +57,7 @@ export default function AdminCategories() {
       updateMutation.mutate({ id: editingId, data }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListCategoriesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
           setIsDialogOpen(false);
           setEditingId(null);
           form.reset();
@@ -65,6 +67,7 @@ export default function AdminCategories() {
       createMutation.mutate({ data }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListCategoriesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
           setIsDialogOpen(false);
           form.reset();
         }

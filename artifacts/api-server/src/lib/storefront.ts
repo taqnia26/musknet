@@ -406,7 +406,7 @@ export async function listCatalogProducts() {
     .select({ product: productsTable, category: categoriesTable })
     .from(productsTable)
     .innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-    .where(eq(productsTable.isActive, true))
+    .where(and(eq(productsTable.isActive, true), eq(categoriesTable.isActive, true)))
     .orderBy(productsTable.id);
   return rows.map(({ product, category }) => mapDatabaseProduct(product, category));
 }
@@ -414,7 +414,7 @@ export async function listCatalogProducts() {
 export async function listCatalogCategories() {
   await ensureCatalogSeeded();
   const [categoryRows, productRows] = await Promise.all([
-    db.select().from(categoriesTable).orderBy(categoriesTable.id),
+    db.select().from(categoriesTable).where(eq(categoriesTable.isActive, true)).orderBy(categoriesTable.id),
     db.select().from(productsTable).where(eq(productsTable.isActive, true)).orderBy(productsTable.id),
   ]);
   return categoryRows.map((category) => {

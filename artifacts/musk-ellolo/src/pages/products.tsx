@@ -102,9 +102,7 @@ function ProductGridCard({ product }: { product: any }) {
   
   const imageUrl = product.imageUrl || "/api/media/Hair_Mist-07_1787598876720.jpg";
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleAddToCart = () => {
     addItemMutation.mutate({ data: { productId: product.id, quantity: 1 } }, {
       onSuccess: () => {
         toast({
@@ -116,35 +114,39 @@ function ProductGridCard({ product }: { product: any }) {
   };
 
   return (
-    <Link href={`/products/${product.slug}`}>
-      <div className="group cursor-pointer flex flex-col h-full bg-white border border-gray-100 rounded-sm hover:shadow-md transition-shadow relative p-4">
+    <div className="group flex h-full flex-col rounded-sm border border-gray-100 bg-white p-4 transition-shadow hover:shadow-md relative">
         
-        {/* Badge */}
-        {product.isBestseller && (
-          <div className="absolute top-0 right-0 rtl:left-auto rtl:right-0 bg-[#ff3b3b] text-white text-[10px] font-bold px-2 py-1 z-10 rounded-bl-sm rounded-tr-sm">
-            {t('الأكثر مبيعا', 'Bestseller')}
-          </div>
-        )}
+      {/* Badge */}
+      {product.isBestseller && (
+        <div className="absolute top-0 right-0 rtl:left-auto rtl:right-0 bg-[#ff3b3b] text-white text-[10px] font-bold px-2 py-1 z-10 rounded-bl-sm rounded-tr-sm">
+          {t('الأكثر مبيعا', 'Bestseller')}
+        </div>
+      )}
         
-        {/* Image */}
-        <div className="relative aspect-square w-full bg-white mb-4">
+      {/* Image */}
+      <Link href={`/products/${product.slug}`} className="block cursor-pointer">
+        <div className="relative aspect-square w-full bg-white">
           <img 
             src={imageUrl} 
             alt={t(product.nameAr, product.nameEn)}
             className="absolute inset-0 w-full h-full object-contain mix-blend-multiply"
           />
-           <Button 
-             variant="outline" 
-             className="absolute inset-x-0 bottom-0 mx-2 translate-y-1 bg-white/95 text-black border-gray-200 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all hover:bg-white hover:text-black font-medium"
-             onClick={handleAddToCart}
-             disabled={addItemMutation.isPending}
-           >
-             {addItemMutation.isPending ? t('جاري الإضافة...', 'Adding...') : t('أضف إلى السلة', 'Add to Cart')}
-           </Button>
         </div>
+      </Link>
+
+      {/* Cart action stays outside the image area so it never covers the product */}
+      <Button
+        variant="outline"
+        className="mt-4 h-10 w-full shrink-0 border-gray-200 bg-white text-black font-medium transition-colors hover:border-black hover:bg-black hover:text-white"
+        onClick={handleAddToCart}
+        disabled={addItemMutation.isPending}
+      >
+        {addItemMutation.isPending ? t('جاري الإضافة...', 'Adding...') : t('أضف إلى السلة', 'Add to Cart')}
+      </Button>
         
-        {/* Details */}
-        <div className="space-y-3 text-center flex-1 flex flex-col justify-end pt-4 border-t border-gray-100">
+      {/* Details */}
+      <Link href={`/products/${product.slug}`} className="flex flex-1 cursor-pointer flex-col">
+        <div className="space-y-3 text-center flex-1 flex flex-col justify-end pt-4">
           <h3 className="font-medium text-sm text-black line-clamp-1">
             {t(product.nameAr, product.nameEn)}
           </h3>
@@ -156,7 +158,7 @@ function ProductGridCard({ product }: { product: any }) {
             )}
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }
