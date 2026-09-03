@@ -78,6 +78,13 @@
       "when": 1788442673620,
       "tag": "0010_friendly_lockjaw",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788444922028,
+      "tag": "0011_white_serpent_society",
+      "breakpoints": true
     }
   ]
 }

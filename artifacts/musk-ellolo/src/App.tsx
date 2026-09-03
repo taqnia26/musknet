@@ -91,6 +91,36 @@ function InitLanguage() {
   return null;
 }
 
+function StorefrontAnalytics() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    if (location.startsWith('/admin') || location.startsWith('/owner')) return;
+
+    const storageKey = 'musk-ellolo-visitor-session';
+    let sessionId = window.localStorage.getItem(storageKey);
+    if (!sessionId) {
+      sessionId = typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      window.localStorage.setItem(storageKey, sessionId);
+    }
+
+    void fetch(`${import.meta.env.BASE_URL.replace(/\/$/, '')}/api/analytics/page-view`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        path: location,
+        referrer: document.referrer || null,
+      }),
+      keepalive: true,
+    }).catch(() => undefined);
+  }, [location]);
+
+  return null;
+}
+
 function App() {
   const showSiteIntro = !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/owner');
 
@@ -100,6 +130,7 @@ function App() {
         {showSiteIntro && <SiteIntro />}
         <InitLanguage />
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+          <StorefrontAnalytics />
           <RoutedErrorBoundary>
             <Router />
           </RoutedErrorBoundary>

@@ -25,6 +25,7 @@ import {
   orderAddressesTable,
   orderItemsTable,
   ordersTable,
+  pageViewsTable,
   productsTable,
   wholesaleDistributorsTable,
   accountingAccountsTable,
@@ -174,6 +175,122 @@ router.get("/admin/dashboard", permit("dashboard", "view"), route(async (_req, r
   res.json(Api.GetAdminDashboardResponse.parse({
     revenue: Number(revenue.value ?? 0), orders: orders.value, customers: customers.value, products: products.value,
     lowStock: lowStock.value, pendingOrders: pending.value, activeCoupons: coupons.value, distributors: distributors.value,
+  }));
+}));
+
+router.get("/admin/analytics/dashboard", permit("dashboard", "view"), route(async (req, res) => {
+  const rawRangeDays = Array.isArray(req.query.rangeDays)
+    ? req.query.rangeDays[0]
+    : req.query.rangeDays;
+  const query = parse(Api.GetAdminAnalyticsDashboardQueryParams, {
+    ...req.query,
+    rangeDays: rawRangeDays === undefined ? undefined : Number(rawRangeDays),
+  }, res);
+  if (!query) return;
+
+  const rangeDays = query.rangeDays ?? 30;
+  const endExclusive = new Date();
+  const start = new Date(endExclusive);
+  start.setUTCDate(start.getUTCDate() - (rangeDays - 1));
+  start.setUTCHours(0, 0, 0, 0);
+
+  const pageViewDay = sql<string>`to_char(date_trunc('day', ${pageViewsTable.createdAt} AT TIME ZONE 'Asia/Riyadh'), 'YYYY-MM-DD')`;
+  const orderDay = sql<string>`to_char(date_trunc('day', ${ordersTable.createdAt} AT TIME ZONE 'Asia/Riyadh'), 'YYYY-MM-DD')`;
+
+  const [pageViewRows, orderRows, topProductRows, sourceRows] = await Promise.all([
+    db.select({
+      date: pageViewDay,
+      pageViews: count(),
+      visits: sql<number>`count(distinct ${pageViewsTable.sessionKey})`,
+    })
+      .from(pageViewsTable)
+      .where(and(gte(pageViewsTable.createdAt, start), lt(pageViewsTable.createdAt, endExclusive)))
+      .groupBy(pageViewDay)
+      .orderBy(pageViewDay),
+    db.select({
+      date: orderDay,
+      orders: count(),
+      revenue: sum(ordersTable.total),
+    })
+      .from(ordersTable)
+      .where(and(
+        eq(ordersTable.paymentStatus, "paid"),
+        gte(ordersTable.createdAt, start),
+        lt(ordersTable.createdAt, endExclusive),
+      ))
+      .groupBy(orderDay)
+      .orderBy(orderDay),
+    db.select({
+      name: orderItemsTable.productName,
+      quantity: sum(orderItemsTable.quantity),
+      revenue: sum(orderItemsTable.totalPrice),
+    })
+      .from(orderItemsTable)
+      .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
+      .where(and(
+        eq(ordersTable.paymentStatus, "paid"),
+        gte(ordersTable.createdAt, start),
+        lt(ordersTable.createdAt, endExclusive),
+      ))
+      .groupBy(orderItemsTable.productName)
+      .orderBy(desc(sum(orderItemsTable.totalPrice)))
+      .limit(5),
+    db.select({
+      source: pageViewsTable.source,
+      visits: sql<number>`count(distinct ${pageViewsTable.sessionKey})`,
+    })
+      .from(pageViewsTable)
+      .where(and(gte(pageViewsTable.createdAt, start), lt(pageViewsTable.createdAt, endExclusive)))
+      .groupBy(pageViewsTable.source)
+      .orderBy(desc(sql`count(distinct ${pageViewsTable.sessionKey})`)),
+  ]);
+
+  const pagesByDate = new Map(pageViewRows.map((row) => [row.date, row]));
+  const ordersByDate = new Map(orderRows.map((row) => [row.date, row]));
+  const series = Array.from({ length: rangeDays }, (_, index) => {
+    const date = new Date(start);
+    date.setUTCDate(start.getUTCDate() + index);
+    const key = date.toISOString().slice(0, 10);
+    const pages = pagesByDate.get(key);
+    const sales = ordersByDate.get(key);
+    return {
+      date: key,
+      pageViews: Number(pages?.pageViews ?? 0),
+      visits: Number(pages?.visits ?? 0),
+      orders: Number(sales?.orders ?? 0),
+      revenue: Number(sales?.revenue ?? 0),
+    };
+  });
+
+  const pageViews = series.reduce((total, row) => total + row.pageViews, 0);
+  const visits = series.reduce((total, row) => total + row.visits, 0);
+  const orders = series.reduce((total, row) => total + row.orders, 0);
+  const revenue = series.reduce((total, row) => total + row.revenue, 0);
+
+  res.json(Api.GetAdminAnalyticsDashboardResponse.parse({
+    rangeDays,
+    period: {
+      from: start.toISOString().slice(0, 10),
+      to: endExclusive.toISOString().slice(0, 10),
+    },
+    summary: {
+      visits,
+      pageViews,
+      orders,
+      revenue,
+      conversionRate: visits > 0 ? (orders / visits) * 100 : 0,
+      averageOrderValue: orders > 0 ? revenue / orders : 0,
+    },
+    series,
+    topProducts: topProductRows.map((row) => ({
+      name: row.name,
+      quantity: Number(row.quantity ?? 0),
+      revenue: Number(row.revenue ?? 0),
+    })),
+    trafficSources: sourceRows.map((row) => ({
+      source: row.source,
+      visits: Number(row.visits ?? 0),
+    })),
   }));
 }));
 

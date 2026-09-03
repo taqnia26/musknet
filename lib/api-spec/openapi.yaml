@@ -520,6 +520,34 @@ paths:
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       responses: { "200": { description: Metrics, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDashboard" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /admin/analytics/dashboard:
+    get:
+      operationId: getAdminAnalyticsDashboard
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - in: query
+          name: rangeDays
+          schema: { type: number, enum: [7, 30, 90], default: 30 }
+      responses:
+        "200":
+          description: Store traffic and sales analytics
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAnalyticsDashboard" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /analytics/page-view:
+    post:
+      operationId: trackPageView
+      tags: [analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TrackPageViewInput" }
+      responses:
+        "204": { description: Page view recorded }
+        "400": { $ref: "#/components/responses/BadRequest" }
   /admin/integrations:
     get:
       operationId: adminListIntegrations
@@ -1695,6 +1723,62 @@ components:
         pendingOrders: { type: number }
         activeCoupons: { type: number }
         distributors: { type: number }
+    AdminAnalyticsDashboard:
+      type: object
+      required: [rangeDays, period, summary, series, topProducts, trafficSources]
+      properties:
+        rangeDays: { type: number }
+        period:
+          type: object
+          required: [from, to]
+          properties:
+            from: { type: string, format: date }
+            to: { type: string, format: date }
+        summary:
+          type: object
+          required: [visits, pageViews, orders, revenue, conversionRate, averageOrderValue]
+          properties:
+            visits: { type: number }
+            pageViews: { type: number }
+            orders: { type: number }
+            revenue: { type: number }
+            conversionRate: { type: number }
+            averageOrderValue: { type: number }
+        series:
+          type: array
+          items:
+            type: object
+            required: [date, visits, pageViews, orders, revenue]
+            properties:
+              date: { type: string, format: date }
+              visits: { type: number }
+              pageViews: { type: number }
+              orders: { type: number }
+              revenue: { type: number }
+        topProducts:
+          type: array
+          items:
+            type: object
+            required: [name, quantity, revenue]
+            properties:
+              name: { type: string }
+              quantity: { type: number }
+              revenue: { type: number }
+        trafficSources:
+          type: array
+          items:
+            type: object
+            required: [source, visits]
+            properties:
+              source: { type: string, enum: [direct, search, social, referral] }
+              visits: { type: number }
+    TrackPageViewInput:
+      type: object
+      required: [sessionId, path]
+      properties:
+        sessionId: { type: string, minLength: 8, maxLength: 80 }
+        path: { type: string, minLength: 1, maxLength: 500 }
+        referrer: { type: ["string", "null"], maxLength: 500 }
     AdminIntegration:
       type: object
       required: [providerId, status, configuredAt, updatedAt]

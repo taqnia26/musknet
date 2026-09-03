@@ -717,6 +717,63 @@ export const GetAdminDashboardResponse = zod.object({
 })
 
 
+export const getAdminAnalyticsDashboardQueryRangeDaysDefault = 30;
+
+export const GetAdminAnalyticsDashboardQueryParams = zod.object({
+  "rangeDays": zod.union([zod.literal(7),zod.literal(30),zod.literal(90)]).default(getAdminAnalyticsDashboardQueryRangeDaysDefault)
+})
+
+export const GetAdminAnalyticsDashboardResponse = zod.object({
+  "rangeDays": zod.number(),
+  "period": zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date()
+}),
+  "summary": zod.object({
+  "visits": zod.number(),
+  "pageViews": zod.number(),
+  "orders": zod.number(),
+  "revenue": zod.number(),
+  "conversionRate": zod.number(),
+  "averageOrderValue": zod.number()
+}),
+  "series": zod.array(zod.object({
+  "date": zod.coerce.date(),
+  "visits": zod.number(),
+  "pageViews": zod.number(),
+  "orders": zod.number(),
+  "revenue": zod.number()
+})),
+  "topProducts": zod.array(zod.object({
+  "name": zod.string(),
+  "quantity": zod.number(),
+  "revenue": zod.number()
+})),
+  "trafficSources": zod.array(zod.object({
+  "source": zod.enum(['direct', 'search', 'social', 'referral']),
+  "visits": zod.number()
+}))
+})
+
+
+export const trackPageViewBodySessionIdMin = 8;
+export const trackPageViewBodySessionIdMax = 80;
+
+export const trackPageViewBodyPathMax = 500;
+
+export const trackPageViewBodyReferrerMax = 500;
+
+
+
+export const TrackPageViewBody = zod.object({
+  "sessionId": zod.string().min(trackPageViewBodySessionIdMin).max(trackPageViewBodySessionIdMax),
+  "path": zod.string().min(1).max(trackPageViewBodyPathMax),
+  "referrer": zod.string().max(trackPageViewBodyReferrerMax).nullish()
+})
+
+export const TrackPageViewResponse = zod.void()
+
+
 export const AdminListIntegrationsResponseItem = zod.object({
   "providerId": zod.string(),
   "status": zod.enum(['configured']),

@@ -22,6 +22,35 @@
 /* Unlayered route tokens must win over next-themes' global .dark class so
    Radix portals keep the admin brand palette regardless of storefront theme. */
 html.admin-route {
+  color-scheme: light;
+  --background: 40 33% 96%;
+  --foreground: 24 12% 7%;
+  --card: 0 0% 100%;
+  --card-foreground: 24 12% 7%;
+  --card-border: 40 20% 90%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 24 12% 7%;
+  --popover-border: 40 20% 90%;
+  --border: 40 20% 90%;
+  --input: 40 20% 90%;
+  --primary: 31 78% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 40 20% 90%;
+  --secondary-foreground: 24 12% 7%;
+  --muted: 40 20% 92%;
+  --muted-foreground: 24 10% 45%;
+  --accent: 17 57% 46%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 48% 31%;
+  --destructive-foreground: 38 35% 96%;
+  --success: 145 45% 39%;
+  --success-foreground: 38 35% 96%;
+  --ring: 31 78% 45%;
+  --sidebar: 40 33% 94%;
+  --sidebar-foreground: 24 12% 7%;
+}
+
+html.dark.admin-route {
   color-scheme: dark;
   --background: 24 12% 7%;
   --foreground: 38 35% 91%;
@@ -254,8 +283,50 @@ html.admin-route {
     max-width: 100%;
   }
 
-  /* Admin Theme: always-dark brand surface, scoped away from the storefront */
+  /* Admin Theme: dynamic light/dark brand surface, scoped away from the storefront */
   .admin-theme {
+    --background: 40 33% 96%; /* Cream */
+    --foreground: 24 12% 7%; /* Charcoal */
+
+    --card: 0 0% 100%;
+    --card-foreground: 24 12% 7%;
+    --card-border: 40 20% 90%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 12% 7%;
+    --popover-border: 40 20% 90%;
+
+    --border: 40 20% 90%;
+    --input: 40 20% 90%;
+
+    --primary: 31 78% 45%; /* Amber */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 20% 90%;
+    --secondary-foreground: 24 12% 7%;
+
+    --muted: 40 20% 92%;
+    --muted-foreground: 24 10% 45%;
+
+    --accent: 17 57% 46%; /* Terracotta */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 48% 31%; /* Deep burgundy */
+    --destructive-foreground: 38 35% 96%;
+
+    --success: 145 45% 39%;
+    --success-foreground: 38 35% 96%;
+
+    --ring: 31 78% 45%;
+
+    --sidebar: 40 33% 94%;
+    --sidebar-foreground: 24 12% 7%;
+
+    --font-sans: 'Open Sans', 'Tajawal', sans-serif;
+    --radius: 0.75rem;
+  }
+
+  html.dark .admin-theme, .dark .admin-theme {
     --background: 24 12% 7%; /* Near Black */
     --foreground: 38 35% 91%; /* Pearl Beige */
 
@@ -292,9 +363,6 @@ html.admin-route {
 
     --sidebar: 24 13% 5%;
     --sidebar-foreground: 38 35% 91%;
-
-    --font-sans: 'Open Sans', 'Tajawal', sans-serif;
-    --radius: 0.75rem;
   }
 
   html[lang="ar"] .admin-theme,
@@ -326,8 +394,37 @@ html.admin-route {
   }
 
   /* Portals (dialogs, selects, popovers) live outside .admin-theme. Keep their
-     variables dark while the admin route is mounted, without touching store pages. */
+     variables contextual while the admin route is mounted, without touching store pages. */
   html.admin-route {
+    color-scheme: light;
+    --background: 40 33% 96%;
+    --foreground: 24 12% 7%;
+    --card: 0 0% 100%;
+    --card-foreground: 24 12% 7%;
+    --card-border: 40 20% 90%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 12% 7%;
+    --popover-border: 40 20% 90%;
+    --border: 40 20% 90%;
+    --input: 40 20% 90%;
+    --primary: 31 78% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 40 20% 90%;
+    --secondary-foreground: 24 12% 7%;
+    --muted: 40 20% 92%;
+    --muted-foreground: 24 10% 45%;
+    --accent: 17 57% 46%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 48% 31%;
+    --destructive-foreground: 38 35% 96%;
+    --success: 145 45% 39%;
+    --success-foreground: 38 35% 96%;
+    --ring: 31 78% 45%;
+    --sidebar: 40 33% 94%;
+    --sidebar-foreground: 24 12% 7%;
+  }
+
+  html.dark.admin-route {
     color-scheme: dark;
     --background: 24 12% 7%;
     --foreground: 38 35% 91%;

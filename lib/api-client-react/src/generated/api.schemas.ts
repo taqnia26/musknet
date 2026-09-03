@@ -386,6 +386,76 @@ export interface AdminDashboard {
   distributors: number;
 }
 
+export type AdminAnalyticsDashboardPeriod = {
+  from: string;
+  to: string;
+};
+
+export type AdminAnalyticsDashboardSummary = {
+  visits: number;
+  pageViews: number;
+  orders: number;
+  revenue: number;
+  conversionRate: number;
+  averageOrderValue: number;
+};
+
+export type AdminAnalyticsDashboardSeriesItem = {
+  date: string;
+  visits: number;
+  pageViews: number;
+  orders: number;
+  revenue: number;
+};
+
+export type AdminAnalyticsDashboardTopProductsItem = {
+  name: string;
+  quantity: number;
+  revenue: number;
+};
+
+export type AdminAnalyticsDashboardTrafficSourcesItemSource = typeof AdminAnalyticsDashboardTrafficSourcesItemSource[keyof typeof AdminAnalyticsDashboardTrafficSourcesItemSource];
+
+
+export const AdminAnalyticsDashboardTrafficSourcesItemSource = {
+  direct: 'direct',
+  search: 'search',
+  social: 'social',
+  referral: 'referral',
+} as const;
+
+export type AdminAnalyticsDashboardTrafficSourcesItem = {
+  source: AdminAnalyticsDashboardTrafficSourcesItemSource;
+  visits: number;
+};
+
+export interface AdminAnalyticsDashboard {
+  rangeDays: number;
+  period: AdminAnalyticsDashboardPeriod;
+  summary: AdminAnalyticsDashboardSummary;
+  series: AdminAnalyticsDashboardSeriesItem[];
+  topProducts: AdminAnalyticsDashboardTopProductsItem[];
+  trafficSources: AdminAnalyticsDashboardTrafficSourcesItem[];
+}
+
+export interface TrackPageViewInput {
+  /**
+     * @minLength 8
+     * @maxLength 80
+     */
+  sessionId: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  path: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  referrer?: string | null;
+}
+
 export type AdminIntegrationStatus = typeof AdminIntegrationStatus[keyof typeof AdminIntegrationStatus];
 
 
@@ -1567,6 +1637,19 @@ export const ListProductsSort = {
   price_asc: 'price_asc',
   price_desc: 'price_desc',
   newest: 'newest',
+} as const;
+
+export type GetAdminAnalyticsDashboardParams = {
+rangeDays?: GetAdminAnalyticsDashboardRangeDays;
+};
+
+export type GetAdminAnalyticsDashboardRangeDays = typeof GetAdminAnalyticsDashboardRangeDays[keyof typeof GetAdminAnalyticsDashboardRangeDays];
+
+
+export const GetAdminAnalyticsDashboardRangeDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+  NUMBER_90: 90,
 } as const;
 
 export type AdminListProductsParams = {

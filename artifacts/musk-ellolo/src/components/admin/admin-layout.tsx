@@ -3,6 +3,7 @@ import { useLocation, Link } from 'wouter';
 import { useGetAdminMe, useAdminLogout, getGetAdminMeQueryKey } from '@workspace/api-client-react';
 import { getAdminToken, removeAdminToken } from '@/lib/auth-token';
 import { useLanguage } from '@/hooks/use-language';
+import { useTheme } from 'next-themes';
 import {
   LayoutDashboard,
   Package,
@@ -23,7 +24,9 @@ import {
   FileText,
   ChevronDown,
   MessageCircle,
-  Network
+  Network,
+  Moon,
+  Sun
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -157,7 +160,7 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
       <CollapsibleTrigger asChild>
         <div className={cn(
-          "flex items-center justify-between px-4 py-2.5 rounded-xl transition-all cursor-pointer text-sidebar-foreground hover:bg-white/10",
+          "flex items-center justify-between px-4 py-2.5 rounded-xl transition-all cursor-pointer text-sidebar-foreground hover:bg-black/5 dark:hover:bg-white/10",
           hasActiveChild && "text-primary font-medium"
         )}>
           <div className="flex items-center gap-3">
@@ -177,7 +180,7 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
                   "block px-4 py-2 text-sm rounded-lg transition-colors cursor-pointer",
                   isChildActive
                     ? "bg-primary/10 text-primary font-medium"
-                    : "text-sidebar-foreground/80 hover:bg-white/5 hover:text-white"
+                    : "text-sidebar-foreground/80 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground dark:hover:text-white"
                 )}
                 onClick={() => setOpen?.(false)}
               >
@@ -194,6 +197,7 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const { lang, setLang, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   const hasToken = !!getAdminToken();
@@ -235,15 +239,15 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="admin-theme flex h-screen min-w-0 overflow-hidden bg-background font-sans text-foreground">
       {/* Desktop Sidebar */}
-      <aside className="z-10 hidden w-72 shrink-0 flex-col border-e border-white/10 bg-sidebar shadow-xl lg:flex">
+      <aside className="z-10 hidden w-72 shrink-0 flex-col border-e border-border dark:border-white/10 bg-sidebar shadow-xl lg:flex">
         <div className="flex items-center gap-3 px-6 py-8">
           <div className="flex min-w-0 flex-col items-start gap-2">
             <img
               src="/site-assets/admin-wordmark.png"
               alt="Musk Ellolo"
-              className="h-auto max-h-12 w-full max-w-[205px] object-contain object-left invert"
+              className="h-auto max-h-12 w-full max-w-[205px] object-contain object-left dark:invert"
             />
-            <span className="text-xs text-white/50">{t('لوحة الإدارة', 'Admin Panel')}</span>
+            <span className="text-xs text-sidebar-foreground/55">{t('لوحة الإدارة', 'Admin Panel')}</span>
           </div>
         </div>
 
@@ -255,13 +259,13 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </nav>
         </div>
 
-        <div className="p-4 mt-auto border-t border-white/10">
-          <div className="bg-white/5 rounded-xl p-3 mb-3">
-            <div className="text-sm font-medium text-white truncate">{user.name}</div>
-            <div className="text-xs text-white/50 truncate">{user.email}</div>
+        <div className="p-4 mt-auto border-t border-border dark:border-white/10">
+          <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 mb-3">
+            <div className="text-sm font-medium text-foreground dark:text-white truncate">{user.name}</div>
+            <div className="text-xs text-muted-foreground dark:text-white/50 truncate">{user.email}</div>
           </div>
           <Link href="/">
-            <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-white/10 hover:text-white mb-1">
+            <Button variant="ghost" className="w-full justify-start gap-2 text-foreground/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground dark:hover:text-white mb-1">
               <Store className="h-4 w-4" />
               {t('العودة للمتجر', 'Back to Store')}
             </Button>
@@ -272,8 +276,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               {t('بوابة المالك', 'Owner portal')}
             </Button>
           </Link>
-          <div className="h-px bg-white/10 my-1 mx-2"></div>
-          <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
+          <div className="h-px bg-border dark:bg-white/10 my-1 mx-2"></div>
+          <Button variant="ghost" className="w-full justify-start gap-2 text-foreground/70 dark:text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
             {t('تسجيل الخروج', 'Logout')}
           </Button>
@@ -290,15 +294,15 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-72 p-0 flex flex-col admin-theme bg-sidebar border-white/10">
-                <div className="flex items-center gap-3 px-6 py-8 border-b border-white/10">
+              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-72 p-0 flex flex-col admin-theme bg-sidebar border-border dark:border-white/10">
+                <div className="flex items-center gap-3 px-6 py-8 border-b border-border dark:border-white/10">
                   <div className="flex min-w-0 flex-col items-start gap-2">
                     <img
                       src="/site-assets/admin-wordmark.png"
                       alt="Musk Ellolo"
-                      className="h-auto max-h-10 w-full max-w-[190px] object-contain object-left invert"
+                      className="h-auto max-h-10 w-full max-w-[190px] object-contain object-left dark:invert"
                     />
-                    <span className="text-xs text-white/50">{t('لوحة الإدارة', 'Admin Panel')}</span>
+                    <span className="text-xs text-sidebar-foreground/55">{t('لوحة الإدارة', 'Admin Panel')}</span>
                   </div>
                 </div>
 
@@ -310,9 +314,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   </nav>
                 </div>
 
-                <div className="p-4 border-t border-white/10">
+                <div className="p-4 border-t border-border dark:border-white/10">
                   <Link href="/">
-                    <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-white/10 hover:text-white mb-1" onClick={() => setIsOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-foreground/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground dark:hover:text-white mb-1" onClick={() => setIsOpen(false)}>
                       <Store className="h-4 w-4" />
                       {t('العودة للمتجر', 'Back to Store')}
                     </Button>
@@ -323,7 +327,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                       {t('بوابة المالك', 'Owner portal')}
                     </Button>
                   </Link>
-                  <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-foreground/70 dark:text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
                     <LogOut className="h-4 w-4" />
                     {t('تسجيل الخروج', 'Logout')}
                   </Button>
@@ -333,7 +337,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             <img
               src="/site-assets/admin-wordmark.png"
               alt="Musk Ellolo"
-              className="ms-2 h-7 w-36 object-contain object-left invert"
+              className="ms-2 h-7 w-36 object-contain object-left dark:invert"
             />
           </div>
 
@@ -342,7 +346,18 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="ms-auto flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-full" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="min-h-11 min-w-11 rounded-full text-muted-foreground hover:text-foreground"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              title={t('تغيير المظهر', 'Toggle Theme')}
+            >
+              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+            <Button variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-full text-muted-foreground hover:text-foreground" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
               <Globe className="h-5 w-5" />
             </Button>
           </div>
