@@ -299,6 +299,13 @@ export interface AdminLoginInput {
   password: string;
 }
 
+export interface OwnerLoginInput {
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
+  /** @minLength 8 */
+  password: string;
+}
+
 export interface AdminUser {
   id: number;
   email: string;
@@ -314,6 +321,21 @@ export interface AdminUser {
 export interface AdminAuthSession {
   token: string;
   user: AdminUser;
+}
+
+export interface OwnerUser {
+  id: number;
+  email: string;
+  name: string;
+  isActive: boolean;
+  /** @nullable */
+  lastLoginAt?: string | null;
+  createdAt: string;
+}
+
+export interface OwnerAuthSession {
+  token: string;
+  user: OwnerUser;
 }
 
 export type AdminPermissionAction = typeof AdminPermissionAction[keyof typeof AdminPermissionAction];
@@ -1403,6 +1425,11 @@ export type UnauthorizedResponse = Error;
  * Insufficient permission
  */
 export type ForbiddenResponse = Error;
+
+/**
+ * Service is not configured
+ */
+export type ServiceUnavailableResponse = Error;
 
 /**
  * Resource not found

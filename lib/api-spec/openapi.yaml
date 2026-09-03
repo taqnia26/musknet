@@ -15,6 +15,7 @@ tags:
   - name: checkout
   - name: account
   - name: admin
+  - name: owner
 paths:
   /healthz:
     get:
@@ -451,6 +452,24 @@ paths:
       tags: [admin]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminLoginInput" } } } }
       responses: { "200": { description: Signed in, content: { application/json: { schema: { $ref: "#/components/schemas/AdminAuthSession" } } } }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /owner/auth/login:
+    post:
+      operationId: ownerLogin
+      tags: [owner]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerLoginInput" } } } }
+      responses: { "200": { description: Signed in, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerAuthSession" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
+  /owner/auth/logout:
+    post:
+      operationId: ownerLogout
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      responses: { "204": { description: Signed out }, "401": { $ref: "#/components/responses/Unauthorized" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
+  /owner/auth/me:
+    get:
+      operationId: getOwnerMe
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      responses: { "200": { description: Current owner, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerUser" } } } }, "401": { $ref: "#/components/responses/Unauthorized" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
   /admin/auth/logout:
     post:
       operationId: adminLogout
@@ -1041,6 +1060,10 @@ components:
       type: http
       scheme: bearer
       bearerFormat: opaque
+    ownerBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
   parameters:
     AdminId:
       name: id
@@ -1093,6 +1116,12 @@ components:
             $ref: "#/components/schemas/Error"
     Forbidden:
       description: Insufficient permission
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ServiceUnavailable:
+      description: Service is not configured
       content:
         application/json:
           schema:
@@ -1509,12 +1538,34 @@ components:
       properties:
         email: { type: string }
         password: { type: string, minLength: 8 }
+    OwnerLoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$' }
+        password: { type: string, minLength: 8 }
     AdminAuthSession:
       type: object
       required: [token, user]
       properties:
         token: { type: string }
         user: { $ref: "#/components/schemas/AdminUser" }
+    OwnerAuthSession:
+      type: object
+      required: [token, user]
+      properties:
+        token: { type: string }
+        user: { $ref: "#/components/schemas/OwnerUser" }
+    OwnerUser:
+      type: object
+      required: [id, email, name, isActive, createdAt]
+      properties:
+        id: { type: number }
+        email: { type: string }
+        name: { type: string }
+        isActive: { type: boolean }
+        lastLoginAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
     AdminUser:
       type: object
       required: [id, email, name, isSuperAdmin, isActive, permissions, createdAt]

@@ -35,6 +35,7 @@ const queryClient = new QueryClient();
 
 import AdminRoutes from '@/pages/admin';
 import OwnerLogin from '@/pages/owner-login';
+import OwnerPortal from '@/pages/owner-portal';
 
 function Router() {
   const [location] = useLocation();
@@ -43,8 +44,8 @@ function Router() {
     return <AdminRoutes />;
   }
 
-  if (location === '/owner/login') {
-    return <OwnerLogin />;
+  if (location.startsWith('/owner')) {
+    return location === '/owner/login' ? <OwnerLogin /> : <OwnerPortal />;
   }
 
   return (
@@ -91,7 +92,7 @@ function InitLanguage() {
 }
 
 function App() {
-  const showSiteIntro = !window.location.pathname.startsWith('/admin') && window.location.pathname !== '/owner/login';
+  const showSiteIntro = !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/owner');
 
   return (
     <QueryClientProvider client={queryClient}>

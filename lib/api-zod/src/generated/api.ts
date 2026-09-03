@@ -598,6 +598,42 @@ export const AdminLoginResponse = zod.object({
 })
 
 
+export const ownerLoginBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const ownerLoginBodyPasswordMin = 8;
+
+
+
+export const OwnerLoginBody = zod.object({
+  "email": zod.string().regex(ownerLoginBodyEmailRegExp),
+  "password": zod.string().min(ownerLoginBodyPasswordMin)
+})
+
+export const OwnerLoginResponse = zod.object({
+  "token": zod.string(),
+  "user": zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "isActive": zod.boolean(),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+export const OwnerLogoutResponse = zod.void()
+
+
+export const GetOwnerMeResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "isActive": zod.boolean(),
+  "lastLoginAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
 export const AdminLogoutResponse = zod.void()
 
 

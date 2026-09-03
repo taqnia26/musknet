@@ -31,6 +31,8 @@ export * from "./order-addresses";
 export * from "./admin-users";
 export * from "./admin-sessions";
 export * from "./admin-permissions";
+export * from "./owner-users";
+export * from "./owner-sessions";
 export * from "./wholesale-distributors";
 export * from "./inventory-movements";
 export * from "./hr";

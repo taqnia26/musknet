@@ -111,12 +111,16 @@ import type {
   OtpRequest,
   OtpRequestResult,
   OtpVerification,
+  OwnerAuthSession,
+  OwnerLoginInput,
+  OwnerUser,
   PayrollInput,
   PayrollRecord,
   Product,
   ProductDetails,
   ProfileUpdate,
   RateLimitedResponse,
+  ServiceUnavailableResponse,
   TrialBalance,
   UnauthorizedResponse
 } from './api.schemas';
@@ -1848,6 +1852,207 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getAdminLoginMutationOptions(options));
     }
+
+export const getOwnerLoginUrl = () => {
+
+
+
+
+  return `/api/owner/auth/login`
+}
+
+export const ownerLogin = async (ownerLoginInput: OwnerLoginInput, options?: Parameters<typeof customFetch>[1]): Promise<OwnerAuthSession> => {
+
+  return customFetch<OwnerAuthSession>(getOwnerLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ownerLoginInput)
+  }
+);}
+
+
+
+
+
+export const getOwnerLoginMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ownerLogin>>, TError,{data: BodyType<OwnerLoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ownerLogin>>, TError,{data: BodyType<OwnerLoginInput>}, TContext> => {
+
+const mutationKey = ['ownerLogin'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ownerLogin>>, {data: BodyType<OwnerLoginInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  ownerLogin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OwnerLoginMutationResult = NonNullable<Awaited<ReturnType<typeof ownerLogin>>>
+    export type OwnerLoginMutationBody = BodyType<OwnerLoginInput>
+    export type OwnerLoginMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ServiceUnavailableResponse>
+
+    export const useOwnerLogin = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ownerLogin>>, TError,{data: BodyType<OwnerLoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ownerLogin>>,
+        TError,
+        {data: BodyType<OwnerLoginInput>},
+        TContext
+      > => {
+      return useMutation(getOwnerLoginMutationOptions(options));
+    }
+
+export const getOwnerLogoutUrl = () => {
+
+
+
+
+  return `/api/owner/auth/logout`
+}
+
+export const ownerLogout = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getOwnerLogoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getOwnerLogoutMutationOptions = <TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ownerLogout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ownerLogout>>, TError,void, TContext> => {
+
+const mutationKey = ['ownerLogout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ownerLogout>>, void> = () => {
+
+
+          return  ownerLogout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OwnerLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof ownerLogout>>>
+
+    export type OwnerLogoutMutationError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>
+
+    export const useOwnerLogout = <TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ownerLogout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ownerLogout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getOwnerLogoutMutationOptions(options));
+    }
+
+export const getGetOwnerMeUrl = () => {
+
+
+
+
+  return `/api/owner/auth/me`
+}
+
+export const getOwnerMe = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerUser> => {
+
+  return customFetch<OwnerUser>(getGetOwnerMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOwnerMeQueryKey = () => {
+    return [
+    `/api/owner/auth/me`
+    ] as const;
+    }
+
+
+export const getGetOwnerMeQueryOptions = <TData = Awaited<ReturnType<typeof getOwnerMe>>, TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOwnerMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwnerMe>>> = ({ signal }) => getOwnerMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOwnerMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOwnerMeQueryResult = NonNullable<Awaited<ReturnType<typeof getOwnerMe>>>
+export type GetOwnerMeQueryError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>
+
+
+
+export function useGetOwnerMe<TData = Awaited<ReturnType<typeof getOwnerMe>>, TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOwnerMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getAdminLogoutUrl = () => {
 
