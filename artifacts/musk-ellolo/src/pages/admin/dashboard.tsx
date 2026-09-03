@@ -71,23 +71,23 @@ export default function AdminDashboard() {
     {
       name: t('قيد الانتظار', 'Pending'),
       value: (orders ?? []).filter((order) => order.status === 'new' || order.status === 'processing' || order.status === 'shipped').length,
-      color: '#F0B429',
+      color: 'hsl(31 78% 66%)',
     },
     {
       name: t('مكتمل', 'Completed'),
       value: (orders ?? []).filter((order) => order.status === 'delivered').length,
-      color: '#16a34a',
+      color: 'hsl(145 45% 39%)',
     },
     {
       name: t('ملغي', 'Cancelled'),
       value: (orders ?? []).filter((order) => order.status === 'cancelled').length,
-      color: '#dc2626',
+      color: 'hsl(0 48% 31%)',
     },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-card p-6 rounded-xl border shadow-sm">
+      <div className="bg-card p-6 rounded-xl border shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-primary">
           {t('نظرة عامة', 'Overview')}
         </h1>
@@ -124,12 +124,12 @@ export default function AdminDashboard() {
               <AreaChart data={revenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#F0B429" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#F0B429" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="hsl(31 78% 66%)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="hsl(31 78% 66%)" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="hsl(17 57% 46%)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="hsl(17 57% 46%)" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="name" />
@@ -137,8 +137,8 @@ export default function AdminDashboard() {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-10" />
                 <RechartsTooltip />
                 <Legend />
-                <Area type="monotone" name={t('الإيرادات', 'Revenue')} dataKey="revenue" stroke="#F0B429" fillOpacity={1} fill="url(#colorRevenue)" />
-                <Area type="monotone" name={t('الأرباح', 'Profit')} dataKey="profit" stroke="#3b82f6" fillOpacity={1} fill="url(#colorProfit)" />
+                <Area type="monotone" name={t('الإيرادات', 'Revenue')} dataKey="revenue" stroke="hsl(31 78% 66%)" fillOpacity={1} fill="url(#colorRevenue)" />
+                <Area type="monotone" name={t('الأرباح', 'Profit')} dataKey="profit" stroke="hsl(17 57% 46%)" fillOpacity={1} fill="url(#colorProfit)" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>

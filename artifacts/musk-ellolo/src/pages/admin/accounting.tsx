@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
+import { useLocation } from 'wouter';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const amountPattern = /^\d{1,15}(?:\.\d{1,4})?$/;
@@ -324,15 +325,17 @@ function TrialBalanceTab() {
 
 export default function AdminAccounting() {
   const { t } = useLanguage();
+  const [location] = useLocation();
   const { data: user, isLoading } = useGetAdminMe();
   const canView = hasPermission(user, 'accounting', 'view');
   const canEdit = hasPermission(user, 'accounting', 'edit');
   if (isLoading) return <p className="py-10 text-center">{t('جاري التحميل...', 'Loading...')}</p>;
   if (!canView) return <Card><CardContent className="py-12 text-center text-muted-foreground" data-testid="status-accounting-forbidden">{t('ليس لديك صلاحية عرض المحاسبة', 'You do not have permission to view accounting')}</CardContent></Card>;
+  const initialTab = location.endsWith('/journal-entries') ? 'journals' : location.endsWith('/trial-balance') ? 'trial' : 'accounts';
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3"><BookOpen className="h-8 w-8 text-primary" /><div><h1 className="text-3xl font-bold tracking-tight">{t('المحاسبة', 'Accounting')}</h1><p className="mt-1 text-muted-foreground">{t('دليل الحسابات والقيود وميزان المراجعة', 'Chart of accounts, journals, and trial balance')}</p></div></div>
-      <Tabs defaultValue="accounts">
+      <Tabs key={initialTab} defaultValue={initialTab}>
         <TabsList className="grid h-auto w-full grid-cols-2 lg:grid-cols-4">
           <TabsTrigger value="accounts" data-testid="tab-accounts">{t('دليل الحسابات', 'Chart of accounts')}</TabsTrigger>
           <TabsTrigger value="journals" data-testid="tab-journals">{t('القيود اليومية', 'Journal entries')}</TabsTrigger>

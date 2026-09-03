@@ -20,8 +20,6 @@ import {
   LogOut,
   Globe,
   Menu,
-  Moon,
-  Sun,
   FileText,
   ChevronDown,
   MessageCircle,
@@ -29,7 +27,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useTheme } from 'next-themes';
 import { hasPermission } from '@/lib/permissions';
 import {
   Collapsible,
@@ -74,13 +71,15 @@ const navStructure = [
   {
     labelEn: 'Marketing', labelAr: 'التسويق', icon: Tags, module: 'dashboard',
     children: [
-      // Placeholder for now
+      { href: '/admin/marketing', labelEn: 'Campaigns', labelAr: 'الحملات' },
     ]
   },
   {
     labelEn: 'WhatsApp', labelAr: 'الواتساب', icon: MessageCircle, module: 'dashboard',
     children: [
-      // Placeholder for now
+      { href: '/admin/whatsapp/inbox', labelEn: 'Inbox', labelAr: 'صندوق الوارد' },
+      { href: '/admin/whatsapp/templates', labelEn: 'Templates', labelAr: 'القوالب' },
+      { href: '/admin/whatsapp/settings', labelEn: 'Connection settings', labelAr: 'إعدادات الربط' },
     ]
   },
   { href: '/admin/chatbot', icon: MessageCircle, labelEn: 'Chatbot', labelAr: 'الشات بوت', module: 'dashboard', direct: true },
@@ -93,8 +92,11 @@ const navStructure = [
   {
     labelEn: 'Finance', labelAr: 'المالية', icon: FileText,
     children: [
-      { href: '/admin/finance', labelEn: 'Expenses & Reports', labelAr: 'المصروفات والتقارير', module: 'finance' },
-      { href: '/admin/accounting', labelEn: 'Accounting', labelAr: 'المحاسبة', module: 'accounting' },
+      { href: '/admin/finance/expenses', labelEn: 'Expenses', labelAr: 'المصروفات', module: 'finance' },
+      { href: '/admin/finance/reports', labelEn: 'Reports', labelAr: 'التقارير', module: 'finance' },
+      { href: '/admin/accounting/accounts', labelEn: 'Accounting', labelAr: 'المحاسبة', module: 'accounting' },
+      { href: '/admin/accounting/journal-entries', labelEn: 'Journal entries', labelAr: 'القيود اليومية', module: 'accounting' },
+      { href: '/admin/accounting/trial-balance', labelEn: 'Trial balance', labelAr: 'ميزان المراجعة', module: 'accounting' },
     ]
   },
   {
@@ -192,7 +194,6 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const { lang, setLang, t } = useLanguage();
-  const { resolvedTheme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
   const hasToken = !!getAdminToken();
@@ -224,7 +225,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   const toggleLanguage = () => setLang(lang === 'ar' ? 'en' : 'ar');
-  const toggleTheme = () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
@@ -263,6 +263,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-white/10 hover:text-white mb-1">
               <Store className="h-4 w-4" />
               {t('العودة للمتجر', 'Back to Store')}
+            </Button>
+          </Link>
+          <Link href="/owner/login">
+            <Button variant="ghost" className="w-full justify-start gap-2 text-primary/80 hover:bg-primary/10 hover:text-primary mb-1">
+              <UserCog className="h-4 w-4" />
+              {t('بوابة المالك', 'Owner portal')}
             </Button>
           </Link>
           <div className="h-px bg-white/10 my-1 mx-2"></div>
@@ -309,6 +315,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                       {t('العودة للمتجر', 'Back to Store')}
                     </Button>
                   </Link>
+                  <Link href="/owner/login">
+                    <Button variant="ghost" className="w-full justify-start gap-2 text-primary/80 hover:bg-primary/10 hover:text-primary mb-1" onClick={() => setIsOpen(false)}>
+                      <UserCog className="h-4 w-4" />
+                      {t('بوابة المالك', 'Owner portal')}
+                    </Button>
+                  </Link>
                   <Button variant="ghost" className="w-full justify-start gap-2 text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
                     <LogOut className="h-4 w-4" />
                     {t('تسجيل الخروج', 'Logout')}
@@ -326,16 +338,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2 ms-auto">
             <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
               <Globe className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full"
-              onClick={toggleTheme}
-              title={t('تغيير المظهر', 'Toggle Theme')}
-            >
-              <Sun className="h-5 w-5 hidden dark:block" />
-              <Moon className="h-5 w-5 block dark:hidden" />
             </Button>
           </div>
         </header>

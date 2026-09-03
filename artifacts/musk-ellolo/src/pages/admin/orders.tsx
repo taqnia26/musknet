@@ -74,10 +74,10 @@ export default function AdminOrders() {
 
   const statusMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
     'new': { label: t('جديد', 'New'), variant: 'default', className: 'bg-primary/20 text-primary hover:bg-primary/30' },
-    'processing': { label: t('قيد التجهيز', 'Processing'), variant: 'secondary', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500 hover:bg-amber-200' },
-    'shipped': { label: t('مشحون', 'Shipped'), variant: 'outline', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-500 hover:bg-blue-200 border-none' },
-    'delivered': { label: t('تم التوصيل', 'Delivered'), variant: 'default', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500 hover:bg-green-200' },
-    'cancelled': { label: t('ملغي', 'Cancelled'), variant: 'destructive', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500 hover:bg-red-200' },
+    'processing': { label: t('قيد التجهيز', 'Processing'), variant: 'secondary', className: 'bg-primary/15 text-primary hover:bg-primary/25' },
+    'shipped': { label: t('مشحون', 'Shipped'), variant: 'outline', className: 'bg-accent/20 text-accent-foreground hover:bg-accent/30 border-accent/30' },
+    'delivered': { label: t('تم التوصيل', 'Delivered'), variant: 'default', className: 'bg-success/20 text-success hover:bg-success/30' },
+    'cancelled': { label: t('ملغي', 'Cancelled'), variant: 'destructive', className: 'bg-destructive/30 text-destructive-foreground hover:bg-destructive/40' },
   };
 
   const paymentMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {

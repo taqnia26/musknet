@@ -17,6 +17,8 @@ import AdminManufacturing from '@/pages/admin/manufacturing';
 import AdminExhibitions from '@/pages/admin/exhibitions';
 import AdminInvoices from '@/pages/admin/invoices';
 import AdminChatbot from '@/pages/admin/chatbot';
+import AdminWhatsAppInbox from '@/pages/admin/whatsapp-inbox';
+import { AdminWhatsAppSettings, AdminWhatsAppTemplates } from '@/pages/admin/whatsapp-placeholders';
 import AdminIntegrations from '@/pages/admin/integrations';
 import AdminAccounting from '@/pages/admin/accounting';
 
@@ -46,13 +48,31 @@ export default function AdminRoutes() {
         <Route path="/admin/distributors" component={AdminDistributors} />
         <Route path="/admin/hr" component={AdminHR} />
         <Route path="/admin/finance" component={AdminFinance} />
+        <Route path="/admin/finance/expenses" component={AdminFinance} />
+        <Route path="/admin/finance/reports" component={AdminFinance} />
         <Route path="/admin/accounting" component={AdminAccounting} />
+        <Route path="/admin/accounting/accounts" component={AdminAccounting} />
+        <Route path="/admin/accounting/journal-entries" component={AdminAccounting} />
+        <Route path="/admin/accounting/trial-balance" component={AdminAccounting} />
         <Route path="/admin/manufacturing" component={AdminManufacturing} />
         <Route path="/admin/exhibitions" component={AdminExhibitions} />
         <Route path="/admin/staff" component={AdminStaff} />
         <Route path="/admin/chatbot" component={AdminChatbot} />
+        <Route path="/admin/whatsapp/inbox" component={AdminWhatsAppInbox} />
+        <Route path="/admin/whatsapp/templates" component={AdminWhatsAppTemplates} />
+        <Route path="/admin/whatsapp/settings" component={AdminWhatsAppSettings} />
+        <Route path="/admin/marketing" component={AdminMarketingPlaceholder} />
         <Route path="/admin/integrations" component={AdminIntegrations} />
       </Switch>
     </AdminLayout>
+  );
+}
+
+function AdminMarketingPlaceholder() {
+  return (
+    <div className="rounded-xl border bg-card p-8">
+      <h1 className="text-3xl font-bold">التسويق / Marketing</h1>
+      <p className="mt-2 text-muted-foreground">واجهة الحملات التسويقية ستكون متاحة هنا.</p>
+    </div>
   );
 }

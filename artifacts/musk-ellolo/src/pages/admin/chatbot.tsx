@@ -9,9 +9,9 @@ import { SiTiktok } from 'react-icons/si';
 
 const platforms = [
   { id: 'whatsapp', nameEn: 'WhatsApp', nameAr: 'واتساب', icon: MessageCircle, interactions: '4,281', status: 'active', color: 'text-green-500' },
-  { id: 'tiktok', nameEn: 'TikTok', nameAr: 'تيك توك', icon: SiTiktok, interactions: '1,104', status: 'active', color: 'text-black dark:text-white' },
-  { id: 'twitter', nameEn: 'X (Twitter)', nameAr: 'إكس (تويتر)', icon: Twitter, interactions: '852', status: 'paused', color: 'text-black dark:text-white' },
-  { id: 'instagram', nameEn: 'Instagram', nameAr: 'انستقرام', icon: Instagram, interactions: '2,943', status: 'active', color: 'text-pink-600' },
+  { id: 'tiktok', nameEn: 'TikTok', nameAr: 'تيك توك', icon: SiTiktok, interactions: '1,104', status: 'active', color: 'text-foreground' },
+  { id: 'twitter', nameEn: 'X (Twitter)', nameAr: 'إكس (تويتر)', icon: Twitter, interactions: '852', status: 'paused', color: 'text-foreground' },
+  { id: 'instagram', nameEn: 'Instagram', nameAr: 'انستقرام', icon: Instagram, interactions: '2,943', status: 'active', color: 'text-accent' },
 ];
 
 const autoReplies = [

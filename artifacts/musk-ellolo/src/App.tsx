@@ -34,12 +34,17 @@ import { useLanguage } from './hooks/use-language';
 const queryClient = new QueryClient();
 
 import AdminRoutes from '@/pages/admin';
+import OwnerLogin from '@/pages/owner-login';
 
 function Router() {
   const [location] = useLocation();
 
   if (location.startsWith('/admin')) {
     return <AdminRoutes />;
+  }
+
+  if (location === '/owner/login') {
+    return <OwnerLogin />;
   }
 
   return (
@@ -86,7 +91,7 @@ function InitLanguage() {
 }
 
 function App() {
-  const showSiteIntro = !window.location.pathname.startsWith('/admin');
+  const showSiteIntro = !window.location.pathname.startsWith('/admin') && window.location.pathname !== '/owner/login';
 
   return (
     <QueryClientProvider client={queryClient}>

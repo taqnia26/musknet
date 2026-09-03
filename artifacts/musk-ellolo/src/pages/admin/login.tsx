@@ -59,7 +59,7 @@ export default function AdminLogin() {
           <img
             src="/site-assets/admin-logo.png"
             alt="Musk Ellolo"
-            className="h-28 w-auto max-w-full object-contain mx-auto mb-5 dark:invert"
+            className="h-28 w-auto max-w-full object-contain mx-auto mb-5 invert"
           />
           <h1 className="text-2xl font-bold tracking-tight">
             {t('إدارة النظام مسك اللولو', 'Musk Ellolo Atelier')}

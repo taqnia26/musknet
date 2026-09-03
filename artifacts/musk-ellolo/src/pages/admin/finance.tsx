@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart } from 'recharts';
+import { useLocation } from 'wouter';
 
 function OverviewTab() {
   const { t, lang } = useLanguage();
@@ -319,9 +320,11 @@ function MonthlyTab() {
 
 export default function AdminFinance() {
   const { t } = useLanguage();
+  const [location] = useLocation();
   const { data: currentUser } = useGetAdminMe();
   const canEdit = hasPermission(currentUser, 'finance', 'edit');
   const canDelete = hasPermission(currentUser, 'finance', 'delete');
+  const initialTab = location.endsWith('/expenses') ? 'expenses' : location.endsWith('/reports') ? 'monthly' : 'overview';
 
   return (
     <div className="space-y-6">
@@ -330,7 +333,7 @@ export default function AdminFinance() {
         <p className="text-muted-foreground mt-1">{t('إدارة المصروفات والتقارير المالية', 'Manage expenses and financial reports')}</p>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs key={initialTab} defaultValue={initialTab} className="w-full">
         <TabsList className="grid grid-cols-3 lg:w-[450px]">
           <TabsTrigger value="overview">{t('نظرة عامة', 'Overview')}</TabsTrigger>
           <TabsTrigger value="expenses">{t('المصروفات', 'Expenses')}</TabsTrigger>

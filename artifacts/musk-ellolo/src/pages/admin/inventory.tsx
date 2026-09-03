@@ -273,9 +273,9 @@ export default function AdminInventory() {
             <YAxis />
             <RechartsTooltip />
             <Legend />
-            <Bar dataKey="current" name={t('الكمية الحالية', 'Current Stock')} fill="#F0B429" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="reorder" name={t('نقطة إعادة الطلب', 'Reorder Point')} fill="#ef4444" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="refill" name={t('كمية التعبئة', 'Refill Qty')} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="current" name={t('الكمية الحالية', 'Current Stock')} fill="hsl(31 78% 66%)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="reorder" name={t('نقطة إعادة الطلب', 'Reorder Point')} fill="hsl(0 48% 31%)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="refill" name={t('كمية التعبئة', 'Refill Qty')} fill="hsl(17 57% 46%)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
