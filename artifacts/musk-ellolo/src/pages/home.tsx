@@ -4,6 +4,25 @@ import { Link } from 'wouter';
 
 const siteAsset = (filename: string) => `${import.meta.env.BASE_URL}site-assets/${filename}`;
 
+type ConnectionHints = {
+  effectiveType?: string;
+  saveData?: boolean;
+};
+
+const isSlowConnection = () => {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+
+  const connection = (navigator as Navigator & { connection?: ConnectionHints }).connection;
+
+  return (
+    connection?.saveData === true ||
+    connection?.effectiveType === 'slow-2g' ||
+    connection?.effectiveType === '2g'
+  );
+};
+
 export default function Home() {
   const { t } = useLanguage();
   const secondVideoRef = useRef<HTMLVideoElement>(null);
@@ -11,21 +30,42 @@ export default function Home() {
   useEffect(() => {
     const video = secondVideoRef.current;
 
-    if (!video || typeof IntersectionObserver === 'undefined') {
+    if (!video) {
       return;
     }
 
-    const observer = new IntersectionObserver(
+    let hasRequestedLoad = false;
+    const requestVideoLoad = () => {
+      if (hasRequestedLoad) {
+        return;
+      }
+
+      hasRequestedLoad = true;
+      video.load();
+    };
+
+    const playVideo = () => {
+      requestVideoLoad();
+      video.muted = true;
+      video.play().catch(() => {
+        // Autoplay can be blocked by the browser; keep the page error-free.
+      });
+    };
+
+    if (typeof IntersectionObserver === 'undefined') {
+      // Older browsers still get the video rather than silently losing playback.
+      playVideo();
+      return () => video.pause();
+    }
+
+    const playObserver = new IntersectionObserver(
       ([entry]) => {
         if (!entry) {
           return;
         }
 
         if (entry.isIntersecting) {
-          video.muted = true;
-          video.play().catch(() => {
-            // Autoplay can be blocked by the browser; keep the page error-free.
-          });
+          playVideo();
         } else {
           video.pause();
         }
@@ -33,10 +73,29 @@ export default function Home() {
       { threshold: 0.25 },
     );
 
-    observer.observe(video);
+    playObserver.observe(video);
+
+    // Pre-warm only when the network allows it. `preload="none"` keeps the
+    // below-the-fold video out of the initial page request on slow connections.
+    const preloadObserver = isSlowConnection()
+      ? null
+      : new IntersectionObserver(
+          ([entry]) => {
+            if (!entry?.isIntersecting) {
+              return;
+            }
+
+            requestVideoLoad();
+            preloadObserver?.disconnect();
+          },
+          { rootMargin: '240px 0px', threshold: 0 },
+        );
+
+    preloadObserver?.observe(video);
 
     return () => {
-      observer.disconnect();
+      playObserver.disconnect();
+      preloadObserver?.disconnect();
       video.pause();
     };
   }, []);
@@ -129,7 +188,7 @@ export default function Home() {
       </section>
 
       {/* Second Video Section */}
-      <section className="relative w-full aspect-video mb-16 overflow-hidden bg-black">
+      <section className="home-second-video relative w-full aspect-video mb-16 overflow-hidden bg-black">
         <video 
           ref={secondVideoRef}
           className="absolute inset-0 block w-full h-full object-cover" 
@@ -138,7 +197,7 @@ export default function Home() {
           muted 
           loop 
           playsInline 
-          preload="metadata"
+          preload="none"
           poster={siteAsset('second-video-poster.jpg')}
         >
           <source src={siteAsset('1-mobile.webm')} type="video/webm" />
