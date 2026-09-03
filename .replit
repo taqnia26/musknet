@@ -21,6 +21,7 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+packages = ["glib", "nss", "nspr", "dbus", "atk", "cups", "libdrm", "expat", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "mesa", "libgbm", "pango", "cairo", "alsa-lib", "libxkbcommon", "at-spi2-atk", "gtk3", "xorg.libxcb", "xorg.libXcursor", "xorg.libXi", "xorg.libXtst"]
 
 [[ports]]
 localPort = 8080
