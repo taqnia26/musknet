@@ -22,7 +22,7 @@ export function Footer() {
             />
           </Link>
           
-          <div className="flex translate-y-1 justify-center gap-3">
+          <div className="flex translate-y-4 justify-center gap-3">
             <a href="https://www.instagram.com/muskellolo" target="_blank" rel="noopener noreferrer" className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20">
               <Instagram className="w-5 h-5" />
             </a>
