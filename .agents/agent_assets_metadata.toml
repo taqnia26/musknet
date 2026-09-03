@@ -1,0 +1,30 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "IPFewblb4g64dNYl7ztHq"
+uri = "file://.local/reports/historical-sell-out-preview-ff316fd33b56c91c4a383043.md"
+type = "text"
+title = "تقرير معاينة استيراد Sell-Out"
+description = "تقرير عربي يوضح الصفوف والباركودات المستبعدة، القيود المؤهلة، المبالغ وميزان المراجعة دون كتابة بيانات."
+logical_id = "b986a255-cb88-4bc7-8da4-f8efd3bdca4c"
+content_hash = "sha256:633dedfc33bb73c728ee1c62ce6473d58c7d18cd5dde926b07e4f3f5bb68b116"
+size = 4357
+mtime_ms = 1788452615846
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/b986a255-cb88-4bc7-8da4-f8efd3bdca4c/f56efe2a-23bd-4515-9e9e-499a28354801"
+storage_version_token = "1788452760909307"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "5uOCSGdSLVln0ur2LqPuc"
+uri = "file://.local/reports/historical-sell-out-preview-ff316fd33b56c91c4a383043.json"
+type = "unspecified"
+title = "بيانات معاينة Sell-Out — JSON"
+description = "النسخة المنظمة الكاملة من نتائج المعاينة، مناسبة للمراجعة الآلية أو الأرشفة."
+logical_id = "b7508600-280b-4173-ad17-c0f05b211855"
+content_hash = "sha256:b5142e3e116927ce234720da84bf4c5a9de6a339463de592d24d602cd1e0e173"
+size = 32178
+mtime_ms = 1788452615846
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/b7508600-280b-4173-ad17-c0f05b211855/43272e9a-927b-4287-8130-3f829054ccbe"
+storage_version_token = "1788452762145121"
+content_type = "application/octet-stream"
