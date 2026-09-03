@@ -11,25 +11,36 @@ function workbookFixture() {
   items.addRow(["Barcode", "ITEM_DESC", "Catergory", "RSP EX VAT", "RSP With VAT"]);
   items.addRow(["6287000000001", "Test perfume", "Perfume", "100", "115"]);
 
-  const sellOut = workbook.addWorksheet("Sell-Out");
-  sellOut.addRow(["Sell-Out 2025"]);
-  sellOut.addRow([]);
-  sellOut.addRow([null, null, null, null, "Month"]);
-  sellOut.addRow(["BRAND", "Retailer", "BARCODE", "Description", new Date("2025-01-01T00:00:00.000Z"), "Grand Total"]);
-  sellOut.addRow(["Partner brand", "Test store", "6287000000001", "Test perfume", 2, 2]);
-  sellOut.addRow(["Other brand", "Other store", "9999999999999", "Other perfume", 1, 1]);
-  sellOut.addRow(["Grand Total", null, null, null, 3, 3]);
+  const sales = workbook.addWorksheet("Master Sales");
+  sales.addRow([
+    "Year", "Month", "Code", "Satus", "Region", "Area", "Type of Chain", "Retailer",
+    "Stores", "Mall Name", "SALES SUPERVISOR", "VPN", "Description", "Catergory",
+    "Sell out QTY", "Sell-out Value",
+  ]);
+  sales.addRow([
+    2025, new Date("2025-01-01T00:00:00.000Z"), 1, "New", "Central", "Riyadh",
+    "Local Chain", "Test store", "Test store", "Test mall", "Tester", "6287000000001",
+    "Test perfume", "Perfume", 2, 230,
+  ]);
+  sales.addRow([
+    2025, new Date("2025-01-01T00:00:00.000Z"), 2, "New", "Central", "Riyadh",
+    "Local Chain", "Other store", "Other store", "Test mall", "Tester", "9999999999999",
+    "Other perfume", "Perfume", 1, 115,
+  ]);
+  const formulaErrorRow = sales.addRow([]);
+  formulaErrorRow.getCell(8).value = { formula: "NA()", result: { error: "#N/A" } } as never;
+  formulaErrorRow.getCell(13).value = { formula: "NA()", result: { error: "#N/A" } } as never;
   return workbook;
 }
 
 describe("historical Sell-Out import planning", () => {
   it("calculates VAT using exact four-decimal ledger amounts", () => {
-    expect(calculateHistoricalSaleAmounts("1", "115")).toEqual({
+    expect(calculateHistoricalSaleAmounts("115")).toEqual({
       gross: "115.0000",
       net: "100.0000",
       vat: "15.0000",
     });
-    expect(calculateHistoricalSaleAmounts("3", "99.99")).toEqual({
+    expect(calculateHistoricalSaleAmounts("299.97")).toEqual({
       gross: "299.9700",
       net: "260.8435",
       vat: "39.1265",
@@ -49,14 +60,15 @@ describe("historical Sell-Out import planning", () => {
     );
     expect(analysis.entries).toHaveLength(1);
     expect(analysis.entries[0]).toMatchObject({
-      excelRow: 5,
+      excelRow: 2,
       barcode: "6287000000001",
       gross: "230.0000",
       net: "200.0000",
       vat: "30.0000",
     });
-    expect(analysis.entries[0].sourceId).toContain("row-5:barcode-6287000000001:month-2025-01");
-    expect(analysis.workbook.summaryRowsExcluded).toBe(1);
+    expect(analysis.entries[0].sourceId).toContain("row-2:barcode-6287000000001:month-2025-01");
+    expect(analysis.workbook.sourceRows).toBe(2);
+    expect(analysis.workbook.excludedRows).toBe(1);
   });
 
   it("reports every missing barcode and excludes it without guessing by description", () => {
@@ -72,7 +84,6 @@ describe("historical Sell-Out import planning", () => {
     expect(analysis.exclusions.barcodesMissingFromItemMaster).toEqual(["9999999999999"]);
     expect(analysis.exclusions.barcodesMissingFromStorefront).toEqual(["9999999999999"]);
     expect(analysis.exclusions.rows[0].reasons).toEqual([
-      "brand_mismatch",
       "missing_item_master_barcode",
       "missing_storefront_barcode",
     ]);

@@ -26,7 +26,7 @@ type CliOptions = {
   confirmDevelopment: boolean;
   actorEmail?: string;
   outputDirectory: string;
-  expectedItems: number;
+  expectedItems?: number;
   cashAccountCode: "1110" | "1120";
 };
 
@@ -38,7 +38,7 @@ function parseArgs(argv: string[]): CliOptions {
   let confirmDevelopment = false;
   let actorEmail: string | undefined;
   let outputDirectory = ".local/reports";
-  let expectedItems = 85;
+  let expectedItems: number | undefined;
   let cashAccountCode: "1110" | "1120" = "1120";
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -79,7 +79,9 @@ Safety:
     }
   }
   if (!filePath) throw new Error("--file is required");
-  if (!Number.isInteger(expectedItems) || expectedItems <= 0) throw new Error("--expected-items must be a positive integer");
+  if (expectedItems !== undefined && (!Number.isInteger(expectedItems) || expectedItems <= 0)) {
+    throw new Error("--expected-items must be a positive integer");
+  }
   return {
     filePath: path.resolve(workspaceRoot, filePath),
     apply,
@@ -103,36 +105,43 @@ function renderReport(
   balanceAfter: { debit: string; credit: string; difference: string },
 ) {
   const examples = analysis.exclusions.rows.slice(0, 10).map((row) =>
-    `- صف ${row.excelRow}: ${row.brand} / ${row.retailer} / ${row.barcode ?? "بدون باركود"} — ${row.reasons.join(", ")}`,
+    `- صف ${row.excelRow}: ${row.month ?? "تاريخ غير صالح"} / ${row.retailer || "بدون بائع"} / `
+    + `${row.barcode ?? "بدون باركود"} / ${row.description || "بدون وصف"} — ${row.reasons.join(", ")}`,
   );
-  return `# تقرير استيراد Sell-Out التاريخي
+  return `# تقرير استيراد Master Sales التاريخي
 
 ## حالة التشغيل
 - الوضع: **${mode === "preview" ? "معاينة فقط — لم تُكتب أي قيود" : "تنفيذ على بيئة التطوير"}**
 - الملف: \`${analysis.source.fileName}\`
 - SHA-256: \`${analysis.source.sha256}\`
-- ورقة المبيعات: \`${analysis.source.sellOutSheet}\`
+- ورقة المبيعات: \`${analysis.source.salesSheet}\`
 - ورقة المنتجات: \`${analysis.source.itemMasterSheet}\`
 
 ## إحصاءات المصدر
-- إجمالي صفوف ورقة Sell-Out: **${analysis.workbook.worksheetRows}**
+- إجمالي صفوف ورقة Master Sales: **${analysis.workbook.worksheetRows}**
 - صفوف منطقة البيانات غير الفارغة: **${analysis.workbook.sourceRows}**
-- صفوف المنتجات التفصيلية: **${analysis.workbook.detailRows}**
-- صفوف الإجماليات/الملخصات المستبعدة: **${analysis.workbook.summaryRowsExcluded}**
-- الأشهر: ${analysis.workbook.monthlyColumns.join("، ")}
+- الصفوف المؤهلة الجديدة: **${analysis.workbook.eligibleRows}**
+- الصفوف المستبعدة: **${analysis.workbook.excludedRows}**
+- الأشهر: ${analysis.workbook.months.join("، ")}
 - مواضع الصفوف المفحوصة في Item Master بعد الرأس: **${analysis.itemMaster.scannedRows}**
 - صفوف Item Master المملوءة فعلياً: **${analysis.itemMaster.populatedRows}**
 - صفوف Item Master المنسقة والفارغة: **${analysis.itemMaster.emptyRows}**
-- منتجات Item Master الفريدة ذات الباركود: **${analysis.itemMaster.actualItems}** من **${analysis.itemMaster.expectedItems}** متوقعة
+- منتجات Item Master الفريدة ذات الباركود: **${analysis.itemMaster.actualItems}**
+- العدد المتوقع المفروض يدوياً: **${analysis.itemMaster.expectedItems ?? "غير محدد"}**
 - منتجات المتجر: **${analysis.storefront.products}**
 - منتجات المتجر ذات SKU/باركود: **${analysis.storefront.productsWithBarcode}**
 
 ## الاستبعادات
-- صفوف بعلامة تجارية غير مطابقة: **${analysis.exclusions.brandMismatchRows}**
-- صفوف بباركود غير موجود في Item Master: **${analysis.exclusions.itemMasterMissingRows}**
-- صفوف بباركود غير موجود في storefront_products: **${analysis.exclusions.storefrontMissingRows}**
-- خلايا كمية غير صالحة: **${analysis.exclusions.invalidCells.length}**
-- خلايا كمية صفرية متجاوزة: **${analysis.exclusions.zeroQuantityCellsSkipped}**
+- تاريخ غير صالح: **${analysis.exclusions.reasonCounts.invalid_month}**
+- بائع مفقود: **${analysis.exclusions.reasonCounts.missing_retailer}**
+- باركود VPN مفقود أو غير صالح: **${analysis.exclusions.reasonCounts.missing_barcode}**
+- وصف مفقود: **${analysis.exclusions.reasonCounts.missing_description}**
+- كمية غير صالحة: **${analysis.exclusions.reasonCounts.invalid_quantity}**
+- كمية صفرية أو سالبة: **${analysis.exclusions.reasonCounts.non_positive_quantity}**
+- قيمة Sell-out Value غير صالحة: **${analysis.exclusions.reasonCounts.invalid_sell_out_value}**
+- قيمة Sell-out Value صفرية أو سالبة: **${analysis.exclusions.reasonCounts.non_positive_sell_out_value}**
+- باركود غير موجود في Item Master: **${analysis.exclusions.reasonCounts.missing_item_master_barcode}**
+- باركود غير موجود في storefront_products: **${analysis.exclusions.reasonCounts.missing_storefront_barcode}**
 
 ### أمثلة الاستبعاد
 ${examples.length ? examples.join("\n") : "- لا يوجد"}
@@ -240,7 +249,7 @@ async function main() {
     trialBalance: { before, after },
   };
   await mkdir(options.outputDirectory, { recursive: true });
-  const baseName = `historical-sell-out-${mode}-${analysis.source.fingerprint}`;
+  const baseName = `historical-master-sales-${mode}-${analysis.source.fingerprint}`;
   const jsonPath = path.join(options.outputDirectory, `${baseName}.json`);
   const markdownPath = path.join(options.outputDirectory, `${baseName}.md`);
   await writeFile(jsonPath, `${JSON.stringify(reportPayload, null, 2)}\n`, "utf8");

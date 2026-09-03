@@ -6,7 +6,6 @@ import ExcelJS, { type Cell, type Workbook, type Worksheet } from "exceljs";
 const MONEY_SCALE = 10_000n;
 const VAT_RATE_NUMERATOR = 115n;
 const VAT_RATE_DENOMINATOR = 100n;
-const DEFAULT_ALLOWED_BRANDS = new Set(["مسك اللولو", "musk ellolo"]);
 
 type Decimal = { numerator: bigint; denominator: bigint };
 
@@ -14,32 +13,34 @@ export type HistoricalSellOutEntry = {
   sourceId: string;
   excelRow: number;
   barcode: string;
-  brand: string;
   retailer: string;
   description: string;
   month: string;
   quantity: string;
-  priceWithVat: string;
   gross: string;
   net: string;
   vat: string;
 };
 
+type ExclusionReason =
+  | "invalid_month"
+  | "missing_retailer"
+  | "missing_barcode"
+  | "missing_description"
+  | "invalid_quantity"
+  | "non_positive_quantity"
+  | "invalid_sell_out_value"
+  | "non_positive_sell_out_value"
+  | "missing_item_master_barcode"
+  | "missing_storefront_barcode";
+
 export type ExcludedSellOutRow = {
   excelRow: number;
-  brand: string;
+  month: string | null;
   retailer: string;
   barcode: string | null;
   description: string;
-  reasons: Array<"brand_mismatch" | "missing_item_master_barcode" | "missing_storefront_barcode">;
-};
-
-export type InvalidSellOutCell = {
-  excelRow: number;
-  barcode: string | null;
-  month: string;
-  value: string;
-  reason: string;
+  reasons: ExclusionReason[];
 };
 
 export type HistoricalSellOutAnalysis = {
@@ -47,18 +48,18 @@ export type HistoricalSellOutAnalysis = {
     fileName: string;
     sha256: string;
     fingerprint: string;
-    sellOutSheet: string;
+    salesSheet: string;
     itemMasterSheet: string;
   };
   workbook: {
     worksheetRows: number;
     sourceRows: number;
-    detailRows: number;
-    summaryRowsExcluded: number;
-    monthlyColumns: string[];
+    eligibleRows: number;
+    excludedRows: number;
+    months: string[];
   };
   itemMaster: {
-    expectedItems: number;
+    expectedItems: number | null;
     scannedRows: number;
     populatedRows: number;
     emptyRows: number;
@@ -78,11 +79,7 @@ export type HistoricalSellOutAnalysis = {
   };
   exclusions: {
     rows: ExcludedSellOutRow[];
-    brandMismatchRows: number;
-    itemMasterMissingRows: number;
-    storefrontMissingRows: number;
-    invalidCells: InvalidSellOutCell[];
-    zeroQuantityCellsSkipped: number;
+    reasonCounts: Record<ExclusionReason, number>;
     barcodesMissingFromItemMaster: string[];
     barcodesMissingFromStorefront: string[];
   };
@@ -100,11 +97,10 @@ export type HistoricalSellOutAnalysis = {
 export type AnalyzeHistoricalSellOutOptions = {
   filePath: string;
   expectedItemMasterCount?: number;
-  allowedBrands?: Iterable<string>;
   storefrontBarcodes: ReadonlySet<string>;
   storefrontProductCount: number;
   existingSourceIds?: ReadonlySet<string>;
-  sellOutSheetName?: string;
+  salesSheetName?: string;
   itemMasterSheetName?: string;
 };
 
@@ -154,26 +150,21 @@ function scaledMoney(value: string): bigint {
   return match[1] ? -amount : amount;
 }
 
-export function calculateHistoricalSaleAmounts(quantity: string | number, priceWithVat: string | number) {
-  const quantityDecimal = decimalFrom(quantity);
-  const priceDecimal = decimalFrom(priceWithVat);
-  if (quantityDecimal.numerator <= 0n) throw new Error("Quantity must be positive");
-  if (priceDecimal.numerator <= 0n) throw new Error("RSP With VAT must be positive");
-
-  const gross = roundDivide(
-    quantityDecimal.numerator * priceDecimal.numerator * MONEY_SCALE,
-    quantityDecimal.denominator * priceDecimal.denominator,
-  );
+export function calculateHistoricalSaleAmounts(sellOutValue: unknown) {
+  const grossDecimal = decimalFrom(sellOutValue);
+  const gross = roundDivide(grossDecimal.numerator * MONEY_SCALE, grossDecimal.denominator);
+  if (gross <= 0n) throw new Error("Sell-out Value must be positive");
   const net = roundDivide(gross * VAT_RATE_DENOMINATOR, VAT_RATE_NUMERATOR);
   const vat = gross - net;
   return { gross: moneyText(gross), net: moneyText(net), vat: moneyText(vat) };
 }
 
 function unwrappedValue(cell: Cell): unknown {
-  const value = cell.value;
+  let value: unknown = cell.value;
   if (value && typeof value === "object" && "result" in value) {
-    return (value as { result?: unknown }).result;
+    value = (value as { result?: unknown }).result ?? null;
   }
+  if (value && typeof value === "object" && "error" in value) return null;
   return value;
 }
 
@@ -222,6 +213,33 @@ function requireWorksheet(workbook: Workbook, name: string): Worksheet {
   return worksheet;
 }
 
+function findHeaderColumns(
+  worksheet: Worksheet,
+  requiredHeaders: string[][],
+  searchLimit = 25,
+): { rowNumber: number; columns: Map<string, number> } {
+  for (let rowNumber = 1; rowNumber <= Math.min(worksheet.rowCount, searchLimit); rowNumber += 1) {
+    const columns = new Map<string, number>();
+    const row = worksheet.getRow(rowNumber);
+    for (let column = 1; column <= worksheet.columnCount; column += 1) {
+      const header = normalizedHeader(unwrappedValue(row.getCell(column)));
+      if (header) columns.set(header, column);
+    }
+    if (requiredHeaders.every((aliases) => aliases.some((alias) => columns.has(normalizedHeader(alias))))) {
+      return { rowNumber, columns };
+    }
+  }
+  throw new Error(`Could not find required Master Sales headers in worksheet ${worksheet.name}`);
+}
+
+function requireColumn(columns: Map<string, number>, ...aliases: string[]): number {
+  for (const alias of aliases) {
+    const column = columns.get(normalizedHeader(alias));
+    if (column) return column;
+  }
+  throw new Error(`Required column ${aliases.join(" / ")} was not found`);
+}
+
 function sourceIdFor(fingerprint: string, row: number, barcode: string, month: string) {
   return `${fingerprint}:row-${row}:barcode-${barcode}:month-${month}`;
 }
@@ -248,16 +266,27 @@ export function analyzeHistoricalSellOutWorkbook(
   identity: { fileName: string; sha256: string; fingerprint: string },
   options: Omit<AnalyzeHistoricalSellOutOptions, "filePath">,
 ): HistoricalSellOutAnalysis {
-  const sellOutSheetName = options.sellOutSheetName ?? "Sell-Out";
+  const salesSheetName = options.salesSheetName ?? "Master Sales";
   const itemMasterSheetName = options.itemMasterSheetName ?? "Item Master";
-  const expectedItems = options.expectedItemMasterCount ?? 85;
-  const sellOutSheet = requireWorksheet(workbook, sellOutSheetName);
+  const expectedItems = options.expectedItemMasterCount ?? null;
+  const salesSheet = requireWorksheet(workbook, salesSheetName);
   const itemMasterSheet = requireWorksheet(workbook, itemMasterSheetName);
   const itemHeaderRow = findHeaderRow(itemMasterSheet, ["Barcode", "ITEM_DESC", "Catergory", "RSP EX VAT", "RSP With VAT"]);
-  const sellOutHeaderRow = findHeaderRow(sellOutSheet, ["BRAND", "Retailer", "BARCODE", "Description"]);
-  const allowedBrands = new Set(
-    [...(options.allowedBrands ?? DEFAULT_ALLOWED_BRANDS)].map((brand) => normalizedText(brand)),
-  );
+  const masterSalesHeaders = findHeaderColumns(salesSheet, [
+    ["Year"],
+    ["Month"],
+    ["Retailer"],
+    ["VPN"],
+    ["Description"],
+    ["Sell out QTY"],
+    ["Sell-out Value"],
+  ]);
+  const monthColumn = requireColumn(masterSalesHeaders.columns, "Month");
+  const retailerColumn = requireColumn(masterSalesHeaders.columns, "Retailer");
+  const barcodeColumn = requireColumn(masterSalesHeaders.columns, "VPN");
+  const descriptionColumn = requireColumn(masterSalesHeaders.columns, "Description");
+  const quantityColumn = requireColumn(masterSalesHeaders.columns, "Sell out QTY");
+  const valueColumn = requireColumn(masterSalesHeaders.columns, "Sell-out Value");
 
   const itemMaster = new Map<string, { description: string; priceWithVat: string; excelRow: number }>();
   const duplicateBarcodes = new Set<string>();
@@ -289,123 +318,95 @@ export function analyzeHistoricalSellOutWorkbook(
     }
   }
 
-  const monthColumns: Array<{ column: number; month: string }> = [];
-  const header = sellOutSheet.getRow(sellOutHeaderRow);
-  for (let column = 5; column <= sellOutSheet.columnCount; column += 1) {
-    const value = unwrappedValue(header.getCell(column));
-    if (normalizedHeader(value) === "grandtotal") break;
-    const month = parseMonth(value);
-    if (!month) throw new Error(`Sell-Out header column ${column} is not a valid month`);
-    monthColumns.push({ column, month });
-  }
-  if (!monthColumns.length) throw new Error("Sell-Out worksheet has no monthly columns");
-
   const excludedRows: ExcludedSellOutRow[] = [];
-  const invalidCells: InvalidSellOutCell[] = [];
   const missingItemMasterBarcodes = new Set<string>();
   const missingStorefrontBarcodes = new Set<string>();
+  const months = new Set<string>();
   const entries: HistoricalSellOutEntry[] = [];
   let entriesAlreadyImported = 0;
   let sourceRows = 0;
-  let detailRows = 0;
-  let summaryRowsExcluded = 0;
-  let zeroQuantityCellsSkipped = 0;
   let grossTotal = 0n;
   let netTotal = 0n;
   let vatTotal = 0n;
 
-  for (let rowNumber = sellOutHeaderRow + 1; rowNumber <= sellOutSheet.rowCount; rowNumber += 1) {
-    const row = sellOutSheet.getRow(rowNumber);
-    const rowValues = Array.from({ length: sellOutSheet.columnCount }, (_, index) =>
+  for (let rowNumber = masterSalesHeaders.rowNumber + 1; rowNumber <= salesSheet.rowCount; rowNumber += 1) {
+    const row = salesSheet.getRow(rowNumber);
+    const rowValues = Array.from({ length: salesSheet.columnCount }, (_, index) =>
       unwrappedValue(row.getCell(index + 1)));
     if (rowValues.every((value) => displayValue(value) === "")) continue;
     sourceRows += 1;
 
-    const brand = displayValue(rowValues[0]);
-    const retailer = displayValue(rowValues[1]);
-    const barcode = normalizeBarcode(rowValues[2]);
-    const description = displayValue(rowValues[3]);
-    if (!barcode || !description || !retailer) {
-      summaryRowsExcluded += 1;
-      continue;
-    }
-    detailRows += 1;
+    const month = parseMonth(rowValues[monthColumn - 1]);
+    const retailer = displayValue(rowValues[retailerColumn - 1]);
+    const barcode = normalizeBarcode(rowValues[barcodeColumn - 1]);
+    const description = displayValue(rowValues[descriptionColumn - 1]);
+    const quantityValue = rowValues[quantityColumn - 1];
+    const sellOutValue = rowValues[valueColumn - 1];
+    const reasons: ExclusionReason[] = [];
+    if (!month) reasons.push("invalid_month");
+    if (!retailer) reasons.push("missing_retailer");
+    if (!barcode) reasons.push("missing_barcode");
+    if (!description) reasons.push("missing_description");
 
-    const reasons: ExcludedSellOutRow["reasons"] = [];
-    const linkedToItemMaster = itemMaster.has(barcode);
-    if (!allowedBrands.has(normalizedText(brand)) && !linkedToItemMaster) reasons.push("brand_mismatch");
-    if (!linkedToItemMaster) {
+    let quantityState: "valid" | "invalid" | "non_positive" = "invalid";
+    try {
+      quantityState = decimalFrom(quantityValue).numerator > 0n ? "valid" : "non_positive";
+    } catch {
+      quantityState = "invalid";
+    }
+    if (quantityState === "invalid") reasons.push("invalid_quantity");
+    if (quantityState === "non_positive") reasons.push("non_positive_quantity");
+
+    let amounts: ReturnType<typeof calculateHistoricalSaleAmounts> | null = null;
+    try {
+      amounts = calculateHistoricalSaleAmounts(sellOutValue);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Sell-out Value must be positive") {
+        reasons.push("non_positive_sell_out_value");
+      } else {
+        reasons.push("invalid_sell_out_value");
+      }
+    }
+
+    if (barcode && !itemMaster.has(barcode)) {
       reasons.push("missing_item_master_barcode");
       missingItemMasterBarcodes.add(barcode);
     }
-    if (!options.storefrontBarcodes.has(barcode)) {
+    if (barcode && !options.storefrontBarcodes.has(barcode)) {
       reasons.push("missing_storefront_barcode");
       missingStorefrontBarcodes.add(barcode);
     }
     if (reasons.length) {
-      excludedRows.push({ excelRow: rowNumber, brand, retailer, barcode, description, reasons });
+      excludedRows.push({ excelRow: rowNumber, month, retailer, barcode, description, reasons });
       continue;
     }
 
-    const item = itemMaster.get(barcode)!;
-    for (const monthColumn of monthColumns) {
-      const quantityValue = rowValues[monthColumn.column - 1];
-      if (displayValue(quantityValue) === "") continue;
-      let quantity: Decimal;
-      try {
-        quantity = decimalFrom(quantityValue);
-      } catch (error) {
-        invalidCells.push({
-          excelRow: rowNumber,
-          barcode,
-          month: monthColumn.month,
-          value: displayValue(quantityValue),
-          reason: error instanceof Error ? error.message : String(error),
-        });
-        continue;
-      }
-      if (quantity.numerator === 0n) {
-        zeroQuantityCellsSkipped += 1;
-        continue;
-      }
-      if (quantity.numerator < 0n) {
-        invalidCells.push({
-          excelRow: rowNumber,
-          barcode,
-          month: monthColumn.month,
-          value: displayValue(quantityValue),
-          reason: "Negative quantities require an explicit returns policy and are not imported",
-        });
-        continue;
-      }
-
-      const sourceId = sourceIdFor(identity.fingerprint, rowNumber, barcode, monthColumn.month);
-      if (options.existingSourceIds?.has(sourceId)) {
-        entriesAlreadyImported += 1;
-        continue;
-      }
-      const quantityText = displayValue(quantityValue);
-      const amounts = calculateHistoricalSaleAmounts(quantityText, item.priceWithVat);
-      entries.push({
-        sourceId,
-        excelRow: rowNumber,
-        barcode,
-        brand,
-        retailer,
-        description,
-        month: monthColumn.month,
-        quantity: quantityText,
-        priceWithVat: item.priceWithVat,
-        ...amounts,
-      });
-      grossTotal += scaledMoney(amounts.gross);
-      netTotal += scaledMoney(amounts.net);
-      vatTotal += scaledMoney(amounts.vat);
+    const validMonth = month!;
+    const validBarcode = barcode!;
+    const validAmounts = amounts!;
+    months.add(validMonth);
+    const sourceId = sourceIdFor(identity.fingerprint, rowNumber, validBarcode, validMonth);
+    if (options.existingSourceIds?.has(sourceId)) {
+      entriesAlreadyImported += 1;
+      continue;
     }
+    entries.push({
+      sourceId,
+      excelRow: rowNumber,
+      barcode: validBarcode,
+      retailer,
+      description,
+      month: validMonth,
+      quantity: displayValue(quantityValue),
+      ...validAmounts,
+    });
+    grossTotal += scaledMoney(validAmounts.gross);
+    netTotal += scaledMoney(validAmounts.net);
+    vatTotal += scaledMoney(validAmounts.vat);
   }
 
   const blockingIssues: string[] = [];
-  if (itemMaster.size !== expectedItems) {
+  if (expectedItems !== null && itemMaster.size !== expectedItems) {
     blockingIssues.push(
       `Item Master has ${populatedItemMasterRows} populated row(s) and ${itemMaster.size} unique product(s) `
       + `across ${scannedItemMasterRows} row position(s); ${expectedItems} unique products were expected`,
@@ -413,9 +414,6 @@ export function analyzeHistoricalSellOutWorkbook(
   }
   if (conflictingBarcodes.size) {
     blockingIssues.push(`Item Master has conflicting RSP With VAT values for ${conflictingBarcodes.size} barcode(s)`);
-  }
-  if (invalidCells.length) {
-    blockingIssues.push(`Sell-Out contains ${invalidCells.length} invalid quantity cell(s)`);
   }
   if (!entries.length && !entriesAlreadyImported) {
     blockingIssues.push("No journal entries qualify for import");
@@ -425,21 +423,36 @@ export function analyzeHistoricalSellOutWorkbook(
   if (options.storefrontBarcodes.size === 0) {
     warnings.push("No storefront product has a barcode in the sku column");
   }
-  if (summaryRowsExcluded) warnings.push(`${summaryRowsExcluded} subtotal/summary row(s) were excluded`);
-  if (zeroQuantityCellsSkipped) warnings.push(`${zeroQuantityCellsSkipped} zero-quantity cell(s) were skipped`);
+  if (excludedRows.length) warnings.push(`${excludedRows.length} Master Sales row(s) were excluded`);
+
+  const reasonCounts = {
+    invalid_month: 0,
+    missing_retailer: 0,
+    missing_barcode: 0,
+    missing_description: 0,
+    invalid_quantity: 0,
+    non_positive_quantity: 0,
+    invalid_sell_out_value: 0,
+    non_positive_sell_out_value: 0,
+    missing_item_master_barcode: 0,
+    missing_storefront_barcode: 0,
+  } satisfies Record<ExclusionReason, number>;
+  for (const row of excludedRows) {
+    for (const reason of row.reasons) reasonCounts[reason] += 1;
+  }
 
   return {
     source: {
       ...identity,
-      sellOutSheet: sellOutSheetName,
+      salesSheet: salesSheetName,
       itemMasterSheet: itemMasterSheetName,
     },
     workbook: {
-      worksheetRows: sellOutSheet.rowCount,
+      worksheetRows: salesSheet.rowCount,
       sourceRows,
-      detailRows,
-      summaryRowsExcluded,
-      monthlyColumns: monthColumns.map(({ month }) => month),
+      eligibleRows: entries.length,
+      excludedRows: excludedRows.length,
+      months: [...months].sort(),
     },
     itemMaster: {
       expectedItems,
@@ -459,11 +472,7 @@ export function analyzeHistoricalSellOutWorkbook(
     },
     exclusions: {
       rows: excludedRows,
-      brandMismatchRows: excludedRows.filter((row) => row.reasons.includes("brand_mismatch")).length,
-      itemMasterMissingRows: excludedRows.filter((row) => row.reasons.includes("missing_item_master_barcode")).length,
-      storefrontMissingRows: excludedRows.filter((row) => row.reasons.includes("missing_storefront_barcode")).length,
-      invalidCells,
-      zeroQuantityCellsSkipped,
+      reasonCounts,
       barcodesMissingFromItemMaster: [...missingItemMasterBarcodes].sort(),
       barcodesMissingFromStorefront: [...missingStorefrontBarcodes].sort(),
     },
