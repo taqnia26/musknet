@@ -237,11 +237,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="z-10 hidden w-72 shrink-0 flex-col border-e border-white/10 bg-sidebar shadow-xl lg:flex">
         <div className="flex items-center gap-3 px-6 py-8">
-          <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-xl">
-            M
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-lg text-white tracking-wide">MUSK ELLOLO</span>
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <img
+              src="/site-assets/admin-wordmark.png"
+              alt="Musk Ellolo"
+              className="h-auto max-h-12 w-full max-w-[205px] object-contain object-left invert"
+            />
             <span className="text-xs text-white/50">{t('لوحة الإدارة', 'Admin Panel')}</span>
           </div>
         </div>
@@ -291,11 +292,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               </SheetTrigger>
               <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-72 p-0 flex flex-col admin-theme bg-sidebar border-white/10">
                 <div className="flex items-center gap-3 px-6 py-8 border-b border-white/10">
-                  <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-xl">
-                    M
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-lg text-white tracking-wide">MUSK ELLOLO</span>
+                  <div className="flex min-w-0 flex-col items-start gap-2">
+                    <img
+                      src="/site-assets/admin-wordmark.png"
+                      alt="Musk Ellolo"
+                      className="h-auto max-h-10 w-full max-w-[190px] object-contain object-left invert"
+                    />
                     <span className="text-xs text-white/50">{t('لوحة الإدارة', 'Admin Panel')}</span>
                   </div>
                 </div>
@@ -328,7 +330,11 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 </div>
               </SheetContent>
             </Sheet>
-            <span className="ms-2 truncate text-lg font-bold tracking-wider">MUSK ELLOLO</span>
+            <img
+              src="/site-assets/admin-wordmark.png"
+              alt="Musk Ellolo"
+              className="ms-2 h-7 w-36 object-contain object-left invert"
+            />
           </div>
 
           <div className="hidden lg:flex items-center text-sm font-medium text-muted-foreground">
