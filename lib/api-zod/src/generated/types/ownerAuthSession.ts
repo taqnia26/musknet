@@ -5,9 +5,11 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { OwnerSession } from './ownerSession';
 import type { OwnerUser } from './ownerUser';
 
 export interface OwnerAuthSession {
   token: string;
   user: OwnerUser;
+  session: OwnerSession;
 }

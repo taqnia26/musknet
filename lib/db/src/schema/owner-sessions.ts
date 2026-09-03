@@ -7,6 +7,9 @@ export const ownerSessionsTable = pgTable("owner_sessions", {
   id: serial("id").primaryKey(),
   ownerUserId: integer("owner_user_id").notNull().references(() => ownerUsersTable.id, { onDelete: "cascade" }),
   tokenHash: text("token_hash").notNull(),
+  deviceLabel: text("device_label").notNull().default("Unknown device"),
+  browser: text("browser").notNull().default("Unknown browser"),
+  operatingSystem: text("operating_system").notNull().default("Unknown operating system"),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("owner_sessions_token_hash_unique").on(table.tokenHash)]);

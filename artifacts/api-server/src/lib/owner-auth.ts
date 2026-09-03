@@ -1,7 +1,12 @@
 import { createHash, randomBytes, scrypt as nodeScrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { and, eq, gt } from "drizzle-orm";
-import { db, ownerSessionsTable, ownerUsersTable } from "@workspace/db";
+import {
+  db,
+  ownerSessionNotificationsTable,
+  ownerSessionsTable,
+  ownerUsersTable,
+} from "@workspace/db";
 
 const scrypt = promisify(nodeScrypt);
 const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -67,19 +72,84 @@ export function publicOwner(user: typeof ownerUsersTable.$inferSelect) {
   };
 }
 
-export async function createOwnerSession(ownerUserId: number) {
-  const token = randomBytes(32).toString("base64url");
-  await db.insert(ownerSessionsTable).values({
-    ownerUserId,
-    tokenHash: tokenHash(token),
-    expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
-  });
-  return token;
+type OwnerSessionDevice = {
+  deviceLabel: string;
+  browser: string;
+  operatingSystem: string;
+};
+
+function parseOwnerSessionDevice(userAgent: string | undefined): OwnerSessionDevice {
+  const agent = userAgent ?? "";
+  const deviceLabel = /mobile|iphone|ipod|android.+mobile/i.test(agent)
+    ? "Mobile device"
+    : /ipad|android/i.test(agent)
+      ? "Tablet"
+      : "Desktop";
+
+  const browser = /edg\//i.test(agent)
+    ? "Microsoft Edge"
+    : /opr\//i.test(agent)
+      ? "Opera"
+      : /firefox\//i.test(agent)
+        ? "Firefox"
+        : /chrome\//i.test(agent)
+          ? "Google Chrome"
+          : /safari\//i.test(agent)
+            ? "Safari"
+            : "Unknown browser";
+
+  const operatingSystem = /windows/i.test(agent)
+    ? "Windows"
+    : /iphone|ipad|ipod/i.test(agent)
+        ? "iOS"
+      : /macintosh|mac os x/i.test(agent)
+        ? "macOS"
+        : /android/i.test(agent)
+          ? "Android"
+          : /linux/i.test(agent)
+            ? "Linux"
+            : "Unknown operating system";
+
+  return { deviceLabel, browser, operatingSystem };
 }
 
-export async function ownerFromToken(token: string | undefined) {
+export async function createOwnerSession(ownerUserId: number, userAgent?: string) {
+  const token = randomBytes(32).toString("base64url");
+  const device = parseOwnerSessionDevice(userAgent);
+  const { session, notificationCount } = await db.transaction(async (tx) => {
+    const recipients = await tx.select({ id: ownerSessionsTable.id })
+      .from(ownerSessionsTable)
+      .where(and(
+        eq(ownerSessionsTable.ownerUserId, ownerUserId),
+        gt(ownerSessionsTable.expiresAt, new Date()),
+      ));
+    const [createdSession] = await tx.insert(ownerSessionsTable).values({
+      ownerUserId,
+      tokenHash: tokenHash(token),
+      ...device,
+      expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
+    }).returning();
+    if (recipients.length > 0) {
+      await tx.insert(ownerSessionNotificationsTable).values(recipients.map((recipient) => ({
+        ownerUserId,
+        recipientSessionId: recipient.id,
+        newSessionId: createdSession.id,
+        ...device,
+        sessionCreatedAt: createdSession.createdAt,
+        readAt: null,
+      })));
+    }
+    return { session: createdSession, notificationCount: recipients.length };
+  });
+  return { token, session, notificationCount };
+}
+
+export async function ownerSessionFromToken(token: string | undefined) {
   if (!token) return null;
-  const [row] = await db.select({ user: ownerUsersTable }).from(ownerSessionsTable)
+  const [row] = await db.select({
+    session: ownerSessionsTable,
+    user: ownerUsersTable,
+  }).from(ownerSessionsTable)
     .innerJoin(ownerUsersTable, eq(ownerSessionsTable.ownerUserId, ownerUsersTable.id))
     .where(and(
       eq(ownerSessionsTable.tokenHash, tokenHash(token)),
@@ -87,7 +157,11 @@ export async function ownerFromToken(token: string | undefined) {
       eq(ownerUsersTable.isActive, true),
     ))
     .limit(1);
-  return row?.user ?? null;
+  return row ?? null;
+}
+
+export async function ownerFromToken(token: string | undefined) {
+  return (await ownerSessionFromToken(token))?.user ?? null;
 }
 
 export async function revokeOwnerSession(token: string) {

@@ -150,6 +150,8 @@ export * from './otpRequestResult';
 export * from './otpVerification';
 export * from './ownerAuthSession';
 export * from './ownerLoginInput';
+export * from './ownerSession';
+export * from './ownerSessionNotification';
 export * from './ownerUser';
 export * from './paymentMethod';
 export * from './paymentMethodId';

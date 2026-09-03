@@ -333,9 +333,30 @@ export interface OwnerUser {
   createdAt: string;
 }
 
+export interface OwnerSession {
+  id: number;
+  deviceLabel: string;
+  browser: string;
+  operatingSystem: string;
+  expiresAt: string;
+  createdAt: string;
+  isCurrent: boolean;
+}
+
 export interface OwnerAuthSession {
   token: string;
   user: OwnerUser;
+  session: OwnerSession;
+}
+
+export interface OwnerSessionNotification {
+  id: number;
+  newSessionId: number;
+  deviceLabel: string;
+  browser: string;
+  operatingSystem: string;
+  sessionCreatedAt: string;
+  createdAt: string;
 }
 
 export type AdminPermissionAction = typeof AdminPermissionAction[keyof typeof AdminPermissionAction];

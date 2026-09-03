@@ -113,6 +113,8 @@ import type {
   OtpVerification,
   OwnerAuthSession,
   OwnerLoginInput,
+  OwnerSession,
+  OwnerSessionNotification,
   OwnerUser,
   PayrollInput,
   PayrollRecord,
@@ -2053,6 +2055,343 @@ export function useGetOwnerMe<TData = Awaited<ReturnType<typeof getOwnerMe>>, TE
 
 
 
+
+export const getListOwnerSessionsUrl = () => {
+
+
+
+
+  return `/api/owner/sessions`
+}
+
+export const listOwnerSessions = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerSession[]> => {
+
+  return customFetch<OwnerSession[]>(getListOwnerSessionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOwnerSessionsQueryKey = () => {
+    return [
+    `/api/owner/sessions`
+    ] as const;
+    }
+
+
+export const getListOwnerSessionsQueryOptions = <TData = Awaited<ReturnType<typeof listOwnerSessions>>, TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOwnerSessions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOwnerSessionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOwnerSessions>>> = ({ signal }) => listOwnerSessions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOwnerSessions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOwnerSessionsQueryResult = NonNullable<Awaited<ReturnType<typeof listOwnerSessions>>>
+export type ListOwnerSessionsQueryError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>
+
+
+
+export function useListOwnerSessions<TData = Awaited<ReturnType<typeof listOwnerSessions>>, TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOwnerSessions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOwnerSessionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRevokeOwnerSessionUrl = (id: number,) => {
+
+
+
+
+  return `/api/owner/sessions/${id}`
+}
+
+export const revokeOwnerSession = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRevokeOwnerSessionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeOwnerSessionMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeOwnerSession>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeOwnerSession>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeOwnerSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeOwnerSession>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeOwnerSession(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeOwnerSessionMutationResult = NonNullable<Awaited<ReturnType<typeof revokeOwnerSession>>>
+
+    export type RevokeOwnerSessionMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ServiceUnavailableResponse>
+
+    export const useRevokeOwnerSession = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeOwnerSession>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeOwnerSession>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeOwnerSessionMutationOptions(options));
+    }
+
+export const getRevokeOtherOwnerSessionsUrl = () => {
+
+
+
+
+  return `/api/owner/sessions/revoke-others`
+}
+
+export const revokeOtherOwnerSessions = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getRevokeOtherOwnerSessionsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeOtherOwnerSessionsMutationOptions = <TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeOtherOwnerSessions>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeOtherOwnerSessions>>, TError,void, TContext> => {
+
+const mutationKey = ['revokeOtherOwnerSessions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeOtherOwnerSessions>>, void> = () => {
+
+
+          return  revokeOtherOwnerSessions(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeOtherOwnerSessionsMutationResult = NonNullable<Awaited<ReturnType<typeof revokeOtherOwnerSessions>>>
+
+    export type RevokeOtherOwnerSessionsMutationError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>
+
+    export const useRevokeOtherOwnerSessions = <TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeOtherOwnerSessions>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeOtherOwnerSessions>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRevokeOtherOwnerSessionsMutationOptions(options));
+    }
+
+export const getListOwnerSessionNotificationsUrl = () => {
+
+
+
+
+  return `/api/owner/session-notifications`
+}
+
+export const listOwnerSessionNotifications = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerSessionNotification[]> => {
+
+  return customFetch<OwnerSessionNotification[]>(getListOwnerSessionNotificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOwnerSessionNotificationsQueryKey = () => {
+    return [
+    `/api/owner/session-notifications`
+    ] as const;
+    }
+
+
+export const getListOwnerSessionNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listOwnerSessionNotifications>>, TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOwnerSessionNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOwnerSessionNotificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOwnerSessionNotifications>>> = ({ signal }) => listOwnerSessionNotifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOwnerSessionNotifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOwnerSessionNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listOwnerSessionNotifications>>>
+export type ListOwnerSessionNotificationsQueryError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>
+
+
+
+export function useListOwnerSessionNotifications<TData = Awaited<ReturnType<typeof listOwnerSessionNotifications>>, TError = ErrorType<UnauthorizedResponse | ServiceUnavailableResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOwnerSessionNotifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOwnerSessionNotificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReadOwnerSessionNotificationUrl = (id: number,) => {
+
+
+
+
+  return `/api/owner/session-notifications/${id}/read`
+}
+
+export const readOwnerSessionNotification = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getReadOwnerSessionNotificationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getReadOwnerSessionNotificationMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof readOwnerSessionNotification>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof readOwnerSessionNotification>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['readOwnerSessionNotification'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof readOwnerSessionNotification>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  readOwnerSessionNotification(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReadOwnerSessionNotificationMutationResult = NonNullable<Awaited<ReturnType<typeof readOwnerSessionNotification>>>
+
+    export type ReadOwnerSessionNotificationMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ServiceUnavailableResponse>
+
+    export const useReadOwnerSessionNotification = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | NotFoundResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof readOwnerSessionNotification>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof readOwnerSessionNotification>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getReadOwnerSessionNotificationMutationOptions(options));
+    }
 
 export const getAdminLogoutUrl = () => {
 

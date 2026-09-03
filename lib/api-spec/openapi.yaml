@@ -470,6 +470,38 @@ paths:
       tags: [owner]
       security: [{ ownerBearerAuth: [] }]
       responses: { "200": { description: Current owner, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerUser" } } } }, "401": { $ref: "#/components/responses/Unauthorized" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
+  /owner/sessions:
+    get:
+      operationId: listOwnerSessions
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      responses: { "200": { description: Active owner sessions, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OwnerSession" } } } } }, "401": { $ref: "#/components/responses/Unauthorized" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
+  /owner/sessions/{id}:
+    delete:
+      operationId: revokeOwnerSession
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/OwnerSessionId" }]
+      responses: { "204": { description: Session revoked }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "404": { $ref: "#/components/responses/NotFound" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
+  /owner/sessions/revoke-others:
+    post:
+      operationId: revokeOtherOwnerSessions
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      responses: { "204": { description: Other sessions revoked }, "401": { $ref: "#/components/responses/Unauthorized" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
+  /owner/session-notifications:
+    get:
+      operationId: listOwnerSessionNotifications
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      responses: { "200": { description: Unread new-session alerts for the current owner session, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OwnerSessionNotification" } } } } }, "401": { $ref: "#/components/responses/Unauthorized" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
+  /owner/session-notifications/{id}/read:
+    post:
+      operationId: readOwnerSessionNotification
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/OwnerSessionNotificationId" }]
+      responses: { "204": { description: Alert marked as read }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "404": { $ref: "#/components/responses/NotFound" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
   /admin/auth/logout:
     post:
       operationId: adminLogout
@@ -1078,6 +1110,16 @@ components:
       name: status
       in: query
       schema: { type: string, enum: [active, inactive, all], default: all }
+    OwnerSessionId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    OwnerSessionNotificationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
     CategorySlug:
       name: category
       in: query
@@ -1552,10 +1594,33 @@ components:
         user: { $ref: "#/components/schemas/AdminUser" }
     OwnerAuthSession:
       type: object
-      required: [token, user]
+      required: [token, user, session]
       properties:
         token: { type: string }
         user: { $ref: "#/components/schemas/OwnerUser" }
+        session: { $ref: "#/components/schemas/OwnerSession" }
+    OwnerSession:
+      type: object
+      required: [id, deviceLabel, browser, operatingSystem, expiresAt, createdAt, isCurrent]
+      properties:
+        id: { type: number }
+        deviceLabel: { type: string }
+        browser: { type: string }
+        operatingSystem: { type: string }
+        expiresAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        isCurrent: { type: boolean }
+    OwnerSessionNotification:
+      type: object
+      required: [id, newSessionId, deviceLabel, browser, operatingSystem, sessionCreatedAt, createdAt]
+      properties:
+        id: { type: number }
+        newSessionId: { type: number }
+        deviceLabel: { type: string }
+        browser: { type: string }
+        operatingSystem: { type: string }
+        sessionCreatedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
     OwnerUser:
       type: object
       required: [id, email, name, isActive, createdAt]

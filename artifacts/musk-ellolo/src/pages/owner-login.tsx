@@ -33,7 +33,13 @@ export default function OwnerLogin() {
       onSuccess: (response) => {
         saveOwnerToken(response.token);
         setLocation('/owner');
-        toast({ title: t('تم تسجيل دخول المالك بنجاح', 'Owner login successful') });
+        toast({
+          title: t('تم تسجيل دخول المالك بنجاح', 'Owner login successful'),
+          description: t(
+            `جلسة جديدة: ${response.session.browser} على ${response.session.operatingSystem}`,
+            `New session: ${response.session.browser} on ${response.session.operatingSystem}`,
+          ),
+        });
       },
       onError: () => {
         toast({

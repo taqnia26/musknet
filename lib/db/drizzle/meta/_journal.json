@@ -57,6 +57,20 @@
       "when": 1788437115987,
       "tag": "0007_wakeful_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788438469168,
+      "tag": "0008_careful_captain_midlands",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788438742204,
+      "tag": "0009_cloudy_the_hand",
+      "breakpoints": true
     }
   ]
 }

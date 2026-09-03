@@ -617,6 +617,15 @@ export const OwnerLoginResponse = zod.object({
   "isActive": zod.boolean(),
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
+}),
+  "session": zod.object({
+  "id": zod.number(),
+  "deviceLabel": zod.string(),
+  "browser": zod.string(),
+  "operatingSystem": zod.string(),
+  "expiresAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "isCurrent": zod.boolean()
 })
 })
 
@@ -632,6 +641,53 @@ export const GetOwnerMeResponse = zod.object({
   "lastLoginAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
+
+
+export const ListOwnerSessionsResponseItem = zod.object({
+  "id": zod.number(),
+  "deviceLabel": zod.string(),
+  "browser": zod.string(),
+  "operatingSystem": zod.string(),
+  "expiresAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date(),
+  "isCurrent": zod.boolean()
+})
+export const ListOwnerSessionsResponse = zod.array(ListOwnerSessionsResponseItem)
+
+
+
+
+
+export const RevokeOwnerSessionParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const RevokeOwnerSessionResponse = zod.void()
+
+
+export const RevokeOtherOwnerSessionsResponse = zod.void()
+
+
+export const ListOwnerSessionNotificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "newSessionId": zod.number(),
+  "deviceLabel": zod.string(),
+  "browser": zod.string(),
+  "operatingSystem": zod.string(),
+  "sessionCreatedAt": zod.coerce.date(),
+  "createdAt": zod.coerce.date()
+})
+export const ListOwnerSessionNotificationsResponse = zod.array(ListOwnerSessionNotificationsResponseItem)
+
+
+
+
+
+export const ReadOwnerSessionNotificationParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const ReadOwnerSessionNotificationResponse = zod.void()
 
 
 export const AdminLogoutResponse = zod.void()

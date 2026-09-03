@@ -33,6 +33,7 @@ export * from "./admin-sessions";
 export * from "./admin-permissions";
 export * from "./owner-users";
 export * from "./owner-sessions";
+export * from "./owner-session-notifications";
 export * from "./wholesale-distributors";
 export * from "./inventory-movements";
 export * from "./hr";

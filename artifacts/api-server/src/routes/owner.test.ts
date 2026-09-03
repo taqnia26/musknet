@@ -1,7 +1,13 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { adminUsersTable, db, ownerSessionsTable, ownerUsersTable } from "@workspace/db";
+import {
+  adminUsersTable,
+  db,
+  ownerSessionNotificationsTable,
+  ownerSessionsTable,
+  ownerUsersTable,
+} from "@workspace/db";
 import app from "../app";
 import { createAdminSession } from "../lib/admin-auth";
 
@@ -20,9 +26,16 @@ beforeAll(async () => {
   process.env.ADMIN_PASSWORD = "owner-auth-admin-password";
 
   await request(app).post("/api/owner/auth/login").send({ email: ownerEmail, password: ownerPassword }).expect(200)
+    .set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36")
     .then((response) => {
       ownerToken = response.body.token;
       ownerId = response.body.user.id;
+      expect(response.body.session).toMatchObject({
+        browser: "Google Chrome",
+        operatingSystem: "Linux",
+        deviceLabel: "Desktop",
+        isCurrent: true,
+      });
     });
   await request(app).get("/api/admin/dashboard").expect(401);
   const [admin] = await db.select({ id: adminUsersTable.id }).from(adminUsersTable)
@@ -33,6 +46,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (ownerId) {
+    await db.delete(ownerSessionNotificationsTable).where(eq(ownerSessionNotificationsTable.ownerUserId, ownerId));
     await db.delete(ownerSessionsTable).where(eq(ownerSessionsTable.ownerUserId, ownerId));
     await db.delete(ownerUsersTable).where(eq(ownerUsersTable.id, ownerId));
   }
@@ -73,6 +87,98 @@ describe.sequential("owner route authorization", () => {
       .set("Authorization", `Bearer ${ownerToken}`)
       .expect(401);
     expect(response.body.error).toMatch(/admin authentication/i);
+  });
+
+  it("lists active sessions and identifies the current session", async () => {
+    const response = await request(app)
+      .get("/api/owner/sessions")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(response.body).toEqual([
+      expect.objectContaining({
+        deviceLabel: "Desktop",
+        browser: "Google Chrome",
+        operatingSystem: "Linux",
+        isCurrent: true,
+      }),
+    ]);
+    expect(response.body[0]).not.toHaveProperty("tokenHash");
+  });
+
+  it("revokes a selected owner session without revoking the current one", async () => {
+    const secondLogin = await request(app)
+      .post("/api/owner/auth/login")
+      .set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1")
+      .send({ email: ownerEmail, password: ownerPassword })
+      .expect(200);
+    expect(secondLogin.body.session).toMatchObject({
+      deviceLabel: "Mobile device",
+      browser: "Safari",
+      operatingSystem: "iOS",
+    });
+    const notifications = await request(app)
+      .get("/api/owner/session-notifications")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(notifications.body).toEqual([
+      expect.objectContaining({
+        newSessionId: secondLogin.body.session.id,
+        deviceLabel: "Mobile device",
+        browser: "Safari",
+        operatingSystem: "iOS",
+      }),
+    ]);
+    await request(app)
+      .post(`/api/owner/session-notifications/${notifications.body[0].id}/read`)
+      .set("Authorization", `Bearer ${secondLogin.body.token}`)
+      .expect(404);
+    await request(app)
+      .post(`/api/owner/session-notifications/${notifications.body[0].id}/read`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .expect(204);
+    await request(app)
+      .get("/api/owner/session-notifications")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .expect(200, []);
+
+    await request(app)
+      .delete(`/api/owner/sessions/${secondLogin.body.session.id}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .expect(204);
+    await request(app)
+      .get("/api/owner/auth/me")
+      .set("Authorization", `Bearer ${secondLogin.body.token}`)
+      .expect(401);
+    await request(app)
+      .get("/api/owner/auth/me")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .expect(200);
+  });
+
+  it("revokes all other owner sessions", async () => {
+    const otherTokens = await Promise.all([1, 2].map(async (index) => {
+      const login = await request(app)
+        .post("/api/owner/auth/login")
+        .set("User-Agent", `Test browser ${index}`)
+        .send({ email: ownerEmail, password: ownerPassword })
+        .expect(200);
+      return login.body.token as string;
+    }));
+
+    await request(app)
+      .post("/api/owner/sessions/revoke-others")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .expect(204);
+    for (const token of otherTokens) {
+      await request(app)
+        .get("/api/owner/auth/me")
+        .set("Authorization", `Bearer ${token}`)
+        .expect(401);
+    }
+    await request(app)
+      .get("/api/owner/auth/me")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .expect(200);
   });
 
   it("revokes only the owner session", async () => {
