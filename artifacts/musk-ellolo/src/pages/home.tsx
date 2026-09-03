@@ -9,6 +9,8 @@ type ConnectionHints = {
   saveData?: boolean;
 };
 
+const SECOND_VIDEO_PLAY_THRESHOLD = 0.25;
+
 const isSlowConnection = () => {
   if (typeof navigator === 'undefined') {
     return false;
@@ -19,7 +21,8 @@ const isSlowConnection = () => {
   return (
     connection?.saveData === true ||
     connection?.effectiveType === 'slow-2g' ||
-    connection?.effectiveType === '2g'
+    connection?.effectiveType === '2g' ||
+    connection?.effectiveType === '3g'
   );
 };
 
@@ -64,13 +67,16 @@ export default function Home() {
           return;
         }
 
-        if (entry.isIntersecting) {
+        if (
+          entry.isIntersecting &&
+          entry.intersectionRatio >= SECOND_VIDEO_PLAY_THRESHOLD
+        ) {
           playVideo();
         } else {
           video.pause();
         }
       },
-      { threshold: 0.25 },
+      { threshold: SECOND_VIDEO_PLAY_THRESHOLD },
     );
 
     playObserver.observe(video);
