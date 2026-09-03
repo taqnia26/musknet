@@ -9,8 +9,8 @@ export function Footer() {
   const { t, lang } = useLanguage();
 
   return (
-    <footer className="w-full bg-black text-white py-16">
-      <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-12 lg:gap-8">
+    <footer className="w-full min-w-0 overflow-hidden bg-black py-12 text-white md:py-16">
+      <div className="container mx-auto grid min-w-0 grid-cols-1 gap-8 px-4 md:grid-cols-4 md:gap-12 lg:grid-cols-6 lg:gap-8">
         
         {/* Logo and Socials */}
         <div className="lg:col-span-2 space-y-6 text-center md:text-start">
@@ -22,17 +22,17 @@ export function Footer() {
             />
           </Link>
           
-          <div className="flex justify-center md:justify-start gap-4">
-            <a href="https://www.instagram.com/muskellolo" target="_blank" rel="noopener noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors">
+          <div className="flex justify-center gap-3 md:justify-start">
+            <a href="https://www.instagram.com/muskellolo" target="_blank" rel="noopener noreferrer" className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20">
               <Instagram className="w-5 h-5" />
             </a>
-            <a href="https://x.com/muskellolo" target="_blank" rel="noopener noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors">
+            <a href="https://x.com/muskellolo" target="_blank" rel="noopener noreferrer" className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20">
               <Twitter className="w-5 h-5" />
             </a>
-            <a href="https://www.snapchat.com/add/muskellolo" target="_blank" rel="noopener noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors">
+            <a href="https://www.snapchat.com/add/muskellolo" target="_blank" rel="noopener noreferrer" className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20">
               <FaSnapchatGhost className="w-5 h-5" />
             </a>
-            <a href="https://www.tiktok.com/@muskellolo" target="_blank" rel="noopener noreferrer" className="bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors">
+            <a href="https://www.tiktok.com/@muskellolo" target="_blank" rel="noopener noreferrer" className="flex min-h-11 min-w-11 items-center justify-center rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20">
               <FaTiktok className="w-5 h-5" />
             </a>
           </div>
@@ -66,17 +66,17 @@ export function Footer() {
 
         {/* Store Info */}
         <div className="lg:col-span-2 space-y-4 text-center md:text-start">
-          <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-3 md:gap-4 bg-white/5 p-4 rounded-lg">
+          <div className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-lg bg-white/5 p-4 md:flex-row md:justify-start md:gap-4">
             <img src={siteAsset('tax-6d0afa4ab2.png')} alt="Tax" className="w-10 h-10 object-contain bg-white rounded p-1" />
-            <div>
+            <div className="min-w-0 text-center md:text-start">
               <p className="text-sm font-bold text-gray-300">{t('الرقم الضريبي', 'Tax Number')}</p>
               <p className="text-sm">310076823100003</p>
             </div>
           </div>
           
-          <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-3 md:gap-4 bg-white/5 p-4 rounded-lg">
+          <div className="flex min-w-0 flex-col items-center justify-center gap-3 rounded-lg bg-white/5 p-4 md:flex-row md:justify-start md:gap-4">
             <img src={siteAsset('commercial-register-dd3f1b86d3.png')} alt="CR" className="w-10 h-10 object-contain bg-white rounded p-1" />
-            <div>
+            <div className="min-w-0 text-center md:text-start">
               <p className="text-sm font-bold text-gray-300">{t('السجل التجاري', 'Commercial Register')}</p>
               <p className="text-sm">1010311811</p>
             </div>
@@ -85,7 +85,7 @@ export function Footer() {
       </div>
       
       {/* Bottom Bar */}
-      <div dir="ltr" className="container mx-auto px-4 mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-400">
+      <div dir="ltr" className="container mx-auto mt-10 flex min-w-0 flex-col items-center justify-between gap-6 border-t border-white/10 px-4 pt-8 text-center text-sm text-gray-400 md:mt-12 md:flex-row">
         <div className="flex flex-wrap items-center justify-center gap-2.5" aria-label={t('وسائل الدفع المتاحة', 'Available payment methods')}>
           <span className="flex h-10 min-w-[58px] items-center justify-center rounded-lg bg-white px-2 shadow-sm">
             <img src={siteAsset('tamara_installment_mini-3e289e2b2d.png')} alt="Tamara" className="h-8 w-8 object-contain" />

@@ -41,20 +41,20 @@ export default function Products() {
   ];
 
   return (
-    <div className="w-full bg-white min-h-screen">
+    <div className="min-h-screen w-full min-w-0 bg-white">
       <div className="container mx-auto px-4 py-8">
         
         {/* Toolbar */}
-        <div className="flex flex-row justify-between items-center mb-12 border-b border-gray-100 pb-4 text-sm text-gray-500">
+        <div className="mb-10 flex flex-col items-stretch gap-4 border-b border-gray-100 pb-4 text-sm text-gray-500 sm:mb-12 sm:flex-row sm:items-center sm:justify-between">
           <div className="font-medium text-black">
             {products?.length || 0} {t('منتجات', 'products')}
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-end">
             <span>{t('ترتيب حسب:', 'Sort by:')}</span>
-            <div className="relative">
+            <div className="relative min-w-0">
               <select 
-                className="bg-transparent text-black font-medium outline-none cursor-pointer rtl:pl-6 ltr:pr-6 appearance-none"
+                className="max-w-full appearance-none bg-transparent font-medium text-black outline-none cursor-pointer rtl:pl-6 ltr:pr-6"
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
               >
@@ -70,7 +70,7 @@ export default function Products() {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        <div className="grid min-w-0 grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-8">
           {isLoading ? (
             Array(8).fill(0).map((_, i) => (
                <div key={i} className="border border-gray-100 rounded-sm p-4">
@@ -114,7 +114,7 @@ function ProductGridCard({ product }: { product: any }) {
   };
 
   return (
-    <div className="group flex h-full flex-col rounded-sm border border-gray-100 bg-white p-4 transition-shadow hover:shadow-md relative">
+    <div className="group relative flex h-full min-w-0 flex-col rounded-sm border border-gray-100 bg-white p-4 transition-shadow hover:shadow-md">
         
       {/* Badge */}
       {product.isBestseller && (

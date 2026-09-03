@@ -69,7 +69,7 @@ export default function Orders() {
                 
                 <div className="space-y-4">
                   {order.items?.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-4">
+                      <div key={idx} className="flex min-w-0 items-center gap-4">
                       <div className="w-16 h-16 bg-white border rounded-lg p-1 shrink-0">
                         {item.imageUrl ? (
                           <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-contain" />
@@ -77,11 +77,11 @@ export default function Orders() {
                           <div className="w-full h-full bg-muted rounded"></div>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-bold">{item.productName}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words font-bold">{item.productName}</p>
                         <p className="text-sm text-muted-foreground">{t('الكمية', 'Qty')}: {item.quantity} × {item.unitPrice} {t('ر.س', 'SAR')}</p>
                       </div>
-                      <div className="font-bold">
+                      <div className="shrink-0 font-bold">
                         {item.totalPrice} {t('ر.س', 'SAR')}
                       </div>
                     </div>

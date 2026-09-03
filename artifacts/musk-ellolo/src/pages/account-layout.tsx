@@ -37,9 +37,9 @@ export function AccountLayout({ children, title }: { children: React.ReactNode, 
   };
 
   return (
-    <div className="bg-background min-h-[calc(100vh-200px)] py-12 md:py-16">
+    <div className="min-h-[calc(100vh-200px)] min-w-0 overflow-x-clip bg-background py-12 md:py-16">
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+        <div className="grid min-w-0 grid-cols-1 gap-8 md:grid-cols-12">
           
           {/* Sidebar */}
           <div className="md:col-span-3 space-y-6">
@@ -72,7 +72,7 @@ export function AccountLayout({ children, title }: { children: React.ReactNode, 
           </div>
 
           {/* Content */}
-          <div className="md:col-span-9">
+          <div className="min-w-0 md:col-span-9">
             <div className="bg-card p-6 md:p-8 rounded-3xl border shadow-sm min-h-full animate-in fade-in">
               <h1 className="text-2xl font-bold mb-8">{title}</h1>
               {children}

@@ -65,7 +65,7 @@ export default function Cart() {
   const activeCart = cart!;
 
   return (
-    <div className="container mx-auto px-4 py-12 md:py-20 max-w-5xl animate-in fade-in duration-500">
+    <div className="container mx-auto min-w-0 max-w-5xl px-4 py-12 animate-in fade-in duration-500 md:py-20">
       <h1 className="text-3xl md:text-4xl font-bold mb-10 text-foreground">
         {t('عربة التسوق', 'Shopping Cart')} <span className="text-muted-foreground font-normal text-xl">({activeCart.itemCount})</span>
       </h1>
@@ -73,7 +73,7 @@ export default function Cart() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         <div className="lg:col-span-2 space-y-6">
           {items.map((item) => (
-            <div key={item.id} className="flex gap-4 md:gap-6 bg-card p-4 md:p-6 rounded-2xl border">
+            <div key={item.id} className="flex min-w-0 gap-3 rounded-2xl border bg-card p-3 md:gap-6 md:p-6">
               <Link href={`/products/${item.product.slug}`} className="shrink-0 block">
                 <div className="w-24 h-24 md:w-32 md:h-32 bg-white rounded-xl flex items-center justify-center p-2 border">
                   <img 
@@ -84,9 +84,9 @@ export default function Cart() {
                 </div>
               </Link>
               
-              <div className="flex flex-col justify-between flex-1">
-                <div className="flex justify-between items-start gap-4">
-                  <div>
+              <div className="flex min-w-0 flex-1 flex-col justify-between">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <div className="min-w-0">
                     <h3 className="font-bold text-lg leading-tight hover:underline cursor-pointer">
                       <Link href={`/products/${item.product.slug}`}>
                         {t(item.product.nameAr, item.product.nameEn)}
@@ -96,14 +96,15 @@ export default function Cart() {
                   </div>
                   <button 
                     onClick={() => handleRemove(item.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                    aria-label={t('حذف المنتج', 'Remove product')}
+                    className="min-h-11 min-w-11 shrink-0 p-2 text-muted-foreground transition-colors hover:text-destructive"
                     disabled={removeItemMutation.isPending}
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
                 
-                <div className="flex items-center justify-between mt-4">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center border rounded-full bg-background h-10 w-32">
                     <button 
                       className="px-3 h-full flex items-center justify-center hover:bg-muted/50 rounded-l-full rtl:rounded-l-none rtl:rounded-r-full"
@@ -131,7 +132,7 @@ export default function Cart() {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="bg-card border rounded-2xl p-6 md:p-8 sticky top-28 space-y-6">
+          <div className="space-y-6 rounded-2xl border bg-card p-6 md:p-8 lg:sticky lg:top-28">
             <h2 className="text-xl font-bold border-b pb-4">{t('ملخص الطلب', 'Order Summary')}</h2>
             
             <div className="space-y-3 text-sm">

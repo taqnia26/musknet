@@ -63,16 +63,16 @@ export default function ProductDetails() {
   const formattedPrice = `${product.price} ${t('ر.س', 'SAR')}`;
 
   return (
-    <div className="w-full bg-white min-h-screen pb-24">
+    <div className="min-h-screen w-full min-w-0 overflow-x-clip bg-white pb-24">
       <div className="container mx-auto px-4 py-8 md:py-12">
-        <div className="flex flex-col lg:flex-row gap-12 lg:gap-16">
+        <div className="flex min-w-0 flex-col gap-10 lg:flex-row lg:gap-16">
           
           {/* Right Column (Text / Details) */}
-          <div className="flex-1 lg:order-1 order-2 flex flex-col pt-4 max-w-xl">
+          <div className="order-2 flex min-w-0 max-w-xl flex-1 flex-col pt-4 lg:order-1">
             
             {/* Title & Badge */}
-            <div className="flex items-center gap-4 mb-4 justify-between">
-              <h1 className="text-3xl md:text-4xl font-bold text-black">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <h1 className="min-w-0 flex-1 text-2xl font-bold text-black md:text-4xl">
                 {t(product.nameAr, product.nameEn)}
               </h1>
               {product.isBestseller && (
@@ -85,7 +85,7 @@ export default function ProductDetails() {
             <p className="text-sm text-gray-500 mb-6">{t('الكمية محدودة', 'Limited quantity')}</p>
 
             {/* Actions */}
-            <div className="flex items-center gap-6 mb-6">
+            <div className="mb-6 flex flex-wrap items-center gap-4">
               <button className="flex items-center gap-2 text-sm text-gray-600 hover:text-black transition-colors">
                 <Heart className="w-4 h-4" />
                 <span>{t('أضف إلى المفضلة', 'Add to Wishlist')}</span>
@@ -102,8 +102,8 @@ export default function ProductDetails() {
             </div>
 
             {/* Installments (Tamara/Tabby placeholder) */}
-            <div className="bg-[#f9fafb] border border-gray-100 p-4 rounded flex items-center justify-between mb-8 text-sm">
-              <div className="flex items-center gap-2 text-gray-700">
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded border border-gray-100 bg-[#f9fafb] p-4 text-sm">
+              <div className="flex min-w-0 items-center gap-2 text-gray-700">
                 <img src={siteAsset('tamara_installment_mini-3e289e2b2d.png')} alt="Tamara" className="h-5 object-contain" />
                 <span>قسم فاتورتك على 4 دفعات</span>
               </div>
@@ -124,12 +124,12 @@ export default function ProductDetails() {
 
             {/* Sticky-like Bottom Actions Area */}
             <div className="bg-white">
-              <div className="flex items-center justify-between mb-4">
+              <div className="mb-4 flex items-center justify-between gap-4">
                 <span className="font-bold text-black">{t('السعر', 'Price')}</span>
                 <span className="text-2xl font-bold text-black">{formattedPrice}</span>
               </div>
               
-              <div className="flex items-center gap-4 mb-4">
+              <div className="mb-4 flex flex-wrap items-center gap-4">
                 <div className="flex items-center border border-gray-300 rounded h-12 w-32 bg-white">
                   <button 
                     className="w-10 h-full flex items-center justify-center text-gray-500 hover:text-black transition-colors"
@@ -181,7 +181,7 @@ export default function ProductDetails() {
           </div>
 
           {/* Left Column (Image) */}
-          <div className="flex-1 lg:order-2 order-1 sticky top-32 h-fit">
+          <div className="order-1 flex min-w-0 flex-1 h-fit lg:sticky lg:top-32 lg:order-2">
             <div className="w-full aspect-square bg-[#fafafa] rounded-lg overflow-hidden border border-gray-100 p-8 flex items-center justify-center">
               <img 
                 src={imageUrl} 
@@ -200,7 +200,7 @@ export default function ProductDetails() {
           <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
             <h2 className="text-xl font-bold text-black">{t('منتجات قد تعجبك', 'You May Also Like')}</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid min-w-0 grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4 md:gap-8">
             {relatedProducts.slice(0, 4).map((p) => (
               <RelatedProductCard key={p.id} product={p} />
             ))}

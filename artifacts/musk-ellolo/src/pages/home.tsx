@@ -107,7 +107,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-white">
+    <div className="flex min-h-screen w-full min-w-0 flex-col overflow-x-clip bg-white">
       
       {/* Hero Video */}
       <section className="relative w-full aspect-[427/240] overflow-hidden bg-black">
@@ -158,8 +158,8 @@ export default function Home() {
 
       {/* Editorial Section */}
       <section className="container mx-auto px-4 py-8 md:py-16">
-        <div className="flex flex-col-reverse md:flex-row gap-8 items-center bg-gray-50">
-          <div className="w-full md:w-1/2 p-8 md:p-16 flex flex-col items-center text-center">
+        <div className="flex min-w-0 flex-col-reverse items-center gap-8 bg-gray-50 md:flex-row">
+          <div className="flex w-full min-w-0 flex-col items-center p-8 text-center md:w-1/2 md:p-16">
             <h1 className="text-2xl md:text-4xl font-bold mb-6 text-black leading-tight">
               {t('العقل المبدع خلف مجموعة عطور مسك اللولو 2026', 'The creative mind behind the 2026 Musk Ellolo perfume collection')}
             </h1>
@@ -178,7 +178,7 @@ export default function Home() {
               {t('شاهد الفيديو', 'Watch Video')}
             </a>
           </div>
-          <div className="w-full md:w-1/2">
+          <div className="w-full min-w-0 md:w-1/2">
             <img 
               src={siteAsset('a049986c-c342-4363-bd46-d04e1188a820-c4fcb4f830.webp')} 
               alt="Chris Maurice Carbonnel" 

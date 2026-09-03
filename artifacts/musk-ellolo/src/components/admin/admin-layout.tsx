@@ -233,9 +233,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   if (!user) return null;
 
   return (
-    <div className="admin-theme bg-background text-foreground flex h-screen font-sans">
+    <div className="admin-theme flex h-screen min-w-0 overflow-hidden bg-background font-sans text-foreground">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-72 bg-sidebar border-e border-white/10 shadow-xl z-10">
+      <aside className="z-10 hidden w-72 shrink-0 flex-col border-e border-white/10 bg-sidebar shadow-xl lg:flex">
         <div className="flex items-center gap-3 px-6 py-8">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-xl">
             M
@@ -279,9 +279,9 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 border-b bg-card flex items-center justify-between px-4 lg:px-8 shrink-0 z-20">
+        <header className="z-20 flex h-16 min-w-0 shrink-0 items-center justify-between border-b bg-card px-4 lg:px-8">
           <div className="flex items-center gap-2 lg:hidden">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
@@ -328,23 +328,23 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 </div>
               </SheetContent>
             </Sheet>
-            <span className="font-bold text-lg tracking-wider ms-2">MUSK ELLOLO</span>
+            <span className="ms-2 truncate text-lg font-bold tracking-wider">MUSK ELLOLO</span>
           </div>
 
           <div className="hidden lg:flex items-center text-sm font-medium text-muted-foreground">
             {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
 
-          <div className="flex items-center gap-2 ms-auto">
-            <Button variant="ghost" size="icon" className="rounded-full" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
+          <div className="ms-auto flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-full" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
               <Globe className="h-5 w-5" />
             </Button>
           </div>
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto bg-background/50">
-          <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background/50">
+          <div className="mx-auto w-full min-w-0 max-w-7xl p-4 md:p-6 lg:p-8">
             {children}
           </div>
         </div>

@@ -115,12 +115,12 @@ export default function Checkout() {
   }
 
   return (
-    <div className="bg-background min-h-screen">
+    <div className="min-h-screen min-w-0 bg-background">
       <div className="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
         
         <h1 className="text-3xl font-bold mb-8 text-foreground">{t('إتمام الطلب', 'Checkout')}</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 flex-col-reverse lg:flex-row">
+        <div className="grid min-w-0 grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
           
           {/* Left Column - Form */}
           <div className="lg:col-span-7 space-y-10 order-2 lg:order-1">
@@ -165,15 +165,15 @@ export default function Checkout() {
                   </h2>
                   <div className="space-y-3">
                     {quote?.shippingMethods?.map(method => (
-                      <label key={method.id} className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${shippingMethod === method.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}>
-                        <div className="flex items-center gap-3">
+                      <label key={method.id} className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${shippingMethod === method.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}>
+                        <div className="flex min-w-0 items-center gap-3">
                           <input type="radio" name="shippingMethod" value={method.id} checked={shippingMethod === method.id} onChange={(e) => setShippingMethod(e.target.value)} className="w-4 h-4 text-primary" />
-                          <div>
+                          <div className="min-w-0">
                             <p className="font-bold text-sm">{method.name}</p>
                             <p className="text-xs text-muted-foreground">{method.estimatedDays}</p>
                           </div>
                         </div>
-                        <span className="font-bold text-sm">{method.price === 0 ? t('مجاناً', 'Free') : `${method.price} ${t('ر.س', 'SAR')}`}</span>
+                        <span className="shrink-0 text-sm font-bold">{method.price === 0 ? t('مجاناً', 'Free') : `${method.price} ${t('ر.س', 'SAR')}`}</span>
                       </label>
                     ))}
                   </div>
@@ -187,12 +187,12 @@ export default function Checkout() {
                   </h2>
                   <div className="space-y-3">
                     {quote?.paymentMethods?.map(method => (
-                      <label key={method.id} className={`flex items-center justify-between p-4 border rounded-xl cursor-pointer transition-colors ${!method.available ? 'opacity-50 cursor-not-allowed' : ''} ${paymentMethod === method.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}>
-                        <div className="flex items-center gap-3">
+                      <label key={method.id} className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${!method.available ? 'opacity-50 cursor-not-allowed' : ''} ${paymentMethod === method.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}>
+                        <div className="flex min-w-0 items-center gap-3">
                           <input type="radio" name="paymentMethod" value={method.id} checked={paymentMethod === method.id} onChange={(e) => setPaymentMethod(e.target.value as any)} disabled={!method.available} className="w-4 h-4 text-primary" />
                           <div>
                             <p className="font-bold text-sm">{method.name}</p>
-                            {method.description && <p className="text-xs text-muted-foreground">{method.description}</p>}
+                            {method.description && <p className="break-words text-xs text-muted-foreground">{method.description}</p>}
                           </div>
                         </div>
                       </label>
@@ -209,7 +209,7 @@ export default function Checkout() {
 
           {/* Right Column - Summary */}
           <div className="lg:col-span-5 order-1 lg:order-2">
-            <div className="bg-card border rounded-2xl p-6 md:p-8 sticky top-28 shadow-sm">
+            <div className="rounded-2xl border bg-card p-6 shadow-sm md:p-8 lg:sticky lg:top-28">
               <h2 className="text-xl font-bold border-b pb-4 mb-6">{t('ملخص الطلب', 'Order Summary')}</h2>
               
               <div className="space-y-4 mb-6 max-h-[40vh] overflow-auto scrollbar-hide pr-2 rtl:pr-0 rtl:pl-2">
@@ -228,7 +228,7 @@ export default function Checkout() {
               </div>
 
               {/* Coupon */}
-              <div className="flex gap-2 mb-6 border-b pb-6">
+              <div className="mb-6 flex min-w-0 gap-2 border-b pb-6">
                 <Input 
                   placeholder={t('كود الخصم', 'Discount Code')} 
                   value={couponCode}

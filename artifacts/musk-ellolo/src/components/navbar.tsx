@@ -48,21 +48,30 @@ export function Navbar() {
   return (
     <div className="w-full flex flex-col">
       {/* Top Bar */}
-      <div className="w-full border-b border-gray-100 hidden md:flex items-center justify-between px-4 lg:px-8 py-2 text-xs text-gray-500 bg-white">
-        <div className="flex items-center gap-4 divide-x divide-x-reverse divide-gray-300">
-          {topLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="hover:text-black transition-colors px-2 first:pr-0">
+      <div className="hidden w-full border-b border-gray-100 bg-white px-4 py-2 text-xs text-gray-500 md:flex md:items-center md:justify-between lg:px-8">
+        <div className="flex min-w-0 items-center">
+          {topLinks.map((link, index) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`inline-flex min-h-8 items-center justify-center px-3 text-center transition-colors hover:text-black ${
+                index > 0 ? 'border-s border-gray-300' : ''
+              }`}
+            >
               {t(link.ar, link.en)}
             </Link>
           ))}
-          <button onClick={toggleLang} className="hover:text-black transition-colors px-2">
+          <button
+            onClick={toggleLang}
+            className="inline-flex min-h-8 items-center justify-center border-s border-gray-300 px-3 text-center transition-colors hover:text-black"
+          >
             {lang === 'ar' ? 'English' : 'العربية'}
           </button>
-          <span className="px-2">
+          <span className="inline-flex min-h-8 items-center justify-center border-s border-gray-300 px-3 text-center">
             {t('ريال سعودي', 'SAR')}
           </span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="ms-4 flex min-w-0 items-center gap-4">
           <a href="mailto:info@muskellolo.com" className="hover:text-black transition-colors">
             info@muskellolo.com
           </a>
@@ -71,40 +80,46 @@ export function Navbar() {
 
       {/* Main Header */}
       <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 transition-all">
-        <div className="px-4 lg:px-8 h-20 md:h-24 flex items-center justify-between">
+        <div className="flex h-20 min-w-0 items-center justify-between px-4 md:h-24 lg:px-8">
           
           {/* Mobile Menu Button */}
-          <div className="flex-1 md:hidden flex justify-end order-3">
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)} className="text-black">
+          <div className="order-3 flex min-w-0 flex-1 justify-end lg:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={isOpen ? 'Close menu' : 'Open menu'}
+              onClick={() => setIsOpen(!isOpen)}
+              className="min-h-11 min-w-11 text-black"
+            >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
 
           {/* Logo */}
-          <div className="flex-1 flex justify-start order-2 md:order-1">
+          <div className="order-2 flex min-w-0 flex-1 justify-start lg:order-1">
             <Link href="/">
               <img 
                 src={siteAsset('Ca44RuZ7R2vL2wTsJKCO2bG6rWGMyqxB0CVdsvxb-63014f950a.png')} 
                 alt="Musk Ellolo" 
-                className="h-10 md:h-12 object-contain cursor-pointer"
+                className="h-10 max-w-full cursor-pointer object-contain md:h-12"
               />
             </Link>
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex flex-none items-center justify-center gap-8 text-sm font-medium order-2">
+          <nav className="order-2 hidden flex-none items-center justify-center gap-4 text-sm font-medium lg:flex xl:gap-8">
             {navLinks.map((link) => (
-              <div key={link.href} className="relative group py-8">
+              <div key={link.href} className="group relative shrink-0 py-8">
                 <Link href={link.href}>
-                  <span className={`flex items-center gap-1 transition-colors hover:text-gray-500 cursor-pointer ${location === link.href ? 'text-gray-500' : 'text-black'}`}>
+                  <span className={`flex items-center gap-1 whitespace-nowrap transition-colors hover:text-gray-500 cursor-pointer ${location === link.href ? 'text-gray-500' : 'text-black'}`}>
                     {t(link.ar, link.en)}
                     {link.children && <ChevronDown className="h-3.5 w-3.5" />}
                   </span>
                 </Link>
                 {link.children && (
-                  <div className="invisible absolute right-0 top-full max-h-80 min-w-52 overflow-y-auto border border-gray-100 bg-white py-2 opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
+                  <div className="invisible absolute top-full max-h-80 min-w-52 max-w-[calc(100vw-2rem)] overflow-y-auto border border-gray-100 bg-white py-2 opacity-0 shadow-lg transition-all ltr:left-0 rtl:right-0 group-hover:visible group-hover:opacity-100">
                     {link.children.map((child) => (
-                      <Link key={child.href} href={child.href} className="block px-5 py-3 text-sm text-black hover:bg-gray-50">
+                      <Link key={child.href} href={child.href} className="block whitespace-normal break-words px-5 py-3 text-sm text-black hover:bg-gray-50">
                         {t(child.ar, child.en)}
                       </Link>
                     ))}
@@ -115,17 +130,17 @@ export function Navbar() {
           </nav>
 
           {/* Actions */}
-          <div className="flex-1 flex items-center justify-end md:justify-end gap-3 md:gap-5 order-1 md:order-3 text-black">
-            <button className="p-2 hover:opacity-70 transition-opacity">
+          <div className="order-1 flex min-w-0 flex-1 items-center justify-end gap-0 text-black md:gap-1 lg:order-3 lg:gap-3 xl:gap-5">
+            <button aria-label="Search" className="min-h-11 min-w-11 p-2 transition-opacity hover:opacity-70">
               <Search className="h-5 w-5" />
             </button>
-            <Link href="/account" className="p-2 hover:opacity-70 transition-opacity">
+            <Link href="/account" aria-label="Account" className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 transition-opacity hover:opacity-70">
               <User className="h-5 w-5" />
             </Link>
-            <Link href="/cart" className="p-2 hover:opacity-70 transition-opacity relative">
+            <Link href="/cart" aria-label="Cart" className="relative inline-flex min-h-11 min-w-11 items-center justify-center p-2 transition-opacity hover:opacity-70">
               <ShoppingBag className="h-5 w-5" />
               {cartItemCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[0.6rem] font-bold text-white">
+                <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[0.6rem] font-bold text-white rtl:left-0.5 rtl:right-auto">
                   {cartItemCount}
                 </span>
               )}
@@ -135,19 +150,19 @@ export function Navbar() {
 
         {/* Mobile Menu */}
         {isOpen && (
-          <div className="md:hidden border-t bg-white absolute top-full left-0 w-full shadow-lg">
-            <nav className="flex flex-col p-4 space-y-4">
+          <div className="absolute inset-x-0 top-full z-40 max-h-[calc(100dvh-5rem)] overflow-y-auto border-t bg-white shadow-lg lg:hidden">
+            <nav className="flex flex-col gap-2 p-4">
               {navLinks.map((link) => (
                 <div key={link.href}>
                   <Link href={link.href}>
-                    <span onClick={() => setIsOpen(false)} className={`text-base font-medium transition-colors hover:text-gray-500 cursor-pointer block ${location === link.href ? 'text-gray-500' : 'text-black'}`}>
+                    <span onClick={() => setIsOpen(false)} className={`flex min-h-11 items-center text-base font-medium transition-colors hover:text-gray-500 cursor-pointer ${location === link.href ? 'text-gray-500' : 'text-black'}`}>
                       {t(link.ar, link.en)}
                     </span>
                   </Link>
                   {link.children && (
-                    <div className="mt-3 space-y-3 border-r border-gray-200 pr-4 text-sm text-gray-600">
+                    <div className="mt-1 space-y-1 border-r border-gray-200 pr-4 text-sm text-gray-600">
                       {link.children.map((child) => (
-                        <Link key={child.href} href={child.href} onClick={() => setIsOpen(false)}>
+                        <Link key={child.href} href={child.href} onClick={() => setIsOpen(false)} className="flex min-h-10 items-center break-words">
                           {t(child.ar, child.en)}
                         </Link>
                       ))}
@@ -155,7 +170,7 @@ export function Navbar() {
                   )}
                 </div>
               ))}
-              <div className="pt-4 border-t flex justify-between items-center text-sm text-gray-500">
+              <div className="mt-2 flex min-w-0 items-center justify-between gap-4 border-t pt-4 text-sm text-gray-500">
                 <a href="mailto:info@muskellolo.com">info@muskellolo.com</a>
                 <button onClick={() => { toggleLang(); setIsOpen(false); }}>
                   {lang === 'ar' ? 'English' : 'العربية'}
