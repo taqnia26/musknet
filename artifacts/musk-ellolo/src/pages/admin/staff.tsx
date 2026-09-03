@@ -32,11 +32,17 @@ const permissionModuleLabels: Record<string, { ar: string; en: string }> = {
   products: { ar: 'المنتجات', en: 'Products' },
   categories: { ar: 'الأقسام', en: 'Categories' },
   orders: { ar: 'الطلبات', en: 'Orders' },
+  invoices: { ar: 'الفواتير', en: 'Invoices' },
   coupons: { ar: 'الكوبونات', en: 'Coupons' },
   customers: { ar: 'العملاء', en: 'Customers' },
   inventory: { ar: 'المخزون', en: 'Inventory' },
   distributors: { ar: 'الموزعين', en: 'Distributors' },
   staff: { ar: 'فريق العمل', en: 'Staff' },
+  hr: { ar: 'الموارد البشرية', en: 'Human Resources' },
+  finance: { ar: 'المالية', en: 'Finance' },
+  accounting: { ar: 'المحاسبة', en: 'Accounting' },
+  manufacturing: { ar: 'التصنيع', en: 'Manufacturing' },
+  exhibitions: { ar: 'المعارض', en: 'Exhibitions' },
 };
 
 const permissionActionLabels: Record<string, { ar: string; en: string }> = {
@@ -44,9 +50,10 @@ const permissionActionLabels: Record<string, { ar: string; en: string }> = {
   edit: { ar: 'تعديل', en: 'Edit' },
   delete: { ar: 'حذف', en: 'Delete' },
 };
+const permissionActionOrder: Record<string, number> = { view: 0, edit: 1, delete: 2 };
 
 export default function AdminStaff() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -156,6 +163,19 @@ export default function AdminStaff() {
   }
 
   const filteredStaff = staff?.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.email.toLowerCase().includes(search.toLowerCase()));
+  const groupedPermissions = (permissions ?? []).reduce((groups, permission) => {
+    (groups[permission.module] ??= []).push(permission);
+    return groups;
+  }, {} as Record<string, NonNullable<typeof permissions>>);
+  const permissionModules = Object.keys(groupedPermissions).sort((a, b) => {
+    const moduleNames = Object.keys(permissionModuleLabels);
+    const aIndex = moduleNames.indexOf(a);
+    const bIndex = moduleNames.indexOf(b);
+    if (aIndex === -1 && bIndex === -1) return a.localeCompare(b);
+    if (aIndex === -1) return 1;
+    if (bIndex === -1) return -1;
+    return aIndex - bIndex;
+  });
 
   return (
     <div className="space-y-6">
@@ -171,7 +191,10 @@ export default function AdminStaff() {
               {t('إضافة مستخدم', 'Add User')}
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent
+            dir={lang === 'ar' ? 'rtl' : 'ltr'}
+            className="max-h-[90vh] max-w-3xl overflow-y-auto"
+          >
             <DialogHeader>
               <DialogTitle>{editingId ? t('تعديل مستخدم', 'Edit User') : t('إضافة مستخدم', 'Add User')}</DialogTitle>
             </DialogHeader>
@@ -207,41 +230,61 @@ export default function AdminStaff() {
 
                 {!form.watch('isSuperAdmin') && permissions && (
                   <div className="pt-4 border-t mt-4">
-                    <div className="text-sm font-medium mb-4">{t('الصلاحيات', 'Permissions')}</div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {permissions.map((perm) => (
-                        <FormField
-                          key={perm.id}
-                          control={form.control}
-                          name="permissionIds"
-                          render={({ field }) => {
-                            return (
-                              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rtl:space-x-reverse">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value?.includes(perm.id)}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...field.value, perm.id])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== perm.id
-                                            )
-                                          )
-                                    }}
-                                  />
-                                </FormControl>
-                                <FormLabel className="font-normal cursor-pointer text-xs">
-                                  {t(
-                                    `${permissionModuleLabels[perm.module]?.ar ?? perm.module} - ${permissionActionLabels[perm.action]?.ar ?? perm.action}`,
-                                    `${permissionModuleLabels[perm.module]?.en ?? perm.module} - ${permissionActionLabels[perm.action]?.en ?? perm.action}`,
+                    <div className="mb-3">
+                      <div className="text-sm font-semibold text-foreground">{t('الصلاحيات حسب القسم', 'Permissions by section')}</div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {t('اختر الإجراء المطلوب داخل كل قسم رئيسي', 'Choose the required actions inside each main section')}
+                      </p>
+                    </div>
+                    <div className="max-h-[46vh] space-y-3 overflow-y-auto pe-1">
+                      {permissionModules.map((module) => {
+                        const modulePermissions = [...groupedPermissions[module]].sort(
+                          (a, b) => (permissionActionOrder[a.action] ?? 99) - (permissionActionOrder[b.action] ?? 99),
+                        );
+                        const moduleLabel = permissionModuleLabels[module];
+                        return (
+                          <section key={module} className="rounded-xl border border-border/80 bg-muted/20 p-3">
+                            <div className="mb-3 flex items-center justify-between gap-3 border-b border-border/60 pb-2">
+                              <h3 className="text-sm font-bold text-foreground">
+                                {moduleLabel
+                                  ? t(moduleLabel.ar, moduleLabel.en)
+                                  : module}
+                              </h3>
+                              <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                {modulePermissions.length} {t('صلاحيات', 'permissions')}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                              {modulePermissions.map((perm) => (
+                                <FormField
+                                  key={perm.id}
+                                  control={form.control}
+                                  name="permissionIds"
+                                  render={({ field }) => (
+                                    <FormItem className="flex min-h-10 flex-row items-center gap-3 space-y-0 rounded-lg border border-border/60 bg-background/70 px-3 py-2 transition-colors hover:bg-background">
+                                      <FormControl>
+                                        <Checkbox
+                                          checked={field.value?.includes(perm.id)}
+                                          onCheckedChange={(checked) => (
+                                            checked
+                                              ? field.onChange([...field.value, perm.id])
+                                              : field.onChange(field.value?.filter((value) => value !== perm.id))
+                                          )}
+                                        />
+                                      </FormControl>
+                                      <FormLabel className="cursor-pointer text-sm font-medium">
+                                        {permissionActionLabels[perm.action]
+                                          ? t(permissionActionLabels[perm.action].ar, permissionActionLabels[perm.action].en)
+                                          : perm.action}
+                                      </FormLabel>
+                                    </FormItem>
                                   )}
-                                </FormLabel>
-                              </FormItem>
-                            )
-                          }}
-                        />
-                      ))}
+                                />
+                              ))}
+                            </div>
+                          </section>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

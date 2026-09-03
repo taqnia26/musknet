@@ -177,11 +177,15 @@ export default function AdminOrders() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-                        <DialogHeader className="px-6 py-4 border-b">
-                          <DialogTitle className="flex items-center gap-2 text-xl">
+                      <DialogContent
+                        dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                        className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden"
+                      >
+                        <DialogHeader className={`px-6 py-4 border-b ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                          <DialogTitle className="flex min-w-0 w-full items-center gap-2 pe-10 text-start text-xl">
                             <ShoppingBag className="h-5 w-5 text-primary" />
-                            {t('تفاصيل الطلب', 'Order Details')} <span className="text-muted-foreground">#{order.orderNumber}</span>
+                            <span className="min-w-0 flex-1 break-words">{t('تفاصيل الطلب', 'Order Details')}</span>
+                            <span dir="ltr" className="shrink-0 text-base text-muted-foreground">#{order.orderNumber}</span>
                           </DialogTitle>
                         </DialogHeader>
                         
