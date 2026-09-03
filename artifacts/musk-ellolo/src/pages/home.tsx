@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { Link } from 'wouter';
 
@@ -5,6 +6,40 @@ const siteAsset = (filename: string) => `${import.meta.env.BASE_URL}site-assets/
 
 export default function Home() {
   const { t } = useLanguage();
+  const secondVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = secondVideoRef.current;
+
+    if (!video || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry) {
+          return;
+        }
+
+        if (entry.isIntersecting) {
+          video.muted = true;
+          video.play().catch(() => {
+            // Autoplay can be blocked by the browser; keep the page error-free.
+          });
+        } else {
+          video.pause();
+        }
+      },
+      { threshold: 0.25 },
+    );
+
+    observer.observe(video);
+
+    return () => {
+      observer.disconnect();
+      video.pause();
+    };
+  }, []);
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-white">
@@ -96,14 +131,13 @@ export default function Home() {
       {/* Second Video Section */}
       <section className="relative w-full aspect-video mb-16 overflow-hidden bg-black">
         <video 
+          ref={secondVideoRef}
           className="absolute inset-0 block w-full h-full object-cover" 
           width="1280"
           height="720"
-          autoPlay 
           muted 
           loop 
           playsInline 
-          controls
           preload="metadata"
           poster={siteAsset('second-video-poster.jpg')}
         >
