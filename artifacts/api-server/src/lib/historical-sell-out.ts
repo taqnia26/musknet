@@ -59,9 +59,18 @@ export type HistoricalSellOutAnalysis = {
   };
   itemMaster: {
     expectedItems: number;
+    scannedRows: number;
+    populatedRows: number;
+    emptyRows: number;
     actualItems: number;
     duplicateBarcodes: string[];
     conflictingBarcodes: string[];
+    items: Array<{
+      excelRow: number;
+      barcode: string;
+      description: string;
+      priceWithVat: string;
+    }>;
   };
   storefront: {
     products: number;
@@ -253,17 +262,21 @@ export function analyzeHistoricalSellOutWorkbook(
   const itemMaster = new Map<string, { description: string; priceWithVat: string; excelRow: number }>();
   const duplicateBarcodes = new Set<string>();
   const conflictingBarcodes = new Set<string>();
+  const scannedItemMasterRows = Math.max(0, itemMasterSheet.rowCount - itemHeaderRow);
+  let populatedItemMasterRows = 0;
   for (let rowNumber = itemHeaderRow + 1; rowNumber <= itemMasterSheet.rowCount; rowNumber += 1) {
     const row = itemMasterSheet.getRow(rowNumber);
-    const barcode = normalizeBarcode(unwrappedValue(row.getCell(1)));
-    const priceValue = unwrappedValue(row.getCell(5));
-    if (!barcode && displayValue(priceValue) === "") continue;
+    const values = Array.from({ length: 5 }, (_, index) => unwrappedValue(row.getCell(index + 1)));
+    if (values.every((value) => displayValue(value) === "")) continue;
+    populatedItemMasterRows += 1;
+    const barcode = normalizeBarcode(values[0]);
+    const priceValue = values[4];
     if (!barcode) throw new Error(`Item Master row ${rowNumber} has a price but no valid barcode`);
     if (displayValue(priceValue) === "") throw new Error(`Item Master row ${rowNumber} barcode ${barcode} has no RSP With VAT`);
     const priceWithVat = decimalText(priceValue);
     if (scaledMoney(priceWithVat) <= 0n) throw new Error(`Item Master row ${rowNumber} barcode ${barcode} has a non-positive RSP With VAT`);
     const item = {
-      description: displayValue(unwrappedValue(row.getCell(2))),
+      description: displayValue(values[1]),
       priceWithVat,
       excelRow: rowNumber,
     };
@@ -393,7 +406,10 @@ export function analyzeHistoricalSellOutWorkbook(
 
   const blockingIssues: string[] = [];
   if (itemMaster.size !== expectedItems) {
-    blockingIssues.push(`Item Master contains ${itemMaster.size} unique products; ${expectedItems} were expected`);
+    blockingIssues.push(
+      `Item Master has ${populatedItemMasterRows} populated row(s) and ${itemMaster.size} unique product(s) `
+      + `across ${scannedItemMasterRows} row position(s); ${expectedItems} unique products were expected`,
+    );
   }
   if (conflictingBarcodes.size) {
     blockingIssues.push(`Item Master has conflicting RSP With VAT values for ${conflictingBarcodes.size} barcode(s)`);
@@ -427,9 +443,15 @@ export function analyzeHistoricalSellOutWorkbook(
     },
     itemMaster: {
       expectedItems,
+      scannedRows: scannedItemMasterRows,
+      populatedRows: populatedItemMasterRows,
+      emptyRows: scannedItemMasterRows - populatedItemMasterRows,
       actualItems: itemMaster.size,
       duplicateBarcodes: [...duplicateBarcodes].sort(),
       conflictingBarcodes: [...conflictingBarcodes].sort(),
+      items: [...itemMaster.entries()]
+        .map(([barcode, item]) => ({ barcode, ...item }))
+        .sort((left, right) => left.excelRow - right.excelRow),
     },
     storefront: {
       products: options.storefrontProductCount,

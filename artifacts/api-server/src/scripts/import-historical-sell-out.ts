@@ -120,7 +120,10 @@ function renderReport(
 - صفوف المنتجات التفصيلية: **${analysis.workbook.detailRows}**
 - صفوف الإجماليات/الملخصات المستبعدة: **${analysis.workbook.summaryRowsExcluded}**
 - الأشهر: ${analysis.workbook.monthlyColumns.join("، ")}
-- منتجات Item Master الفعلية: **${analysis.itemMaster.actualItems}** من **${analysis.itemMaster.expectedItems}** متوقعة
+- مواضع الصفوف المفحوصة في Item Master بعد الرأس: **${analysis.itemMaster.scannedRows}**
+- صفوف Item Master المملوءة فعلياً: **${analysis.itemMaster.populatedRows}**
+- صفوف Item Master المنسقة والفارغة: **${analysis.itemMaster.emptyRows}**
+- منتجات Item Master الفريدة ذات الباركود: **${analysis.itemMaster.actualItems}** من **${analysis.itemMaster.expectedItems}** متوقعة
 - منتجات المتجر: **${analysis.storefront.products}**
 - منتجات المتجر ذات SKU/باركود: **${analysis.storefront.productsWithBarcode}**
 

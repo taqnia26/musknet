@@ -77,4 +77,35 @@ describe("historical Sell-Out import planning", () => {
       "missing_storefront_barcode",
     ]);
   });
+
+  it("reads all 85 populated Item Master rows instead of stopping after ten", () => {
+    const workbook = workbookFixture();
+    const items = workbook.getWorksheet("Item Master")!;
+    for (let index = 2; index <= 85; index += 1) {
+      items.addRow([
+        String(6_287_000_000_001 + index - 1),
+        `Test perfume ${index}`,
+        "Perfume",
+        "100",
+        "115",
+      ]);
+    }
+
+    const analysis = analyzeHistoricalSellOutWorkbook(
+      workbook,
+      { fileName: "fixture.xlsm", sha256: "c".repeat(64), fingerprint: "c".repeat(24) },
+      {
+        expectedItemMasterCount: 85,
+        storefrontBarcodes: new Set(["6287000000001"]),
+        storefrontProductCount: 1,
+      },
+    );
+
+    expect(analysis.itemMaster).toMatchObject({
+      scannedRows: 85,
+      populatedRows: 85,
+      emptyRows: 0,
+      actualItems: 85,
+    });
+  });
 });
