@@ -106,6 +106,14 @@ const navStructure = [
     labelEn: 'B2B', labelAr: 'الجملة B2B', icon: Warehouse, module: 'distributors',
     children: [
       { href: '/admin/distributors', labelEn: 'Distributors', labelAr: 'الموزعين' },
+      { href: '/admin/contracts', labelEn: 'Contracts', labelAr: 'العقود', module: 'contracts' },
+      { href: '/admin/distributor-catalog', labelEn: 'B2B Catalog', labelAr: 'كتالوج الجملة', module: 'distributors' },
+    ]
+  },
+  {
+    labelEn: 'Storefront', labelAr: 'واجهة المتجر', icon: Globe, module: 'site-content',
+    children: [
+      { href: '/admin/site-content', labelEn: 'Site Content', labelAr: 'محتوى الموقع' },
     ]
   },
   {
@@ -243,7 +251,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-3 px-6 py-8">
           <div className="flex min-w-0 flex-col items-start gap-2">
             <img
-              src="/site-assets/admin-wordmark.png"
+              src="/site-assets/admin-wordmark-brandguide.png"
               alt="Musk Ellolo"
               className="h-auto max-h-12 w-full max-w-[205px] object-contain object-left dark:invert"
             />
@@ -298,7 +306,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                 <div className="flex items-center gap-3 px-6 py-8 border-b border-border dark:border-white/10">
                   <div className="flex min-w-0 flex-col items-start gap-2">
                     <img
-                      src="/site-assets/admin-wordmark.png"
+                      src="/site-assets/admin-wordmark-brandguide.png"
                       alt="Musk Ellolo"
                       className="h-auto max-h-10 w-full max-w-[190px] object-contain object-left dark:invert"
                     />
@@ -335,7 +343,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               </SheetContent>
             </Sheet>
             <img
-              src="/site-assets/admin-wordmark.png"
+              src="/site-assets/admin-wordmark-brandguide.png"
               alt="Musk Ellolo"
               className="ms-2 h-7 w-36 object-contain object-left dark:invert"
             />

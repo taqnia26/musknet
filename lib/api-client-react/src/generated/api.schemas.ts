@@ -487,6 +487,263 @@ export interface AdminIntegrationInput {
   apiBaseUrl?: string | null;
 }
 
+export type DistributorContractStatus = typeof DistributorContractStatus[keyof typeof DistributorContractStatus];
+
+
+export const DistributorContractStatus = {
+  draft: 'draft',
+  seller_signed: 'seller_signed',
+  sent: 'sent',
+  final: 'final',
+  cancelled: 'cancelled',
+} as const;
+
+export interface DistributorContract {
+  id: number;
+  contractNumber: string;
+  /** @nullable */
+  distributorId?: number | null;
+  contractType: string;
+  status: DistributorContractStatus;
+  /** @nullable */
+  contractDate?: string | null;
+  /** @nullable */
+  hijriDateStr?: string | null;
+  /** @nullable */
+  gregorianDateStr?: string | null;
+  /** @nullable */
+  contractDayName?: string | null;
+  sellerName: string;
+  sellerCrNumber: string;
+  sellerCrDate: string;
+  sellerCrIssuer: string;
+  sellerAddress: string;
+  sellerRepName: string;
+  sellerRepTitle: string;
+  buyerCompanyName: string;
+  /** @nullable */
+  buyerCrNumber?: string | null;
+  /** @nullable */
+  buyerCrDate?: string | null;
+  /** @nullable */
+  buyerCrIssuer?: string | null;
+  /** @nullable */
+  buyerNeighborhood?: string | null;
+  /** @nullable */
+  buyerCity?: string | null;
+  /** @nullable */
+  buyerPoBox?: string | null;
+  /** @nullable */
+  buyerPostalCode?: string | null;
+  /** @nullable */
+  buyerRepName?: string | null;
+  /** @nullable */
+  buyerRepTitle?: string | null;
+  /** @nullable */
+  buyerEmail?: string | null;
+  /** @nullable */
+  buyerPhone?: string | null;
+  /** @nullable */
+  showroomName?: string | null;
+  /** @nullable */
+  showroomLocation?: string | null;
+  /** @nullable */
+  showroomCity?: string | null;
+  marginPercent?: string;
+  minOrderValue?: string;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  endDate?: string | null;
+  vatRate?: string;
+  latePaymentWeeklyRate?: string;
+  latePaymentCapRate?: string;
+  inspectionDays?: number;
+  warrantyMonths?: number;
+  deliveryDays?: number;
+  paymentDays?: number;
+  products: unknown[];
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  sellerSignaturePath?: string | null;
+  /** @nullable */
+  sellerSignedAt?: string | null;
+  /** @nullable */
+  buyerSignaturePath?: string | null;
+  /** @nullable */
+  buyerSignedAt?: string | null;
+  /** @nullable */
+  buyerSignedName?: string | null;
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DistributorContractInput {
+  /** @nullable */
+  contractNumber?: string | null;
+  /** @nullable */
+  distributorId?: number | null;
+  /** @minLength 1 */
+  contractType: string;
+  /** @nullable */
+  contractDate?: string | null;
+  /** @nullable */
+  hijriDateStr?: string | null;
+  /** @nullable */
+  gregorianDateStr?: string | null;
+  /** @nullable */
+  contractDayName?: string | null;
+  /** @minLength 1 */
+  sellerName: string;
+  /** @minLength 1 */
+  sellerCrNumber: string;
+  /** @minLength 1 */
+  sellerCrDate: string;
+  /** @minLength 1 */
+  sellerCrIssuer: string;
+  /** @minLength 1 */
+  sellerAddress: string;
+  /** @minLength 1 */
+  sellerRepName: string;
+  /** @minLength 1 */
+  sellerRepTitle: string;
+  /** @minLength 1 */
+  buyerCompanyName: string;
+  /** @nullable */
+  buyerCrNumber?: string | null;
+  /** @nullable */
+  buyerCrDate?: string | null;
+  /** @nullable */
+  buyerCrIssuer?: string | null;
+  /** @nullable */
+  buyerNeighborhood?: string | null;
+  /** @nullable */
+  buyerCity?: string | null;
+  /** @nullable */
+  buyerPoBox?: string | null;
+  /** @nullable */
+  buyerPostalCode?: string | null;
+  /** @nullable */
+  buyerRepName?: string | null;
+  /** @nullable */
+  buyerRepTitle?: string | null;
+  /** @nullable */
+  buyerEmail?: string | null;
+  /** @nullable */
+  buyerPhone?: string | null;
+  /** @nullable */
+  showroomName?: string | null;
+  /** @nullable */
+  showroomLocation?: string | null;
+  /** @nullable */
+  showroomCity?: string | null;
+  marginPercent?: string;
+  minOrderValue?: string;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  endDate?: string | null;
+  vatRate?: string;
+  latePaymentWeeklyRate?: string;
+  latePaymentCapRate?: string;
+  inspectionDays?: number;
+  warrantyMonths?: number;
+  deliveryDays?: number;
+  paymentDays?: number;
+  products?: unknown[];
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type DistributorContractUpdate = DistributorContractInput;
+
+export interface ContractSignatureInput {
+  /** @minLength 1 */
+  signaturePath: string;
+}
+
+export type ContractSignatureUploadInputContentType = typeof ContractSignatureUploadInputContentType[keyof typeof ContractSignatureUploadInputContentType];
+
+
+export const ContractSignatureUploadInputContentType = {
+  'image/png': 'image/png',
+  'image/jpeg': 'image/jpeg',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface ContractSignatureUploadInput {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 2097152
+     */
+  size: number;
+  contentType: ContractSignatureUploadInputContentType;
+}
+
+export interface ContractSignatureUpload {
+  uploadUrl: string;
+  objectPath: string;
+}
+
+export interface PublicContractSignatureInput {
+  /** @minLength 1 */
+  signaturePath: string;
+  /** @minLength 1 */
+  buyerSignedName: string;
+}
+
+export interface ContractSendResponse {
+  contract: DistributorContract;
+  signingToken: string;
+  signingUrl: string;
+}
+
+export interface SiteContent {
+  id: number;
+  key: string;
+  data: unknown;
+  updatedAt: string;
+  /** @nullable */
+  updatedBy?: string | null;
+}
+
+export type SiteContentUpsertItemsItem = {
+  /** @minLength 1 */
+  key: string;
+  data: unknown;
+};
+
+export interface SiteContentUpsert {
+  items: SiteContentUpsertItemsItem[];
+}
+
+export interface DistributorCatalogSetting {
+  id: number;
+  nameAr: string;
+  nameEn: string;
+  showOnDistributors: boolean;
+  /** @nullable */
+  distributorNameOverride?: string | null;
+  /** @nullable */
+  distributorImageOverride?: string | null;
+}
+
+export interface DistributorCatalogUpdate {
+  productId: number;
+  showOnDistributors: boolean;
+  /** @nullable */
+  distributorNameOverride?: string | null;
+  /** @nullable */
+  distributorImageOverride?: string | null;
+}
+
 export interface AdminProductImage {
   url: string;
   alt: string;
@@ -511,6 +768,11 @@ export interface AdminProduct {
   isActive: boolean;
   isFeatured: boolean;
   isBestseller: boolean;
+  showOnDistributors?: boolean;
+  /** @nullable */
+  distributorNameOverride?: string | null;
+  /** @nullable */
+  distributorImageOverride?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -569,6 +831,11 @@ export interface AdminProductInput {
   isActive?: boolean;
   isFeatured?: boolean;
   isBestseller?: boolean;
+  showOnDistributors?: boolean;
+  /** @nullable */
+  distributorNameOverride?: string | null;
+  /** @nullable */
+  distributorImageOverride?: string | null;
 }
 
 export interface AdminProductUpdate {
@@ -595,6 +862,11 @@ export interface AdminProductUpdate {
   isActive?: boolean;
   isFeatured?: boolean;
   isBestseller?: boolean;
+  showOnDistributors?: boolean;
+  /** @nullable */
+  distributorNameOverride?: string | null;
+  /** @nullable */
+  distributorImageOverride?: string | null;
   images?: AdminProductImage[];
   notes?: FragranceNote[];
 }
@@ -1638,6 +1910,10 @@ export const ListProductsSort = {
   price_desc: 'price_desc',
   newest: 'newest',
 } as const;
+
+export type AdminListContractsParams = {
+search?: AdminSearchParameter;
+};
 
 export type GetAdminAnalyticsDashboardParams = {
 rangeDays?: GetAdminAnalyticsDashboardRangeDays;

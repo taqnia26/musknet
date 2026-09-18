@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { randomBytes } from "node:crypto";
 import { and, count, desc, eq, gte, ilike, inArray, lt, lte, or, sql, sum } from "drizzle-orm";
 import QRCode from "qrcode";
 import * as Api from "@workspace/api-zod";
@@ -31,6 +32,8 @@ import {
   accountingAccountsTable,
   journalEntriesTable,
   journalEntryLinesTable,
+  distributorContractsTable,
+  siteContentTable,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -54,6 +57,7 @@ import {
   trialBalance,
 } from "../lib/accounting";
 import { ObjectStorageService } from "../lib/object-storage";
+import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -176,6 +180,147 @@ router.get("/admin/dashboard", permit("dashboard", "view"), route(async (_req, r
     revenue: Number(revenue.value ?? 0), orders: orders.value, customers: customers.value, products: products.value,
     lowStock: lowStock.value, pendingOrders: pending.value, activeCoupons: coupons.value, distributors: distributors.value,
   }));
+}));
+
+const contractPublic = (row: typeof distributorContractsTable.$inferSelect) => row;
+const contractNumber = () => `DC-${new Date().getUTCFullYear()}-${randomBytes(5).toString("hex").toUpperCase()}`;
+const safeSignaturePath = (value: string) => value.startsWith("/objects/") && !value.includes("..");
+
+router.get("/admin/contracts", permit("contracts", "view"), route(async (req, res) => {
+  const query = parse(Api.AdminListContractsQueryParams, req.query, res); if (!query) return;
+  let rows = await db.select().from(distributorContractsTable).orderBy(desc(distributorContractsTable.createdAt));
+  if (query.search) {
+    const needle = query.search.toLowerCase();
+    rows = rows.filter((row) => row.contractNumber.toLowerCase().includes(needle) || row.buyerCompanyName.toLowerCase().includes(needle));
+  }
+  res.json(Api.AdminListContractsResponse.parse(rows.map(contractPublic)));
+}));
+router.post("/admin/contracts", permit("contracts", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateContractBody, req.body, res); if (!body) return;
+  if (body.distributorId != null) {
+    const [distributor] = await db.select({ id: wholesaleDistributorsTable.id }).from(wholesaleDistributorsTable)
+      .where(eq(wholesaleDistributorsTable.id, body.distributorId)).limit(1);
+    if (!distributor) { res.status(400).json({ error: "Distributor not found" }); return; }
+  }
+  const [row] = await db.insert(distributorContractsTable).values({
+    ...body,
+    contractNumber: body.contractNumber?.trim() || contractNumber(),
+    createdBy: res.locals.admin.id,
+    products: body.products ?? [],
+  }).returning();
+  res.status(201).json(Api.AdminCreateContractResponse.parse(contractPublic(row)));
+}));
+router.get("/admin/contracts/:id", permit("contracts", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminGetContractParams, req.params, res); if (!params) return;
+  const [row] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Contract not found" }); return; }
+  res.json(Api.AdminGetContractResponse.parse(contractPublic(row)));
+}));
+router.post("/admin/contracts/signatures/upload-url", permit("contracts", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminRequestContractSignatureUploadBody, req.body, res); if (!body) return;
+  const upload = await objectStorage.createPrivateUpload("uploads/contracts/signatures");
+  res.json(Api.AdminRequestContractSignatureUploadResponse.parse(upload));
+}));
+router.patch("/admin/contracts/:id", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateContractParams, req.params, res);
+  const body = parse(Api.AdminUpdateContractBody.partial(), req.body, res); if (!params || !body) return;
+  const [existing] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
+  if (existing.status !== "draft") { res.status(409).json({ error: "Only draft contracts can be edited" }); return; }
+  const { contractNumber: requestedContractNumber, ...contractUpdate } = body;
+  const [row] = await db.update(distributorContractsTable).set({
+    ...contractUpdate,
+    ...(requestedContractNumber ? { contractNumber: requestedContractNumber } : {}),
+  }).where(eq(distributorContractsTable.id, params.id)).returning();
+  res.json(Api.AdminUpdateContractResponse.parse(contractPublic(row)));
+}));
+router.delete("/admin/contracts/:id", permit("contracts", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminDeleteContractParams, req.params, res); if (!params) return;
+  const [existing] = await db.select({ id: distributorContractsTable.id, status: distributorContractsTable.status })
+    .from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
+  if (existing.status !== "draft" && existing.status !== "cancelled") { res.status(409).json({ error: "Only draft or cancelled contracts can be deleted" }); return; }
+  await db.delete(distributorContractsTable).where(eq(distributorContractsTable.id, params.id));
+  res.sendStatus(204);
+}));
+router.post("/admin/contracts/:id/seller-sign", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminSignContractParams, req.params, res);
+  const body = parse(Api.AdminSignContractBody, req.body, res); if (!params || !body) return;
+  if (!safeSignaturePath(body.signaturePath)) { res.status(400).json({ error: "Signature must be a private object path" }); return; }
+  const [existing] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
+  try { assertTransition(existing.status, "seller_signed"); } catch (error) { res.status(409).json({ error: (error as Error).message }); return; }
+  const [row] = await db.update(distributorContractsTable).set({
+    status: "seller_signed", sellerSignaturePath: body.signaturePath, sellerSignedAt: new Date(),
+    sellerSignedByUserId: res.locals.admin.id, sellerSignedBy: res.locals.admin.name, sellerSignedIp: req.ip,
+  }).where(eq(distributorContractsTable.id, params.id)).returning();
+  res.json(Api.AdminSignContractResponse.parse(contractPublic(row)));
+}));
+router.post("/admin/contracts/:id/send", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminSendContractParams, req.params, res); if (!params) return;
+  const [existing] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
+  try { assertTransition(existing.status, "sent"); } catch (error) { res.status(409).json({ error: (error as Error).message }); return; }
+  const signingToken = newContractToken();
+  const [row] = await db.update(distributorContractsTable).set({
+    status: "sent", signingTokenHash: hashContractToken(signingToken),
+    signingTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), sentForSignatureAt: new Date(),
+  }).where(eq(distributorContractsTable.id, params.id)).returning();
+  const base = process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`;
+  res.json(Api.AdminSendContractResponse.parse({ contract: contractPublic(row), signingToken, signingUrl: `${base}/contracts/sign/${signingToken}` }));
+}));
+router.post("/admin/contracts/:id/cancel", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminCancelContractParams, req.params, res); if (!params) return;
+  const [existing] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
+  try { assertTransition(existing.status, "cancelled"); } catch (error) { res.status(409).json({ error: (error as Error).message }); return; }
+  const [row] = await db.update(distributorContractsTable).set({ status: "cancelled", signingTokenHash: null, downloadTokenHash: null }).where(eq(distributorContractsTable.id, params.id)).returning();
+  res.json(Api.AdminCancelContractResponse.parse(contractPublic(row)));
+}));
+router.get("/admin/contracts/:id/pdf", permit("contracts", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminGetContractPdfParams, req.params, res); if (!params) return;
+  const [row] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Contract not found" }); return; }
+  const url = `${process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`}/api/public/contracts/by-token/${row.signingTokenHash ?? row.id}`;
+  const pdf = await createContractPdf(row, url);
+  res.type("application/pdf").setHeader("Content-Disposition", `inline; filename="${row.contractNumber}.pdf"`).send(pdf);
+}));
+
+router.get("/admin/site-content", permit("site-content", "view"), route(async (_req, res) => {
+  const rows = await db.select().from(siteContentTable).orderBy(siteContentTable.key);
+  res.json(Api.AdminListSiteContentResponse.parse(rows));
+}));
+router.put("/admin/site-content", permit("site-content", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminUpsertSiteContentBody, req.body, res); if (!body) return;
+  for (const item of body.items) {
+    await db.insert(siteContentTable).values({ key: item.key, data: item.data, updatedBy: String(res.locals.admin.id) })
+      .onConflictDoUpdate({ target: siteContentTable.key, set: { data: item.data, updatedBy: String(res.locals.admin.id), updatedAt: new Date() } });
+  }
+  const rows = await db.select().from(siteContentTable).orderBy(siteContentTable.key);
+  res.json(Api.AdminUpsertSiteContentResponse.parse(rows));
+}));
+
+router.get("/admin/distributor-catalog", permit("distributors", "view"), route(async (_req, res) => {
+  const rows = await db.select({
+    id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
+    showOnDistributors: productsTable.showOnDistributors, distributorNameOverride: productsTable.distributorNameOverride,
+    distributorImageOverride: productsTable.distributorImageOverride,
+  }).from(productsTable).orderBy(productsTable.id);
+  res.json(Api.AdminListDistributorCatalogResponse.parse(rows));
+}));
+router.patch("/admin/distributor-catalog", permit("distributors", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminUpdateDistributorCatalogBody, req.body, res); if (!body) return;
+  const [row] = await db.update(productsTable).set({
+    showOnDistributors: body.showOnDistributors,
+    distributorNameOverride: body.distributorNameOverride,
+    distributorImageOverride: body.distributorImageOverride,
+  }).where(eq(productsTable.id, body.productId)).returning({
+    id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
+    showOnDistributors: productsTable.showOnDistributors, distributorNameOverride: productsTable.distributorNameOverride,
+    distributorImageOverride: productsTable.distributorImageOverride,
+  });
+  if (!row) { res.status(404).json({ error: "Product not found" }); return; }
+  res.json(Api.AdminUpdateDistributorCatalogResponse.parse(row));
 }));
 
 router.get("/admin/analytics/dashboard", permit("dashboard", "view"), route(async (req, res) => {
@@ -1137,6 +1282,46 @@ router.put("/admin/staff/:id/permissions", superOnly, route(async (req, res) => 
     }
   });
   res.json(Api.AdminSetStaffPermissionsResponse.parse(await publicAdmin(user)));
+}));
+
+router.get("/public/contracts/by-token/:token", route(async (req, res) => {
+  const params = parse(Api.GetPublicContractByTokenParams, req.params, res); if (!params) return;
+  const row = await contractBySigningToken(params.token);
+  if (!row || row.status === "cancelled") { res.status(404).json({ error: "Signing link is invalid or expired" }); return; }
+  res.json(Api.GetPublicContractByTokenResponse.parse(contractPublic(row)));
+}));
+router.post("/public/contracts/by-token/:token/sign", route(async (req, res) => {
+  const params = parse(Api.SignPublicContractParams, req.params, res);
+  const body = parse(Api.SignPublicContractBody, req.body, res); if (!params || !body) return;
+  if (!safeSignaturePath(body.signaturePath)) { res.status(400).json({ error: "Signature must be a private object path" }); return; }
+  const existing = await contractBySigningToken(params.token);
+  if (!existing) { res.status(404).json({ error: "Signing link is invalid or expired" }); return; }
+  try { assertTransition(existing.status, "final"); } catch (error) { res.status(409).json({ error: (error as Error).message }); return; }
+  const downloadToken = newContractToken();
+  const [row] = await db.update(distributorContractsTable).set({
+    status: "final", buyerSignaturePath: body.signaturePath, buyerSignedName: body.buyerSignedName.trim(),
+    buyerSignedAt: new Date(), buyerSignedIp: req.ip, buyerSignedUserAgent: req.get("user-agent") ?? null,
+    signingTokenHash: null, signingTokenExpiresAt: null,
+    downloadTokenHash: hashContractToken(downloadToken), downloadTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+  }).where(eq(distributorContractsTable.id, existing.id)).returning();
+  const base = process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`;
+  res.json({ ...Api.SignPublicContractResponse.parse(contractPublic(row)), downloadToken, downloadUrl: `${base}/api/public/contracts/by-download-token/${downloadToken}/pdf` });
+}));
+router.get("/public/contracts/by-token/:token/pdf", route(async (req, res) => {
+  const params = parse(Api.GetPublicContractPdfParams, req.params, res); if (!params) return;
+  const row = await contractBySigningToken(params.token);
+  if (!row || row.status === "cancelled") { res.status(404).json({ error: "Signing link is invalid or expired" }); return; }
+  const base = process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`;
+  const pdf = await createContractPdf(row, `${base}/api/public/contracts/by-token/${params.token}`);
+  res.type("application/pdf").setHeader("Content-Disposition", `inline; filename="${row.contractNumber}.pdf"`).send(pdf);
+}));
+router.get("/public/contracts/by-download-token/:token/pdf", route(async (req, res) => {
+  const params = parse(Api.DownloadPublicContractPdfParams, req.params, res); if (!params) return;
+  const row = await contractByDownloadToken(params.token);
+  if (!row || row.status !== "final") { res.status(404).json({ error: "Download link is invalid or expired" }); return; }
+  const base = process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`;
+  const pdf = await createContractPdf(row, `${base}/api/public/contracts/by-download-token/${params.token}`);
+  res.type("application/pdf").setHeader("Content-Disposition", `attachment; filename="${row.contractNumber}.pdf"`).send(pdf);
 }));
 
 export default router;

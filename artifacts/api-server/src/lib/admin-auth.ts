@@ -10,7 +10,7 @@ import {
 } from "@workspace/db";
 
 const scrypt = promisify(nodeScrypt);
-const modules = ["dashboard", "products", "categories", "orders", "invoices", "coupons", "customers", "inventory", "distributors", "staff", "hr", "finance", "manufacturing", "exhibitions"];
+const modules = ["dashboard", "products", "categories", "orders", "invoices", "coupons", "customers", "inventory", "distributors", "staff", "hr", "finance", "manufacturing", "exhibitions", "contracts", "site-content"];
 const actions = ["view", "edit", "delete"];
 const permissionSpecs = [
   ...modules.flatMap((module) => actions.map((action) => ({ module, action }))),

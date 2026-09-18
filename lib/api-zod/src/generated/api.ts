@@ -717,6 +717,795 @@ export const GetAdminDashboardResponse = zod.object({
 })
 
 
+export const AdminListContractsQueryParams = zod.object({
+  "search": zod.coerce.string().optional()
+})
+
+export const AdminListContractsResponseItem = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListContractsResponse = zod.array(AdminListContractsResponseItem)
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const AdminCreateContractBody = zod.object({
+  "contractNumber": zod.string().nullish(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string().min(1),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string().min(1),
+  "sellerCrNumber": zod.string().min(1),
+  "sellerCrDate": zod.string().min(1),
+  "sellerCrIssuer": zod.string().min(1),
+  "sellerAddress": zod.string().min(1),
+  "sellerRepName": zod.string().min(1),
+  "sellerRepTitle": zod.string().min(1),
+  "buyerCompanyName": zod.string().min(1),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()).optional(),
+  "notes": zod.string().nullish()
+})
+
+export const AdminCreateContractResponse = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminGetContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminGetContractResponse = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+
+
+
+
+
+
+export const AdminUpdateContractBody = zod.object({
+  "contractNumber": zod.string().nullish(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string().min(1),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string().min(1),
+  "sellerCrNumber": zod.string().min(1),
+  "sellerCrDate": zod.string().min(1),
+  "sellerCrIssuer": zod.string().min(1),
+  "sellerAddress": zod.string().min(1),
+  "sellerRepName": zod.string().min(1),
+  "sellerRepTitle": zod.string().min(1),
+  "buyerCompanyName": zod.string().min(1),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()).optional(),
+  "notes": zod.string().nullish()
+})
+
+export const AdminUpdateContractResponse = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminDeleteContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDeleteContractResponse = zod.void()
+
+
+export const AdminSignContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const AdminSignContractBody = zod.object({
+  "signaturePath": zod.string().min(1)
+})
+
+export const AdminSignContractResponse = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const adminRequestContractSignatureUploadBodyNameMax = 255;
+
+export const adminRequestContractSignatureUploadBodySizeMax = 2097152;
+
+
+
+export const AdminRequestContractSignatureUploadBody = zod.object({
+  "name": zod.string().min(1).max(adminRequestContractSignatureUploadBodyNameMax),
+  "size": zod.number().min(1).max(adminRequestContractSignatureUploadBodySizeMax),
+  "contentType": zod.enum(['image/png', 'image/jpeg', 'image/webp'])
+})
+
+export const AdminRequestContractSignatureUploadResponse = zod.object({
+  "uploadUrl": zod.string(),
+  "objectPath": zod.string()
+})
+
+
+export const AdminSendContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminSendContractResponse = zod.object({
+  "contract": zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "signingToken": zod.string(),
+  "signingUrl": zod.string()
+})
+
+
+export const AdminCancelContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminCancelContractResponse = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminGetContractPdfParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminGetContractPdfResponse = zod.unknown()
+
+
+export const AdminListSiteContentResponseItem = zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "data": zod.unknown(),
+  "updatedAt": zod.coerce.date(),
+  "updatedBy": zod.string().nullish()
+})
+export const AdminListSiteContentResponse = zod.array(AdminListSiteContentResponseItem)
+
+
+
+
+
+export const AdminUpsertSiteContentBody = zod.object({
+  "items": zod.array(zod.object({
+  "key": zod.string().min(1),
+  "data": zod.unknown()
+}))
+})
+
+export const AdminUpsertSiteContentResponseItem = zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "data": zod.unknown(),
+  "updatedAt": zod.coerce.date(),
+  "updatedBy": zod.string().nullish()
+})
+export const AdminUpsertSiteContentResponse = zod.array(AdminUpsertSiteContentResponseItem)
+
+
+export const AdminListDistributorCatalogResponseItem = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "showOnDistributors": zod.boolean(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish()
+})
+export const AdminListDistributorCatalogResponse = zod.array(AdminListDistributorCatalogResponseItem)
+
+
+export const AdminUpdateDistributorCatalogBody = zod.object({
+  "productId": zod.number(),
+  "showOnDistributors": zod.boolean(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish()
+})
+
+export const AdminUpdateDistributorCatalogResponse = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "showOnDistributors": zod.boolean(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish()
+})
+
+
+export const getPublicContractByTokenPathTokenMin = 32;
+
+
+
+export const GetPublicContractByTokenParams = zod.object({
+  "token": zod.coerce.string().min(getPublicContractByTokenPathTokenMin)
+})
+
+export const GetPublicContractByTokenResponse = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const signPublicContractPathTokenMin = 32;
+
+
+
+export const SignPublicContractParams = zod.object({
+  "token": zod.coerce.string().min(signPublicContractPathTokenMin)
+})
+
+
+
+
+
+export const SignPublicContractBody = zod.object({
+  "signaturePath": zod.string().min(1),
+  "buyerSignedName": zod.string().min(1)
+})
+
+export const SignPublicContractResponse = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.string(),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const getPublicContractPdfPathTokenMin = 32;
+
+
+
+export const GetPublicContractPdfParams = zod.object({
+  "token": zod.coerce.string().min(getPublicContractPdfPathTokenMin)
+})
+
+export const GetPublicContractPdfResponse = zod.unknown()
+
+
+export const downloadPublicContractPdfPathTokenMin = 32;
+
+
+
+export const DownloadPublicContractPdfParams = zod.object({
+  "token": zod.coerce.string().min(downloadPublicContractPdfPathTokenMin)
+})
+
+export const DownloadPublicContractPdfResponse = zod.unknown()
+
+
 export const getAdminAnalyticsDashboardQueryRangeDaysDefault = 30;
 
 export const GetAdminAnalyticsDashboardQueryParams = zod.object({
@@ -854,6 +1643,9 @@ export const AdminListProductsResponseItem = zod.object({
   "isActive": zod.boolean(),
   "isFeatured": zod.boolean(),
   "isBestseller": zod.boolean(),
+  "showOnDistributors": zod.boolean().optional(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -892,7 +1684,10 @@ export const AdminCreateProductBody = zod.object({
   "sku": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "isFeatured": zod.boolean().optional(),
-  "isBestseller": zod.boolean().optional()
+  "isBestseller": zod.boolean().optional(),
+  "showOnDistributors": zod.boolean().optional(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish()
 })
 
 export const AdminCreateProductResponse = zod.object({
@@ -919,6 +1714,9 @@ export const AdminCreateProductResponse = zod.object({
   "isActive": zod.boolean(),
   "isFeatured": zod.boolean(),
   "isBestseller": zod.boolean(),
+  "showOnDistributors": zod.boolean().optional(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -971,6 +1769,9 @@ export const AdminGetProductResponse = zod.object({
   "isActive": zod.boolean(),
   "isFeatured": zod.boolean(),
   "isBestseller": zod.boolean(),
+  "showOnDistributors": zod.boolean().optional(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -1005,6 +1806,9 @@ export const AdminUpdateProductBody = zod.object({
   "isActive": zod.boolean().optional(),
   "isFeatured": zod.boolean().optional(),
   "isBestseller": zod.boolean().optional(),
+  "showOnDistributors": zod.boolean().optional(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish(),
   "images": zod.array(zod.object({
   "url": zod.string(),
   "alt": zod.string()
@@ -1040,6 +1844,9 @@ export const AdminUpdateProductResponse = zod.object({
   "isActive": zod.boolean(),
   "isFeatured": zod.boolean(),
   "isBestseller": zod.boolean(),
+  "showOnDistributors": zod.boolean().optional(),
+  "distributorNameOverride": zod.string().nullish(),
+  "distributorImageOverride": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })

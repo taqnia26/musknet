@@ -31,4 +31,9 @@ export interface AdminProductInput {
   isActive?: boolean;
   isFeatured?: boolean;
   isBestseller?: boolean;
+  showOnDistributors?: boolean;
+  /** @nullable */
+  distributorNameOverride?: string | null;
+  /** @nullable */
+  distributorImageOverride?: string | null;
 }

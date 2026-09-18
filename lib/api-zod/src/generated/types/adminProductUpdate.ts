@@ -32,6 +32,11 @@ export interface AdminProductUpdate {
   isActive?: boolean;
   isFeatured?: boolean;
   isBestseller?: boolean;
+  showOnDistributors?: boolean;
+  /** @nullable */
+  distributorNameOverride?: string | null;
+  /** @nullable */
+  distributorImageOverride?: string | null;
   images?: AdminProductImage[];
   notes?: FragranceNote[];
 }

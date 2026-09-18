@@ -27,6 +27,11 @@ export interface AdminProduct {
   isActive: boolean;
   isFeatured: boolean;
   isBestseller: boolean;
+  showOnDistributors?: boolean;
+  /** @nullable */
+  distributorNameOverride?: string | null;
+  /** @nullable */
+  distributorImageOverride?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

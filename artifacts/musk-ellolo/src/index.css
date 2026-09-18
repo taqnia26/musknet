@@ -23,60 +23,60 @@
    Radix portals keep the admin brand palette regardless of storefront theme. */
 html.admin-route {
   color-scheme: light;
-  --background: 40 33% 96%;
-  --foreground: 24 12% 7%;
-  --card: 0 0% 100%;
-  --card-foreground: 24 12% 7%;
-  --card-border: 40 20% 90%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 24 12% 7%;
-  --popover-border: 40 20% 90%;
-  --border: 40 20% 90%;
-  --input: 40 20% 90%;
-  --primary: 31 78% 45%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 40 20% 90%;
-  --secondary-foreground: 24 12% 7%;
-  --muted: 40 20% 92%;
-  --muted-foreground: 24 10% 45%;
-  --accent: 17 57% 46%;
-  --accent-foreground: 0 0% 100%;
+  --background: 42 23% 89%; /* Pearl */
+  --foreground: 0 0% 24%; /* Charcoal */
+  --card: 42 30% 95%;
+  --card-foreground: 0 0% 24%;
+  --card-border: 42 15% 80%;
+  --popover: 42 30% 95%;
+  --popover-foreground: 0 0% 24%;
+  --popover-border: 42 15% 80%;
+  --border: 42 15% 80%;
+  --input: 42 15% 80%;
+  --primary: 0 0% 24%;
+  --primary-foreground: 42 23% 89%;
+  --secondary: 42 15% 82%;
+  --secondary-foreground: 0 0% 24%;
+  --muted: 42 15% 84%;
+  --muted-foreground: 0 0% 45%;
+  --accent: 0 0% 30%;
+  --accent-foreground: 42 23% 89%;
   --destructive: 0 48% 31%;
   --destructive-foreground: 38 35% 96%;
   --success: 145 45% 39%;
   --success-foreground: 38 35% 96%;
-  --ring: 31 78% 45%;
-  --sidebar: 40 33% 94%;
-  --sidebar-foreground: 24 12% 7%;
+  --ring: 0 0% 24%;
+  --sidebar: 42 25% 93%;
+  --sidebar-foreground: 0 0% 24%;
 }
 
 html.dark.admin-route {
   color-scheme: dark;
-  --background: 24 12% 7%;
-  --foreground: 38 35% 91%;
-  --card: 24 10% 11%;
-  --card-foreground: 38 35% 91%;
-  --card-border: 24 8% 22%;
-  --popover: 24 10% 12%;
-  --popover-foreground: 38 35% 91%;
-  --popover-border: 24 8% 24%;
-  --border: 24 8% 22%;
-  --input: 24 8% 25%;
-  --primary: 31 78% 66%;
-  --primary-foreground: 24 12% 7%;
-  --secondary: 24 8% 18%;
-  --secondary-foreground: 38 35% 91%;
-  --muted: 24 8% 17%;
-  --muted-foreground: 35 15% 67%;
-  --accent: 17 57% 46%;
-  --accent-foreground: 38 35% 96%;
-  --destructive: 0 48% 31%;
+  --background: 0 0% 24%; /* Charcoal */
+  --foreground: 42 23% 89%; /* Pearl */
+  --card: 0 0% 20%;
+  --card-foreground: 42 23% 89%;
+  --card-border: 0 0% 30%;
+  --popover: 0 0% 20%;
+  --popover-foreground: 42 23% 89%;
+  --popover-border: 0 0% 30%;
+  --border: 0 0% 30%;
+  --input: 0 0% 30%;
+  --primary: 42 23% 89%;
+  --primary-foreground: 0 0% 24%;
+  --secondary: 0 0% 30%;
+  --secondary-foreground: 42 23% 89%;
+  --muted: 0 0% 32%;
+  --muted-foreground: 42 15% 70%;
+  --accent: 42 23% 89%;
+  --accent-foreground: 0 0% 24%;
+  --destructive: 0 48% 40%;
   --destructive-foreground: 38 35% 96%;
   --success: 145 45% 39%;
   --success-foreground: 38 35% 96%;
-  --ring: 31 78% 66%;
-  --sidebar: 24 13% 5%;
-  --sidebar-foreground: 38 35% 91%;
+  --ring: 42 23% 89%;
+  --sidebar: 0 0% 22%;
+  --sidebar-foreground: 42 23% 89%;
 }
 
 .site-intro__logo {
@@ -285,31 +285,31 @@ html.dark.admin-route {
 
   /* Admin Theme: dynamic light/dark brand surface, scoped away from the storefront */
   .admin-theme {
-    --background: 40 33% 96%; /* Cream */
-    --foreground: 24 12% 7%; /* Charcoal */
+    --background: 42 23% 89%; /* Pearl */
+    --foreground: 0 0% 24%; /* Charcoal */
 
-    --card: 0 0% 100%;
-    --card-foreground: 24 12% 7%;
-    --card-border: 40 20% 90%;
+    --card: 42 30% 95%;
+    --card-foreground: 0 0% 24%;
+    --card-border: 42 15% 80%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 24 12% 7%;
-    --popover-border: 40 20% 90%;
+    --popover: 42 30% 95%;
+    --popover-foreground: 0 0% 24%;
+    --popover-border: 42 15% 80%;
 
-    --border: 40 20% 90%;
-    --input: 40 20% 90%;
+    --border: 42 15% 80%;
+    --input: 42 15% 80%;
 
-    --primary: 31 78% 45%; /* Amber */
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 24%; /* Charcoal */
+    --primary-foreground: 42 23% 89%;
 
-    --secondary: 40 20% 90%;
-    --secondary-foreground: 24 12% 7%;
+    --secondary: 42 15% 82%;
+    --secondary-foreground: 0 0% 24%;
 
-    --muted: 40 20% 92%;
-    --muted-foreground: 24 10% 45%;
+    --muted: 42 15% 84%;
+    --muted-foreground: 0 0% 45%;
 
-    --accent: 17 57% 46%; /* Terracotta */
-    --accent-foreground: 0 0% 100%;
+    --accent: 0 0% 30%;
+    --accent-foreground: 42 23% 89%;
 
     --destructive: 0 48% 31%; /* Deep burgundy */
     --destructive-foreground: 38 35% 96%;
@@ -317,52 +317,52 @@ html.dark.admin-route {
     --success: 145 45% 39%;
     --success-foreground: 38 35% 96%;
 
-    --ring: 31 78% 45%;
+    --ring: 0 0% 24%;
 
-    --sidebar: 40 33% 94%;
-    --sidebar-foreground: 24 12% 7%;
+    --sidebar: 42 25% 93%;
+    --sidebar-foreground: 0 0% 24%;
 
     --font-sans: 'Open Sans', 'Tajawal', sans-serif;
     --radius: 0.75rem;
   }
 
   html.dark .admin-theme, .dark .admin-theme {
-    --background: 24 12% 7%; /* Near Black */
-    --foreground: 38 35% 91%; /* Pearl Beige */
+    --background: 0 0% 24%; /* Charcoal */
+    --foreground: 42 23% 89%; /* Pearl */
 
-    --card: 24 10% 11%;
-    --card-foreground: 38 35% 91%;
-    --card-border: 24 8% 22%;
+    --card: 0 0% 20%;
+    --card-foreground: 42 23% 89%;
+    --card-border: 0 0% 30%;
 
-    --popover: 24 10% 12%;
-    --popover-foreground: 38 35% 91%;
-    --popover-border: 24 8% 24%;
+    --popover: 0 0% 20%;
+    --popover-foreground: 42 23% 89%;
+    --popover-border: 0 0% 30%;
 
-    --border: 24 8% 22%;
-    --input: 24 8% 25%;
+    --border: 0 0% 30%;
+    --input: 0 0% 30%;
 
-    --primary: 31 78% 66%; /* Peach Gold */
-    --primary-foreground: 24 12% 7%;
+    --primary: 42 23% 89%; /* Pearl */
+    --primary-foreground: 0 0% 24%;
 
-    --secondary: 24 8% 18%;
-    --secondary-foreground: 38 35% 91%;
+    --secondary: 0 0% 30%;
+    --secondary-foreground: 42 23% 89%;
 
-    --muted: 24 8% 17%;
-    --muted-foreground: 35 15% 67%;
+    --muted: 0 0% 32%;
+    --muted-foreground: 42 15% 70%;
 
-    --accent: 17 57% 46%; /* Terracotta */
-    --accent-foreground: 38 35% 96%;
+    --accent: 42 23% 89%;
+    --accent-foreground: 0 0% 24%;
 
-    --destructive: 0 48% 31%; /* Deep burgundy */
+    --destructive: 0 48% 40%;
     --destructive-foreground: 38 35% 96%;
 
     --success: 145 45% 39%;
     --success-foreground: 38 35% 96%;
 
-    --ring: 31 78% 66%;
+    --ring: 42 23% 89%;
 
-    --sidebar: 24 13% 5%;
-    --sidebar-foreground: 38 35% 91%;
+    --sidebar: 0 0% 22%;
+    --sidebar-foreground: 42 23% 89%;
   }
 
   html[lang="ar"] .admin-theme,
@@ -397,60 +397,60 @@ html.dark.admin-route {
      variables contextual while the admin route is mounted, without touching store pages. */
   html.admin-route {
     color-scheme: light;
-    --background: 40 33% 96%;
-    --foreground: 24 12% 7%;
-    --card: 0 0% 100%;
-    --card-foreground: 24 12% 7%;
-    --card-border: 40 20% 90%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 24 12% 7%;
-    --popover-border: 40 20% 90%;
-    --border: 40 20% 90%;
-    --input: 40 20% 90%;
-    --primary: 31 78% 45%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 40 20% 90%;
-    --secondary-foreground: 24 12% 7%;
-    --muted: 40 20% 92%;
-    --muted-foreground: 24 10% 45%;
-    --accent: 17 57% 46%;
-    --accent-foreground: 0 0% 100%;
+    --background: 42 23% 89%; /* Pearl */
+    --foreground: 0 0% 24%; /* Charcoal */
+    --card: 42 30% 95%;
+    --card-foreground: 0 0% 24%;
+    --card-border: 42 15% 80%;
+    --popover: 42 30% 95%;
+    --popover-foreground: 0 0% 24%;
+    --popover-border: 42 15% 80%;
+    --border: 42 15% 80%;
+    --input: 42 15% 80%;
+    --primary: 0 0% 24%;
+    --primary-foreground: 42 23% 89%;
+    --secondary: 42 15% 82%;
+    --secondary-foreground: 0 0% 24%;
+    --muted: 42 15% 84%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 30%;
+    --accent-foreground: 42 23% 89%;
     --destructive: 0 48% 31%;
     --destructive-foreground: 38 35% 96%;
     --success: 145 45% 39%;
     --success-foreground: 38 35% 96%;
-    --ring: 31 78% 45%;
-    --sidebar: 40 33% 94%;
-    --sidebar-foreground: 24 12% 7%;
+    --ring: 0 0% 24%;
+    --sidebar: 42 25% 93%;
+    --sidebar-foreground: 0 0% 24%;
   }
 
   html.dark.admin-route {
     color-scheme: dark;
-    --background: 24 12% 7%;
-    --foreground: 38 35% 91%;
-    --card: 24 10% 11%;
-    --card-foreground: 38 35% 91%;
-    --card-border: 24 8% 22%;
-    --popover: 24 10% 12%;
-    --popover-foreground: 38 35% 91%;
-    --popover-border: 24 8% 24%;
-    --border: 24 8% 22%;
-    --input: 24 8% 25%;
-    --primary: 31 78% 66%;
-    --primary-foreground: 24 12% 7%;
-    --secondary: 24 8% 18%;
-    --secondary-foreground: 38 35% 91%;
-    --muted: 24 8% 17%;
-    --muted-foreground: 35 15% 67%;
-    --accent: 17 57% 46%;
-    --accent-foreground: 38 35% 96%;
-    --destructive: 0 48% 31%;
+    --background: 0 0% 24%; /* Charcoal */
+    --foreground: 42 23% 89%; /* Pearl */
+    --card: 0 0% 20%;
+    --card-foreground: 42 23% 89%;
+    --card-border: 0 0% 30%;
+    --popover: 0 0% 20%;
+    --popover-foreground: 42 23% 89%;
+    --popover-border: 0 0% 30%;
+    --border: 0 0% 30%;
+    --input: 0 0% 30%;
+    --primary: 42 23% 89%;
+    --primary-foreground: 0 0% 24%;
+    --secondary: 0 0% 30%;
+    --secondary-foreground: 42 23% 89%;
+    --muted: 0 0% 32%;
+    --muted-foreground: 42 15% 70%;
+    --accent: 42 23% 89%;
+    --accent-foreground: 0 0% 24%;
+    --destructive: 0 48% 40%;
     --destructive-foreground: 38 35% 96%;
     --success: 145 45% 39%;
     --success-foreground: 38 35% 96%;
-    --ring: 31 78% 66%;
-    --sidebar: 24 13% 5%;
-    --sidebar-foreground: 38 35% 91%;
+    --ring: 42 23% 89%;
+    --sidebar: 0 0% 22%;
+    --sidebar-foreground: 42 23% 89%;
   }
 
   html.admin-route body {

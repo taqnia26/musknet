@@ -10,6 +10,11 @@ import AdminCoupons from '@/pages/admin/coupons';
 import AdminCustomers from '@/pages/admin/customers';
 import AdminInventory from '@/pages/admin/inventory';
 import AdminDistributors from '@/pages/admin/distributors';
+import AdminContractsList from '@/pages/admin/contracts/index';
+import AdminContractForm from '@/pages/admin/contracts/form';
+import AdminContractDetail from '@/pages/admin/contracts/detail';
+import AdminSiteContent from '@/pages/admin/site-content/index';
+import AdminDistributorCatalog from '@/pages/admin/distributor-catalog/index';
 import AdminStaff from '@/pages/admin/staff';
 import AdminHR from '@/pages/admin/hr';
 import AdminFinance from '@/pages/admin/finance';
@@ -46,6 +51,12 @@ export default function AdminRoutes() {
         <Route path="/admin/customers" component={AdminCustomers} />
         <Route path="/admin/inventory" component={AdminInventory} />
         <Route path="/admin/distributors" component={AdminDistributors} />
+        <Route path="/admin/distributor-catalog" component={AdminDistributorCatalog} />
+        <Route path="/admin/contracts" component={AdminContractsList} />
+        <Route path="/admin/contracts/new" component={AdminContractForm} />
+        <Route path="/admin/contracts/:id/edit" component={AdminContractForm} />
+        <Route path="/admin/contracts/:id" component={AdminContractDetail} />
+        <Route path="/admin/site-content" component={AdminSiteContent} />
         <Route path="/admin/hr" component={AdminHR} />
         <Route path="/admin/finance" component={AdminFinance} />
         <Route path="/admin/finance/expenses" component={AdminFinance} />

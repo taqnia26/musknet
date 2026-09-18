@@ -41,6 +41,9 @@ export const productsTable = pgTable("storefront_products", {
   isActive: boolean("is_active").notNull().default(true),
   isFeatured: boolean("is_featured").notNull().default(false),
   isBestseller: boolean("is_bestseller").notNull().default(false),
+  showOnDistributors: boolean("show_on_distributors").notNull().default(true),
+  distributorNameOverride: text("distributor_name_override"),
+  distributorImageOverride: text("distributor_image_override"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [

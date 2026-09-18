@@ -1,0 +1,210 @@
+import { useState } from 'react';
+import { useAdminListDistributorCatalog, useAdminUpdateDistributorCatalog, getAdminListDistributorCatalogQueryKey } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2, Eye, EyeOff, Save, Image as ImageIcon } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+
+export default function AdminDistributorCatalog() {
+  const { data: catalog, isLoading } = useAdminListDistributorCatalog();
+  const updateCatalog = useAdminUpdateDistributorCatalog();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValues, setEditValues] = useState<{
+    showOnDistributors: boolean;
+    distributorNameOverride: string;
+    distributorImageOverride: string;
+  } | null>(null);
+
+  const startEditing = (item: any) => {
+    setEditingId(item.id);
+    setEditValues({
+      showOnDistributors: item.showOnDistributors,
+      distributorNameOverride: item.distributorNameOverride || '',
+      distributorImageOverride: item.distributorImageOverride || '',
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditValues(null);
+  };
+
+  const handleSave = (productId: number) => {
+    if (!editValues) return;
+
+    updateCatalog.mutate(
+      {
+        data: {
+          productId,
+          showOnDistributors: editValues.showOnDistributors,
+          distributorNameOverride: editValues.distributorNameOverride || null,
+          distributorImageOverride: editValues.distributorImageOverride || null,
+        }
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getAdminListDistributorCatalogQueryKey() });
+          toast({ title: 'تم الحفظ', description: 'تم تحديث إعدادات المنتج بنجاح' });
+          setEditingId(null);
+          setEditValues(null);
+        },
+        onError: () => {
+          toast({ title: 'خطأ', description: 'حدث خطأ أثناء الحفظ', variant: 'destructive' });
+        }
+      }
+    );
+  };
+
+  const toggleVisibility = (productId: number, currentVisibility: boolean) => {
+    const item = catalog?.find(c => c.id === productId);
+    if (!item) return;
+
+    updateCatalog.mutate(
+      {
+        data: {
+          productId,
+          showOnDistributors: !currentVisibility,
+          distributorNameOverride: item.distributorNameOverride,
+          distributorImageOverride: item.distributorImageOverride,
+        }
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getAdminListDistributorCatalogQueryKey() });
+          toast({ title: 'تم التحديث', description: 'تم تحديث حالة الظهور بنجاح' });
+        }
+      }
+    );
+  };
+
+  if (isLoading) {
+    return <div className="flex h-[200px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">كتالوج الموزعين / B2B Catalog</h1>
+          <p className="text-muted-foreground mt-2">إدارة المنتجات المعروضة للموزعين وتخصيص أسمائها وصورها</p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>المنتج الأساسي</TableHead>
+              <TableHead>حالة الظهور</TableHead>
+              <TableHead>الاسم المخصص (للموزعين)</TableHead>
+              <TableHead>الصورة المخصصة</TableHead>
+              <TableHead className="w-[150px] text-left">الإجراءات</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {catalog?.map((item) => {
+              const isEditing = editingId === item.id;
+              
+              return (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">
+                    {item.nameAr}
+                    <div className="text-xs text-muted-foreground mt-1" dir="ltr">{item.nameEn}</div>
+                  </TableCell>
+                  <TableCell>
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <Switch 
+                          checked={editValues?.showOnDistributors} 
+                          onCheckedChange={(c) => setEditValues(prev => prev ? {...prev, showOnDistributors: c} : null)}
+                        />
+                        <span className="text-sm">{editValues?.showOnDistributors ? 'ظاهر' : 'مخفي'}</span>
+                      </div>
+                    ) : (
+                      <Badge
+                        variant="secondary"
+                        className={item.showOnDistributors ? "cursor-pointer border-transparent bg-success text-success-foreground" : "cursor-pointer"}
+                        onClick={() => toggleVisibility(item.id, item.showOnDistributors)}
+                      >
+                        {item.showOnDistributors ? <Eye className="ml-1 h-3 w-3 inline" /> : <EyeOff className="ml-1 h-3 w-3 inline" />}
+                        {item.showOnDistributors ? 'ظاهر' : 'مخفي'}
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isEditing ? (
+                      <Input 
+                        value={editValues?.distributorNameOverride} 
+                        onChange={(e) => setEditValues(prev => prev ? {...prev, distributorNameOverride: e.target.value} : null)}
+                        placeholder="اترك فارغاً لاستخدام الاسم الأساسي"
+                        className="h-8"
+                      />
+                    ) : (
+                      <span className={item.distributorNameOverride ? "text-primary font-medium" : "text-muted-foreground"}>
+                        {item.distributorNameOverride || '—'}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {isEditing ? (
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          value={editValues?.distributorImageOverride} 
+                          onChange={(e) => setEditValues(prev => prev ? {...prev, distributorImageOverride: e.target.value} : null)}
+                          placeholder="رابط الصورة (URL)"
+                          className="h-8"
+                          dir="ltr"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {item.distributorImageOverride ? (
+                          <>
+                            <div className="h-8 w-8 rounded overflow-hidden bg-muted flex items-center justify-center border">
+                              <img src={item.distributorImageOverride} alt="Custom" className="h-full w-full object-cover" />
+                            </div>
+                            <span className="text-xs text-muted-foreground truncate w-24 block" dir="ltr">{item.distributorImageOverride}</span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-left">
+                    {isEditing ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="sm" onClick={cancelEditing}>إلغاء</Button>
+                        <Button size="sm" onClick={() => handleSave(item.id)} disabled={updateCatalog.isPending}>
+                          {updateCatalog.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => startEditing(item)}>تعديل</Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+            
+            {catalog?.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                  لا توجد منتجات حالياً.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}

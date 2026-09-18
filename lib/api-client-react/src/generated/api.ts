@@ -48,6 +48,7 @@ import type {
   AdminInvoice,
   AdminJournalEntry,
   AdminListCategoriesParams,
+  AdminListContractsParams,
   AdminListCouponsParams,
   AdminListCustomersParams,
   AdminListDistributorsParams,
@@ -81,9 +82,18 @@ import type {
   Category,
   CheckoutQuote,
   CheckoutQuoteInput,
+  ContractSendResponse,
+  ContractSignatureInput,
+  ContractSignatureUpload,
+  ContractSignatureUploadInput,
   CouponResult,
   CouponValidation,
   Customer,
+  DistributorCatalogSetting,
+  DistributorCatalogUpdate,
+  DistributorContract,
+  DistributorContractInput,
+  DistributorContractUpdate,
   Employee,
   EmployeeInput,
   EmployeeUpdate,
@@ -127,8 +137,11 @@ import type {
   Product,
   ProductDetails,
   ProfileUpdate,
+  PublicContractSignatureInput,
   RateLimitedResponse,
   ServiceUnavailableResponse,
+  SiteContent,
+  SiteContentUpsert,
   TrackPageViewInput,
   TrialBalance,
   UnauthorizedResponse
@@ -2595,6 +2608,1234 @@ export function useGetAdminDashboard<TData = Awaited<ReturnType<typeof getAdminD
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAdminDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminListContractsUrl = (params?: AdminListContractsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/contracts?${stringifiedParams}` : `/api/admin/contracts`
+}
+
+export const adminListContracts = async (params?: AdminListContractsParams, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract[]> => {
+
+  return customFetch<DistributorContract[]>(getAdminListContractsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListContractsQueryKey = (params?: AdminListContractsParams,) => {
+    return [
+    `/api/admin/contracts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListContractsQueryOptions = <TData = Awaited<ReturnType<typeof adminListContracts>>, TError = ErrorType<unknown>>(params?: AdminListContractsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListContractsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListContracts>>> = ({ signal }) => adminListContracts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListContracts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListContractsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListContracts>>>
+export type AdminListContractsQueryError = ErrorType<unknown>
+
+
+
+export function useAdminListContracts<TData = Awaited<ReturnType<typeof adminListContracts>>, TError = ErrorType<unknown>>(
+ params?: AdminListContractsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListContracts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListContractsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateContractUrl = () => {
+
+
+
+
+  return `/api/admin/contracts`
+}
+
+export const adminCreateContract = async (distributorContractInput: DistributorContractInput, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getAdminCreateContractUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(distributorContractInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateContract>>, TError,{data: BodyType<DistributorContractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateContract>>, TError,{data: BodyType<DistributorContractInput>}, TContext> => {
+
+const mutationKey = ['adminCreateContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateContract>>, {data: BodyType<DistributorContractInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateContract(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateContractMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateContract>>>
+    export type AdminCreateContractMutationBody = BodyType<DistributorContractInput>
+    export type AdminCreateContractMutationError = ErrorType<unknown>
+
+    export const useAdminCreateContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateContract>>, TError,{data: BodyType<DistributorContractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateContract>>,
+        TError,
+        {data: BodyType<DistributorContractInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateContractMutationOptions(options));
+    }
+
+export const getAdminGetContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}`
+}
+
+export const adminGetContract = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getAdminGetContractUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetContractQueryKey = (id: number,) => {
+    return [
+    `/api/admin/contracts/${id}`
+    ] as const;
+    }
+
+
+export const getAdminGetContractQueryOptions = <TData = Awaited<ReturnType<typeof adminGetContract>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetContract>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetContractQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetContract>>> = ({ signal }) => adminGetContract(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetContract>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetContractQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetContract>>>
+export type AdminGetContractQueryError = ErrorType<unknown>
+
+
+
+export function useAdminGetContract<TData = Awaited<ReturnType<typeof adminGetContract>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetContract>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetContractQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminUpdateContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}`
+}
+
+export const adminUpdateContract = async (id: number,
+    distributorContractUpdate: DistributorContractUpdate, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getAdminUpdateContractUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(distributorContractUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateContract>>, TError,{id: number;data: BodyType<DistributorContractUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateContract>>, TError,{id: number;data: BodyType<DistributorContractUpdate>}, TContext> => {
+
+const mutationKey = ['adminUpdateContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateContract>>, {id: number;data: BodyType<DistributorContractUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateContract(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateContractMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateContract>>>
+    export type AdminUpdateContractMutationBody = BodyType<DistributorContractUpdate>
+    export type AdminUpdateContractMutationError = ErrorType<unknown>
+
+    export const useAdminUpdateContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateContract>>, TError,{id: number;data: BodyType<DistributorContractUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateContract>>,
+        TError,
+        {id: number;data: BodyType<DistributorContractUpdate>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateContractMutationOptions(options));
+    }
+
+export const getAdminDeleteContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}`
+}
+
+export const adminDeleteContract = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteContractUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContract>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminDeleteContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteContract>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteContract(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteContractMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteContract>>>
+
+    export type AdminDeleteContractMutationError = ErrorType<unknown>
+
+    export const useAdminDeleteContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteContract>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminDeleteContractMutationOptions(options));
+    }
+
+export const getAdminSignContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}/seller-sign`
+}
+
+export const adminSignContract = async (id: number,
+    contractSignatureInput: ContractSignatureInput, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getAdminSignContractUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contractSignatureInput)
+  }
+);}
+
+
+
+
+
+export const getAdminSignContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSignContract>>, TError,{id: number;data: BodyType<ContractSignatureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSignContract>>, TError,{id: number;data: BodyType<ContractSignatureInput>}, TContext> => {
+
+const mutationKey = ['adminSignContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSignContract>>, {id: number;data: BodyType<ContractSignatureInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminSignContract(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSignContractMutationResult = NonNullable<Awaited<ReturnType<typeof adminSignContract>>>
+    export type AdminSignContractMutationBody = BodyType<ContractSignatureInput>
+    export type AdminSignContractMutationError = ErrorType<unknown>
+
+    export const useAdminSignContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSignContract>>, TError,{id: number;data: BodyType<ContractSignatureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSignContract>>,
+        TError,
+        {id: number;data: BodyType<ContractSignatureInput>},
+        TContext
+      > => {
+      return useMutation(getAdminSignContractMutationOptions(options));
+    }
+
+export const getAdminRequestContractSignatureUploadUrl = () => {
+
+
+
+
+  return `/api/admin/contracts/signatures/upload-url`
+}
+
+export const adminRequestContractSignatureUpload = async (contractSignatureUploadInput: ContractSignatureUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<ContractSignatureUpload> => {
+
+  return customFetch<ContractSignatureUpload>(getAdminRequestContractSignatureUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contractSignatureUploadInput)
+  }
+);}
+
+
+
+
+
+export const getAdminRequestContractSignatureUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRequestContractSignatureUpload>>, TError,{data: BodyType<ContractSignatureUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRequestContractSignatureUpload>>, TError,{data: BodyType<ContractSignatureUploadInput>}, TContext> => {
+
+const mutationKey = ['adminRequestContractSignatureUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRequestContractSignatureUpload>>, {data: BodyType<ContractSignatureUploadInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminRequestContractSignatureUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRequestContractSignatureUploadMutationResult = NonNullable<Awaited<ReturnType<typeof adminRequestContractSignatureUpload>>>
+    export type AdminRequestContractSignatureUploadMutationBody = BodyType<ContractSignatureUploadInput>
+    export type AdminRequestContractSignatureUploadMutationError = ErrorType<unknown>
+
+    export const useAdminRequestContractSignatureUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRequestContractSignatureUpload>>, TError,{data: BodyType<ContractSignatureUploadInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRequestContractSignatureUpload>>,
+        TError,
+        {data: BodyType<ContractSignatureUploadInput>},
+        TContext
+      > => {
+      return useMutation(getAdminRequestContractSignatureUploadMutationOptions(options));
+    }
+
+export const getAdminSendContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}/send`
+}
+
+export const adminSendContract = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ContractSendResponse> => {
+
+  return customFetch<ContractSendResponse>(getAdminSendContractUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminSendContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSendContract>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminSendContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSendContract>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminSendContract(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSendContractMutationResult = NonNullable<Awaited<ReturnType<typeof adminSendContract>>>
+
+    export type AdminSendContractMutationError = ErrorType<unknown>
+
+    export const useAdminSendContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSendContract>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminSendContractMutationOptions(options));
+    }
+
+export const getAdminCancelContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}/cancel`
+}
+
+export const adminCancelContract = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getAdminCancelContractUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminCancelContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCancelContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCancelContract>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminCancelContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCancelContract>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminCancelContract(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCancelContractMutationResult = NonNullable<Awaited<ReturnType<typeof adminCancelContract>>>
+
+    export type AdminCancelContractMutationError = ErrorType<unknown>
+
+    export const useAdminCancelContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCancelContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCancelContract>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminCancelContractMutationOptions(options));
+    }
+
+export const getAdminGetContractPdfUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}/pdf`
+}
+
+export const adminGetContractPdf = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getAdminGetContractPdfUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetContractPdfQueryKey = (id: number,) => {
+    return [
+    `/api/admin/contracts/${id}/pdf`
+    ] as const;
+    }
+
+
+export const getAdminGetContractPdfQueryOptions = <TData = Awaited<ReturnType<typeof adminGetContractPdf>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetContractPdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetContractPdfQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetContractPdf>>> = ({ signal }) => adminGetContractPdf(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetContractPdf>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetContractPdfQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetContractPdf>>>
+export type AdminGetContractPdfQueryError = ErrorType<unknown>
+
+
+
+export function useAdminGetContractPdf<TData = Awaited<ReturnType<typeof adminGetContractPdf>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetContractPdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetContractPdfQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminListSiteContentUrl = () => {
+
+
+
+
+  return `/api/admin/site-content`
+}
+
+export const adminListSiteContent = async ( options?: Parameters<typeof customFetch>[1]): Promise<SiteContent[]> => {
+
+  return customFetch<SiteContent[]>(getAdminListSiteContentUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListSiteContentQueryKey = () => {
+    return [
+    `/api/admin/site-content`
+    ] as const;
+    }
+
+
+export const getAdminListSiteContentQueryOptions = <TData = Awaited<ReturnType<typeof adminListSiteContent>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListSiteContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListSiteContentQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListSiteContent>>> = ({ signal }) => adminListSiteContent({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListSiteContent>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListSiteContentQueryResult = NonNullable<Awaited<ReturnType<typeof adminListSiteContent>>>
+export type AdminListSiteContentQueryError = ErrorType<unknown>
+
+
+
+export function useAdminListSiteContent<TData = Awaited<ReturnType<typeof adminListSiteContent>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListSiteContent>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListSiteContentQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminUpsertSiteContentUrl = () => {
+
+
+
+
+  return `/api/admin/site-content`
+}
+
+export const adminUpsertSiteContent = async (siteContentUpsert: SiteContentUpsert, options?: Parameters<typeof customFetch>[1]): Promise<SiteContent[]> => {
+
+  return customFetch<SiteContent[]>(getAdminUpsertSiteContentUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(siteContentUpsert)
+  }
+);}
+
+
+
+
+
+export const getAdminUpsertSiteContentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpsertSiteContent>>, TError,{data: BodyType<SiteContentUpsert>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpsertSiteContent>>, TError,{data: BodyType<SiteContentUpsert>}, TContext> => {
+
+const mutationKey = ['adminUpsertSiteContent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpsertSiteContent>>, {data: BodyType<SiteContentUpsert>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminUpsertSiteContent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpsertSiteContentMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpsertSiteContent>>>
+    export type AdminUpsertSiteContentMutationBody = BodyType<SiteContentUpsert>
+    export type AdminUpsertSiteContentMutationError = ErrorType<unknown>
+
+    export const useAdminUpsertSiteContent = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpsertSiteContent>>, TError,{data: BodyType<SiteContentUpsert>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpsertSiteContent>>,
+        TError,
+        {data: BodyType<SiteContentUpsert>},
+        TContext
+      > => {
+      return useMutation(getAdminUpsertSiteContentMutationOptions(options));
+    }
+
+export const getAdminListDistributorCatalogUrl = () => {
+
+
+
+
+  return `/api/admin/distributor-catalog`
+}
+
+export const adminListDistributorCatalog = async ( options?: Parameters<typeof customFetch>[1]): Promise<DistributorCatalogSetting[]> => {
+
+  return customFetch<DistributorCatalogSetting[]>(getAdminListDistributorCatalogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListDistributorCatalogQueryKey = () => {
+    return [
+    `/api/admin/distributor-catalog`
+    ] as const;
+    }
+
+
+export const getAdminListDistributorCatalogQueryOptions = <TData = Awaited<ReturnType<typeof adminListDistributorCatalog>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListDistributorCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListDistributorCatalogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListDistributorCatalog>>> = ({ signal }) => adminListDistributorCatalog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListDistributorCatalog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListDistributorCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof adminListDistributorCatalog>>>
+export type AdminListDistributorCatalogQueryError = ErrorType<unknown>
+
+
+
+export function useAdminListDistributorCatalog<TData = Awaited<ReturnType<typeof adminListDistributorCatalog>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListDistributorCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListDistributorCatalogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminUpdateDistributorCatalogUrl = () => {
+
+
+
+
+  return `/api/admin/distributor-catalog`
+}
+
+export const adminUpdateDistributorCatalog = async (distributorCatalogUpdate: DistributorCatalogUpdate, options?: Parameters<typeof customFetch>[1]): Promise<DistributorCatalogSetting> => {
+
+  return customFetch<DistributorCatalogSetting>(getAdminUpdateDistributorCatalogUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(distributorCatalogUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateDistributorCatalogMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateDistributorCatalog>>, TError,{data: BodyType<DistributorCatalogUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateDistributorCatalog>>, TError,{data: BodyType<DistributorCatalogUpdate>}, TContext> => {
+
+const mutationKey = ['adminUpdateDistributorCatalog'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateDistributorCatalog>>, {data: BodyType<DistributorCatalogUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminUpdateDistributorCatalog(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateDistributorCatalogMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateDistributorCatalog>>>
+    export type AdminUpdateDistributorCatalogMutationBody = BodyType<DistributorCatalogUpdate>
+    export type AdminUpdateDistributorCatalogMutationError = ErrorType<unknown>
+
+    export const useAdminUpdateDistributorCatalog = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateDistributorCatalog>>, TError,{data: BodyType<DistributorCatalogUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateDistributorCatalog>>,
+        TError,
+        {data: BodyType<DistributorCatalogUpdate>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateDistributorCatalogMutationOptions(options));
+    }
+
+export const getGetPublicContractByTokenUrl = (token: string,) => {
+
+
+
+
+  return `/api/public/contracts/by-token/${token}`
+}
+
+export const getPublicContractByToken = async (token: string, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getGetPublicContractByTokenUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPublicContractByTokenQueryKey = (token: string,) => {
+    return [
+    `/api/public/contracts/by-token/${token}`
+    ] as const;
+    }
+
+
+export const getGetPublicContractByTokenQueryOptions = <TData = Awaited<ReturnType<typeof getPublicContractByToken>>, TError = ErrorType<unknown>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicContractByToken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPublicContractByTokenQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicContractByToken>>> = ({ signal }) => getPublicContractByToken(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPublicContractByToken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPublicContractByTokenQueryResult = NonNullable<Awaited<ReturnType<typeof getPublicContractByToken>>>
+export type GetPublicContractByTokenQueryError = ErrorType<unknown>
+
+
+
+export function useGetPublicContractByToken<TData = Awaited<ReturnType<typeof getPublicContractByToken>>, TError = ErrorType<unknown>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicContractByToken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPublicContractByTokenQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSignPublicContractUrl = (token: string,) => {
+
+
+
+
+  return `/api/public/contracts/by-token/${token}/sign`
+}
+
+export const signPublicContract = async (token: string,
+    publicContractSignatureInput: PublicContractSignatureInput, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getSignPublicContractUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(publicContractSignatureInput)
+  }
+);}
+
+
+
+
+
+export const getSignPublicContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signPublicContract>>, TError,{token: string;data: BodyType<PublicContractSignatureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof signPublicContract>>, TError,{token: string;data: BodyType<PublicContractSignatureInput>}, TContext> => {
+
+const mutationKey = ['signPublicContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof signPublicContract>>, {token: string;data: BodyType<PublicContractSignatureInput>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  signPublicContract(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SignPublicContractMutationResult = NonNullable<Awaited<ReturnType<typeof signPublicContract>>>
+    export type SignPublicContractMutationBody = BodyType<PublicContractSignatureInput>
+    export type SignPublicContractMutationError = ErrorType<unknown>
+
+    export const useSignPublicContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signPublicContract>>, TError,{token: string;data: BodyType<PublicContractSignatureInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof signPublicContract>>,
+        TError,
+        {token: string;data: BodyType<PublicContractSignatureInput>},
+        TContext
+      > => {
+      return useMutation(getSignPublicContractMutationOptions(options));
+    }
+
+export const getGetPublicContractPdfUrl = (token: string,) => {
+
+
+
+
+  return `/api/public/contracts/by-token/${token}/pdf`
+}
+
+export const getPublicContractPdf = async (token: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetPublicContractPdfUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPublicContractPdfQueryKey = (token: string,) => {
+    return [
+    `/api/public/contracts/by-token/${token}/pdf`
+    ] as const;
+    }
+
+
+export const getGetPublicContractPdfQueryOptions = <TData = Awaited<ReturnType<typeof getPublicContractPdf>>, TError = ErrorType<unknown>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicContractPdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPublicContractPdfQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicContractPdf>>> = ({ signal }) => getPublicContractPdf(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPublicContractPdf>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPublicContractPdfQueryResult = NonNullable<Awaited<ReturnType<typeof getPublicContractPdf>>>
+export type GetPublicContractPdfQueryError = ErrorType<unknown>
+
+
+
+export function useGetPublicContractPdf<TData = Awaited<ReturnType<typeof getPublicContractPdf>>, TError = ErrorType<unknown>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPublicContractPdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPublicContractPdfQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDownloadPublicContractPdfUrl = (token: string,) => {
+
+
+
+
+  return `/api/public/contracts/by-download-token/${token}/pdf`
+}
+
+export const downloadPublicContractPdf = async (token: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadPublicContractPdfUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadPublicContractPdfQueryKey = (token: string,) => {
+    return [
+    `/api/public/contracts/by-download-token/${token}/pdf`
+    ] as const;
+    }
+
+
+export const getDownloadPublicContractPdfQueryOptions = <TData = Awaited<ReturnType<typeof downloadPublicContractPdf>>, TError = ErrorType<unknown>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadPublicContractPdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadPublicContractPdfQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadPublicContractPdf>>> = ({ signal }) => downloadPublicContractPdf(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadPublicContractPdf>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadPublicContractPdfQueryResult = NonNullable<Awaited<ReturnType<typeof downloadPublicContractPdf>>>
+export type DownloadPublicContractPdfQueryError = ErrorType<unknown>
+
+
+
+export function useDownloadPublicContractPdf<TData = Awaited<ReturnType<typeof downloadPublicContractPdf>>, TError = ErrorType<unknown>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadPublicContractPdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadPublicContractPdfQueryOptions(token,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

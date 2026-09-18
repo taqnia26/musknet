@@ -53,59 +53,77 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="admin-theme min-h-screen bg-background text-foreground flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-card p-8 rounded-xl shadow-sm border border-border">
-        <div className="mb-8 text-center">
+    <div className="admin-theme min-h-screen bg-background text-foreground flex">
+      {/* Visual Side */}
+      <div className="hidden lg:flex w-1/2 relative bg-primary items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 z-0">
           <img
-            src="/site-assets/admin-logo.png"
-            alt="Musk Ellolo"
-            className="h-28 w-auto max-w-full object-contain mx-auto mb-5 invert"
+            src="/site-assets/admin-profile-brand.jpg"
+            alt="Brand Pattern"
+            className="w-full h-full object-cover opacity-30 mix-blend-overlay grayscale"
           />
-          <h1 className="text-2xl font-bold tracking-tight">
-            {t('إدارة النظام مسك اللولو', 'Musk Ellolo Atelier')}
-          </h1>
-          <p className="text-muted-foreground mt-2 text-sm">{t('تسجيل الدخول للوحة التحكم', 'Sign in to admin panel')}</p>
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
         </div>
+      </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('البريد الإلكتروني', 'Email')}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      autoComplete="username"
-                      placeholder="admin@example.com"
-                      {...field}
-                      dir="ltr"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+      {/* Form Side */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12">
+        <div className="w-full max-w-md bg-card p-10 rounded-2xl shadow-sm border border-border">
+          <div className="mb-10 text-center">
+            <img
+              src="/site-assets/admin-wordmark-brandguide.png"
+              alt="Musk Ellolo"
+              className="h-16 w-auto max-w-full object-contain mx-auto mb-6 dark:invert"
             />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('كلمة المرور', 'Password')}</FormLabel>
-                  <FormControl>
-                    <Input type="password" autoComplete="current-password" {...field} dir="ltr" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full mt-6" disabled={loginMutation.isPending} data-testid="button-login-submit">
-              {loginMutation.isPending ? t('جاري تسجيل الدخول...', 'Signing in...') : t('دخول', 'Sign In')}
-            </Button>
-          </form>
-        </Form>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {t('إدارة النظام مسك اللولو', 'Musk Ellolo Atelier')}
+            </h1>
+            <p className="text-muted-foreground mt-2 text-sm">
+              {t('تسجيل الدخول للوحة التحكم', 'Sign in to admin panel')}
+            </p>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-foreground/80">{t('البريد الإلكتروني', 'Email')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        autoComplete="username"
+                        placeholder="admin@example.com"
+                        className="bg-background"
+                        {...field}
+                        dir="ltr"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-foreground/80">{t('كلمة المرور', 'Password')}</FormLabel>
+                    <FormControl>
+                      <Input type="password" autoComplete="current-password" className="bg-background" {...field} dir="ltr" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full mt-8 h-12 text-md" disabled={loginMutation.isPending} data-testid="button-login-submit">
+                {loginMutation.isPending ? t('جاري تسجيل الدخول...', 'Signing in...') : t('دخول', 'Sign In')}
+              </Button>
+            </form>
+          </Form>
+        </div>
       </div>
     </div>
   );

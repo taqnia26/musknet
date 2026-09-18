@@ -520,6 +520,124 @@ paths:
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       responses: { "200": { description: Metrics, content: { application/json: { schema: { $ref: "#/components/schemas/AdminDashboard" } } } }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /admin/contracts:
+    get:
+      operationId: adminListContracts
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminSearch" }]
+      responses: { "200": { description: Contracts, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/DistributorContract" } } } } } }
+    post:
+      operationId: adminCreateContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContractInput" } } } }
+      responses: { "201": { description: Contract, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } } }
+  /admin/contracts/{id}:
+    get:
+      operationId: adminGetContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Contract, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } } }
+    patch:
+      operationId: adminUpdateContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContractUpdate" } } } }
+      responses: { "200": { description: Contract, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } } }
+    delete:
+      operationId: adminDeleteContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Contract deleted } }
+  /admin/contracts/{id}/seller-sign:
+    post:
+      operationId: adminSignContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ContractSignatureInput" } } } }
+      responses: { "200": { description: Seller signed, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } } }
+  /admin/contracts/signatures/upload-url:
+    post:
+      operationId: adminRequestContractSignatureUpload
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ContractSignatureUploadInput" } } } }
+      responses: { "200": { description: Presigned private signature upload, content: { application/json: { schema: { $ref: "#/components/schemas/ContractSignatureUpload" } } } } }
+  /admin/contracts/{id}/send:
+    post:
+      operationId: adminSendContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Signing link created, content: { application/json: { schema: { $ref: "#/components/schemas/ContractSendResponse" } } } } }
+  /admin/contracts/{id}/cancel:
+    post:
+      operationId: adminCancelContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Cancelled, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } } }
+  /admin/contracts/{id}/pdf:
+    get:
+      operationId: adminGetContractPdf
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
+  /admin/site-content:
+    get:
+      operationId: adminListSiteContent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Site content, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SiteContent" } } } } } }
+    put:
+      operationId: adminUpsertSiteContent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SiteContentUpsert" } } } }
+      responses: { "200": { description: Site content, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SiteContent" } } } } } }
+  /admin/distributor-catalog:
+    get:
+      operationId: adminListDistributorCatalog
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Distributor catalog settings, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/DistributorCatalogSetting" } } } } } }
+    patch:
+      operationId: adminUpdateDistributorCatalog
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorCatalogUpdate" } } } }
+      responses: { "200": { description: Distributor catalog settings, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorCatalogSetting" } } } } }
+  /public/contracts/by-token/{token}:
+    get:
+      operationId: getPublicContractByToken
+      tags: [admin]
+      parameters: [{ name: token, in: path, required: true, schema: { type: string, minLength: 32 } }]
+      responses: { "200": { description: Contract, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } } }
+  /public/contracts/by-token/{token}/sign:
+    post:
+      operationId: signPublicContract
+      tags: [admin]
+      parameters: [{ name: token, in: path, required: true, schema: { type: string, minLength: 32 } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PublicContractSignatureInput" } } } }
+      responses: { "200": { description: Contract signed, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } } }
+  /public/contracts/by-token/{token}/pdf:
+    get:
+      operationId: getPublicContractPdf
+      tags: [admin]
+      parameters: [{ name: token, in: path, required: true, schema: { type: string, minLength: 32 } }]
+      responses: { "200": { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
+  /public/contracts/by-download-token/{token}/pdf:
+    get:
+      operationId: downloadPublicContractPdf
+      tags: [admin]
+      parameters: [{ name: token, in: path, required: true, schema: { type: string, minLength: 32 } }]
+      responses: { "200": { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
   /admin/analytics/dashboard:
     get:
       operationId: getAdminAnalyticsDashboard
@@ -1794,6 +1912,173 @@ components:
       properties:
         accountLabel: { type: ["string", "null"], maxLength: 120 }
         apiBaseUrl: { type: ["string", "null"], maxLength: 500 }
+    DistributorContract:
+      type: object
+      required: [id, contractNumber, contractType, status, sellerName, sellerCrNumber, sellerCrDate, sellerCrIssuer, sellerAddress, sellerRepName, sellerRepTitle, buyerCompanyName, products, createdBy, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        contractNumber: { type: string }
+        distributorId: { type: [number, "null"] }
+        contractType: { type: string }
+        status: { type: string, enum: [draft, seller_signed, sent, final, cancelled] }
+        contractDate: { type: [string, "null"], format: date-time }
+        hijriDateStr: { type: [string, "null"] }
+        gregorianDateStr: { type: [string, "null"] }
+        contractDayName: { type: [string, "null"] }
+        sellerName: { type: string }
+        sellerCrNumber: { type: string }
+        sellerCrDate: { type: string }
+        sellerCrIssuer: { type: string }
+        sellerAddress: { type: string }
+        sellerRepName: { type: string }
+        sellerRepTitle: { type: string }
+        buyerCompanyName: { type: string }
+        buyerCrNumber: { type: [string, "null"] }
+        buyerCrDate: { type: [string, "null"] }
+        buyerCrIssuer: { type: [string, "null"] }
+        buyerNeighborhood: { type: [string, "null"] }
+        buyerCity: { type: [string, "null"] }
+        buyerPoBox: { type: [string, "null"] }
+        buyerPostalCode: { type: [string, "null"] }
+        buyerRepName: { type: [string, "null"] }
+        buyerRepTitle: { type: [string, "null"] }
+        buyerEmail: { type: [string, "null"] }
+        buyerPhone: { type: [string, "null"] }
+        showroomName: { type: [string, "null"] }
+        showroomLocation: { type: [string, "null"] }
+        showroomCity: { type: [string, "null"] }
+        marginPercent: { type: string }
+        minOrderValue: { type: string }
+        startDate: { type: [string, "null"], format: date-time }
+        endDate: { type: [string, "null"], format: date-time }
+        vatRate: { type: string }
+        latePaymentWeeklyRate: { type: string }
+        latePaymentCapRate: { type: string }
+        inspectionDays: { type: number }
+        warrantyMonths: { type: number }
+        deliveryDays: { type: number }
+        paymentDays: { type: number }
+        products: { type: array, items: {} }
+        notes: { type: [string, "null"] }
+        sellerSignaturePath: { type: [string, "null"] }
+        sellerSignedAt: { type: [string, "null"], format: date-time }
+        buyerSignaturePath: { type: [string, "null"] }
+        buyerSignedAt: { type: [string, "null"], format: date-time }
+        buyerSignedName: { type: [string, "null"] }
+        createdBy: { type: number }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DistributorContractInput:
+      type: object
+      required: [contractType, sellerName, sellerCrNumber, sellerCrDate, sellerCrIssuer, sellerAddress, sellerRepName, sellerRepTitle, buyerCompanyName]
+      properties:
+        contractNumber: { type: [string, "null"] }
+        distributorId: { type: [number, "null"] }
+        contractType: { type: string, minLength: 1 }
+        contractDate: { type: [string, "null"], format: date-time }
+        hijriDateStr: { type: [string, "null"] }
+        gregorianDateStr: { type: [string, "null"] }
+        contractDayName: { type: [string, "null"] }
+        sellerName: { type: string, minLength: 1 }
+        sellerCrNumber: { type: string, minLength: 1 }
+        sellerCrDate: { type: string, minLength: 1 }
+        sellerCrIssuer: { type: string, minLength: 1 }
+        sellerAddress: { type: string, minLength: 1 }
+        sellerRepName: { type: string, minLength: 1 }
+        sellerRepTitle: { type: string, minLength: 1 }
+        buyerCompanyName: { type: string, minLength: 1 }
+        buyerCrNumber: { type: [string, "null"] }
+        buyerCrDate: { type: [string, "null"] }
+        buyerCrIssuer: { type: [string, "null"] }
+        buyerNeighborhood: { type: [string, "null"] }
+        buyerCity: { type: [string, "null"] }
+        buyerPoBox: { type: [string, "null"] }
+        buyerPostalCode: { type: [string, "null"] }
+        buyerRepName: { type: [string, "null"] }
+        buyerRepTitle: { type: [string, "null"] }
+        buyerEmail: { type: [string, "null"] }
+        buyerPhone: { type: [string, "null"] }
+        showroomName: { type: [string, "null"] }
+        showroomLocation: { type: [string, "null"] }
+        showroomCity: { type: [string, "null"] }
+        marginPercent: { type: string }
+        minOrderValue: { type: string }
+        startDate: { type: [string, "null"], format: date-time }
+        endDate: { type: [string, "null"], format: date-time }
+        vatRate: { type: string }
+        latePaymentWeeklyRate: { type: string }
+        latePaymentCapRate: { type: string }
+        inspectionDays: { type: number }
+        warrantyMonths: { type: number }
+        deliveryDays: { type: number }
+        paymentDays: { type: number }
+        products: { type: array, items: {} }
+        notes: { type: [string, "null"] }
+    DistributorContractUpdate:
+      allOf: [{ $ref: "#/components/schemas/DistributorContractInput" }]
+    ContractSignatureInput:
+      type: object
+      required: [signaturePath]
+      properties:
+        signaturePath: { type: string, minLength: 1 }
+    ContractSignatureUploadInput:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        size: { type: number, minimum: 1, maximum: 2097152 }
+        contentType: { type: string, enum: [image/png, image/jpeg, image/webp] }
+    ContractSignatureUpload:
+      type: object
+      required: [uploadUrl, objectPath]
+      properties:
+        uploadUrl: { type: string }
+        objectPath: { type: string }
+    PublicContractSignatureInput:
+      type: object
+      required: [signaturePath, buyerSignedName]
+      properties:
+        signaturePath: { type: string, minLength: 1 }
+        buyerSignedName: { type: string, minLength: 1 }
+    ContractSendResponse:
+      type: object
+      required: [contract, signingToken, signingUrl]
+      properties:
+        contract: { $ref: "#/components/schemas/DistributorContract" }
+        signingToken: { type: string }
+        signingUrl: { type: string }
+    SiteContent:
+      type: object
+      required: [id, key, data, updatedAt]
+      properties:
+        id: { type: number }
+        key: { type: string }
+        data: {}
+        updatedAt: { type: string, format: date-time }
+        updatedBy: { type: [string, "null"] }
+    SiteContentUpsert:
+      type: object
+      required: [items]
+      properties:
+        items: { type: array, items: { type: object, required: [key, data], properties: { key: { type: string, minLength: 1 }, data: {} } } }
+    DistributorCatalogSetting:
+      type: object
+      required: [id, nameAr, nameEn, showOnDistributors]
+      properties:
+        id: { type: number }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        showOnDistributors: { type: boolean }
+        distributorNameOverride: { type: [string, "null"] }
+        distributorImageOverride: { type: [string, "null"] }
+    DistributorCatalogUpdate:
+      type: object
+      required: [productId, showOnDistributors]
+      properties:
+        productId: { type: number }
+        showOnDistributors: { type: boolean }
+        distributorNameOverride: { type: [string, "null"] }
+        distributorImageOverride: { type: [string, "null"] }
     AdminProduct:
       type: object
       required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, isActive, isFeatured, isBestseller, createdAt, updatedAt]
@@ -1814,6 +2099,9 @@ components:
         isActive: { type: boolean }
         isFeatured: { type: boolean }
         isBestseller: { type: boolean }
+        showOnDistributors: { type: boolean }
+        distributorNameOverride: { type: [string, "null"] }
+        distributorImageOverride: { type: [string, "null"] }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     AdminProductImage:
@@ -1855,6 +2143,9 @@ components:
         isActive: { type: boolean }
         isFeatured: { type: boolean }
         isBestseller: { type: boolean }
+        showOnDistributors: { type: boolean }
+        distributorNameOverride: { type: [string, "null"] }
+        distributorImageOverride: { type: [string, "null"] }
     AdminProductUpdate:
       type: object
       properties:
@@ -1871,6 +2162,9 @@ components:
         isActive: { type: boolean }
         isFeatured: { type: boolean }
         isBestseller: { type: boolean }
+        showOnDistributors: { type: boolean }
+        distributorNameOverride: { type: [string, "null"] }
+        distributorImageOverride: { type: [string, "null"] }
         images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
         notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
     AdminCategory:

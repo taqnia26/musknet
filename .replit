@@ -21,7 +21,7 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
-packages = ["glib", "nss", "nspr", "dbus", "atk", "cups", "libdrm", "expat", "xorg.libX11", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "mesa", "libgbm", "pango", "cairo", "alsa-lib", "libxkbcommon", "at-spi2-atk", "gtk3", "xorg.libxcb", "xorg.libXcursor", "xorg.libXi", "xorg.libXtst"]
+packages = ["alsa-lib", "at-spi2-atk", "atk", "cairo", "cups", "dbus", "expat", "freetype", "glib", "gtk3", "gumbo", "harfbuzz", "jbig2dec", "libdrm", "libgbm", "libjpeg_turbo", "libxkbcommon", "mesa", "mupdf", "nspr", "nss", "openjpeg", "pango", "swig", "xcbuild", "xorg.libX11", "xorg.libXcomposite", "xorg.libXcursor", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXi", "xorg.libXrandr", "xorg.libXtst", "xorg.libxcb"]
 
 [[ports]]
 localPort = 8080

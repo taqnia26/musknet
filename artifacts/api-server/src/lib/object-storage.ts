@@ -67,7 +67,11 @@ export class ObjectStorageService {
   }
 
   async createProductImageUpload() {
-    const objectPath = `uploads/products/${randomUUID()}`;
+    return this.createPrivateUpload("uploads/products");
+  }
+
+  async createPrivateUpload(prefix: string) {
+    const objectPath = `${prefix.replace(/^\/+|\/+$/g, "")}/${randomUUID()}`;
     const fullPath = `${this.getPrivateObjectDir()}/${objectPath}`;
     const { bucketName, objectName } = parseObjectPath(fullPath);
     return {
