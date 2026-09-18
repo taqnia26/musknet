@@ -18,6 +18,7 @@ import {
   leaveRequestsTable,
   payrollRecordsTable,
   expensesTable,
+  purchasesTable,
   manufacturingBatchesTable,
   exhibitionsTable,
   exhibitionProductsTable,
@@ -50,6 +51,7 @@ import {
   AccountingNotFoundError,
   AccountingValidationError,
   createExpenseWithJournal,
+  createPurchaseWithJournal,
   createPayrollWithJournal,
   ensureStandardAccountingChart,
   postJournalEntry,
@@ -964,6 +966,77 @@ router.delete("/admin/finance/expenses/:id", permit("finance", "delete"), route(
   const [row] = await db.delete(expensesTable).where(eq(expensesTable.id, params.id)).returning({ id: expensesTable.id });
   if (!row) { res.status(404).json({ error: "Expense not found" }); return; }
   res.sendStatus(204);
+}));
+
+const purchaseMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+router.post("/admin/finance/purchases/invoice-upload", permit("finance", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminRequestPurchaseInvoiceUploadBody, req.body, res); if (!body) return;
+  if (!purchaseMimeTypes.has(body.contentType) || body.size <= 0 || body.size > 10 * 1024 * 1024) {
+    res.status(400).json({ error: "Invoice must be PDF or image and 10 MB or smaller" }); return;
+  }
+  const upload = await objectStorage.createPrivateUpload("purchases");
+  parsedJson(Api.AdminRequestPurchaseInvoiceUploadResponse, upload, res);
+}));
+router.get("/admin/finance/purchases", permit("finance", "view"), route(async (req, res) => {
+  const rows = await db.select().from(purchasesTable).orderBy(sql`${purchasesTable.purchaseDate} desc`, purchasesTable.id);
+  parsedJson(Api.AdminListPurchasesResponse, rows, res);
+}));
+router.post("/admin/finance/purchases", permit("finance", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreatePurchaseBody, req.body, res); if (!body) return;
+  if (body.invoiceObjectPath && (!body.invoiceObjectPath.startsWith("/objects/purchases/") || body.invoiceObjectPath.includes(".."))) {
+    res.status(400).json({ error: "Invoice must use a private purchases object path" }); return;
+  }
+  const invoiceFields = [body.invoiceObjectPath, body.invoiceContentType, body.invoiceSize];
+  if (invoiceFields.some((value) => value != null) && invoiceFields.some((value) => value == null)) {
+    res.status(400).json({ error: "Invoice path, content type, and size must be supplied together" }); return;
+  }
+  if (body.invoiceObjectPath) {
+    if (!purchaseMimeTypes.has(body.invoiceContentType!)) {
+      res.status(400).json({ error: "Unsupported invoice type" }); return;
+    }
+    if (body.invoiceSize! <= 0 || body.invoiceSize! > 10 * 1024 * 1024) {
+      res.status(400).json({ error: "Invoice must be between 1 byte and 10 MB" }); return;
+    }
+    try {
+      const metadata = await objectStorage.getObjectMetadata(body.invoiceObjectPath);
+      if (!purchaseMimeTypes.has(metadata.contentType ?? "") || metadata.contentType !== body.invoiceContentType ||
+        metadata.size !== body.invoiceSize) {
+        res.status(400).json({ error: "Invoice metadata does not match the uploaded object" }); return;
+      }
+    } catch {
+      res.status(400).json({ error: "Invoice object was not found" }); return;
+    }
+  }
+  const row = await createPurchaseWithJournal({
+    ...body, amount: String(body.amount), purchaseDate: body.purchaseDate ? isoDate(body.purchaseDate) : utcDateString(new Date()), createdBy: res.locals.admin.id,
+  }, req.header("idempotency-key"));
+  parsedJson(Api.AdminCreatePurchaseResponse, row, res, 201);
+}));
+router.get("/admin/finance/purchases/:id", permit("finance", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminGetPurchaseParams, req.params, res); if (!params) return;
+  const [row] = await db.select().from(purchasesTable).where(eq(purchasesTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Purchase not found" }); return; }
+  parsedJson(Api.AdminGetPurchaseResponse, row, res);
+}));
+router.get("/admin/finance/purchases/:id/invoice", permit("finance", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminGetPurchaseParams, req.params, res); if (!params) return;
+  const [row] = await db.select({ path: purchasesTable.invoiceObjectPath, title: purchasesTable.title })
+    .from(purchasesTable).where(eq(purchasesTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Purchase not found" }); return; }
+  if (!row.path) { res.status(404).json({ error: "This purchase has no invoice" }); return; }
+  const file = await objectStorage.getObjectFile(row.path);
+  const safeName = row.title.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "purchase-invoice";
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Disposition", `attachment; filename="${safeName}.invoice"`);
+  await objectStorage.pipeObject(file, res);
+}));
+router.post("/admin/finance/purchases/:id/archive", permit("finance", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminArchivePurchaseParams, req.params, res); if (!params) return;
+  const [row] = await db.update(purchasesTable).set({ archivedAt: new Date() })
+    .where(eq(purchasesTable.id, params.id)).returning();
+  if (!row) { res.status(404).json({ error: "Purchase not found" }); return; }
+  parsedJson(Api.AdminArchivePurchaseResponse, row, res);
 }));
 
 function utcDateString(date: Date) {

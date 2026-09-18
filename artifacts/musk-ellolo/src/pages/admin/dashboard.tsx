@@ -12,8 +12,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  AreaChart, Area, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip as RechartsTooltip, ResponsiveContainer
 } from 'recharts';
 
 function parseLocalDate(dateStr: string): Date {
@@ -66,13 +66,16 @@ export default function AdminDashboard() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between animate-pulse">
-          <div className="h-10 w-48 bg-muted rounded-lg" />
+          <div className="space-y-2">
+            <div className="h-4 w-24 bg-muted rounded" />
+            <div className="h-6 w-64 bg-muted rounded" />
+          </div>
           <div className="h-10 w-32 bg-muted rounded-lg" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <Card key={i} className="animate-pulse shadow-sm border-none">
-              <CardContent className="h-28" />
+            <Card key={i} className="animate-pulse shadow-none border border-border">
+              <CardContent className="h-[104px]" />
             </Card>
           ))}
         </div>
@@ -81,40 +84,23 @@ export default function AdminDashboard() {
   }
 
   const kpis = [
-    { label: t('الإيرادات', 'Revenue'), value: formatCurrency(analyticsData?.summary.revenue || 0), icon: DollarSign, fg: "hsl(var(--primary))", bg: "hsl(var(--primary) / 0.1)" },
-    { label: t('الطلبات', 'Orders'), value: formatNumber(analyticsData?.summary.orders || 0), icon: ShoppingCart, fg: "hsl(var(--accent))", bg: "hsl(var(--accent) / 0.1)" },
-    { label: t('الزيارات', 'Visits'), value: formatNumber(analyticsData?.summary.visits || 0), icon: Eye, fg: "hsl(320, 21%, 55%)", bg: "hsl(320, 21%, 55% / 0.1)" },
-    { label: t('مشاهدات الصفحات', 'Page Views'), value: formatNumber(analyticsData?.summary.pageViews || 0), icon: Activity, fg: "hsl(139, 15%, 49%)", bg: "hsl(139, 15%, 49% / 0.1)" },
-    { label: t('معدل التحويل', 'Conversion'), value: formatPercent(analyticsData?.summary.conversionRate || 0), icon: MousePointerClick, fg: "hsl(194, 42%, 45%)", bg: "hsl(194, 42%, 45% / 0.1)" },
-    { label: t('متوسط قيمة الطلب', 'AOV'), value: formatCurrency(analyticsData?.summary.averageOrderValue || 0), icon: TrendingUp, fg: "hsl(40, 42%, 45%)", bg: "hsl(40, 42%, 45% / 0.1)" },
+    { label: t('الإيرادات', 'Revenue'), value: formatCurrency(analyticsData?.summary.revenue || 0), icon: DollarSign, color: "hsl(42, 45%, 55%)" },
+    { label: t('الطلبات', 'Orders'), value: formatNumber(analyticsData?.summary.orders || 0), icon: ShoppingCart, color: "hsl(210, 80%, 65%)" },
+    { label: t('العملاء', 'Customers'), value: formatNumber(dashboardData?.customers || 0), icon: Users, color: "hsl(270, 60%, 65%)" },
+    { label: t('المنتجات النشطة', 'Active Products'), value: formatNumber(dashboardData?.products || 0), icon: Package, color: "hsl(150, 50%, 55%)" },
   ];
 
-  const sourceLabels: Record<string, string> = {
-    direct: t('مباشر', 'Direct'),
-    search: t('بحث', 'Search'),
-    social: t('تواصل اجتماعي', 'Social'),
-    referral: t('إحالة', 'Referral')
-  };
-
-  const sourceColors: Record<string, string> = {
-    direct: "hsl(var(--primary))",
-    search: "hsl(var(--accent))",
-    social: "hsl(320, 21%, 55%)",
-    referral: "hsl(139, 15%, 49%)"
-  };
-
-  const trafficData = (analyticsData?.trafficSources || []).map(s => ({
-    name: sourceLabels[s.source] || s.source,
-    value: s.visits,
-    color: sourceColors[s.source] || "hsl(var(--primary))"
-  }));
-
-  const overviewStats = [
-    { label: t('المنتجات', 'Products'), value: dashboardData?.products || 0, icon: Package },
-    { label: t('العملاء', 'Customers'), value: dashboardData?.customers || 0, icon: Users },
+  const orderStatus = [
     { label: t('طلبات معلقة', 'Pending Orders'), value: dashboardData?.pendingOrders || 0, icon: ShoppingCart },
     { label: t('مخزون منخفض', 'Low Stock'), value: dashboardData?.lowStock || 0, icon: AlertTriangle, alert: (dashboardData?.lowStock || 0) > 0 },
     { label: t('الموزعين', 'Distributors'), value: dashboardData?.distributors || 0, icon: Store },
+  ];
+
+  const activitySummary = [
+    { label: t('الزيارات', 'Visits'), value: formatNumber(analyticsData?.summary.visits || 0), icon: Eye, color: "hsl(270, 60%, 65%)" },
+    { label: t('مشاهدات الصفحات', 'Page Views'), value: formatNumber(analyticsData?.summary.pageViews || 0), icon: Activity, color: "hsl(150, 50%, 55%)" },
+    { label: t('معدل التحويل', 'Conversion'), value: formatPercent(analyticsData?.summary.conversionRate || 0), icon: MousePointerClick, color: "hsl(30, 90%, 60%)" },
+    { label: t('متوسط قيمة الطلب', 'Average Order Value'), value: formatCurrency(analyticsData?.summary.averageOrderValue || 0), icon: TrendingUp, color: "hsl(330, 70%, 65%)" },
   ];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -123,14 +109,14 @@ export default function AdminDashboard() {
       ? formatDateLabel(label, lang)
       : label;
     return (
-      <div className="bg-popover border border-border shadow-lg rounded-lg p-3 text-sm min-w-[150px]">
-        {formattedLabel && <div className="font-semibold text-foreground mb-2 pb-2 border-b border-border/50">{formattedLabel}</div>}
+      <div className="bg-popover border border-border shadow-md rounded-md p-2.5 text-xs min-w-[130px]">
+        {formattedLabel && <div className="font-semibold text-foreground mb-1.5 pb-1.5 border-b border-border/60">{formattedLabel}</div>}
         {payload.map((entry: any, index: number) => {
           const isRevenue = entry.dataKey === 'revenue' || entry.name === t('الإيرادات', 'Revenue');
           return (
-            <div key={index} className="flex items-center justify-between gap-4 mt-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: entry.color }} />
+            <div key={index} className="flex items-center justify-between gap-4 mt-1">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                 <span className="text-muted-foreground">{entry.name}</span>
               </div>
               <span className="font-semibold text-foreground">
@@ -144,29 +130,27 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {t('لوحة المتابعة', 'Dashboard')}
+      {/* Header section matching reference */}
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-2">
+        <div className="flex flex-col gap-1">
+          <div className="text-xs font-bold text-foreground uppercase tracking-wider">{t('نظرة عامة', 'Overview')}</div>
+          <h1 className="text-[15px] font-medium text-muted-foreground">
+            {t('مرحباً بك، إليك ملخص أداء مسك اللولو', 'Welcome, here is a summary of Musk Ellolo performance')}
           </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('نظرة عامة على أداء المتجر', 'Storefront performance overview')}
-          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center bg-card border border-border/50 rounded-lg p-1 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center bg-card border border-border rounded-md p-0.5 shadow-sm">
             {RANGES.map(days => (
               <button
                 key={days}
                 onClick={() => setRangeDays(days)}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
+                className={`px-3 py-1 text-[11px] font-semibold rounded-[4px] transition-all ${
                   rangeDays === days
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                    ? 'bg-accent/10 text-accent'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {days} {t('يوم', 'Days')}
@@ -178,187 +162,165 @@ export default function AdminDashboard() {
             size="icon"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="bg-card shadow-sm h-10 w-10 border-border/50"
+            className="bg-card shadow-sm h-7 w-7 border-border rounded-md"
             title={t('تحديث البيانات', 'Refresh data')}
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin text-primary' : 'text-muted-foreground'}`} />
+            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin text-accent' : 'text-muted-foreground'}`} />
           </Button>
         </div>
       </div>
 
       {/* Main KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => (
-          <Card key={i} className="border-border/50 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br from-card to-card/50">
-            <CardContent className="p-5 flex flex-col justify-between h-full">
-              <div className="flex justify-between items-start mb-4">
-                <div className="text-sm font-medium text-muted-foreground">{kpi.label}</div>
-                <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: kpi.bg, color: kpi.fg }}>
-                  <kpi.icon className="h-4 w-4" />
+          <Card key={i} className="border border-border shadow-sm rounded-lg overflow-hidden bg-card transition-shadow hover:shadow-md" style={{ borderTopWidth: '3px', borderTopColor: kpi.color }}>
+            <CardContent className="p-4 flex flex-col justify-between h-full min-h-[104px]">
+              <div className="flex justify-between items-start mb-2">
+                <div className="text-[12.5px] font-medium text-muted-foreground">{kpi.label}</div>
+                <div className="h-6 w-6 rounded-md flex items-center justify-center shrink-0 bg-black/5 dark:bg-white/5" style={{ color: kpi.color }}>
+                  <kpi.icon className="h-[14px] w-[14px]" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-foreground" dir="ltr">{kpi.value}</div>
+              <div className="text-xl font-bold text-foreground mt-auto" dir="ltr">{kpi.value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Revenue & Visits Trend Chart */}
-        <Card className="xl:col-span-2 border-border/50 shadow-sm overflow-hidden flex flex-col">
-          <CardHeader className="bg-card border-b border-border/50 pb-4">
-            <CardTitle className="text-base font-semibold">{t('اتجاهات الإيرادات والزيارات', 'Revenue & Visits Trends')}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t('رسمان منفصلان لقراءة أوضح بدون محاور متعاكسة', 'Separate charts for a clearer, consistent reading')}
-            </p>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 2xl:grid-cols-2 gap-6 p-6 flex-1" dir="ltr">
-            <div className="min-w-0">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-                {t('الإيرادات', 'Revenue')}
-              </div>
-              <div className="h-[260px]">
-                <ResponsiveContainer width="100%" height="100%" debounce={0}>
-                  <AreaChart data={analyticsData?.series || []} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" className="opacity-50" />
-                    <XAxis dataKey="date" tickFormatter={date => formatDateLabel(date, lang)} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} minTickGap={24} />
-                    <YAxis orientation="left" tickFormatter={val => formatCompact(val)} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'end' }} tickLine={false} axisLine={false} width={58} />
-                    <RechartsTooltip content={<CustomTooltip />} isAnimationActive={false} cursor={{ fill: 'hsl(var(--muted)/0.3)', stroke: 'none' }} />
-                    <Area type="monotone" dataKey="revenue" name={t('الإيرادات', 'Revenue')} stroke="hsl(var(--primary))" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
+        {/* Combined Revenue & Visits Trend Chart */}
+        <Card className="lg:col-span-2 border border-border shadow-sm bg-card flex flex-col rounded-xl overflow-hidden">
+          <CardHeader className="border-b border-border/60 py-3.5 px-5">
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-accent" />
+                {t('الإيرادات والزيارات', 'Revenue and Visits')}
+              </CardTitle>
+              <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[hsl(42,45%,55%)]" />
+                  {t('الإيرادات', 'Revenue')}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-[hsl(150,50%,55%)]" />
+                  {t('الزيارات', 'Visits')}
+                </span>
               </div>
             </div>
-            <div className="min-w-0">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
-                <span className="h-2.5 w-2.5 rounded-full bg-[hsl(320,21%,55%)]" />
-                {t('الزيارات', 'Visits')}
-              </div>
-              <div className="h-[260px]">
-                <ResponsiveContainer width="100%" height="100%" debounce={0}>
-                  <AreaChart data={analyticsData?.series || []} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(320, 21%, 55%)" stopOpacity={0.28}/>
-                        <stop offset="95%" stopColor="hsl(320, 21%, 55%)" stopOpacity={0.0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" className="opacity-50" />
-                    <XAxis dataKey="date" tickFormatter={date => formatDateLabel(date, lang)} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} minTickGap={24} />
-                    <YAxis orientation="left" tickFormatter={val => formatCompact(val)} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))', textAnchor: 'end' }} tickLine={false} axisLine={false} width={48} allowDecimals={false} />
-                    <RechartsTooltip content={<CustomTooltip />} isAnimationActive={false} cursor={{ fill: 'hsl(var(--muted)/0.3)', stroke: 'none' }} />
-                    <Area type="monotone" dataKey="visits" name={t('الزيارات', 'Visits')} stroke="hsl(320, 21%, 55%)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorVisits)" isAnimationActive={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+          </CardHeader>
+          <CardContent className="p-5 flex-1" dir="ltr">
+            <div className="h-[260px]">
+              <ResponsiveContainer width="100%" height="100%" debounce={0}>
+                <AreaChart data={analyticsData?.series || []} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(42, 45%, 55%)" stopOpacity={0.16}/>
+                      <stop offset="95%" stopColor="hsl(42, 45%, 55%)" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(150, 50%, 55%)" stopOpacity={0.12}/>
+                      <stop offset="95%" stopColor="hsl(150, 50%, 55%)" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" tickFormatter={date => formatDateLabel(date, lang)} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} minTickGap={24} />
+                  <YAxis yAxisId="revenue" orientation="left" tickFormatter={formatCompact} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} width={42} />
+                  <YAxis yAxisId="visits" orientation="right" tickFormatter={formatCompact} tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} width={34} allowDecimals={false} />
+                  <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--border))', strokeDasharray: '3 3' }} />
+                  <Area yAxisId="revenue" type="monotone" dataKey="revenue" name={t('الإيرادات', 'Revenue')} stroke="hsl(42, 45%, 55%)" strokeWidth={2} fill="url(#colorRev)" isAnimationActive={false} />
+                  <Area yAxisId="visits" type="monotone" dataKey="visits" name={t('الزيارات', 'Visits')} stroke="hsl(150, 50%, 55%)" strokeWidth={2} fill="url(#colorVisits)" isAnimationActive={false} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
 
-        {/* Traffic Sources Pie */}
-        <Card className="border-border/50 shadow-sm flex flex-col">
-          <CardHeader className="bg-card border-b border-border/50 pb-4">
-            <CardTitle className="text-base font-semibold">{t('مصادر الزيارات', 'Traffic Sources')}</CardTitle>
+        {/* Order and operations status */}
+        <Card className="border border-border shadow-sm flex flex-col bg-card rounded-xl overflow-hidden">
+          <CardHeader className="border-b border-border/60 py-3.5 px-5">
+            <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4 text-accent" />
+              {t('حالة الطلبات والتشغيل', 'Orders and Operations')}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-6 flex-1 min-h-[350px] flex items-center justify-center" dir="ltr">
-            {trafficData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%" debounce={0}>
-                <PieChart>
-                  <Pie
-                    data={trafficData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={65}
-                    outerRadius={90}
-                    paddingAngle={4}
-                    stroke="none"
-                    isAnimationActive={false}
-                  >
-                    {trafficData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip content={<CustomTooltip />} isAnimationActive={false} />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    iconType="circle"
-                    formatter={(value) => <span className="text-muted-foreground text-sm font-medium">{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-muted-foreground text-sm text-center">
-                {t('لا توجد بيانات متاحة', 'No data available')}
-              </div>
-            )}
+          <CardContent className="flex flex-1 flex-col justify-center p-0">
+            <div className="divide-y divide-border/60">
+              {orderStatus.map((stat) => (
+                <div key={stat.label} className="flex items-center justify-between px-5 py-5 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className={`h-8 w-8 rounded-md flex items-center justify-center shrink-0 ${
+                      stat.alert ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'
+                    }`}>
+                      <stat.icon className="h-4 w-4" />
+                    </div>
+                    <div className="text-[13px] font-medium text-foreground">{stat.label}</div>
+                  </div>
+                  <div className="text-xl font-bold text-foreground" dir="ltr">{formatNumber(stat.value)}</div>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Bottom Section: Top Products & Operations Overview */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {/* Bottom Section: Activity summary and Top Products */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Top Products */}
-        <Card className="xl:col-span-2 shadow-sm border-border/50">
-          <CardHeader className="bg-card border-b border-border/50 pb-4">
-            <CardTitle className="text-base font-semibold">{t('المنتجات الأكثر مبيعاً', 'Top Products')}</CardTitle>
+        <Card className="shadow-sm border border-border bg-card rounded-xl overflow-hidden">
+          <CardHeader className="border-b border-border/60 py-3.5 px-5">
+            <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+              <Activity className="h-4 w-4 text-accent" />
+              {t('ملخص النشاط', 'Activity Summary')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-px bg-border/60 p-0">
+            {activitySummary.map((stat) => (
+              <div key={stat.label} className="bg-card p-5 hover:bg-muted/30 transition-colors">
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <span className="text-[12px] font-medium text-muted-foreground">{stat.label}</span>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-black/5 dark:bg-white/5" style={{ color: stat.color }}>
+                    <stat.icon className="h-3.5 w-3.5" />
+                  </div>
+                </div>
+                <div className="text-lg font-bold text-foreground" dir="ltr">{stat.value}</div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border border-border bg-card rounded-xl overflow-hidden">
+          <CardHeader className="border-b border-border/60 py-3.5 px-5">
+            <CardTitle className="text-[13px] font-semibold text-foreground flex items-center gap-2">
+              <Package className="h-4 w-4 text-accent" />
+              {t('المنتجات الأكثر مبيعاً', 'Top Products')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="divide-y divide-border/50">
-              {analyticsData?.topProducts?.map((p, i) => (
-                <div key={i} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                      {i + 1}
+            <div className="divide-y divide-border/60">
+              {analyticsData?.topProducts?.map((product, index) => (
+                <div key={`${product.name}-${index}`} className="flex items-center justify-between px-5 py-3.5 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="h-7 w-7 rounded-md bg-accent/10 flex items-center justify-center text-accent font-bold text-xs shrink-0">
+                      {index + 1}
                     </div>
-                    <span className="font-medium text-foreground">{p.name}</span>
+                    <span className="truncate font-medium text-[13.5px] text-foreground">{product.name}</span>
                   </div>
-                  <div className="text-left shrink-0" dir="ltr">
-                    <div className="font-bold text-sm text-foreground">{formatCurrency(p.revenue)}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{formatNumber(p.quantity)} {t('وحدة', 'units')}</div>
+                  <div className="text-left shrink-0 ps-3" dir="ltr">
+                    <div className="font-bold text-[13.5px] text-foreground">{formatCurrency(product.revenue)}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{formatNumber(product.quantity)} {t('وحدة', 'units')}</div>
                   </div>
                 </div>
               ))}
               {(!analyticsData?.topProducts || analyticsData.topProducts.length === 0) && (
-                <div className="p-8 text-center text-muted-foreground text-sm">
+                <div className="p-8 text-center text-muted-foreground text-[13px]">
                   {t('لا توجد بيانات', 'No data available')}
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
-
-        {/* Operations Overview */}
-        <div className="space-y-4">
-          <h3 className="text-base font-semibold text-foreground px-1">{t('التشغيل', 'Operations')}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-4">
-            {overviewStats.map((stat, i) => (
-              <div key={i} className="flex items-center justify-between gap-4 p-4 rounded-xl bg-card border border-border/50 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className={`h-11 w-11 rounded-lg flex items-center justify-center shrink-0 ${
-                    stat.alert ? 'bg-destructive/10 text-destructive' : 'bg-secondary/80 text-secondary-foreground'
-                  }`}>
-                    <stat.icon className="h-5 w-5" />
-                  </div>
-                  <div className="text-sm text-muted-foreground font-medium">{stat.label}</div>
-                </div>
-                <div className="text-2xl font-bold text-foreground shrink-0 text-left" dir="ltr">{formatNumber(stat.value)}</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
       </div>
 

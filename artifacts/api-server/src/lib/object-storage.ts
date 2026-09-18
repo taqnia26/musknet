@@ -96,10 +96,16 @@ export class ObjectStorageService {
     return file;
   }
 
+  async getObjectMetadata(objectPath: string) {
+    const file = await this.getObjectFile(objectPath);
+    const [metadata] = await file.getMetadata();
+    return { file, contentType: metadata.contentType?.toLowerCase() ?? null, size: Number(metadata.size ?? 0) };
+  }
+
   async pipeObject(file: File, response: import("express").Response) {
     const [metadata] = await file.getMetadata();
     response.setHeader("Content-Type", metadata.contentType || "application/octet-stream");
-    response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    if (!response.getHeader("Cache-Control")) response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     if (metadata.size) response.setHeader("Content-Length", String(metadata.size));
     const stream = file.createReadStream();
     stream.setMaxListeners(20);

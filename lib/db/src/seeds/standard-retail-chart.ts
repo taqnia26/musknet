@@ -26,6 +26,7 @@ export const standardRetailChart: readonly AccountSeed[] = [
   { code: "2110", nameAr: "الذمم الدائنة", nameEn: "Accounts Payable", accountType: "liability", normalBalance: "credit", isPosting: true, parentCode: "2100" },
   { code: "2120", nameAr: "ضريبة القيمة المضافة المستحقة", nameEn: "Output VAT Payable", accountType: "liability", normalBalance: "credit", isPosting: true, parentCode: "2100" },
   { code: "2130", nameAr: "المصروفات المستحقة", nameEn: "Accrued Expenses", accountType: "liability", normalBalance: "credit", isPosting: true, parentCode: "2100" },
+  { code: "2140", nameAr: "ذمم مستحقة للمالك", nameEn: "Owner Payable", accountType: "liability", normalBalance: "credit", isPosting: true, parentCode: "2100" },
   { code: "3000", nameAr: "حقوق الملكية", nameEn: "Equity", accountType: "equity", normalBalance: "credit", isPosting: false },
   { code: "3100", nameAr: "رأس المال", nameEn: "Capital", accountType: "equity", normalBalance: "credit", isPosting: true, parentCode: "3000" },
   { code: "3200", nameAr: "الأرباح المبقاة", nameEn: "Retained Earnings", accountType: "equity", normalBalance: "credit", isPosting: true, parentCode: "3000" },

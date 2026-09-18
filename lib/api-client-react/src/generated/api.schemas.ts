@@ -1680,6 +1680,101 @@ export interface ExpenseInput {
 
 export type ExpenseUpdate = ExpenseInput;
 
+export type PurchaseCategory = typeof PurchaseCategory[keyof typeof PurchaseCategory];
+
+
+export const PurchaseCategory = {
+  direct_materials_oils: 'direct_materials_oils',
+  travel_tickets: 'travel_tickets',
+  meeting_hospitality: 'meeting_hospitality',
+  shipping: 'shipping',
+  marketing: 'marketing',
+  utilities: 'utilities',
+  other: 'other',
+} as const;
+
+export type PurchasePaymentSource = typeof PurchasePaymentSource[keyof typeof PurchasePaymentSource];
+
+
+export const PurchasePaymentSource = {
+  company_account: 'company_account',
+  owner_account: 'owner_account',
+} as const;
+
+export interface Purchase {
+  id: number;
+  title: string;
+  description: string;
+  amount: AccountingUnsignedAmount;
+  purchaseDate: string;
+  /** @nullable */
+  notes: string | null;
+  category: PurchaseCategory;
+  paymentSource: PurchasePaymentSource;
+  /** @nullable */
+  invoiceObjectPath: string | null;
+  /** @nullable */
+  invoiceContentType: string | null;
+  /** @nullable */
+  invoiceSize: number | null;
+  /** @nullable */
+  idempotencyKey: string | null;
+  /** @nullable */
+  archivedAt: string | null;
+  createdBy: number;
+  createdAt: string;
+}
+
+export type PurchaseInputCategory = typeof PurchaseInputCategory[keyof typeof PurchaseInputCategory];
+
+
+export const PurchaseInputCategory = {
+  direct_materials_oils: 'direct_materials_oils',
+  travel_tickets: 'travel_tickets',
+  meeting_hospitality: 'meeting_hospitality',
+  shipping: 'shipping',
+  marketing: 'marketing',
+  utilities: 'utilities',
+  other: 'other',
+} as const;
+
+export type PurchaseInputPaymentSource = typeof PurchaseInputPaymentSource[keyof typeof PurchaseInputPaymentSource];
+
+
+export const PurchaseInputPaymentSource = {
+  company_account: 'company_account',
+  owner_account: 'owner_account',
+} as const;
+
+export interface PurchaseInput {
+  /** @minLength 1 */
+  title: string;
+  /** @minLength 1 */
+  description: string;
+  amount: AccountingUnsignedAmount;
+  purchaseDate?: string;
+  /** @nullable */
+  notes?: string | null;
+  category: PurchaseInputCategory;
+  paymentSource: PurchaseInputPaymentSource;
+  /** @nullable */
+  invoiceObjectPath?: string | null;
+  /** @nullable */
+  invoiceContentType?: string | null;
+  /** @nullable */
+  invoiceSize?: number | null;
+}
+
+export interface PurchaseInvoiceUploadInput {
+  contentType: string;
+  size: number;
+}
+
+export interface PurchaseInvoiceUploadResponse {
+  uploadUrl: string;
+  objectPath: string;
+}
+
 export interface FinanceMetrics {
   from: string;
   to: string;

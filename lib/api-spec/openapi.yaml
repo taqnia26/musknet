@@ -1140,6 +1140,48 @@ paths:
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExpenseInput" } } } }
       responses: { "201": { description: Expense, content: { application/json: { schema: { $ref: "#/components/schemas/Expense" } } } } }
+  /admin/finance/purchases:
+    get:
+      operationId: adminListPurchases
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Purchases, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Purchase" } } } } } }
+    post:
+      operationId: adminCreatePurchase
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseInput" } } } }
+      responses: { "201": { description: Purchase, content: { application/json: { schema: { $ref: "#/components/schemas/Purchase" } } } } }
+  /admin/finance/purchases/invoice-upload:
+    post:
+      operationId: adminRequestPurchaseInvoiceUpload
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseInvoiceUploadInput" } } } }
+      responses: { "200": { description: Private upload, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseInvoiceUploadResponse" } } } } }
+  /admin/finance/purchases/{id}:
+    get:
+      operationId: adminGetPurchase
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Purchase, content: { application/json: { schema: { $ref: "#/components/schemas/Purchase" } } } } }
+  /admin/finance/purchases/{id}/invoice:
+    get:
+      operationId: adminGetPurchaseInvoice
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200": { description: Private invoice binary, content: { application/pdf: {}, image/jpeg: {}, image/png: {}, image/webp: {} } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/finance/purchases/{id}/archive:
+    post:
+      operationId: adminArchivePurchase
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Archived purchase, content: { application/json: { schema: { $ref: "#/components/schemas/Purchase" } } } } }
   /admin/finance/expenses/{id}:
     get:
       operationId: adminGetExpense
@@ -2667,6 +2709,51 @@ components:
         receiptUrl: { type: [string, "null"] }
     ExpenseUpdate:
       allOf: [{ $ref: "#/components/schemas/ExpenseInput" }]
+    Purchase:
+      type: object
+      required: [id, title, description, amount, purchaseDate, notes, category, paymentSource, invoiceObjectPath, invoiceContentType, invoiceSize, idempotencyKey, archivedAt, createdBy, createdAt]
+      properties:
+        id: { type: number }
+        title: { type: string }
+        description: { type: string }
+        amount: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        purchaseDate: { type: string, format: date }
+        notes: { type: [string, "null"] }
+        category: { type: string, enum: [direct_materials_oils, travel_tickets, meeting_hospitality, shipping, marketing, utilities, other] }
+        paymentSource: { type: string, enum: [company_account, owner_account] }
+        invoiceObjectPath: { type: [string, "null"] }
+        invoiceContentType: { type: [string, "null"] }
+        invoiceSize: { type: [number, "null"] }
+        idempotencyKey: { type: [string, "null"] }
+        archivedAt: { type: [string, "null"], format: date-time }
+        createdBy: { type: number }
+        createdAt: { type: string, format: date-time }
+    PurchaseInput:
+      type: object
+      required: [title, description, amount, category, paymentSource]
+      properties:
+        title: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        amount: { $ref: "#/components/schemas/AccountingUnsignedAmount" }
+        purchaseDate: { type: string, format: date }
+        notes: { type: [string, "null"] }
+        category: { type: string, enum: [direct_materials_oils, travel_tickets, meeting_hospitality, shipping, marketing, utilities, other] }
+        paymentSource: { type: string, enum: [company_account, owner_account] }
+        invoiceObjectPath: { type: [string, "null"] }
+        invoiceContentType: { type: [string, "null"] }
+        invoiceSize: { type: [number, "null"] }
+    PurchaseInvoiceUploadInput:
+      type: object
+      required: [contentType, size]
+      properties:
+        contentType: { type: string }
+        size: { type: number }
+    PurchaseInvoiceUploadResponse:
+      type: object
+      required: [uploadUrl, objectPath]
+      properties:
+        uploadUrl: { type: string }
+        objectPath: { type: string }
     FinanceMetrics:
       type: object
       required: [from, to, revenue, expenses, netProfit, paidOrderCount, averageOrderValue]

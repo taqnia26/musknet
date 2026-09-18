@@ -26,6 +26,7 @@ import AdminWhatsAppInbox from '@/pages/admin/whatsapp-inbox';
 import { AdminWhatsAppSettings, AdminWhatsAppTemplates } from '@/pages/admin/whatsapp-placeholders';
 import AdminIntegrations from '@/pages/admin/integrations';
 import AdminAccounting from '@/pages/admin/accounting';
+import AdminPurchases from '@/pages/admin/purchases';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
@@ -60,6 +61,7 @@ export default function AdminRoutes() {
         <Route path="/admin/hr" component={AdminHR} />
         <Route path="/admin/finance" component={AdminFinance} />
         <Route path="/admin/finance/expenses" component={AdminFinance} />
+        <Route path="/admin/finance/purchases" component={AdminPurchases} />
         <Route path="/admin/finance/reports" component={AdminFinance} />
         <Route path="/admin/accounting" component={AdminAccounting} />
         <Route path="/admin/accounting/accounts" component={AdminAccounting} />

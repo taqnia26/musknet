@@ -8,6 +8,7 @@ import {
   journalEntryAuditTable,
   journalEntryLinesTable,
   payrollRecordsTable,
+  purchasesTable,
   seedStandardRetailChart,
 } from "@workspace/db";
 
@@ -279,6 +280,55 @@ export async function createExpenseWithJournal(
       ],
     });
     return expense;
+  });
+}
+
+const purchaseAccountCodes: Record<string, string> = {
+  direct_materials_oils: "5100", travel_tickets: "6190", meeting_hospitality: "6190",
+  shipping: "6150", marketing: "6140", utilities: "6130", other: "6190",
+};
+
+export async function createPurchaseWithJournal(
+  values: typeof purchasesTable.$inferInsert,
+  idempotencyKey?: string,
+) {
+  await ensureStandardAccountingChart();
+  return db.transaction(async (tx) => {
+    const key = idempotencyKey?.trim() || null;
+    if (key) {
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${"purchase:" + key}, 0))`);
+      const [existing] = await tx.select().from(purchasesTable).where(eq(purchasesTable.idempotencyKey, key)).limit(1);
+      if (existing) {
+        const same = existing.title === values.title &&
+          existing.description === values.description &&
+          exactMoney(existing.amount) === exactMoney(values.amount) &&
+          existing.purchaseDate === values.purchaseDate &&
+          (existing.notes ?? null) === (values.notes ?? null) &&
+          existing.category === values.category &&
+          existing.paymentSource === values.paymentSource &&
+          (existing.invoiceObjectPath ?? null) === (values.invoiceObjectPath ?? null) &&
+          (existing.invoiceContentType ?? null) === (values.invoiceContentType ?? null) &&
+          (existing.invoiceSize ?? null) === (values.invoiceSize ?? null) &&
+          existing.createdBy === values.createdBy;
+        if (!same) {
+          throw new AccountingConflictError("Purchase idempotency key was already used with different values");
+        }
+        return existing;
+      }
+    }
+    const [purchase] = await tx.insert(purchasesTable).values({ ...values, idempotencyKey: key }).returning();
+    await postInTransaction(tx, {
+      entryDate: purchase.purchaseDate,
+      description: `Purchase: ${purchase.title}`,
+      createdBy: purchase.createdBy,
+      sourceType: "purchase",
+      sourceId: String(purchase.id),
+      lines: [
+        { accountCode: purchaseAccountCodes[purchase.category] ?? "6190", debit: purchase.amount },
+        { accountCode: purchase.paymentSource === "owner_account" ? "2140" : "1120", credit: purchase.amount },
+      ],
+    });
+    return purchase;
   });
 }
 

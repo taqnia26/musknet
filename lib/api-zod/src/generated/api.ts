@@ -3195,6 +3195,139 @@ export const AdminCreateExpenseResponse = zod.object({
 })
 
 
+export const adminListPurchasesResponseAmountRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+
+
+export const AdminListPurchasesResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "amount": zod.string().regex(adminListPurchasesResponseAmountRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "purchaseDate": zod.coerce.date(),
+  "notes": zod.string().nullable(),
+  "category": zod.enum(['direct_materials_oils', 'travel_tickets', 'meeting_hospitality', 'shipping', 'marketing', 'utilities', 'other']),
+  "paymentSource": zod.enum(['company_account', 'owner_account']),
+  "invoiceObjectPath": zod.string().nullable(),
+  "invoiceContentType": zod.string().nullable(),
+  "invoiceSize": zod.number().nullable(),
+  "idempotencyKey": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+export const AdminListPurchasesResponse = zod.array(AdminListPurchasesResponseItem)
+
+
+
+
+export const adminCreatePurchaseBodyAmountRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+
+
+export const AdminCreatePurchaseBody = zod.object({
+  "title": zod.string().min(1),
+  "description": zod.string().min(1),
+  "amount": zod.string().regex(adminCreatePurchaseBodyAmountRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "purchaseDate": zod.coerce.date().optional(),
+  "notes": zod.string().nullish(),
+  "category": zod.enum(['direct_materials_oils', 'travel_tickets', 'meeting_hospitality', 'shipping', 'marketing', 'utilities', 'other']),
+  "paymentSource": zod.enum(['company_account', 'owner_account']),
+  "invoiceObjectPath": zod.string().nullish(),
+  "invoiceContentType": zod.string().nullish(),
+  "invoiceSize": zod.number().nullish()
+})
+
+export const adminCreatePurchaseResponseAmountRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+
+
+export const AdminCreatePurchaseResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "amount": zod.string().regex(adminCreatePurchaseResponseAmountRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "purchaseDate": zod.coerce.date(),
+  "notes": zod.string().nullable(),
+  "category": zod.enum(['direct_materials_oils', 'travel_tickets', 'meeting_hospitality', 'shipping', 'marketing', 'utilities', 'other']),
+  "paymentSource": zod.enum(['company_account', 'owner_account']),
+  "invoiceObjectPath": zod.string().nullable(),
+  "invoiceContentType": zod.string().nullable(),
+  "invoiceSize": zod.number().nullable(),
+  "idempotencyKey": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminRequestPurchaseInvoiceUploadBody = zod.object({
+  "contentType": zod.string(),
+  "size": zod.number()
+})
+
+export const AdminRequestPurchaseInvoiceUploadResponse = zod.object({
+  "uploadUrl": zod.string(),
+  "objectPath": zod.string()
+})
+
+
+export const AdminGetPurchaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminGetPurchaseResponseAmountRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+
+
+export const AdminGetPurchaseResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "amount": zod.string().regex(adminGetPurchaseResponseAmountRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "purchaseDate": zod.coerce.date(),
+  "notes": zod.string().nullable(),
+  "category": zod.enum(['direct_materials_oils', 'travel_tickets', 'meeting_hospitality', 'shipping', 'marketing', 'utilities', 'other']),
+  "paymentSource": zod.enum(['company_account', 'owner_account']),
+  "invoiceObjectPath": zod.string().nullable(),
+  "invoiceContentType": zod.string().nullable(),
+  "invoiceSize": zod.number().nullable(),
+  "idempotencyKey": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const AdminGetPurchaseInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminGetPurchaseInvoiceResponse = zod.unknown()
+
+
+export const AdminArchivePurchaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminArchivePurchaseResponseAmountRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
+
+
+export const AdminArchivePurchaseResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "amount": zod.string().regex(adminArchivePurchaseResponseAmountRegExp).describe('Exact non-negative decimal monetary amount with no more than four fractional digits.'),
+  "purchaseDate": zod.coerce.date(),
+  "notes": zod.string().nullable(),
+  "category": zod.enum(['direct_materials_oils', 'travel_tickets', 'meeting_hospitality', 'shipping', 'marketing', 'utilities', 'other']),
+  "paymentSource": zod.enum(['company_account', 'owner_account']),
+  "invoiceObjectPath": zod.string().nullable(),
+  "invoiceContentType": zod.string().nullable(),
+  "invoiceSize": zod.number().nullable(),
+  "idempotencyKey": zod.string().nullable(),
+  "archivedAt": zod.coerce.date().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+
+
 export const AdminGetExpenseParams = zod.object({
   "id": zod.coerce.number()
 })

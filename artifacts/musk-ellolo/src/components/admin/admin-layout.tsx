@@ -37,6 +37,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 // Hierarchical Navigation matching requirements
 const navStructure = [
@@ -96,6 +97,7 @@ const navStructure = [
     labelEn: 'Finance', labelAr: 'المالية', icon: FileText,
     children: [
       { href: '/admin/finance/expenses', labelEn: 'Expenses', labelAr: 'المصروفات', module: 'finance' },
+      { href: '/admin/finance/purchases', labelEn: 'Purchases', labelAr: 'المشتريات', module: 'finance' },
       { href: '/admin/finance/reports', labelEn: 'Reports', labelAr: 'التقارير', module: 'finance' },
       { href: '/admin/accounting/accounts', labelEn: 'Accounting', labelAr: 'المحاسبة', module: 'accounting' },
       { href: '/admin/accounting/journal-entries', labelEn: 'Journal entries', labelAr: 'القيود اليومية', module: 'accounting' },
@@ -139,14 +141,14 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
         <span
           data-active={isActive}
           className={cn(
-            "admin-nav-item flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all cursor-pointer",
+            "group flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-[13.5px]",
             isActive
-              ? "bg-primary text-primary-foreground shadow-sm font-semibold"
-              : "text-sidebar-foreground hover:bg-white/10"
+              ? "bg-accent/10 text-accent font-semibold"
+              : "text-sidebar-foreground/75 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
           )}
           onClick={() => setOpen?.(false)}
         >
-          <item.icon className="h-5 w-5 shrink-0" />
+          <item.icon className={cn("h-[18px] w-[18px] shrink-0 transition-colors", isActive ? "text-accent" : "text-sidebar-foreground/50 group-hover:text-foreground")} />
           {lang === 'ar' ? item.labelAr : item.labelEn}
         </span>
       </Link>
@@ -168,27 +170,27 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
       <CollapsibleTrigger asChild>
         <div className={cn(
-          "flex items-center justify-between px-4 py-2.5 rounded-xl transition-all cursor-pointer text-sidebar-foreground hover:bg-black/5 dark:hover:bg-white/10",
-          hasActiveChild && "text-primary font-medium"
+          "group flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer text-[13.5px]",
+          hasActiveChild ? "text-foreground font-semibold" : "text-sidebar-foreground/75 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
         )}>
           <div className="flex items-center gap-3">
-            <item.icon className={cn("h-5 w-5 shrink-0", hasActiveChild && "text-primary")} />
+            <item.icon className={cn("h-[18px] w-[18px] shrink-0 transition-colors", hasActiveChild ? "text-accent" : "text-sidebar-foreground/50 group-hover:text-foreground")} />
             {lang === 'ar' ? item.labelAr : item.labelEn}
           </div>
-          <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isOpen && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 text-sidebar-foreground/40 transition-transform duration-200", isOpen && "rotate-180")} />
         </div>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-6 rtl:pl-0 rtl:pr-6 space-y-1 mt-1 overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+      <CollapsibleContent className="pl-9 rtl:pl-0 rtl:pr-9 space-y-0.5 mt-0.5 overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
         {validChildren.map((child: any) => {
           const isChildActive = location === child.href || (child.href !== '/admin' && location.startsWith(child.href));
           return (
             <Link key={child.href} href={child.href}>
               <span
                 className={cn(
-                  "block px-4 py-2 text-sm rounded-lg transition-colors cursor-pointer",
+                  "block px-3 py-1.5 text-xs rounded-md transition-colors cursor-pointer",
                   isChildActive
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-sidebar-foreground/80 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground dark:hover:text-white"
+                    ? "text-accent font-semibold"
+                    : "text-sidebar-foreground/60 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
                 )}
                 onClick={() => setOpen?.(false)}
               >
@@ -237,147 +239,174 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   const toggleLanguage = () => setLang(lang === 'ar' ? 'en' : 'ar');
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+    return <div className="flex items-center justify-center min-h-screen bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
   }
 
   if (!user) return null;
 
+  const date = new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
   return (
-    <div className="admin-theme flex h-screen min-w-0 overflow-hidden bg-background font-sans text-foreground">
-      {/* Desktop Sidebar */}
-      <aside className="z-10 hidden w-72 shrink-0 flex-col border-e border-border dark:border-white/10 bg-sidebar shadow-xl lg:flex">
-        <div className="flex items-center gap-3 px-6 py-8">
-          <div className="flex min-w-0 flex-col items-start gap-2">
-            <img
-              src="/site-assets/admin-wordmark-brandguide.png"
-              alt="Musk Ellolo"
-              className="h-auto max-h-12 w-full max-w-[205px] object-contain object-left dark:invert"
-            />
-            <span className="text-xs text-sidebar-foreground/55">{t('لوحة الإدارة', 'Admin Panel')}</span>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-4 pb-6 scrollbar-thin">
-          <nav className="space-y-1.5">
-            {navStructure.map((item, i) => (
-              <NavItem key={i} item={item} user={user} location={location} lang={lang} />
-            ))}
-          </nav>
-        </div>
-
-        <div className="p-4 mt-auto border-t border-border dark:border-white/10">
-          <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 mb-3">
-            <div className="text-sm font-medium text-foreground dark:text-white truncate">{user.name}</div>
-            <div className="text-xs text-muted-foreground dark:text-white/50 truncate">{user.email}</div>
-          </div>
-          <Link href="/">
-            <Button variant="ghost" className="w-full justify-start gap-2 text-foreground/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground dark:hover:text-white mb-1">
-              <Store className="h-4 w-4" />
-              {t('العودة للمتجر', 'Back to Store')}
-            </Button>
-          </Link>
-          <Link href="/owner/login">
-            <Button variant="ghost" className="w-full justify-start gap-2 text-primary/80 hover:bg-primary/10 hover:text-primary mb-1">
-              <UserCog className="h-4 w-4" />
-              {t('بوابة المالك', 'Owner portal')}
-            </Button>
-          </Link>
-          <div className="h-px bg-border dark:bg-white/10 my-1 mx-2"></div>
-          <Button variant="ghost" className="w-full justify-start gap-2 text-foreground/70 dark:text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
-            <LogOut className="h-4 w-4" />
-            {t('تسجيل الخروج', 'Logout')}
-          </Button>
-        </div>
-      </aside>
-
-      <main className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <header className="z-20 flex h-16 min-w-0 shrink-0 items-center justify-between border-b bg-card px-4 lg:px-8">
-          <div className="flex items-center gap-2 lg:hidden">
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="hover:bg-muted">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-72 p-0 flex flex-col admin-theme bg-sidebar border-border dark:border-white/10">
-                <div className="flex items-center gap-3 px-6 py-8 border-b border-border dark:border-white/10">
-                  <div className="flex min-w-0 flex-col items-start gap-2">
-                    <img
-                      src="/site-assets/admin-wordmark-brandguide.png"
-                      alt="Musk Ellolo"
-                      className="h-auto max-h-10 w-full max-w-[190px] object-contain object-left dark:invert"
-                    />
-                    <span className="text-xs text-sidebar-foreground/55">{t('لوحة الإدارة', 'Admin Panel')}</span>
-                  </div>
+    <div
+      dir={lang === 'ar' ? 'rtl' : 'ltr'}
+      className="admin-theme flex h-screen min-w-0 flex-col overflow-hidden bg-background font-sans text-foreground transition-colors duration-300"
+    >
+      {/* Top Header */}
+      <header className="z-20 flex h-[60px] min-w-0 shrink-0 items-center justify-between border-b border-sidebar-border bg-card px-3 lg:px-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] relative">
+        {/* Right side (RTL start): System name & Mobile menu trigger */}
+        <div className="flex items-center gap-2">
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden hover:bg-muted text-muted-foreground shrink-0 h-9 w-9"
+                aria-label={t('فتح قائمة الإدارة', 'Open admin navigation')}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-[260px] p-0 flex flex-col admin-theme bg-sidebar border-sidebar-border">
+              <div className="flex-1 overflow-y-auto px-3 py-6 scrollbar-thin">
+                <div className="mb-6 px-3">
+                  <div className="text-xs font-semibold text-sidebar-foreground/40 uppercase tracking-wider mb-2">{t('لوحة المتابعة', 'Dashboard')}</div>
                 </div>
-
-                <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-thin">
-                  <nav className="space-y-1.5">
-                    {navStructure.map((item, i) => (
-                      <NavItem key={i} item={item} user={user} location={location} lang={lang} setOpen={setIsOpen} />
-                    ))}
-                  </nav>
-                </div>
-
-                <div className="p-4 border-t border-border dark:border-white/10">
-                  <Link href="/">
-                    <Button variant="ghost" className="w-full justify-start gap-2 text-foreground/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/10 hover:text-foreground dark:hover:text-white mb-1" onClick={() => setIsOpen(false)}>
-                      <Store className="h-4 w-4" />
-                      {t('العودة للمتجر', 'Back to Store')}
-                    </Button>
-                  </Link>
-                  <Link href="/owner/login">
-                    <Button variant="ghost" className="w-full justify-start gap-2 text-primary/80 hover:bg-primary/10 hover:text-primary mb-1" onClick={() => setIsOpen(false)}>
-                      <UserCog className="h-4 w-4" />
-                      {t('بوابة المالك', 'Owner portal')}
-                    </Button>
-                  </Link>
-                  <Button variant="ghost" className="w-full justify-start gap-2 text-foreground/70 dark:text-white/70 hover:bg-destructive/20 hover:text-destructive" onClick={handleLogout}>
-                    <LogOut className="h-4 w-4" />
-                    {t('تسجيل الخروج', 'Logout')}
+                <nav className="space-y-1">
+                  {navStructure.map((item, i) => (
+                    <NavItem key={i} item={item} user={user} location={location} lang={lang} setOpen={setIsOpen} />
+                  ))}
+                </nav>
+              </div>
+              <div className="p-4 border-t border-sidebar-border">
+                <Link href="/">
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-[13px] text-foreground/70 hover:bg-black/5 hover:text-foreground mb-1" onClick={() => setIsOpen(false)}>
+                    <Store className="h-4 w-4" />
+                    {t('العودة للمتجر', 'Back to Store')}
                   </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
-            <img
-              src="/site-assets/admin-wordmark-brandguide.png"
-              alt="Musk Ellolo"
-              className="ms-2 h-7 w-36 object-contain object-left dark:invert"
-            />
-          </div>
+                </Link>
+                <Link href="/owner/login">
+                  <Button variant="ghost" className="w-full justify-start gap-2 text-[13px] text-accent/90 hover:bg-accent/10 hover:text-accent mb-1" onClick={() => setIsOpen(false)}>
+                    <UserCog className="h-4 w-4" />
+                    {t('بوابة المالك', 'Owner portal')}
+                  </Button>
+                </Link>
+                <Button variant="ghost" className="w-full justify-start gap-2 text-[13px] text-foreground/70 hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4" />
+                  {t('تسجيل الخروج', 'Logout')}
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
 
-          <div className="hidden lg:flex items-center text-sm font-medium text-muted-foreground">
-            {new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          <div className="hidden lg:flex items-center gap-2">
+            <img src="/site-assets/admin-brandmark.png" alt="" className="h-5 w-5 object-contain dark:invert opacity-80 shrink-0" />
+            <span className="text-[13px] font-medium text-foreground/80 tracking-wide truncate">{t('نظام إدارة مسك اللولو', 'Musk Ellolo System')}</span>
           </div>
+        </div>
 
-          <div className="ms-auto flex items-center gap-2">
+        {/* Center: Logo */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
+          <img
+            src="/site-assets/admin-wordmark-brandguide.png"
+            alt="Musk Ellolo"
+            className="h-[18px] object-contain dark:invert opacity-90"
+          />
+        </div>
+        <div className="flex-1 flex justify-center sm:hidden pointer-events-none mx-2">
+          <img
+            src="/site-assets/admin-wordmark-brandguide.png"
+            alt="Musk Ellolo"
+            className="h-[15px] object-contain dark:invert opacity-90"
+          />
+        </div>
+
+        {/* Left side (RTL end): Date & User Actions */}
+        <div className="flex items-center justify-end gap-1">
+          <div className="hidden xl:flex items-center gap-4 text-[11px] font-medium text-muted-foreground mr-4 rtl:mr-0 rtl:ml-4">
+            <span className="truncate">{date}</span>
+            <div className="h-3 w-px bg-border/60"></div>
+          </div>
+          <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"
-              className="min-h-11 min-w-11 rounded-full text-muted-foreground hover:text-foreground"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              title={t('تغيير المظهر', 'Toggle Theme')}
+              className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted"
+              onClick={toggleTheme}
+              title={t('تغيير المظهر', 'Toggle theme')}
+              aria-label={t('تغيير المظهر', 'Toggle theme')}
             >
-              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <Sun className="h-[15px] w-[15px] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-[15px] w-[15px] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Toggle theme</span>
             </Button>
-            <Button variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-full text-muted-foreground hover:text-foreground" onClick={toggleLanguage} title={t('تغيير اللغة', 'Toggle Language')}>
-              <Globe className="h-5 w-5" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted"
+              onClick={toggleLanguage}
+              title={t('تغيير اللغة', 'Toggle language')}
+              aria-label={t('تغيير اللغة', 'Toggle language')}
+            >
+              <Globe className="h-[15px] w-[15px]" />
             </Button>
           </div>
-        </header>
 
-        {/* Content */}
-        <div className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background/50">
-          <div className="mx-auto w-full min-w-0 max-w-7xl p-4 md:p-6 lg:p-8">
+          <div className="h-5 w-px bg-border/60 mx-2"></div>
+
+          <Avatar className="h-7 w-7 ring-2 ring-background cursor-pointer">
+            <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-semibold">
+              {user.name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      </header>
+
+      {/* Main Layout Area */}
+      <div className="flex min-w-0 flex-1 overflow-hidden">
+        {/* Desktop Sidebar (Right side in RTL naturally due to layout flex order) */}
+        <aside className="z-10 hidden w-[240px] shrink-0 flex-col border-e border-sidebar-border bg-sidebar lg:flex shadow-sm">
+          <div className="flex-1 overflow-y-auto px-3 py-6 scrollbar-thin">
+            <div className="mb-4 px-3 flex items-center justify-between">
+              <div className="text-[11px] font-bold text-sidebar-foreground/40 uppercase tracking-wider">{t('لوحة المتابعة', 'Dashboard')}</div>
+              <LayoutDashboard className="h-3.5 w-3.5 text-sidebar-foreground/30" />
+            </div>
+            <nav className="space-y-0.5">
+              {navStructure.map((item, i) => (
+                <NavItem key={i} item={item} user={user} location={location} lang={lang} />
+              ))}
+            </nav>
+          </div>
+
+          <div className="p-3 border-t border-sidebar-border mt-auto">
+            <Link href="/">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-[12.5px] font-medium text-sidebar-foreground/70 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground mb-1">
+                <Store className="h-[15px] w-[15px]" />
+                {t('العودة للمتجر', 'Back to Store')}
+              </Button>
+            </Link>
+            <Link href="/owner/login">
+              <Button variant="ghost" className="w-full justify-start gap-2 text-[12.5px] font-medium text-accent/80 hover:bg-accent/10 hover:text-accent mb-1">
+                <UserCog className="h-[15px] w-[15px]" />
+                {t('بوابة المالك', 'Owner portal')}
+              </Button>
+            </Link>
+            <Button variant="ghost" className="w-full justify-start gap-2 text-[12.5px] font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
+              <LogOut className="h-[15px] w-[15px]" />
+              {t('تسجيل الخروج', 'Logout')}
+            </Button>
+          </div>
+        </aside>
+
+        {/* Content Area */}
+        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background">
+          <div className="mx-auto w-full min-w-0 max-w-[1600px] p-4 md:p-6 lg:p-8">
             {children}
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }

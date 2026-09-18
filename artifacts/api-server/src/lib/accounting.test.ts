@@ -14,6 +14,7 @@ import { createAdminSession, hashAdminPassword } from "./admin-auth";
 import {
   AccountingValidationError,
   createExpenseWithJournal,
+  createPurchaseWithJournal,
   createPayrollWithJournal,
   ensureStandardAccountingChart,
   postJournalEntry,
@@ -229,5 +230,36 @@ describe.sequential("exact double-entry accounting", () => {
       totalCredit: throughAsOf.totals.credit,
       isBalanced: true,
     });
+  });
+
+  it("posts owner-paid purchases to owner payable and is idempotent", async () => {
+    const values = {
+      title: `Owner oils ${suffix}`,
+      description: "Exact purchase test",
+      amount: "125.0000",
+      purchaseDate: mixedPostingDate,
+      notes: null,
+      category: "direct_materials_oils",
+      paymentSource: "owner_account",
+      invoiceObjectPath: null,
+      invoiceContentType: null,
+      invoiceSize: null,
+      createdBy: actorId,
+    } as const;
+    const [purchase, concurrentRetry] = await Promise.all([
+      createPurchaseWithJournal(values, `purchase-test-${suffix}`),
+      createPurchaseWithJournal({ ...values, amount: "125" }, `purchase-test-${suffix}`),
+    ]);
+    const retry = concurrentRetry;
+    expect(retry.id).toBe(purchase.id);
+    await expect(createPurchaseWithJournal({ ...values, description: "Different payload" }, `purchase-test-${suffix}`))
+      .rejects.toThrow("idempotency key was already used with different values");
+    const [entry] = await db.select().from(journalEntriesTable)
+      .where(eq(journalEntriesTable.sourceId, String(purchase.id))).limit(1);
+    const lines = await db.select().from(journalEntryLinesTable)
+      .where(eq(journalEntryLinesTable.journalEntryId, entry.id));
+    expect(lines).toHaveLength(2);
+    const accounts = await db.select().from(accountingAccountsTable);
+    expect(lines.map((line) => accounts.find((account) => account.id === line.accountId)?.code)).toEqual(expect.arrayContaining(["5100", "2140"]));
   });
 });

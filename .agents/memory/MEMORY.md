@@ -9,3 +9,4 @@
 - [Styled Excel rows](styled-excel-rows.md) — Excel row ranges can include many formatted but valueless rows; report scanned, populated, and unique counts separately.
 - [Ledger totals after API tests](ledger-totals-after-api-tests.md) — integration tests can change development ledger totals; recalculate immediately before and after accounting imports.
 - [PDFKit bundle runtime helpers](pdfkit-bundle-runtime-helpers.md) — bundled PDFKit/fontkit servers must declare @swc/helpers as a direct runtime dependency.
+- [Owner-paid purchases](owner-paid-purchases.md) — treat owner-funded business purchases as a liability until the company reimburses the owner.
