@@ -28,12 +28,14 @@ import {
   Laptop,
   LogOut,
   Menu,
+  Moon,
   Package,
   ReceiptText,
   Settings,
   ShieldCheck,
   Smartphone,
   Store,
+  Sun,
   Tablet,
   Trash2,
   WalletCards,
@@ -43,6 +45,7 @@ import { getOwnerToken, removeOwnerToken } from '@/lib/auth-token';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from 'next-themes';
 
 type OwnerNavItem = {
   href: string;
@@ -79,6 +82,7 @@ export default function OwnerPortal() {
   const [location, setLocation] = useLocation();
   const { t, lang } = useLanguage();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const queryClient = useQueryClient();
   const hasToken = Boolean(getOwnerToken());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -117,6 +121,7 @@ export default function OwnerPortal() {
   const revokeMutation = useRevokeOwnerSession();
   const revokeOthersMutation = useRevokeOtherOwnerSessions();
   const readNotificationMutation = useReadOwnerSessionNotification();
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
     const unauthorized = [error, sessionsError, notificationsError].some(
@@ -197,7 +202,7 @@ export default function OwnerPortal() {
 
   if (isLoading || sessionsLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f7f6f2]">
+      <main className="flex min-h-screen items-center justify-center bg-[#f7f6f2] dark:bg-[#090a0c]">
         <div className="h-9 w-9 animate-spin rounded-full border-2 border-[#e2b92f] border-t-transparent" />
       </main>
     );
@@ -208,21 +213,20 @@ export default function OwnerPortal() {
   const isSecurityPage = location === '/owner/security';
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-[#fbfaf7]">
-      <div className="flex h-[82px] items-center justify-between border-b border-[#e9e7e1] px-6">
+    <div className="flex h-full flex-col bg-[#fbfaf7] text-[#1c1c1c] transition-colors duration-300 dark:bg-[#111214] dark:text-[#f4f4f2]">
+      <div className="flex h-[82px] items-center justify-between border-b border-[#e9e7e1] px-5 dark:border-[#24262a]">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#171717] text-[#f5c72c]">
-            <Crown className="h-5 w-5" />
-          </div>
+          <img src="/site-assets/musk-ellolo-mark-black.png" alt="" className="h-10 w-10 object-contain dark:hidden" />
+          <img src="/site-assets/musk-ellolo-mark-white.png" alt="" className="hidden h-10 w-10 object-contain dark:block" />
           <div>
-            <p className="text-xs text-[#8a8985]">{t('مسك اللولو', 'Musk Ellolo')}</p>
-            <p className="font-semibold text-[#1c1c1c]">{t('لوحة المالك', 'Owner console')}</p>
+            <p className="text-xs text-[#8a8985] dark:text-[#85878c]">{t('نظام إدارة مسك اللولو', 'Musk Ellolo System')}</p>
+            <p className="font-semibold text-[#1c1c1c] dark:text-[#f4f4f2]">{t('لوحة المالك', 'Owner console')}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={() => setMobileMenuOpen(false)}
-          className="rounded-lg p-2 text-[#666] hover:bg-black/5 lg:hidden"
+          className="rounded-lg p-2 text-[#666] hover:bg-black/5 dark:text-[#aaa] dark:hover:bg-white/5 lg:hidden"
           data-testid="button-close-owner-menu"
           aria-label={t('إغلاق القائمة', 'Close menu')}
         >
@@ -231,15 +235,15 @@ export default function OwnerPortal() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-5">
-        <button type="button" className="mb-1 flex w-full items-center justify-between rounded-xl px-4 py-3 text-[#555] hover:bg-[#f3f1ec]">
+        <button type="button" className="mb-1 flex w-full items-center justify-between rounded-xl px-4 py-3 text-[#555] hover:bg-[#f3f1ec] dark:text-[#c1c2c5] dark:hover:bg-white/5">
           <span className="flex items-center gap-3"><CircleDollarSign className="h-5 w-5" />{t('الجملة — B2B', 'Wholesale — B2B')}</span>
           <ChevronDown className="h-4 w-4" />
         </button>
-        <button type="button" className="mb-1 flex w-full items-center justify-between rounded-xl px-4 py-3 text-[#555] hover:bg-[#f3f1ec]">
+        <button type="button" className="mb-1 flex w-full items-center justify-between rounded-xl px-4 py-3 text-[#555] hover:bg-[#f3f1ec] dark:text-[#c1c2c5] dark:hover:bg-white/5">
           <span className="flex items-center gap-3"><ReceiptText className="h-5 w-5" />{t('التكاملات', 'Integrations')}</span>
           <ChevronDown className="h-4 w-4" />
         </button>
-        <button type="button" className="mb-2 flex w-full items-center justify-between rounded-xl px-4 py-3 text-[#555] hover:bg-[#f3f1ec]">
+        <button type="button" className="mb-2 flex w-full items-center justify-between rounded-xl px-4 py-3 text-[#555] hover:bg-[#f3f1ec] dark:text-[#c1c2c5] dark:hover:bg-white/5">
           <span className="flex items-center gap-3"><Settings className="h-5 w-5" />{t('الإعدادات', 'Settings')}</span>
           <ChevronDown className="h-4 w-4" />
         </button>
@@ -247,7 +251,7 @@ export default function OwnerPortal() {
         <button
           type="button"
           onClick={() => setManagementOpen((value) => !value)}
-          className="flex w-full items-center justify-between rounded-xl px-4 py-3 font-medium text-[#202020] hover:bg-[#f3f1ec]"
+          className="flex w-full items-center justify-between rounded-xl px-4 py-3 font-medium text-[#202020] hover:bg-[#f3f1ec] dark:text-[#f1f1ef] dark:hover:bg-white/5"
           data-testid="button-toggle-owner-management"
         >
           <span className="flex items-center gap-3"><Crown className="h-5 w-5" />{t('إدارة المالك', 'Owner management')}</span>
@@ -266,7 +270,9 @@ export default function OwnerPortal() {
                   onClick={() => setMobileMenuOpen(false)}
                   data-testid={`link-owner-${item.href.split('/').pop() || 'overview'}`}
                   className={`flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] transition-colors ${
-                    active ? 'bg-[#efede8] font-medium text-[#252525]' : 'text-[#777] hover:bg-[#f5f3ee] hover:text-[#333]'
+                    active
+                      ? 'bg-[#f5efd9] font-medium text-[#9b7400] dark:bg-[#282619] dark:text-[#e5bb2c]'
+                      : 'text-[#777] hover:bg-[#f5f3ee] hover:text-[#333] dark:text-[#a9aaad] dark:hover:bg-white/5 dark:hover:text-white'
                   }`}
                 >
                   <Icon className="h-[18px] w-[18px]" />
@@ -282,7 +288,9 @@ export default function OwnerPortal() {
           onClick={() => setMobileMenuOpen(false)}
           data-testid="link-owner-security"
           className={`mt-3 flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] transition-colors ${
-            isSecurityPage ? 'bg-[#efede8] font-medium text-[#252525]' : 'text-[#777] hover:bg-[#f5f3ee] hover:text-[#333]'
+            isSecurityPage
+              ? 'bg-[#f5efd9] font-medium text-[#9b7400] dark:bg-[#282619] dark:text-[#e5bb2c]'
+              : 'text-[#777] hover:bg-[#f5f3ee] hover:text-[#333] dark:text-[#a9aaad] dark:hover:bg-white/5 dark:hover:text-white'
           }`}
         >
           <ShieldCheck className="h-[18px] w-[18px]" />
@@ -291,10 +299,10 @@ export default function OwnerPortal() {
         </Link>
       </nav>
 
-      <div className="border-t border-[#e9e7e1] p-4">
-        <div className="mb-3 rounded-xl bg-[#f2f0eb] px-4 py-3">
-          <p className="truncate text-sm font-medium text-[#292929]" data-testid="text-owner-name">{owner.name}</p>
-          <p className="mt-1 truncate text-xs text-[#83817c]" dir="ltr" data-testid="text-owner-email">{owner.email}</p>
+      <div className="border-t border-[#e9e7e1] p-4 dark:border-[#24262a]">
+        <div className="mb-3 rounded-xl bg-[#f2f0eb] px-4 py-3 dark:bg-[#1a1b1e]">
+          <p className="truncate text-sm font-medium text-[#292929] dark:text-[#f1f1ef]" data-testid="text-owner-name">{owner.name}</p>
+          <p className="mt-1 truncate text-xs text-[#83817c] dark:text-[#86888d]" dir="ltr" data-testid="text-owner-email">{owner.email}</p>
         </div>
         <Button
           variant="ghost"
@@ -311,7 +319,7 @@ export default function OwnerPortal() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f7f6f2] text-[#1c1c1c]" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-[#f7f6f2] text-[#1c1c1c] transition-colors duration-300 dark:bg-[#090a0c] dark:text-[#f4f4f2]" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       {mobileMenuOpen && (
         <>
           <button
@@ -320,31 +328,45 @@ export default function OwnerPortal() {
             onClick={() => setMobileMenuOpen(false)}
             className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[1px] lg:hidden"
           />
-          <aside className="fixed inset-y-0 start-0 z-50 w-[286px] border-e border-[#e3e1db] lg:hidden">
+          <aside className="fixed inset-y-0 start-0 z-50 w-[286px] border-e border-[#e3e1db] dark:border-[#24262a] lg:hidden">
             {sidebar}
           </aside>
         </>
       )}
-      <aside className="fixed inset-y-0 start-0 z-40 hidden w-[286px] border-e border-[#e3e1db] lg:block">
+      <aside className="fixed inset-y-0 start-0 z-40 hidden w-[286px] border-e border-[#e3e1db] dark:border-[#24262a] lg:block">
         {sidebar}
       </aside>
 
       <main className="min-h-screen lg:ms-[286px]">
-        <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-[#e4e2dc] bg-[#fbfaf7]/95 px-4 backdrop-blur sm:px-7">
+        <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-[#e4e2dc] bg-[#fbfaf7]/95 px-4 backdrop-blur transition-colors duration-300 dark:border-[#24262a] dark:bg-[#0d0e10]/95 sm:px-7">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
             data-testid="button-open-owner-menu"
-            className="rounded-xl border border-[#dedbd4] bg-white p-2.5 text-[#333] shadow-sm lg:hidden"
+            className="rounded-xl border border-[#dedbd4] bg-white p-2.5 text-[#333] shadow-sm dark:border-[#2b2d31] dark:bg-[#17181b] dark:text-white lg:hidden"
             aria-label={t('فتح القائمة', 'Open menu')}
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="hidden text-sm text-[#74726d] sm:block">
-            {new Intl.DateTimeFormat(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { dateStyle: 'full' }).format(new Date())}
+          <div className="hidden items-center gap-3 text-sm text-[#74726d] dark:text-[#8f9196] sm:flex">
+            <span>{new Intl.DateTimeFormat(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { dateStyle: 'full' }).format(new Date())}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4dfd2] bg-white text-[#b48700]">
+          <div className="pointer-events-none absolute start-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rtl:translate-x-1/2">
+            <img src="/site-assets/musk-ellolo-wordmark-black.png" alt="Musk Ellolo" className="w-[150px] object-contain dark:hidden sm:w-[210px]" />
+            <img src="/site-assets/musk-ellolo-wordmark-white.png" alt="Musk Ellolo" className="hidden w-[150px] object-contain dark:block sm:w-[210px]" />
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              data-testid="button-toggle-owner-theme"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#e4dfd2] bg-white text-[#696762] transition-colors hover:text-[#b48700] dark:border-[#353022] dark:bg-[#17181b] dark:text-[#d7ad23]"
+              aria-label={t('تغيير الوضع الليلي', 'Toggle dark mode')}
+            >
+              <Moon className="h-5 w-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+              <Sun className="absolute h-5 w-5 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+            </button>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e4dfd2] bg-white text-[#b48700] dark:border-[#2b2d31] dark:bg-[#17181b] dark:text-[#d7ad23]">
               <BellRing className="h-5 w-5" />
             </div>
           </div>
@@ -379,7 +401,7 @@ function OwnerOverview({ ownerName, t }: { ownerName: string; t: (ar: string, en
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl" data-testid="text-owner-page-title">
           {t('نظرة عامة', 'Overview')}
         </h1>
-        <p className="mt-2 text-[16px] text-[#7d7a74]">
+        <p className="mt-2 text-[16px] text-[#7d7a74] dark:text-[#8f9196]">
           {t(`مرحباً ${ownerName}، إليك ملخص أداء مسك اللولو`, `Welcome ${ownerName}, here is your Musk Ellolo overview`)}
         </p>
       </div>
@@ -393,30 +415,30 @@ function OwnerOverview({ ownerName, t }: { ownerName: string; t: (ar: string, en
         ].map((metric) => {
           const Icon = metric.icon;
           return (
-            <section key={metric.labelEn} className="relative overflow-hidden rounded-2xl border border-[#e5e2dc] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+            <section key={metric.labelEn} className="relative overflow-hidden rounded-2xl border border-[#e5e2dc] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.05)] transition-colors dark:border-[#24262a] dark:bg-[#111214]">
               <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-l from-[#e0aa00] to-[#f5d459]" />
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-[#7e7b75]">{t(metric.labelAr, metric.labelEn)}</p>
+                  <p className="text-sm text-[#7e7b75] dark:text-[#96989d]">{t(metric.labelAr, metric.labelEn)}</p>
                   <p className="mt-7 text-3xl font-bold">—</p>
-                  <p className="mt-2 text-xs text-[#a09d96]">{t('بانتظار ملفات البيانات', 'Waiting for data files')}</p>
+                  <p className="mt-2 text-xs text-[#a09d96] dark:text-[#6f7176]">{t('بانتظار ملفات البيانات', 'Waiting for data files')}</p>
                 </div>
-                <div className="rounded-xl bg-[#fbf4d8] p-3 text-[#ba8d00]"><Icon className="h-5 w-5" /></div>
+                <div className="rounded-xl bg-[#fbf4d8] p-3 text-[#ba8d00] dark:bg-[#282619] dark:text-[#e3b723]"><Icon className="h-5 w-5" /></div>
               </div>
             </section>
           );
         })}
       </div>
 
-      <section className="min-h-[290px] rounded-2xl border border-[#e5e2dc] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-        <div className="flex items-center gap-3 border-b border-dashed border-[#e8e5de] pb-5">
-          <div className="rounded-lg bg-[#fbf4d8] p-2 text-[#c09300]"><CircleDollarSign className="h-5 w-5" /></div>
+      <section className="min-h-[290px] rounded-2xl border border-[#e5e2dc] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-colors dark:border-[#24262a] dark:bg-[#111214]">
+        <div className="flex items-center gap-3 border-b border-dashed border-[#e8e5de] pb-5 dark:border-[#2a2c30]">
+          <div className="rounded-lg bg-[#fbf4d8] p-2 text-[#c09300] dark:bg-[#282619] dark:text-[#e3b723]"><CircleDollarSign className="h-5 w-5" /></div>
           <h2 className="text-lg font-bold">{t('الإيرادات والأرباح', 'Revenue and profit')}</h2>
         </div>
         <div className="flex min-h-[210px] flex-col items-center justify-center text-center">
-          <FileText className="mb-3 h-8 w-8 text-[#d0cbbf]" />
-          <p className="font-medium text-[#66635d]">{t('القسم جاهز لاستقبال بياناتك', 'This section is ready for your data')}</p>
-          <p className="mt-2 text-sm text-[#9a9790]">{t('سيتم تفريغ الملفات التي سترسلها هنا', 'The files you provide will be populated here')}</p>
+          <FileText className="mb-3 h-8 w-8 text-[#d0cbbf] dark:text-[#55575c]" />
+          <p className="font-medium text-[#66635d] dark:text-[#c2c3c6]">{t('القسم جاهز لاستقبال بياناتك', 'This section is ready for your data')}</p>
+          <p className="mt-2 text-sm text-[#9a9790] dark:text-[#77797e]">{t('سيتم تفريغ الملفات التي سترسلها هنا', 'The files you provide will be populated here')}</p>
         </div>
       </section>
     </div>
@@ -428,12 +450,12 @@ function PendingOwnerSection({ item, t }: { item?: OwnerNavItem; t: (ar: string,
   return (
     <div>
       <h1 className="text-3xl font-bold">{item ? t(item.labelAr, item.labelEn) : t('إدارة المالك', 'Owner management')}</h1>
-      <section className="mt-7 flex min-h-[430px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#d9d4c8] bg-white p-8 text-center shadow-sm">
-        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fbf4d8] text-[#bd9000]">
+      <section className="mt-7 flex min-h-[430px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#d9d4c8] bg-white p-8 text-center shadow-sm dark:border-[#303238] dark:bg-[#111214]">
+        <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#fbf4d8] text-[#bd9000] dark:bg-[#282619] dark:text-[#e3b723]">
           <Icon className="h-8 w-8" />
         </div>
         <h2 className="text-xl font-bold">{t('جاهز لاستقبال ملفاتك', 'Ready for your files')}</h2>
-        <p className="mt-3 max-w-md leading-7 text-[#85817a]">
+        <p className="mt-3 max-w-md leading-7 text-[#85817a] dark:text-[#8f9196]">
           {t('تم تجهيز هذا القسم بنفس هيكل لوحة المالك، وسيتم وضع البيانات فيه عند تزويدي بالملفات.', 'This owner section is prepared and will be populated when you provide the files.')}
         </p>
       </section>
@@ -463,14 +485,14 @@ function SecuritySessions({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">{t('الأمان والجلسات', 'Security & sessions')}</h1>
-          <p className="mt-2 text-[#7d7a74]">{t('راجع الأجهزة التي دخلت إلى لوحة المالك.', 'Review devices signed into the owner console.')}</p>
+          <p className="mt-2 text-[#7d7a74] dark:text-[#8f9196]">{t('راجع الأجهزة التي دخلت إلى لوحة المالك.', 'Review devices signed into the owner console.')}</p>
         </div>
         <Button
           variant="outline"
           onClick={onRevokeOthers}
           disabled={sessions.length < 2 || revokeOthersPending}
           data-testid="button-revoke-other-owner-sessions"
-          className="border-[#d7c36e] bg-white hover:bg-[#fff9df]"
+          className="border-[#d7c36e] bg-white hover:bg-[#fff9df] dark:border-[#514723] dark:bg-[#17181b] dark:hover:bg-[#282619]"
         >
           <ShieldCheck className="me-2 h-4 w-4" />
           {t('إلغاء الجلسات الأخرى', 'Revoke other sessions')}
@@ -478,19 +500,19 @@ function SecuritySessions({
       </div>
       <div className="mt-7 space-y-3">
         {sessions.map((session) => (
-          <section key={session.id} className={`flex flex-col gap-4 rounded-2xl border bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between ${
-            session.isCurrent ? 'border-[#e0bd39]' : 'border-[#e5e2dc]'
+          <section key={session.id} className={`flex flex-col gap-4 rounded-2xl border bg-white p-5 shadow-sm transition-colors dark:bg-[#111214] sm:flex-row sm:items-center sm:justify-between ${
+            session.isCurrent ? 'border-[#e0bd39] dark:border-[#9b7b17]' : 'border-[#e5e2dc] dark:border-[#24262a]'
           }`}>
             <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3f1eb] text-[#4c4a46]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#f3f1eb] text-[#4c4a46] dark:bg-[#1d1f22] dark:text-[#c0c2c6]">
                 <SessionDeviceIcon deviceLabel={session.deviceLabel} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">{session.browser} · {session.operatingSystem}</p>
-                  {session.isCurrent && <span className="rounded-full bg-[#fff3bd] px-2 py-0.5 text-xs text-[#8b6800]">{t('الحالية', 'Current')}</span>}
+                  {session.isCurrent && <span className="rounded-full bg-[#fff3bd] px-2 py-0.5 text-xs text-[#8b6800] dark:bg-[#332c16] dark:text-[#e4bb32]">{t('الحالية', 'Current')}</span>}
                 </div>
-                <p className="mt-2 flex items-center gap-1.5 text-sm text-[#89867f]">
+                <p className="mt-2 flex items-center gap-1.5 text-sm text-[#89867f] dark:text-[#85878c]">
                   <Clock3 className="h-4 w-4" />{formatOwnerDate(session.createdAt, lang)}
                 </p>
               </div>
