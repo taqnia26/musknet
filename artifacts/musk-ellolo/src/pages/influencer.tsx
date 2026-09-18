@@ -26,7 +26,7 @@ function Login() {
         <h1 className="text-2xl font-bold">{t('بوابة المشاهير', 'Influencer portal')}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{t('تابع أداءك وأرباحك من مكان واحد', 'Track your performance and earnings in one place')}</p>
       </div>
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); mutation.mutate({ data: { email, password } }, { onSuccess: (result) => { saveInfluencerToken(result.token); setLocation('/infulancer'); } }); }}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); mutation.mutate({ data: { email, password } }, { onSuccess: (result) => { saveInfluencerToken(result.token); setLocation('/influencer'); } }); }}>
         <label className="block text-sm font-medium">{t('البريد الإلكتروني', 'Email')}<Input className="mt-2" dir="ltr" type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} /></label>
         <label className="block text-sm font-medium">{t('كلمة المرور', 'Password')}<Input className="mt-2" dir="ltr" type="password" autoComplete="current-password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} /></label>
         {mutation.isError && <p className="text-sm text-destructive">{t('تعذر تسجيل الدخول. تحقق من البيانات.', 'Unable to sign in. Check your credentials.')}</p>}
@@ -45,7 +45,7 @@ function Dashboard() {
   const [range, setRange] = useState('30');
   const [copied, setCopied] = useState(false);
   const dashboard = useInfluencerDashboard({ rangeDays: Number(range) as 7 | 30 | 90 }, { query: { enabled: hasToken, retry: false, queryKey: getInfluencerDashboardQueryKey({ rangeDays: Number(range) as 7 | 30 | 90 }) } });
-  useEffect(() => { if (!hasToken || (me.error as any)?.status === 401) { removeInfluencerToken(); setLocation('/infulancer/login'); } }, [hasToken, me.error, setLocation]);
+  useEffect(() => { if (!hasToken || (me.error as any)?.status === 401) { removeInfluencerToken(); setLocation('/influencer/login'); } }, [hasToken, me.error, setLocation]);
   if (!hasToken || me.isLoading) return <div className="admin-theme min-h-screen grid place-items-center bg-background"><div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent" /></div>;
   if (me.error || dashboard.error) return <main className="admin-theme min-h-screen grid place-items-center bg-background p-6 text-center"><div><p className="mb-4 text-destructive">{t('حدث خطأ أثناء تحميل البيانات.', 'Something went wrong loading your data.')}</p><Button onClick={() => { void me.refetch(); void dashboard.refetch(); }}>{t('إعادة المحاولة', 'Try again')}</Button></div></main>;
   const user = me.data;
@@ -60,7 +60,7 @@ function Dashboard() {
     [ShoppingBag, t('متوسط الطلب', 'Average order value'), money(summary.averageOrderValue), 'text-pink-600'],
   ] as const;
   const copy = async () => { if (data?.referralUrl) { await navigator.clipboard?.writeText(new URL(data.referralUrl, window.location.origin).toString()); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } };
-  const logout = async () => { await fetch('/api/influencer/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${getAuthToken()}` } }).catch(() => undefined); removeInfluencerToken(); setLocation('/infulancer/login'); };
+  const logout = async () => { await fetch('/api/influencer/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${getAuthToken()}` } }).catch(() => undefined); removeInfluencerToken(); setLocation('/influencer/login'); };
   return <main className="admin-theme min-h-screen bg-background text-foreground" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
     <header className="border-b bg-card"><div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 md:px-8">
       <div className="flex items-center gap-3"><img src="/site-assets/musk-ellolo-mark-black.png" alt="" className="h-9 w-9 object-contain dark:hidden" /><img src="/site-assets/musk-ellolo-mark-white.png" alt="" className="hidden h-9 w-9 object-contain dark:block" /><span className="font-semibold">{t('بوابة المشاهير', 'Influencer portal')}</span></div>
@@ -79,5 +79,12 @@ function Dashboard() {
 }
 
 export default function InfluencerRoutes() {
-  return <Switch><Route path="/infulancer/login" component={Login} /><Route path="/infulancer" component={Dashboard} /></Switch>;
+  return (
+    <Switch>
+      <Route path="/influencer/login" component={Login} />
+      <Route path="/influencer" component={Dashboard} />
+      <Route path="/infulancer/login" component={Login} />
+      <Route path="/infulancer" component={Dashboard} />
+    </Switch>
+  );
 }

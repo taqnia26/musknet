@@ -59,7 +59,48 @@ router.get("/influencer/capture", asyncRoute(async (req, res) => {
 }));
 
 router.post("/admin/influencers", asyncRoute(async (req, res) => { if (!await admin(req, res, "edit")) return; const body = parse(Api.CreateInfluencerBody, req.body, res); if (!body) return; const extra = req.body as { imageUrl?: string | null; isActive?: boolean }; try { const [created] = await db.insert(influencersTable).values({ name: body.name, email: body.email.toLowerCase(), referralCode: body.referralCode.toUpperCase(), imageUrl: extra.imageUrl ?? null, commissionRate: body.commissionRate ?? 10, isActive: extra.isActive ?? true, passwordHash: await hashInfluencerPassword(body.password) }).returning(); res.status(201).json(profile(created)); } catch { res.status(409).json({ error: "Email or referral code already exists" }); } }));
-router.get("/admin/influencers", asyncRoute(async (req, res) => { if (!await admin(req, res, "view")) return; const users = await db.select().from(influencersTable); const output = await Promise.all(users.map(async (u) => { const [p] = await db.select({ orders: count(), sales: sum(ordersTable.total), commission: sum(orderAttributionsTable.commissionAmount) }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(and(eq(orderAttributionsTable.influencerId, u.id), eq(ordersTable.paymentStatus, "paid"))); const links = await db.select({ couponId: influencerCouponsTable.couponId }).from(influencerCouponsTable).where(eq(influencerCouponsTable.influencerId, u.id)); return { ...profile(u), couponIds: links.map((link) => link.couponId), performance: { orders: Number(p?.orders ?? 0), sales: Number(p?.sales ?? 0), commission: Number(p?.commission ?? 0) } }; })); res.json(output); }));
+router.get("/admin/influencers", asyncRoute(async (req, res) => {
+  if (!await admin(req, res, "view")) return;
+  const users = await db.select().from(influencersTable);
+  const output = await Promise.all(users.map(async (u) => {
+    const [p] = await db.select({
+      orders: count(),
+      sales: sum(ordersTable.total),
+      commission: sum(orderAttributionsTable.commissionAmount),
+      lastOrderAt: sql<Date | null>`max(${ordersTable.createdAt})`,
+      couponOrders: sql<number>`count(*) filter (where ${orderAttributionsTable.source} = 'coupon')`,
+      referralOrders: sql<number>`count(*) filter (where ${orderAttributionsTable.source} = 'referral')`,
+    })
+      .from(orderAttributionsTable)
+      .innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id))
+      .where(and(eq(orderAttributionsTable.influencerId, u.id), eq(ordersTable.paymentStatus, "paid")));
+    const [visitSummary] = await db.select({
+      visits: sql<number>`count(distinct (${influencerVisitsTable.visitorKey}, date(${influencerVisitsTable.createdAt})))`,
+    }).from(influencerVisitsTable).where(eq(influencerVisitsTable.influencerId, u.id));
+    const links = await db.select({ couponId: influencerCouponsTable.couponId })
+      .from(influencerCouponsTable)
+      .where(eq(influencerCouponsTable.influencerId, u.id));
+    const orders = Number(p?.orders ?? 0);
+    const sales = Number(p?.sales ?? 0);
+    const visits = Number(visitSummary?.visits ?? 0);
+    return {
+      ...profile(u),
+      couponIds: links.map((link) => link.couponId),
+      performance: {
+        orders,
+        sales,
+        commission: Number(p?.commission ?? 0),
+        visits,
+        conversionRate: visits ? orders / visits : 0,
+        averageOrderValue: orders ? sales / orders : 0,
+        lastOrderAt: p?.lastOrderAt?.toISOString() ?? null,
+        couponOrders: Number(p?.couponOrders ?? 0),
+        referralOrders: Number(p?.referralOrders ?? 0),
+      },
+    };
+  }));
+  res.json(output);
+}));
 router.get("/admin/influencers/:id", asyncRoute(async (req, res) => { if (!await admin(req, res, "view")) return; const [u] = await db.select().from(influencersTable).where(eq(influencersTable.id, Number(req.params.id))); if (!u) { res.status(404).json({ error: "Not found" }); return; } const links = await db.select({ couponId: influencerCouponsTable.couponId }).from(influencerCouponsTable).where(eq(influencerCouponsTable.influencerId, u.id)); res.json({ ...profile(u), couponIds: links.map((link) => link.couponId) }); }));
 router.patch("/admin/influencers/:id", asyncRoute(async (req, res) => { if (!await admin(req, res, "edit")) return; if (!req.body || Object.keys(req.body).length === 0) { res.status(400).json({ error: "At least one field is required" }); return; } const body = parse(Api.InfluencerPatchBody, req.body, res); if (!body) return; const influencerId = Number(req.params.id); const { password, ...rest } = body; const values = { ...rest, ...(password ? { passwordHash: await hashInfluencerPassword(password) } : {}), ...(rest.email ? { email: rest.email.toLowerCase() } : {}), ...(rest.referralCode ? { referralCode: rest.referralCode.toUpperCase() } : {}) }; try { const [u] = await db.update(influencersTable).set(values).where(eq(influencersTable.id, influencerId)).returning(); if (!u) { res.status(404).json({ error: "Not found" }); return; } if (password || rest.isActive === false) await db.delete(influencerSessionsTable).where(eq(influencerSessionsTable.influencerId, influencerId)); const links = await db.select({ couponId: influencerCouponsTable.couponId }).from(influencerCouponsTable).where(eq(influencerCouponsTable.influencerId, u.id)); res.json({ ...profile(u), couponIds: links.map((link) => link.couponId) }); } catch { res.status(409).json({ error: "Email or referral code already exists" }); } }));
 router.post("/admin/influencers/:id/coupons", asyncRoute(async (req, res) => { if (!await admin(req, res, "edit")) return; const couponId = Number((req.body as Record<string, unknown>)?.couponId); if (!Number.isInteger(couponId) || couponId < 1) { res.status(400).json({ error: "couponId is required" }); return; } const [i] = await db.select({ id: influencersTable.id }).from(influencersTable).where(eq(influencersTable.id, Number(req.params.id))); const [c] = await db.select({ id: couponsTable.id }).from(couponsTable).where(eq(couponsTable.id, couponId)); const [owner] = await db.select({ influencerId: influencerCouponsTable.influencerId }).from(influencerCouponsTable).where(eq(influencerCouponsTable.couponId, couponId)); if (!i || !c) { res.status(404).json({ error: "Influencer or coupon not found" }); return; } if (owner) { res.status(409).json({ error: "Coupon is already owned by an influencer" }); return; } const [link] = await db.insert(influencerCouponsTable).values({ influencerId: i.id, couponId: c.id }).returning(); res.status(201).json(link); }));

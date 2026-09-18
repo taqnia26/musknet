@@ -10,7 +10,7 @@ export function getAuthToken() {
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/owner')) {
     return localStorage.getItem(OWNER_TOKEN_STORAGE_KEY);
   }
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/infulancer')) {
+  if (typeof window !== 'undefined' && (window.location.pathname.startsWith('/influencer') || window.location.pathname.startsWith('/infulancer'))) {
     return localStorage.getItem(INFLUENCER_TOKEN_STORAGE_KEY);
   }
   return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);

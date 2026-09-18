@@ -25,7 +25,6 @@ import { SiteIntro } from '@/components/site-intro';
 
 import {
   Route,
-  Redirect,
   Switch,
   useLocation,
   Router as WouterRouter,
@@ -50,10 +49,9 @@ function Router() {
   if (location.startsWith('/owner')) {
     return location === '/owner/login' ? <OwnerLogin /> : <OwnerPortal />;
   }
-  if (location.startsWith('/influencer')) {
-    return <Redirect to={location.replace('/influencer', '/infulancer')} />;
+  if (location.startsWith('/influencer') || location.startsWith('/infulancer')) {
+    return <InfluencerRoutes />;
   }
-  if (location.startsWith('/infulancer')) return <InfluencerRoutes />;
 
   return (
     <Layout>
@@ -102,7 +100,7 @@ function StorefrontAnalytics() {
   const [location] = useLocation();
 
   useEffect(() => {
-    if (location.startsWith('/admin') || location.startsWith('/owner') || location.startsWith('/infulancer')) return;
+    if (location.startsWith('/admin') || location.startsWith('/owner') || location.startsWith('/influencer') || location.startsWith('/infulancer')) return;
     const referral = new URLSearchParams(window.location.search).get('ref');
     if (referral) void captureInfluencerReferral({ ref: referral }).catch(() => undefined);
 
@@ -131,7 +129,7 @@ function StorefrontAnalytics() {
 }
 
 function App() {
-  const showSiteIntro = !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/owner') && !window.location.pathname.startsWith('/infulancer');
+  const showSiteIntro = !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/owner') && !window.location.pathname.startsWith('/influencer') && !window.location.pathname.startsWith('/infulancer');
 
   return (
     <QueryClientProvider client={queryClient}>
