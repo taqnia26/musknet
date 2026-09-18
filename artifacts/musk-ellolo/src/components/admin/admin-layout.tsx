@@ -60,6 +60,7 @@ const navStructure = [
       { href: '/admin/customers', labelEn: 'Manage Customers', labelAr: 'إدارة العملاء' },
     ]
   },
+  { href: '/admin/influencers', icon: UserCog, labelEn: 'Influencers', labelAr: 'المشاهير', module: 'dashboard', direct: true },
   {
     labelEn: 'HR', labelAr: 'شؤون الموظفين', icon: Briefcase, module: 'hr',
     children: [
@@ -79,7 +80,6 @@ const navStructure = [
     labelEn: 'Marketing', labelAr: 'التسويق', icon: Tags, module: 'dashboard',
     children: [
       { href: '/admin/marketing', labelEn: 'Campaigns', labelAr: 'الحملات' },
-      { href: '/admin/influencers', labelEn: 'Influencers', labelAr: 'المشاهير' },
     ]
   },
   {
