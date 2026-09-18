@@ -1,0 +1,155 @@
+# BUILD PROMPT — Add Contracts, Site Content & Distributor Catalog Controls (ADMIN-ONLY)
+
+> Paste this into the Replit Agent chat inside the **musknet** project (the live muskellolo.net codebase).
+> This project already has its own admin system, database, and design language — do not replace or duplicate any of it.
+> **Hard rule for this task: do not create, edit, or touch any existing public/storefront page or file. Every change must live inside the admin area only.**
+
+---
+
+**PASTE STARTING HERE:**
+
+I need you to add three new features to this existing admin dashboard: **Distributor Contracts with e-signature**, **Site Content management**, and **Distributor catalog display controls**. This is an EXTENSION of the current project, not a rebuild — and it is strictly scoped to the admin area.
+
+**Absolute constraint: do not modify any existing public-facing page (home, about, contact, distributors catalog, or any other storefront route). If a task below would normally require editing one of those pages, skip that part and leave a note instead — do not touch the file.**
+
+## STEP 0 — Mandatory self-audit before writing any code
+
+Before implementing anything, inspect this project's own codebase and tell me:
+- The exact name of the admin users table and its role/permission system (table names, role list, how permission checks are done in existing routes)
+- The exact name of the existing distributors table and its columns
+- The design tokens already in use (colors, fonts, spacing, border-radius — from the existing CSS/Tailwind config)
+- The existing admin layout/sidebar pattern (how new nav items are normally added)
+- Which PDF-generation, file-upload, or signature-capture libraries (if any) are already installed
+
+Everything below MUST be adapted to match what you find — same permission system, same design language, same file/folder conventions already used in this project. Do not introduce a second parallel admin_users table, a second design system, or a second permission scheme.
+
+## FEATURE 1 — Distributor Contracts (with e-signature)
+
+⚠️ **One necessary exception to the admin-only rule, flagged for your decision:** completing a buyer's signature requires the buyer (an external party with no admin account) to open a link and sign. That means ONE new, isolated public route is unavoidable if you want online buyer-signing: `/contracts/sign/:token`. This is entirely NEW code — it does not modify any existing page or file, it just adds one. If you'd rather have zero new public routes of any kind today, tell the Agent to stop after the "seller signs" step below, and the buyer's copy gets sent out for signature manually (print/email) instead — the admin then uploads the signed-back file. Default to building the online buyer-signing route unless told otherwise.
+
+### Database table: `distributor_contracts`
+Create this table, but point its foreign keys at THIS project's own existing `distributors` and admin-users tables (use their real names/types, not the ones below):
+
+```
+id                          serial PK
+contract_number             text, unique, not null
+distributor_id              integer, FK -> [this project's distributors table].id, nullable
+contract_type                text, not null
+status                       text, not null, default 'draft'
+contract_date                timestamptz
+hijri_date_str                text
+gregorian_date_str            text
+contract_day_name             text
+seller_name, seller_cr_number, seller_cr_date, seller_cr_issuer,
+seller_address, seller_rep_name, seller_rep_title   -- text fields, default to this company's real info (ask me for the values, do not invent them)
+buyer_company_name           text, not null
+buyer_cr_number, buyer_cr_date, buyer_cr_issuer,
+buyer_neighborhood, buyer_city, buyer_po_box, buyer_postal_code,
+buyer_rep_name, buyer_rep_title, buyer_email, buyer_phone      -- text, nullable
+showroom_name, showroom_location, showroom_city   -- text, nullable
+margin_percent               numeric(5,2), default 0
+min_order_value               numeric(12,2), default 3000
+start_date, end_date          timestamptz, nullable
+vat_rate                      numeric(5,2), default 15
+late_payment_weekly_rate      numeric(5,2), default 2
+late_payment_cap_rate         numeric(5,2), default 10
+inspection_days               integer, default 7
+warranty_months               integer, default 6
+delivery_days                 integer, default 15
+payment_days                  integer, default 30
+products                      jsonb, default []
+notes                         text
+signing_token, signing_token_expires_at        -- for the public buyer-signing link
+sent_for_signature_at         timestamptz
+seller_signature_image, seller_signed_at, seller_signed_by,
+seller_signed_by_user_id (FK -> admin users), seller_signed_ip
+buyer_signature_image, buyer_signed_at, buyer_signed_name,
+buyer_signed_ip, buyer_signed_user_agent
+download_token, download_token_expires_at      -- for the protected final-PDF link
+created_by (FK -> admin users)
+created_at, updated_at         timestamptz
+```
+
+### API routes (under this project's existing `/api` prefix, protected the same way this project already protects admin routes)
+```
+GET    /api/contracts
+GET    /api/contracts/:id
+POST   /api/contracts
+PATCH  /api/contracts/:id
+DELETE /api/contracts/:id
+GET    /api/contracts/:id/pdf
+POST   /api/contracts/:id/seller-sign      -- captures seller signature image + timestamp + IP
+POST   /api/contracts/:id/send             -- generates signing_token, marks sent_for_signature_at
+POST   /api/contracts/:id/cancel
+```
+Only if building online buyer-signing (see the flagged exception above), also add:
+```
+GET    /api/public/contracts/by-token/:token            -- public, no auth
+POST   /api/public/contracts/by-token/:token/sign        -- public, captures buyer signature + name + IP + user agent
+GET    /api/public/contracts/by-token/:token/pdf
+GET    /api/public/contracts/by-download-token/:token/pdf
+```
+
+### Frontend
+- Admin pages only: contract list (table with status badges), create/edit form, view page, print-friendly view
+- A signature-capture component (canvas-based, e.g. `react-signature-canvas`) reusable for both seller and buyer signing
+- Only if building online buyer-signing: one new, isolated public page at `/contracts/sign/:token` where the buyer reviews the contract and signs — this is a new route only, no existing file is touched
+- PDF generation should render the contract bilingually (Arabic RTL layout) with a QR code linking to the verification/download URL — use `pdfkit` + `qrcode` + an Arabic text-shaping library (`arabic-reshaper` or equivalent) if this project doesn't already have an Arabic-PDF solution
+
+### Business flow
+1. Admin creates contract (draft) → 2. Admin (seller) signs → 3. Admin clicks "send" → either a signing link is generated and sent to the buyer (online path), or the admin exports the PDF to send manually (offline path) → 4. Buyer signs → 5. Contract becomes final; a separately-tokened PDF download link is available for the online path, or the admin uploads the signed-back copy for the offline path.
+
+## FEATURE 2 — Site Content Management (admin-only, staging step)
+
+Build the admin-side management tool only. **Do not modify any existing public page to read from this system yet** — that is a deliberate future step that will be requested separately, once this is reviewed.
+
+### Database table: `site_content`
+```
+id            serial PK
+key           text, unique, not null
+data          jsonb, not null
+updated_at    timestamptz, default now()
+updated_by    text, nullable
+```
+
+### API routes
+```
+GET /api/admin/site-content        -- admin, returns all rows for editing
+PUT /api/admin/site-content        -- admin, upserts one or more keys
+```
+(Skip the public read route for now — nothing on the live site will call it yet, so there's no need to build it before it's needed.)
+
+### Frontend
+- One admin page listing every content "key" you'd propose (hero titles, about-page text, contact info, etc. — inspect this project's own public pages to see what text blocks exist today, and propose a sensible set of keys, but do not edit those public page files)
+- A simple form per key to edit its `data` (support plain text and rich text/JSON shapes as needed per key)
+- This page's only job today is to let the admin start populating content ahead of time. It does not yet affect what visitors see.
+
+## FEATURE 3 — Distributor Catalog Display Controls (admin-only, staging step)
+
+Extend the EXISTING `products` table with new columns, and build an admin page to control them. **Do not modify the existing public distributor catalog page** — it keeps rendering exactly as it does today.
+
+- Add to the products table (or equivalent): `show_on_distributors` (boolean, default true), `distributor_name_override` (text, nullable), `distributor_image_override` (text, nullable)
+- Add one admin settings page where the admin can, per product, set these three fields
+- These fields are inert for now — no existing public page reads them yet. Wiring the public distributor catalog to respect them is a separate future step.
+
+## INTEGRATION RULES — read before finishing
+
+- Reuse this project's existing admin layout, sidebar, buttons, tables, and color tokens for every new page. Do not import a different UI kit or a different color palette.
+- Reuse this project's existing authentication/permission-check pattern for every new admin route. If this project has named roles, decide which role(s) should access contracts vs. site-content vs. distributor settings and use the same permission-check mechanism already in place — do not build a parallel one.
+- Do not touch, rename, or duplicate any existing table, route, or page outside of what's described above.
+- Do not edit any file under the public/storefront pages directory for any reason in this task.
+- Ask me for the real company legal details (CR number, address, authorized signatory) before hardcoding any seller default values in the contract — do not invent placeholder legal data.
+
+## VERIFICATION CHECKLIST (report back on each)
+- [ ] Self-audit findings from Step 0 (existing tables/roles/design tokens found)
+- [ ] Confirm no existing public/storefront file was created, edited, or deleted
+- [ ] Migration applied cleanly with no data loss on existing tables
+- [ ] Contract create → seller sign → send flow works end-to-end (plus buyer sign, if the online path was built)
+- [ ] Site content admin page loads and edits save (public site untouched — confirm it still renders exactly as before)
+- [ ] Distributor catalog fields save correctly on at least one real product (public catalog untouched — confirm it still renders exactly as before)
+- [ ] All new admin routes respect this project's existing role/permission system
+- [ ] All new pages visually match this project's existing admin design (screenshot both an old and a new page for comparison)
+
+---
+
+*ملف مرجعي لـ Four Corners — برومبت توسعة مبني على أوديت مشروع مسك اللولو (بشرطة)، محصور بالكامل داخل لوحة الأدمن، بدون أي لمس للصفحات العامة بالموقع الحي.*
