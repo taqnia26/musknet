@@ -134,14 +134,14 @@ export default function AdminLogin() {
                         <Input
                           type={showPassword ? 'text' : 'password'}
                           autoComplete="current-password"
-                          className="bg-background pe-11"
+                          className="bg-background pr-11"
                           {...field}
                           dir="ltr"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword((visible) => !visible)}
-                          className="absolute inset-y-0 end-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                           aria-label={showPassword
                             ? t('إخفاء كلمة المرور', 'Hide password')
                             : t('إظهار كلمة المرور', 'Show password')}
