@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes';
 import {
   LayoutDashboard,
   Package,
+  Gift,
   Tags,
   ShoppingCart,
   Ticket,
@@ -49,6 +50,7 @@ const navStructure = [
       { href: '/admin/products', labelEn: 'Manage Products', labelAr: 'إدارة المنتجات' },
       { href: '/admin/categories', labelEn: 'Categories', labelAr: 'الفئات', module: 'categories' },
       { href: '/admin/inventory', labelEn: 'Inventory', labelAr: 'المخزون', module: 'inventory' },
+      { href: '/admin/gifting-issues', labelEn: 'Gifts & Testers', labelAr: 'الهدايا والتيستر', module: 'inventory' },
     ]
   },
   {

@@ -27,6 +27,7 @@ import { AdminWhatsAppSettings, AdminWhatsAppTemplates } from '@/pages/admin/wha
 import AdminIntegrations from '@/pages/admin/integrations';
 import AdminAccounting from '@/pages/admin/accounting';
 import AdminPurchases from '@/pages/admin/purchases';
+import AdminGiftingIssues from '@/pages/admin/gifting-issues';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
@@ -51,6 +52,7 @@ export default function AdminRoutes() {
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/customers" component={AdminCustomers} />
         <Route path="/admin/inventory" component={AdminInventory} />
+        <Route path="/admin/gifting-issues" component={AdminGiftingIssues} />
         <Route path="/admin/distributors" component={AdminDistributors} />
         <Route path="/admin/distributor-catalog" component={AdminDistributorCatalog} />
         <Route path="/admin/contracts" component={AdminContractsList} />

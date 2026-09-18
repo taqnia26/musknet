@@ -1933,6 +1933,39 @@ export interface ExhibitionProductInput {
   quantitySold?: number;
 }
 
+export type GiftingIssueCategory = typeof GiftingIssueCategory[keyof typeof GiftingIssueCategory];
+
+
+export const GiftingIssueCategory = {
+  VIP: 'VIP',
+  Sample: 'Sample',
+  Damage: 'Damage',
+  Marketing: 'Marketing',
+  Tester: 'Tester',
+} as const;
+
+export interface GiftingIssue {
+  id: number;
+  recipientName: string;
+  category: GiftingIssueCategory;
+  comment: string;
+  /** @nullable */
+  program?: string | null;
+  productId: number;
+  barcode: string;
+  descriptionSnapshot: string;
+  /** @minimum 1 */
+  quantity: number;
+  totalCost: string;
+  /** @nullable */
+  issueDate?: string | null;
+  sourceFilename: string;
+  sourceSheet: string;
+  sourceRow: number;
+  dedupeKey: string;
+  importedAt: string;
+}
+
 /**
  * Invalid request
  */
@@ -2091,5 +2124,32 @@ as_of: string;
 export type AdminGetFinanceSummaryParams = {
 from: string;
 to: string;
+};
+
+export type GetAdminGiftingIssuesParams = {
+category?: GetAdminGiftingIssuesCategory;
+search?: string;
+};
+
+export type GetAdminGiftingIssuesCategory = typeof GetAdminGiftingIssuesCategory[keyof typeof GetAdminGiftingIssuesCategory];
+
+
+export const GetAdminGiftingIssuesCategory = {
+  VIP: 'VIP',
+  Sample: 'Sample',
+  Damage: 'Damage',
+  Marketing: 'Marketing',
+  Tester: 'Tester',
+} as const;
+
+export type GetAdminGiftingIssues200Summary = {
+  rows?: number;
+  units?: number;
+  totalCost?: string;
+};
+
+export type GetAdminGiftingIssues200 = {
+  rows: GiftingIssue[];
+  summary: GetAdminGiftingIssues200Summary;
 };
 

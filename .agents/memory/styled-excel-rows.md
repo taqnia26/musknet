@@ -7,4 +7,4 @@ Treat a worksheet's declared row range as positions to inspect, not proof that e
 
 **Why:** Excel files can serialize styled empty cells across a large range. They can also leave VLOOKUP templates whose cached result is an error object rather than a primitive value. Either case can make a reader report phantom records unless values are normalized before deciding whether a row is populated.
 
-**How to apply:** For spreadsheet imports, normalize formula results before testing row emptiness; report scanned positions, populated rows, styled/blank rows, and unique identifiers. Add fixtures for values beyond early rows and error-result formulas.
+**How to apply:** For spreadsheet imports, unwrap cached formula results in both text and numeric fields before testing row emptiness or matching business keys; report scanned positions, populated rows, styled/blank rows, and unique identifiers. Add fixtures for values beyond early rows and error-result formulas.

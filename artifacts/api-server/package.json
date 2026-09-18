@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "import:sell-out": "tsx ./src/scripts/import-historical-sell-out.ts",
+    "import:gifting": "tsx ./src/scripts/import-gifting-issues.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --maxWorkers=1"
   },

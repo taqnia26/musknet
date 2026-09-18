@@ -655,11 +655,12 @@ export const ListOwnerSessionsResponseItem = zod.object({
 export const ListOwnerSessionsResponse = zod.array(ListOwnerSessionsResponseItem)
 
 
+export const revokeOwnerSessionPathIdMultipleOf = 1;
 
 
 
 export const RevokeOwnerSessionParams = zod.object({
-  "id": zod.coerce.number().int().min(1)
+  "id": zod.coerce.number().min(1).multipleOf(revokeOwnerSessionPathIdMultipleOf)
 })
 
 export const RevokeOwnerSessionResponse = zod.void()
@@ -680,11 +681,12 @@ export const ListOwnerSessionNotificationsResponseItem = zod.object({
 export const ListOwnerSessionNotificationsResponse = zod.array(ListOwnerSessionNotificationsResponseItem)
 
 
+export const readOwnerSessionNotificationPathIdMultipleOf = 1;
 
 
 
 export const ReadOwnerSessionNotificationParams = zod.object({
-  "id": zod.coerce.number().int().min(1)
+  "id": zod.coerce.number().min(1).multipleOf(readOwnerSessionNotificationPathIdMultipleOf)
 })
 
 export const ReadOwnerSessionNotificationResponse = zod.void()
@@ -3719,6 +3721,96 @@ export const AdminCreateExhibitionProductResponse = zod.object({
   "productNameAr": zod.string(),
   "productNameEn": zod.string(),
   "productSku": zod.string().nullable()
+})
+
+
+/**
+ * @summary Gifts and testers archive
+ */
+export const GetAdminGiftingIssuesQueryParams = zod.object({
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester']).optional(),
+  "search": zod.coerce.string().optional()
+})
+
+export const getAdminGiftingIssuesResponseRowsItemIdMultipleOf = 1;
+
+export const getAdminGiftingIssuesResponseRowsItemProductIdMultipleOf = 1;
+
+export const getAdminGiftingIssuesResponseRowsItemQuantityMultipleOf = 1;
+
+export const getAdminGiftingIssuesResponseRowsItemSourceRowMultipleOf = 1;
+
+export const getAdminGiftingIssuesResponseSummaryRowsMultipleOf = 1;
+
+export const getAdminGiftingIssuesResponseSummaryUnitsMultipleOf = 1;
+
+
+
+export const GetAdminGiftingIssuesResponse = zod.object({
+  "rows": zod.array(zod.object({
+  "id": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemIdMultipleOf),
+  "recipientName": zod.string(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester']),
+  "comment": zod.string(),
+  "program": zod.string().nullish(),
+  "productId": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemProductIdMultipleOf),
+  "barcode": zod.string(),
+  "descriptionSnapshot": zod.string(),
+  "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssuesResponseRowsItemQuantityMultipleOf),
+  "totalCost": zod.string(),
+  "issueDate": zod.coerce.date().nullish(),
+  "sourceFilename": zod.string(),
+  "sourceSheet": zod.string(),
+  "sourceRow": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemSourceRowMultipleOf),
+  "dedupeKey": zod.string(),
+  "importedAt": zod.coerce.date()
+})),
+  "summary": zod.object({
+  "rows": zod.number().multipleOf(getAdminGiftingIssuesResponseSummaryRowsMultipleOf).optional(),
+  "units": zod.number().multipleOf(getAdminGiftingIssuesResponseSummaryUnitsMultipleOf).optional(),
+  "totalCost": zod.string().optional()
+})
+})
+
+
+/**
+ * @summary Gifting issue detail
+ */
+export const getAdminGiftingIssuesIdPathIdMultipleOf = 1;
+
+
+
+export const GetAdminGiftingIssuesIdParams = zod.object({
+  "id": zod.coerce.number().multipleOf(getAdminGiftingIssuesIdPathIdMultipleOf)
+})
+
+export const getAdminGiftingIssuesIdResponseIdMultipleOf = 1;
+
+export const getAdminGiftingIssuesIdResponseProductIdMultipleOf = 1;
+
+export const getAdminGiftingIssuesIdResponseQuantityMultipleOf = 1;
+
+export const getAdminGiftingIssuesIdResponseSourceRowMultipleOf = 1;
+
+
+
+export const GetAdminGiftingIssuesIdResponse = zod.object({
+  "id": zod.number().multipleOf(getAdminGiftingIssuesIdResponseIdMultipleOf),
+  "recipientName": zod.string(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester']),
+  "comment": zod.string(),
+  "program": zod.string().nullish(),
+  "productId": zod.number().multipleOf(getAdminGiftingIssuesIdResponseProductIdMultipleOf),
+  "barcode": zod.string(),
+  "descriptionSnapshot": zod.string(),
+  "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssuesIdResponseQuantityMultipleOf),
+  "totalCost": zod.string(),
+  "issueDate": zod.coerce.date().nullish(),
+  "sourceFilename": zod.string(),
+  "sourceSheet": zod.string(),
+  "sourceRow": zod.number().multipleOf(getAdminGiftingIssuesIdResponseSourceRowMultipleOf),
+  "dedupeKey": zod.string(),
+  "importedAt": zod.coerce.date()
 })
 
 

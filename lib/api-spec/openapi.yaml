@@ -1297,6 +1297,41 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExhibitionProductInput" } } } }
       responses: { "201": { description: Allocated product, content: { application/json: { schema: { $ref: "#/components/schemas/ExhibitionProduct" } } } } }
 
+  /admin/gifting-issues:
+    get:
+      tags: [admin]
+      summary: Gifts and testers archive
+      parameters:
+        - { in: query, name: category, schema: { type: string, enum: [VIP, Sample, Damage, Marketing, Tester] } }
+        - { in: query, name: search, schema: { type: string } }
+      responses:
+        "200":
+          description: Archive rows and summary
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rows, summary]
+                properties:
+                  rows: { type: array, items: { $ref: "#/components/schemas/GiftingIssue" } }
+                  summary:
+                    type: object
+                    properties:
+                      rows: { type: number, multipleOf: 1 }
+                      units: { type: number, multipleOf: 1 }
+                      totalCost: { type: string }
+  /admin/gifting-issues/{id}:
+    get:
+      tags: [admin]
+      summary: Gifting issue detail
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: number, multipleOf: 1 } }
+      responses:
+        "200":
+          description: Gifting issue
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/GiftingIssue" } }
+        "404": { description: Not found }
 components:
   securitySchemes:
     bearerAuth:
@@ -1334,12 +1369,12 @@ components:
       name: id
       in: path
       required: true
-      schema: { type: integer, minimum: 1 }
+      schema: { type: number, multipleOf: 1, minimum: 1 }
     OwnerSessionNotificationId:
       name: id
       in: path
       required: true
-      schema: { type: integer, minimum: 1 }
+      schema: { type: number, multipleOf: 1, minimum: 1 }
     CategorySlug:
       name: category
       in: query
@@ -2852,3 +2887,23 @@ components:
         productId: { type: number }
         quantityAllocated: { type: number, multipleOf: 1, minimum: 0 }
         quantitySold: { type: number, multipleOf: 1, minimum: 0, default: 0 }
+    GiftingIssue:
+      type: object
+      required: [id, recipientName, category, comment, productId, barcode, descriptionSnapshot, quantity, totalCost, sourceFilename, sourceSheet, sourceRow, dedupeKey, importedAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        recipientName: { type: string }
+        category: { type: string, enum: [VIP, Sample, Damage, Marketing, Tester] }
+        comment: { type: string }
+        program: { type: [string, "null"] }
+        productId: { type: number, multipleOf: 1 }
+        barcode: { type: string }
+        descriptionSnapshot: { type: string }
+        quantity: { type: number, multipleOf: 1, minimum: 1 }
+        totalCost: { type: string }
+        issueDate: { type: [string, "null"], format: date-time }
+        sourceFilename: { type: string }
+        sourceSheet: { type: string }
+        sourceRow: { type: number, multipleOf: 1 }
+        dedupeKey: { type: string }
+        importedAt: { type: string, format: date-time }

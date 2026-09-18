@@ -97,7 +97,7 @@ function allowed(res: Response, module: string, action: string) {
   return user.isSuperAdmin || (res.locals.permissions as string[] | undefined)?.includes(`${module}:${action}`);
 }
 
-function permit(module: string, action: "view" | "edit" | "delete") {
+export function permit(module: string, action: "view" | "edit" | "delete") {
   return async (_req: Request, res: Response, next: NextFunction) => {
    try {
     const user = res.locals.admin as typeof adminUsersTable.$inferSelect;

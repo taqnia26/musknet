@@ -108,6 +108,9 @@ import type {
   FinanceMetrics,
   ForbiddenResponse,
   GetAdminAnalyticsDashboardParams,
+  GetAdminGiftingIssues200,
+  GetAdminGiftingIssuesParams,
+  GiftingIssue,
   HealthStatus,
   HomeContent,
   JournalEntry,
@@ -249,12 +252,6 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-
-
-
-
-
-
 export const getListCategoriesUrl = () => {
 
 
@@ -325,12 +322,6 @@ export function useListCategories<TData = Awaited<ReturnType<typeof listCategori
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
 
 export const getListProductsUrl = (params?: ListProductsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -409,13 +400,6 @@ export function useListProducts<TData = Awaited<ReturnType<typeof listProducts>>
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getGetProductUrl = (slug: string,) => {
 
 
@@ -9570,3 +9554,157 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getAdminCreateExhibitionProductMutationOptions(options));
     }
 
+export const getGetAdminGiftingIssuesUrl = (params?: GetAdminGiftingIssuesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/gifting-issues?${stringifiedParams}` : `/api/admin/gifting-issues`
+}
+
+/**
+ * @summary Gifts and testers archive
+ */
+export const getAdminGiftingIssues = async (params?: GetAdminGiftingIssuesParams, options?: Parameters<typeof customFetch>[1]): Promise<GetAdminGiftingIssues200> => {
+
+  return customFetch<GetAdminGiftingIssues200>(getGetAdminGiftingIssuesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminGiftingIssuesQueryKey = (params?: GetAdminGiftingIssuesParams,) => {
+    return [
+    `/api/admin/gifting-issues`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAdminGiftingIssuesQueryOptions = <TData = Awaited<ReturnType<typeof getAdminGiftingIssues>>, TError = ErrorType<unknown>>(params?: GetAdminGiftingIssuesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssues>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminGiftingIssuesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminGiftingIssues>>> = ({ signal }) => getAdminGiftingIssues(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssues>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminGiftingIssuesQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminGiftingIssues>>>
+export type GetAdminGiftingIssuesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Gifts and testers archive
+ */
+
+export function useGetAdminGiftingIssues<TData = Awaited<ReturnType<typeof getAdminGiftingIssues>>, TError = ErrorType<unknown>>(
+ params?: GetAdminGiftingIssuesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssues>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminGiftingIssuesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdminGiftingIssuesIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/gifting-issues/${id}`
+}
+
+/**
+ * @summary Gifting issue detail
+ */
+export const getAdminGiftingIssuesId = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<GiftingIssue> => {
+
+  return customFetch<GiftingIssue>(getGetAdminGiftingIssuesIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminGiftingIssuesIdQueryKey = (id: number,) => {
+    return [
+    `/api/admin/gifting-issues/${id}`
+    ] as const;
+    }
+
+
+export const getGetAdminGiftingIssuesIdQueryOptions = <TData = Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminGiftingIssuesIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>> = ({ signal }) => getAdminGiftingIssuesId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminGiftingIssuesIdQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>>
+export type GetAdminGiftingIssuesIdQueryError = ErrorType<void>
+
+
+/**
+ * @summary Gifting issue detail
+ */
+
+export function useGetAdminGiftingIssuesId<TData = Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminGiftingIssuesIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
