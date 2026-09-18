@@ -285,21 +285,21 @@ export function AdminLayout({ children }: { children: ReactNode }) {
                   ))}
                 </nav>
               </div>
-              <div className="p-4 border-t border-sidebar-border">
+              <div className="border-t border-sidebar-border p-2">
                 <Link href="/">
-                  <Button variant="ghost" className="w-full justify-start gap-2 text-[13px] text-foreground/70 hover:bg-black/5 hover:text-foreground mb-1" onClick={() => setIsOpen(false)}>
-                    <Store className="h-4 w-4" />
+                  <Button variant="ghost" className="mb-0.5 h-8 w-full justify-start gap-2 px-2 text-[12px] text-foreground/70 hover:bg-black/5 hover:text-foreground" onClick={() => setIsOpen(false)}>
+                    <Store className="h-3.5 w-3.5" />
                     {t('العودة للمتجر', 'Back to Store')}
                   </Button>
                 </Link>
                 <Link href="/owner/login">
-                  <Button variant="ghost" className="w-full justify-start gap-2 text-[13px] text-accent/90 hover:bg-accent/10 hover:text-accent mb-1" onClick={() => setIsOpen(false)}>
-                    <UserCog className="h-4 w-4" />
+                  <Button variant="ghost" className="mb-0.5 h-8 w-full justify-start gap-2 px-2 text-[12px] text-accent/90 hover:bg-accent/10 hover:text-accent" onClick={() => setIsOpen(false)}>
+                    <UserCog className="h-3.5 w-3.5" />
                     {t('بوابة المالك', 'Owner portal')}
                   </Button>
                 </Link>
-                <Button variant="ghost" className="w-full justify-start gap-2 text-[13px] text-foreground/70 hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
-                  <LogOut className="h-4 w-4" />
+                <Button variant="ghost" className="h-8 w-full justify-start gap-2 px-2 text-[12px] text-foreground/70 hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
+                  <LogOut className="h-3.5 w-3.5" />
                   {t('تسجيل الخروج', 'Logout')}
                 </Button>
               </div>
@@ -388,21 +388,21 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </nav>
           </div>
 
-          <div className="p-3 border-t border-sidebar-border mt-auto">
+          <div className="mt-auto border-t border-sidebar-border p-2">
             <Link href="/">
-              <Button variant="ghost" className="w-full justify-start gap-2 text-[12.5px] font-medium text-sidebar-foreground/70 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground mb-1">
-                <Store className="h-[15px] w-[15px]" />
+              <Button variant="ghost" className="mb-0.5 h-8 w-full justify-start gap-2 px-2 text-[11.5px] font-medium text-sidebar-foreground/70 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5">
+                <Store className="h-3.5 w-3.5" />
                 {t('العودة للمتجر', 'Back to Store')}
               </Button>
             </Link>
             <Link href="/owner/login">
-              <Button variant="ghost" className="w-full justify-start gap-2 text-[12.5px] font-medium text-accent/80 hover:bg-accent/10 hover:text-accent mb-1">
-                <UserCog className="h-[15px] w-[15px]" />
+              <Button variant="ghost" className="mb-0.5 h-8 w-full justify-start gap-2 px-2 text-[11.5px] font-medium text-accent/80 hover:bg-accent/10 hover:text-accent">
+                <UserCog className="h-3.5 w-3.5" />
                 {t('بوابة المالك', 'Owner portal')}
               </Button>
             </Link>
-            <Button variant="ghost" className="w-full justify-start gap-2 text-[12.5px] font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
-              <LogOut className="h-[15px] w-[15px]" />
+            <Button variant="ghost" className="h-8 w-full justify-start gap-2 px-2 text-[11.5px] font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive" onClick={handleLogout}>
+              <LogOut className="h-3.5 w-3.5" />
               {t('تسجيل الخروج', 'Logout')}
             </Button>
           </div>
