@@ -27,6 +27,8 @@ if (!basePath) {
   );
 }
 
+const e2eApiUrl = process.env.E2E_API_URL;
+
 export default defineConfig({
   base: basePath,
   plugins: [
@@ -72,6 +74,14 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    proxy: e2eApiUrl
+      ? {
+          '/api': {
+            target: e2eApiUrl,
+            changeOrigin: true,
+          },
+        }
+      : undefined,
   },
   preview: {
     port,

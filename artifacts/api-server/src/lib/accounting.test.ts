@@ -1,6 +1,6 @@
 import request from "supertest";
 import { beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   adminUsersTable,
   accountingAccountsTable,
@@ -255,7 +255,10 @@ describe.sequential("exact double-entry accounting", () => {
     await expect(createPurchaseWithJournal({ ...values, description: "Different payload" }, `purchase-test-${suffix}`))
       .rejects.toThrow("idempotency key was already used with different values");
     const [entry] = await db.select().from(journalEntriesTable)
-      .where(eq(journalEntriesTable.sourceId, String(purchase.id))).limit(1);
+      .where(and(
+        eq(journalEntriesTable.sourceType, "purchase"),
+        eq(journalEntriesTable.sourceId, String(purchase.id)),
+      )).limit(1);
     const lines = await db.select().from(journalEntryLinesTable)
       .where(eq(journalEntryLinesTable.journalEntryId, entry.id));
     expect(lines).toHaveLength(2);

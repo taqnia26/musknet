@@ -33,7 +33,7 @@ let capitalAccountId: number;
 async function login(page: Page, email: string) {
   await page.goto("/admin/login");
   await page.getByLabel(/البريد الإلكتروني|Email/).fill(email);
-  await page.getByLabel(/كلمة المرور|Password/).fill(password);
+  await page.locator('input[type="password"]').fill(password);
   await page.getByTestId("button-login-submit").click();
   await expect(page).toHaveURL(/\/admin(?:\/)?$/);
   await page.goto("/admin/accounting");
@@ -171,12 +171,12 @@ test("accounting:edit rejects imbalance, posts a balanced entry, and reverses it
   await page.getByTestId("input-entry-debit-1").fill("0");
   await page.getByTestId("input-entry-credit-1").fill("37.24");
   await page.getByTestId("button-post-journal").click();
-  await expect(page.getByTestId("status-entry-balance-error")).toBeVisible();
+  await expect(page.getByText(/غير متوازن|Unbalanced/)).toBeVisible();
   await expect(page.getByText(entryDescription)).toHaveCount(0);
 
   await page.getByTestId("input-entry-credit-1").fill(String(amount));
   await page.getByTestId("button-post-journal").click();
-  await expect(page.getByText(/تم ترحيل القيد|Journal entry posted/)).toBeVisible();
+  await expect(page.getByText(/^(تم ترحيل القيد|Journal entry posted)$/)).toBeVisible();
 
   await page.getByTestId("tab-journals").click();
   const originalRow = page.getByRole("row").filter({ hasText: entryDescription });
@@ -195,7 +195,7 @@ test("accounting:edit rejects imbalance, posts a balanced entry, and reverses it
   await expect(page.getByTestId("button-confirm-reversal")).toBeDisabled();
   await page.getByTestId("input-reversal-reason").fill(reversalReason);
   await page.getByTestId("button-confirm-reversal").click();
-  await expect(page.getByText(/تم عكس القيد|Journal entry reversed/)).toBeVisible();
+  await expect(page.getByText(/^(تم عكس القيد|Journal entry reversed)$/)).toBeVisible();
 
   await expect(page.getByRole("row").filter({ hasText: reversalReason })).toBeVisible();
   await expect(page.getByRole("row").filter({ hasText: entryDescription })).toContainText("reversed");

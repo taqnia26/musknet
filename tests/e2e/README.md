@@ -1,22 +1,43 @@
-# Accounting browser test
+# Project tests
 
-The accounting journey mutates immutable financial records, so it intentionally
-refuses to run against the normal Replit development database.
-
-Provide all three variables:
-
-- `E2E_BASE_URL`: a CI-provided instance of the storefront and API.
-- `E2E_DATABASE_URL`: the dedicated PostgreSQL database used by that instance.
-- `E2E_DISPOSABLE_DATABASE=true`: explicit confirmation that test-created
-  accounting and audit records may be removed.
-
-`E2E_DATABASE_URL` must differ from the workspace's normal `DATABASE_URL`. The
-test provisions unique users in the isolated database, verifies that the target
-service can authenticate them (which also confirms both sides use the same
-database), and removes all records it created even after a failed browser step.
-
-Run with:
+Run every API and Chromium browser test from the project root:
 
 ```sh
-pnpm test:e2e:accounting
+pnpm test
 ```
+
+The unified runner downloads the Playwright-pinned Chromium build when it is not
+already cached. It creates a uniquely named PostgreSQL database, applies the
+schema and accounting integrity rules, runs the API tests, starts isolated API
+and storefront processes, runs the browser tests, and removes the processes and
+database on exit.
+
+API tests and the accounting browser journey mutate persistent records. They
+always receive the generated disposable database URL and never the normal
+project database.
+The generated database name uses the `musk_ellolo_e2e_` prefix, and cleanup uses
+that generated name rather than accepting a database name from user input.
+
+## Individual groups
+
+```sh
+pnpm test:api
+pnpm test:e2e
+pnpm test:e2e:accounting
+pnpm test:e2e:home-video
+```
+
+## Local and CI requirements
+
+- `DATABASE_URL` must identify a PostgreSQL database whose role may create and
+  drop databases. Replit supplies this to the workspace; CI should inject it as
+  a secret.
+- PostgreSQL client tools (`psql`) and Chromium runtime libraries must be
+  installed. They are declared in `.replit` for this workspace.
+- CI must allow downloading the pinned Playwright browser on the first run, or
+  restore `.cache/ms-playwright` from a cache.
+- Do not put database URLs, passwords, or other credentials in scripts, test
+  files, command output, or committed environment files.
+
+Optional `E2E_API_PORT` and `E2E_WEB_PORT` variables can override the isolated
+local ports when the defaults (`18181` and `18182`) are occupied.

@@ -6,8 +6,12 @@
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "import:sell-out": "pnpm --filter @workspace/api-server run import:sell-out --",
+    "test": "sh scripts/run-tests.sh",
+    "test:api": "E2E_MODE=api sh scripts/run-browser-e2e.sh",
+    "test:api:raw": "pnpm --filter @workspace/api-server run test",
+    "test:e2e": "sh scripts/run-browser-e2e.sh",
     "test:e2e:accounting": "sh scripts/run-accounting-e2e.sh",
-    "test:e2e:home-video": "playwright test tests/e2e/home-video.spec.ts",
+    "test:e2e:home-video": "sh scripts/run-browser-e2e.sh tests/e2e/home-video.spec.ts",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
