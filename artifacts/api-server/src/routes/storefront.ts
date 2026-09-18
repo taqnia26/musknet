@@ -317,7 +317,7 @@ router.post("/orders", asyncRoute(async (req, res) => {
     },
     shippingMethod: parsed.data.shippingMethod,
     paymentMethod: parsed.data.paymentMethod,
-  }, parsed.data.couponCode);
+  }, parsed.data.couponCode, undefined, req.cookies?.musk_referral);
   if (!order) {
     res.status(400).json({ error: "لا يمكن إنشاء طلب من سلة فارغة" });
     return;

@@ -3840,3 +3840,213 @@ export const GetAdminGiftingIssuesIdResponse = zod.object({
 })
 
 
+export const influencerLoginBodyPasswordMin = 8;
+
+
+
+export const InfluencerLoginBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string().min(influencerLoginBodyPasswordMin)
+})
+
+export const influencerLoginResponseInfluencerCouponIdsItemMultipleOf = 1;
+
+
+
+export const InfluencerLoginResponse = zod.object({
+  "token": zod.string(),
+  "influencer": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "referralCode": zod.string(),
+  "commissionRate": zod.number(),
+  "isActive": zod.boolean().optional(),
+  "couponIds": zod.array(zod.number().multipleOf(influencerLoginResponseInfluencerCouponIdsItemMultipleOf)).optional()
+})
+})
+
+
+export const influencerMeResponseCouponIdsItemMultipleOf = 1;
+
+
+
+export const InfluencerMeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "referralCode": zod.string(),
+  "commissionRate": zod.number(),
+  "isActive": zod.boolean().optional(),
+  "couponIds": zod.array(zod.number().multipleOf(influencerMeResponseCouponIdsItemMultipleOf)).optional()
+})
+
+
+export const InfluencerDashboardQueryParams = zod.object({
+  "rangeDays": zod.union([zod.literal(7),zod.literal(30),zod.literal(90)]).optional(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional()
+})
+
+export const InfluencerDashboardResponse = zod.object({
+  "summary": zod.record(zod.string(), zod.unknown()),
+  "referralUrl": zod.string(),
+  "codes": zod.array(zod.record(zod.string(), zod.unknown())),
+  "orders": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+export const CaptureInfluencerReferralQueryParams = zod.object({
+  "ref": zod.coerce.string()
+})
+
+export const CaptureInfluencerReferralResponse = zod.unknown()
+
+
+export const listInfluencersResponseCouponIdsItemMultipleOf = 1;
+
+
+
+export const ListInfluencersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "referralCode": zod.string(),
+  "commissionRate": zod.number(),
+  "isActive": zod.boolean().optional(),
+  "couponIds": zod.array(zod.number().multipleOf(listInfluencersResponseCouponIdsItemMultipleOf)).optional()
+})
+export const ListInfluencersResponse = zod.array(ListInfluencersResponseItem)
+
+
+export const createInfluencerBodyOnePasswordMin = 8;
+
+export const createInfluencerBodyTwoCommissionRateMin = 0;
+export const createInfluencerBodyTwoCommissionRateMax = 100;
+
+
+
+export const CreateInfluencerBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string().min(createInfluencerBodyOnePasswordMin)
+}).and(zod.object({
+  "name": zod.string(),
+  "referralCode": zod.string(),
+  "commissionRate": zod.number().min(createInfluencerBodyTwoCommissionRateMin).max(createInfluencerBodyTwoCommissionRateMax).optional()
+}))
+
+export const createInfluencerResponseCouponIdsItemMultipleOf = 1;
+
+
+
+export const CreateInfluencerResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "referralCode": zod.string(),
+  "commissionRate": zod.number(),
+  "isActive": zod.boolean().optional(),
+  "couponIds": zod.array(zod.number().multipleOf(createInfluencerResponseCouponIdsItemMultipleOf)).optional()
+})
+
+
+export const getInfluencerPathIdMultipleOf = 1;
+
+
+
+export const GetInfluencerParams = zod.object({
+  "id": zod.coerce.number().multipleOf(getInfluencerPathIdMultipleOf)
+})
+
+export const getInfluencerResponseCouponIdsItemMultipleOf = 1;
+
+
+
+export const GetInfluencerResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "referralCode": zod.string(),
+  "commissionRate": zod.number(),
+  "isActive": zod.boolean().optional(),
+  "couponIds": zod.array(zod.number().multipleOf(getInfluencerResponseCouponIdsItemMultipleOf)).optional()
+})
+
+
+export const updateInfluencerPathIdMultipleOf = 1;
+
+
+
+export const UpdateInfluencerParams = zod.object({
+  "id": zod.coerce.number().multipleOf(updateInfluencerPathIdMultipleOf)
+})
+
+export const updateInfluencerBodyPasswordMin = 8;
+
+export const updateInfluencerBodyCommissionRateMin = 0;
+export const updateInfluencerBodyCommissionRateMax = 100;
+
+
+
+export const UpdateInfluencerBody = zod.object({
+  "name": zod.string().optional(),
+  "email": zod.string().optional(),
+  "password": zod.string().min(updateInfluencerBodyPasswordMin).optional(),
+  "referralCode": zod.string().optional(),
+  "imageUrl": zod.string().nullish(),
+  "commissionRate": zod.number().min(updateInfluencerBodyCommissionRateMin).max(updateInfluencerBodyCommissionRateMax).optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const updateInfluencerResponseCouponIdsItemMultipleOf = 1;
+
+
+
+export const UpdateInfluencerResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "imageUrl": zod.string().nullish(),
+  "referralCode": zod.string(),
+  "commissionRate": zod.number(),
+  "isActive": zod.boolean().optional(),
+  "couponIds": zod.array(zod.number().multipleOf(updateInfluencerResponseCouponIdsItemMultipleOf)).optional()
+})
+
+
+export const linkInfluencerCouponPathIdMultipleOf = 1;
+
+
+
+export const LinkInfluencerCouponParams = zod.object({
+  "id": zod.coerce.number().multipleOf(linkInfluencerCouponPathIdMultipleOf)
+})
+
+export const linkInfluencerCouponBodyCouponIdMultipleOf = 1;
+
+
+
+export const LinkInfluencerCouponBody = zod.object({
+  "couponId": zod.number().min(1).multipleOf(linkInfluencerCouponBodyCouponIdMultipleOf)
+})
+
+export const LinkInfluencerCouponResponse = zod.void()
+
+
+export const unlinkInfluencerCouponPathIdMultipleOf = 1;
+
+export const unlinkInfluencerCouponPathCouponIdMultipleOf = 1;
+
+
+
+export const UnlinkInfluencerCouponParams = zod.object({
+  "id": zod.coerce.number().multipleOf(unlinkInfluencerCouponPathIdMultipleOf),
+  "couponId": zod.coerce.number().multipleOf(unlinkInfluencerCouponPathCouponIdMultipleOf)
+})
+
+export const UnlinkInfluencerCouponResponse = zod.void()

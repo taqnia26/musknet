@@ -6,6 +6,7 @@ import ownerRouter from "./owner";
 import giftingRouter from "./gifting";
 import storageRouter from "./storage";
 import analyticsRouter from "./analytics";
+import influencerRouter from "./influencer";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(analyticsRouter);
 router.use(adminRouter);
 router.use(giftingRouter);
 router.use(ownerRouter);
+router.use(influencerRouter);
 
 export default router;

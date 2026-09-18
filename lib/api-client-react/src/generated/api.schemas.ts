@@ -1982,6 +1982,73 @@ export interface GiftingIssue {
   importedAt: string;
 }
 
+export interface InfluencerLogin {
+  email: string;
+  /** @minLength 8 */
+  password: string;
+}
+
+export interface Influencer {
+  id: number;
+  name: string;
+  email: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  referralCode: string;
+  commissionRate: number;
+  isActive?: boolean;
+  couponIds?: number[];
+}
+
+export interface InfluencerAuth {
+  token: string;
+  influencer: Influencer;
+}
+
+export type InfluencerInput = InfluencerLogin & {
+  name: string;
+  referralCode: string;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  commissionRate?: number;
+};
+
+export type InfluencerDashboardSummary = { [key: string]: unknown };
+
+export type InfluencerDashboardCodesItem = { [key: string]: unknown };
+
+export type InfluencerDashboardOrdersItem = { [key: string]: unknown };
+
+export interface InfluencerDashboard {
+  summary: InfluencerDashboardSummary;
+  referralUrl: string;
+  codes: InfluencerDashboardCodesItem[];
+  orders: InfluencerDashboardOrdersItem[];
+}
+
+export interface InfluencerPatchBody {
+  name?: string;
+  email?: string;
+  /** @minLength 8 */
+  password?: string;
+  referralCode?: string;
+  /** @nullable */
+  imageUrl?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  commissionRate?: number;
+  isActive?: boolean;
+}
+
+export interface CouponLink {
+  /** @minimum 1 */
+  couponId: number;
+}
+
 /**
  * Invalid request
  */
@@ -2169,3 +2236,21 @@ export type GetAdminGiftingIssues200 = {
   summary: GetAdminGiftingIssues200Summary;
 };
 
+export type InfluencerDashboardParams = {
+rangeDays?: InfluencerDashboardRangeDays;
+from?: string;
+to?: string;
+};
+
+export type InfluencerDashboardRangeDays = typeof InfluencerDashboardRangeDays[keyof typeof InfluencerDashboardRangeDays];
+
+
+export const InfluencerDashboardRangeDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+  NUMBER_90: 90,
+} as const;
+
+export type CaptureInfluencerReferralParams = {
+ref: string;
+};

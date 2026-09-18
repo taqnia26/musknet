@@ -25,17 +25,20 @@ import { SiteIntro } from '@/components/site-intro';
 
 import {
   Route,
+  Redirect,
   Switch,
   useLocation,
   Router as WouterRouter,
 } from 'wouter';
 import { useLanguage } from './hooks/use-language';
+import { captureInfluencerReferral } from '@workspace/api-client-react';
 
 const queryClient = new QueryClient();
 
 import AdminRoutes from '@/pages/admin';
 import OwnerLogin from '@/pages/owner-login';
 import OwnerPortal from '@/pages/owner-portal';
+import InfluencerRoutes from '@/pages/influencer';
 
 function Router() {
   const [location] = useLocation();
@@ -47,6 +50,10 @@ function Router() {
   if (location.startsWith('/owner')) {
     return location === '/owner/login' ? <OwnerLogin /> : <OwnerPortal />;
   }
+  if (location.startsWith('/influencer')) {
+    return <Redirect to={location.replace('/influencer', '/infulancer')} />;
+  }
+  if (location.startsWith('/infulancer')) return <InfluencerRoutes />;
 
   return (
     <Layout>
@@ -95,7 +102,9 @@ function StorefrontAnalytics() {
   const [location] = useLocation();
 
   useEffect(() => {
-    if (location.startsWith('/admin') || location.startsWith('/owner')) return;
+    if (location.startsWith('/admin') || location.startsWith('/owner') || location.startsWith('/infulancer')) return;
+    const referral = new URLSearchParams(window.location.search).get('ref');
+    if (referral) void captureInfluencerReferral({ ref: referral }).catch(() => undefined);
 
     const storageKey = 'musk-ellolo-visitor-session';
     let sessionId = window.localStorage.getItem(storageKey);
@@ -122,7 +131,7 @@ function StorefrontAnalytics() {
 }
 
 function App() {
-  const showSiteIntro = !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/owner');
+  const showSiteIntro = !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/owner') && !window.location.pathname.startsWith('/infulancer');
 
   return (
     <QueryClientProvider client={queryClient}>

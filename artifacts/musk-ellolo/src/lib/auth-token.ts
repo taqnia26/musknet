@@ -1,6 +1,7 @@
 export const AUTH_TOKEN_STORAGE_KEY = 'musk-ellolo-auth-token';
 export const ADMIN_TOKEN_STORAGE_KEY = 'musk-ellolo-admin-token';
 export const OWNER_TOKEN_STORAGE_KEY = 'musk-ellolo-owner-token';
+export const INFLUENCER_TOKEN_STORAGE_KEY = 'musk-ellolo-influencer-token';
 
 export function getAuthToken() {
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')) {
@@ -8,6 +9,9 @@ export function getAuthToken() {
   }
   if (typeof window !== 'undefined' && window.location.pathname.startsWith('/owner')) {
     return localStorage.getItem(OWNER_TOKEN_STORAGE_KEY);
+  }
+  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/infulancer')) {
+    return localStorage.getItem(INFLUENCER_TOKEN_STORAGE_KEY);
   }
   return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 }
@@ -43,3 +47,5 @@ export function saveOwnerToken(token: string) {
 export function removeOwnerToken() {
   localStorage.removeItem(OWNER_TOKEN_STORAGE_KEY);
 }
+export function saveInfluencerToken(token: string) { localStorage.setItem(INFLUENCER_TOKEN_STORAGE_KEY, token); }
+export function removeInfluencerToken() { localStorage.removeItem(INFLUENCER_TOKEN_STORAGE_KEY); }

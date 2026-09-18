@@ -15,6 +15,9 @@ import {
   ordersTable,
   otpRecordsTable,
   productsTable,
+  influencersTable,
+  influencerCouponsTable,
+  orderAttributionsTable,
 } from "@workspace/db";
 import { ensureAdminSeeded } from "./admin-auth";
 import { updateOrderAndIssueInvoice } from "./invoices";
@@ -794,6 +797,7 @@ export async function createOrderForUser(
   details: OrderInputDetails,
   couponCode?: string | null,
   trustedPayment?: { confirmedByProvider: true; environment?: NodeJS.ProcessEnv },
+  referralCode?: string | null,
 ) {
   const createdOrder = await db.transaction(async (tx) => {
     const [cart] = await tx.select().from(cartsTable).where(eq(cartsTable.userId, userId)).limit(1);
@@ -864,6 +868,22 @@ export async function createOrderForUser(
       shippingMethod: details.shippingMethod,
       paymentMethod: details.paymentMethod,
     }).returning();
+    // Coupon attribution wins over the durable referral cookie. The primary key on
+    // orderAttributions makes retries idempotent and prevents double counting.
+    const [couponLink] = couponRecord
+      ? await tx.select({ influencerId: influencerCouponsTable.influencerId }).from(influencerCouponsTable).innerJoin(influencersTable, eq(influencerCouponsTable.influencerId, influencersTable.id)).where(and(eq(influencerCouponsTable.couponId, couponRecord.id), eq(influencersTable.isActive, true))).limit(1)
+      : [];
+    const [referrer] = !couponLink && referralCode
+      ? await tx.select({ id: influencersTable.id, commissionRate: influencersTable.commissionRate }).from(influencersTable).where(and(eq(influencersTable.referralCode, referralCode.trim().toUpperCase()), eq(influencersTable.isActive, true))).limit(1)
+      : [];
+    const influencerId = couponLink?.influencerId ?? referrer?.id;
+    const commissionRate = couponLink ? (await tx.select({ commissionRate: influencersTable.commissionRate }).from(influencersTable).where(eq(influencersTable.id, couponLink.influencerId)).limit(1))[0]?.commissionRate : referrer?.commissionRate;
+    if (influencerId && commissionRate !== undefined) {
+      await tx.insert(orderAttributionsTable).values({
+        orderId: created.id, influencerId, source: couponLink ? "coupon" : "referral",
+        commissionRate, commissionAmount: Math.round(created.total * commissionRate / 100 * 100) / 100,
+      }).onConflictDoNothing();
+    }
     await tx.insert(orderAddressesTable).values({
       orderId: created.id,
       label: details.address.label,

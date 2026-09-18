@@ -1351,6 +1351,74 @@ paths:
           content:
             application/json: { schema: { $ref: "#/components/schemas/GiftingIssue" } }
         "404": { description: Not found }
+  /influencer/auth/login:
+    post:
+      operationId: influencerLogin
+      tags: [influencer]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/InfluencerLogin" } }
+      responses:
+        "200": { description: Authenticated, content: { application/json: { schema: { $ref: "#/components/schemas/InfluencerAuth" } } } }
+  /influencer/me:
+    get:
+      operationId: influencerMe
+      tags: [influencer]
+      responses:
+        "200": { description: Profile, content: { application/json: { schema: { $ref: "#/components/schemas/Influencer" } } } }
+  /influencer/dashboard:
+    get:
+      operationId: influencerDashboard
+      tags: [influencer]
+      parameters:
+        - { name: rangeDays, in: query, schema: { type: integer, enum: [7, 30, 90] } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200": { description: Performance dashboard, content: { application/json: { schema: { $ref: "#/components/schemas/InfluencerDashboard" } } } }
+  /influencer/capture:
+    get:
+      operationId: captureInfluencerReferral
+      tags: [influencer]
+      parameters: [{ name: ref, in: query, required: true, schema: { type: string } }]
+      responses: { "200": { description: Referral captured } }
+  /admin/influencers:
+    get:
+      operationId: listInfluencers
+      tags: [admin]
+      responses: { "200": { description: Influencers, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Influencer" } } } } } }
+    post:
+      operationId: createInfluencer
+      tags: [admin]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InfluencerInput" } } } }
+      responses: { "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Influencer" } } } } }
+  /admin/influencers/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+    get:
+      operationId: getInfluencer
+      tags: [admin]
+      responses: { "200": { description: Influencer, content: { application/json: { schema: { $ref: "#/components/schemas/Influencer" } } } } }
+    patch:
+      operationId: updateInfluencer
+      tags: [admin]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InfluencerPatchBody" } } } }
+      responses: { "200": { description: Updated, content: { application/json: { schema: { $ref: "#/components/schemas/Influencer" } } } } }
+  /admin/influencers/{id}/coupons:
+    parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+    post:
+      operationId: linkInfluencerCoupon
+      tags: [admin]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CouponLink" } } } }
+      responses: { "201": { description: Linked } }
+  /admin/influencers/{id}/coupons/{couponId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }
+      - { name: couponId, in: path, required: true, schema: { type: number, multipleOf: 1 } }
+    delete:
+      operationId: unlinkInfluencerCoupon
+      tags: [admin]
+      responses: { "204": { description: Unlinked } }
 components:
   securitySchemes:
     bearerAuth:
@@ -2940,3 +3008,59 @@ components:
         sourceRow: { type: number, multipleOf: 1 }
         dedupeKey: { type: string }
         importedAt: { type: string, format: date-time }
+    InfluencerLogin:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string, minLength: 8 }
+    InfluencerAuth:
+      type: object
+      required: [token, influencer]
+      properties:
+        token: { type: string }
+        influencer: { $ref: "#/components/schemas/Influencer" }
+    Influencer:
+      type: object
+      required: [id, name, email, referralCode, commissionRate]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        email: { type: string }
+        imageUrl: { type: [string, "null"] }
+        referralCode: { type: string }
+        commissionRate: { type: number }
+        isActive: { type: boolean }
+        couponIds: { type: array, items: { type: number, multipleOf: 1 } }
+    InfluencerInput:
+      allOf:
+        - $ref: "#/components/schemas/InfluencerLogin"
+        - type: object
+          required: [name, referralCode]
+          properties:
+            name: { type: string }
+            referralCode: { type: string }
+            commissionRate: { type: number, minimum: 0, maximum: 100 }
+    InfluencerDashboard:
+      type: object
+      required: [summary, referralUrl, codes, orders]
+      properties:
+        summary: { type: object, additionalProperties: true }
+        referralUrl: { type: string }
+        codes: { type: array, items: { type: object, additionalProperties: true } }
+        orders: { type: array, items: { type: object, additionalProperties: true } }
+    InfluencerPatchBody:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string }
+        password: { type: string, minLength: 8 }
+        referralCode: { type: string }
+        imageUrl: { type: [string, "null"] }
+        commissionRate: { type: number, minimum: 0, maximum: 100 }
+        isActive: { type: boolean }
+    CouponLink:
+      type: object
+      required: [couponId]
+      properties:
+        couponId: { type: number, multipleOf: 1, minimum: 1 }

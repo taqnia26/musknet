@@ -76,6 +76,7 @@ import type {
   AttendanceRecord,
   AuthSession,
   BadRequestResponse,
+  CaptureInfluencerReferralParams,
   Cart,
   CartItemInput,
   CartItemUpdate,
@@ -86,6 +87,7 @@ import type {
   ContractSignatureInput,
   ContractSignatureUpload,
   ContractSignatureUploadInput,
+  CouponLink,
   CouponResult,
   CouponValidation,
   Customer,
@@ -113,6 +115,13 @@ import type {
   GiftingIssue,
   HealthStatus,
   HomeContent,
+  Influencer,
+  InfluencerAuth,
+  InfluencerDashboard,
+  InfluencerDashboardParams,
+  InfluencerInput,
+  InfluencerLogin,
+  InfluencerPatchBody,
   JournalEntry,
   JournalEntryReversalInput,
   LeaveRequest,
@@ -9865,3 +9874,707 @@ export function useGetAdminGiftingIssuesId<TData = Awaited<ReturnType<typeof get
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
+export const getInfluencerLoginUrl = () => {
+
+
+
+
+  return `/api/influencer/auth/login`
+}
+
+export const influencerLogin = async (influencerLogin: InfluencerLogin, options?: Parameters<typeof customFetch>[1]): Promise<InfluencerAuth> => {
+
+  return customFetch<InfluencerAuth>(getInfluencerLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(influencerLogin)
+  }
+);}
+
+
+
+
+
+export const getInfluencerLoginMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof influencerLogin>>, TError,{data: BodyType<InfluencerLogin>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof influencerLogin>>, TError,{data: BodyType<InfluencerLogin>}, TContext> => {
+
+const mutationKey = ['influencerLogin'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof influencerLogin>>, {data: BodyType<InfluencerLogin>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  influencerLogin(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InfluencerLoginMutationResult = NonNullable<Awaited<ReturnType<typeof influencerLogin>>>
+    export type InfluencerLoginMutationBody = BodyType<InfluencerLogin>
+    export type InfluencerLoginMutationError = ErrorType<unknown>
+
+    export const useInfluencerLogin = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof influencerLogin>>, TError,{data: BodyType<InfluencerLogin>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof influencerLogin>>,
+        TError,
+        {data: BodyType<InfluencerLogin>},
+        TContext
+      > => {
+      return useMutation(getInfluencerLoginMutationOptions(options));
+    }
+
+export const getInfluencerMeUrl = () => {
+
+
+
+
+  return `/api/influencer/me`
+}
+
+export const influencerMe = async ( options?: Parameters<typeof customFetch>[1]): Promise<Influencer> => {
+
+  return customFetch<Influencer>(getInfluencerMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getInfluencerMeQueryKey = () => {
+    return [
+    `/api/influencer/me`
+    ] as const;
+    }
+
+
+export const getInfluencerMeQueryOptions = <TData = Awaited<ReturnType<typeof influencerMe>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof influencerMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getInfluencerMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof influencerMe>>> = ({ signal }) => influencerMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof influencerMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type InfluencerMeQueryResult = NonNullable<Awaited<ReturnType<typeof influencerMe>>>
+export type InfluencerMeQueryError = ErrorType<unknown>
+
+
+
+export function useInfluencerMe<TData = Awaited<ReturnType<typeof influencerMe>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof influencerMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getInfluencerMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getInfluencerDashboardUrl = (params?: InfluencerDashboardParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/influencer/dashboard?${stringifiedParams}` : `/api/influencer/dashboard`
+}
+
+export const influencerDashboard = async (params?: InfluencerDashboardParams, options?: Parameters<typeof customFetch>[1]): Promise<InfluencerDashboard> => {
+
+  return customFetch<InfluencerDashboard>(getInfluencerDashboardUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getInfluencerDashboardQueryKey = (params?: InfluencerDashboardParams,) => {
+    return [
+    `/api/influencer/dashboard`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getInfluencerDashboardQueryOptions = <TData = Awaited<ReturnType<typeof influencerDashboard>>, TError = ErrorType<unknown>>(params?: InfluencerDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof influencerDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getInfluencerDashboardQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof influencerDashboard>>> = ({ signal }) => influencerDashboard(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof influencerDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type InfluencerDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof influencerDashboard>>>
+export type InfluencerDashboardQueryError = ErrorType<unknown>
+
+
+
+export function useInfluencerDashboard<TData = Awaited<ReturnType<typeof influencerDashboard>>, TError = ErrorType<unknown>>(
+ params?: InfluencerDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof influencerDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getInfluencerDashboardQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCaptureInfluencerReferralUrl = (params: CaptureInfluencerReferralParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/influencer/capture?${stringifiedParams}` : `/api/influencer/capture`
+}
+
+export const captureInfluencerReferral = async (params: CaptureInfluencerReferralParams, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getCaptureInfluencerReferralUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCaptureInfluencerReferralQueryKey = (params?: CaptureInfluencerReferralParams,) => {
+    return [
+    `/api/influencer/capture`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getCaptureInfluencerReferralQueryOptions = <TData = Awaited<ReturnType<typeof captureInfluencerReferral>>, TError = ErrorType<unknown>>(params: CaptureInfluencerReferralParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof captureInfluencerReferral>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCaptureInfluencerReferralQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof captureInfluencerReferral>>> = ({ signal }) => captureInfluencerReferral(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof captureInfluencerReferral>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CaptureInfluencerReferralQueryResult = NonNullable<Awaited<ReturnType<typeof captureInfluencerReferral>>>
+export type CaptureInfluencerReferralQueryError = ErrorType<unknown>
+
+
+
+export function useCaptureInfluencerReferral<TData = Awaited<ReturnType<typeof captureInfluencerReferral>>, TError = ErrorType<unknown>>(
+ params: CaptureInfluencerReferralParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof captureInfluencerReferral>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCaptureInfluencerReferralQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListInfluencersUrl = () => {
+
+
+
+
+  return `/api/admin/influencers`
+}
+
+export const listInfluencers = async ( options?: Parameters<typeof customFetch>[1]): Promise<Influencer[]> => {
+
+  return customFetch<Influencer[]>(getListInfluencersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInfluencersQueryKey = () => {
+    return [
+    `/api/admin/influencers`
+    ] as const;
+    }
+
+
+export const getListInfluencersQueryOptions = <TData = Awaited<ReturnType<typeof listInfluencers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInfluencers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInfluencersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInfluencers>>> = ({ signal }) => listInfluencers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInfluencers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInfluencersQueryResult = NonNullable<Awaited<ReturnType<typeof listInfluencers>>>
+export type ListInfluencersQueryError = ErrorType<unknown>
+
+
+
+export function useListInfluencers<TData = Awaited<ReturnType<typeof listInfluencers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInfluencers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInfluencersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateInfluencerUrl = () => {
+
+
+
+
+  return `/api/admin/influencers`
+}
+
+export const createInfluencer = async (influencerInput: InfluencerInput, options?: Parameters<typeof customFetch>[1]): Promise<Influencer> => {
+
+  return customFetch<Influencer>(getCreateInfluencerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(influencerInput)
+  }
+);}
+
+
+
+
+
+export const getCreateInfluencerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInfluencer>>, TError,{data: BodyType<InfluencerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInfluencer>>, TError,{data: BodyType<InfluencerInput>}, TContext> => {
+
+const mutationKey = ['createInfluencer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInfluencer>>, {data: BodyType<InfluencerInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInfluencer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInfluencerMutationResult = NonNullable<Awaited<ReturnType<typeof createInfluencer>>>
+    export type CreateInfluencerMutationBody = BodyType<InfluencerInput>
+    export type CreateInfluencerMutationError = ErrorType<unknown>
+
+    export const useCreateInfluencer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInfluencer>>, TError,{data: BodyType<InfluencerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInfluencer>>,
+        TError,
+        {data: BodyType<InfluencerInput>},
+        TContext
+      > => {
+      return useMutation(getCreateInfluencerMutationOptions(options));
+    }
+
+export const getGetInfluencerUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/influencers/${id}`
+}
+
+export const getInfluencer = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Influencer> => {
+
+  return customFetch<Influencer>(getGetInfluencerUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInfluencerQueryKey = (id: number,) => {
+    return [
+    `/api/admin/influencers/${id}`
+    ] as const;
+    }
+
+
+export const getGetInfluencerQueryOptions = <TData = Awaited<ReturnType<typeof getInfluencer>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInfluencer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInfluencerQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInfluencer>>> = ({ signal }) => getInfluencer(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInfluencer>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInfluencerQueryResult = NonNullable<Awaited<ReturnType<typeof getInfluencer>>>
+export type GetInfluencerQueryError = ErrorType<unknown>
+
+
+
+export function useGetInfluencer<TData = Awaited<ReturnType<typeof getInfluencer>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInfluencer>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInfluencerQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateInfluencerUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/influencers/${id}`
+}
+
+export const updateInfluencer = async (id: number,
+    influencerPatchBody: InfluencerPatchBody, options?: Parameters<typeof customFetch>[1]): Promise<Influencer> => {
+
+  return customFetch<Influencer>(getUpdateInfluencerUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(influencerPatchBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateInfluencerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInfluencer>>, TError,{id: number;data: BodyType<InfluencerPatchBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInfluencer>>, TError,{id: number;data: BodyType<InfluencerPatchBody>}, TContext> => {
+
+const mutationKey = ['updateInfluencer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInfluencer>>, {id: number;data: BodyType<InfluencerPatchBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInfluencer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInfluencerMutationResult = NonNullable<Awaited<ReturnType<typeof updateInfluencer>>>
+    export type UpdateInfluencerMutationBody = BodyType<InfluencerPatchBody>
+    export type UpdateInfluencerMutationError = ErrorType<unknown>
+
+    export const useUpdateInfluencer = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInfluencer>>, TError,{id: number;data: BodyType<InfluencerPatchBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInfluencer>>,
+        TError,
+        {id: number;data: BodyType<InfluencerPatchBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateInfluencerMutationOptions(options));
+    }
+
+export const getLinkInfluencerCouponUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/influencers/${id}/coupons`
+}
+
+export const linkInfluencerCoupon = async (id: number,
+    couponLink: CouponLink, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getLinkInfluencerCouponUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(couponLink)
+  }
+);}
+
+
+
+
+
+export const getLinkInfluencerCouponMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof linkInfluencerCoupon>>, TError,{id: number;data: BodyType<CouponLink>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof linkInfluencerCoupon>>, TError,{id: number;data: BodyType<CouponLink>}, TContext> => {
+
+const mutationKey = ['linkInfluencerCoupon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof linkInfluencerCoupon>>, {id: number;data: BodyType<CouponLink>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  linkInfluencerCoupon(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LinkInfluencerCouponMutationResult = NonNullable<Awaited<ReturnType<typeof linkInfluencerCoupon>>>
+    export type LinkInfluencerCouponMutationBody = BodyType<CouponLink>
+    export type LinkInfluencerCouponMutationError = ErrorType<unknown>
+
+    export const useLinkInfluencerCoupon = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof linkInfluencerCoupon>>, TError,{id: number;data: BodyType<CouponLink>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof linkInfluencerCoupon>>,
+        TError,
+        {id: number;data: BodyType<CouponLink>},
+        TContext
+      > => {
+      return useMutation(getLinkInfluencerCouponMutationOptions(options));
+    }
+
+export const getUnlinkInfluencerCouponUrl = (id: number,
+    couponId: number,) => {
+
+
+
+
+  return `/api/admin/influencers/${id}/coupons/${couponId}`
+}
+
+export const unlinkInfluencerCoupon = async (id: number,
+    couponId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getUnlinkInfluencerCouponUrl(id,couponId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnlinkInfluencerCouponMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlinkInfluencerCoupon>>, TError,{id: number;couponId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unlinkInfluencerCoupon>>, TError,{id: number;couponId: number}, TContext> => {
+
+const mutationKey = ['unlinkInfluencerCoupon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unlinkInfluencerCoupon>>, {id: number;couponId: number}> = (props) => {
+          const {id,couponId} = props ?? {};
+
+          return  unlinkInfluencerCoupon(id,couponId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnlinkInfluencerCouponMutationResult = NonNullable<Awaited<ReturnType<typeof unlinkInfluencerCoupon>>>
+
+    export type UnlinkInfluencerCouponMutationError = ErrorType<unknown>
+
+    export const useUnlinkInfluencerCoupon = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlinkInfluencerCoupon>>, TError,{id: number;couponId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unlinkInfluencerCoupon>>,
+        TError,
+        {id: number;couponId: number},
+        TContext
+      > => {
+      return useMutation(getUnlinkInfluencerCouponMutationOptions(options));
+    }

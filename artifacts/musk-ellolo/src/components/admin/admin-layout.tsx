@@ -79,6 +79,7 @@ const navStructure = [
     labelEn: 'Marketing', labelAr: 'التسويق', icon: Tags, module: 'dashboard',
     children: [
       { href: '/admin/marketing', labelEn: 'Campaigns', labelAr: 'الحملات' },
+      { href: '/admin/influencers', labelEn: 'Influencers', labelAr: 'المشاهير' },
     ]
   },
   {
