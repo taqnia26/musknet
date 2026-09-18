@@ -1,5 +1,5 @@
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   adminPermissionsTable,
@@ -180,6 +180,30 @@ describe.sequential("admin route authorization", () => {
     expect(response.body.nameEn).toBe("Partially updated product");
     expect(response.body.nameAr).toBe("منتج اختبار الإدارة");
     expect(response.body.categoryId).toBe(categoryId);
+  });
+
+  it("returns a clear error without contacting storage when image storage is not configured", async () => {
+    const previousPrivateObjectDir = process.env.PRIVATE_OBJECT_DIR;
+    delete process.env.PRIVATE_OBJECT_DIR;
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+    try {
+      const response = await request(app)
+        .post("/api/admin/products/images/upload-url")
+        .set("Authorization", `Bearer ${superToken}`)
+        .send({ name: "product.jpg", contentType: "image/jpeg", size: 1024 })
+        .expect(503);
+
+      expect(response.body).toEqual({ error: "Product image storage is not configured" });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+      if (previousPrivateObjectDir === undefined) {
+        delete process.env.PRIVATE_OBJECT_DIR;
+      } else {
+        process.env.PRIVATE_OBJECT_DIR = previousPrivateObjectDir;
+      }
+    }
   });
 
   it("rejects a product update with a missing category", async () => {

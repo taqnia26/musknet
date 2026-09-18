@@ -3,24 +3,28 @@ import { Storage, type File } from "@google-cloud/storage";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
 
-export const objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
-      },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
+let objectStorageClient: Storage | undefined;
 
+function getObjectStorageClient() {
+  objectStorageClient ??= new Storage({
+    credentials: {
+      audience: "replit",
+      subject_token_type: "access_token",
+      token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
+      type: "external_account",
+      credential_source: {
+        url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
+        format: {
+          type: "json",
+          subject_token_field_name: "access_token",
+        },
+      },
+      universe_domain: "googleapis.com",
+    },
+    projectId: "",
+  });
+  return objectStorageClient;
+}
 export class ObjectNotFoundError extends Error {
   constructor() {
     super("Object not found");
@@ -62,7 +66,7 @@ async function signObjectUrl(bucketName: string, objectName: string) {
 export class ObjectStorageService {
   private getPrivateObjectDir() {
     const value = process.env.PRIVATE_OBJECT_DIR;
-    if (!value) throw new Error("PRIVATE_OBJECT_DIR is not configured");
+    if (!value) throw new ObjectStorageConfigurationError();
     return value.replace(/\/+$/, "");
   }
 
@@ -86,7 +90,7 @@ export class ObjectStorageService {
     const { bucketName, objectName } = parseObjectPath(
       `${this.getPrivateObjectDir()}/${relativePath}`,
     );
-    const file = objectStorageClient.bucket(bucketName).file(objectName);
+    const file = getObjectStorageClient().bucket(bucketName).file(objectName);
     const [exists] = await file.exists();
     if (!exists) throw new ObjectNotFoundError();
     return file;
@@ -100,5 +104,12 @@ export class ObjectStorageService {
     const stream = file.createReadStream();
     stream.setMaxListeners(20);
     stream.pipe(response);
+  }
+}
+
+export class ObjectStorageConfigurationError extends Error {
+  constructor() {
+    super("Product image storage is not configured");
+    this.name = "ObjectStorageConfigurationError";
   }
 }

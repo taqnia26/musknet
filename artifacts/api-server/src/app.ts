@@ -11,6 +11,7 @@ import {
   AccountingValidationError,
 } from "./lib/accounting";
 import { OwnerConfigurationError } from "./lib/owner-auth";
+import { ObjectStorageConfigurationError } from "./lib/object-storage";
 
 const app: Express = express();
 
@@ -64,6 +65,10 @@ app.use((error: unknown, req: express.Request, res: express.Response, _next: exp
     }
     if (error instanceof OwnerConfigurationError) {
       res.status(503).json({ error: "Owner authentication is not configured" });
+      return;
+    }
+    if (error instanceof ObjectStorageConfigurationError) {
+      res.status(503).json({ error: error.message });
       return;
     }
     if (error instanceof Error && /^VAT_(?:SELLER_LEGAL_NAME|REGISTRATION_NUMBER)/.test(error.message)) {
