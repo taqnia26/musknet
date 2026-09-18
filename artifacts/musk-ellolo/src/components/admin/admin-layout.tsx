@@ -257,7 +257,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       className="admin-theme flex h-screen min-w-0 flex-col overflow-hidden bg-background font-sans text-foreground transition-colors duration-300"
     >
       {/* Top Header */}
-      <header className="z-20 flex h-[60px] min-w-0 shrink-0 items-center justify-between border-b border-sidebar-border bg-card px-3 lg:px-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] relative">
+      <header className="z-20 flex h-[76px] min-w-0 shrink-0 items-center justify-between border-b border-sidebar-border bg-card px-3 lg:px-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] relative">
         {/* Right side (RTL start): System name & Mobile menu trigger */}
         <div className="flex items-center gap-2">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -303,26 +303,29 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <div className="hidden lg:flex items-center gap-2">
-            <img src="/site-assets/admin-brandmark.png" alt="" className="h-5 w-5 object-contain dark:invert opacity-80 shrink-0" />
-            <span className="text-[13px] font-medium text-foreground/80 tracking-wide truncate">{t('نظام إدارة مسك اللولو', 'Musk Ellolo System')}</span>
+          <div className="hidden lg:flex items-center gap-3">
+            <img
+              src="/site-assets/musk-ellolo-mark-black.png"
+              alt=""
+              className="h-11 w-11 shrink-0 object-contain dark:hidden"
+            />
+            <img
+              src="/site-assets/musk-ellolo-mark-white.png"
+              alt=""
+              className="hidden h-11 w-11 shrink-0 object-contain dark:block"
+            />
+            <span className="truncate text-[15px] font-semibold tracking-wide text-foreground/90">{t('نظام إدارة مسك اللولو', 'Musk Ellolo System')}</span>
           </div>
         </div>
 
         {/* Center: Logo */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
-          <img
-            src="/site-assets/admin-wordmark-brandguide.png"
-            alt="Musk Ellolo"
-            className="h-[18px] object-contain dark:invert opacity-90"
-          />
+          <img src="/site-assets/musk-ellolo-wordmark-black.png" alt="Musk Ellolo" className="w-[230px] object-contain dark:hidden" />
+          <img src="/site-assets/musk-ellolo-wordmark-white.png" alt="Musk Ellolo" className="hidden w-[230px] object-contain dark:block" />
         </div>
         <div className="flex-1 flex justify-center sm:hidden pointer-events-none mx-2">
-          <img
-            src="/site-assets/admin-wordmark-brandguide.png"
-            alt="Musk Ellolo"
-            className="h-[15px] object-contain dark:invert opacity-90"
-          />
+          <img src="/site-assets/musk-ellolo-wordmark-black.png" alt="Musk Ellolo" className="w-[145px] object-contain dark:hidden" />
+          <img src="/site-assets/musk-ellolo-wordmark-white.png" alt="Musk Ellolo" className="hidden w-[145px] object-contain dark:block" />
         </div>
 
         {/* Left side (RTL end): Date & User Actions */}

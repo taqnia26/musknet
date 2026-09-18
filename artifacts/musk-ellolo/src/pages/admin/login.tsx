@@ -89,9 +89,14 @@ export default function AdminLogin() {
         <div className="w-full max-w-md bg-card p-10 rounded-2xl shadow-sm border border-border">
           <div className="mb-10 text-center">
             <img
-              src="/site-assets/admin-wordmark-brandguide.png"
+              src="/site-assets/musk-ellolo-wordmark-black.png"
               alt="Musk Ellolo"
-              className="h-16 w-auto max-w-full object-contain mx-auto mb-6 dark:invert"
+              className="mx-auto mb-7 w-[300px] max-w-full object-contain dark:hidden"
+            />
+            <img
+              src="/site-assets/musk-ellolo-wordmark-white.png"
+              alt="Musk Ellolo"
+              className="mx-auto mb-7 hidden w-[300px] max-w-full object-contain dark:block"
             />
             <h1 className="text-2xl font-bold tracking-tight">
               {t('إدارة النظام مسك اللولو', 'Musk Ellolo Atelier')}
