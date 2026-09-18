@@ -6,12 +6,23 @@ import {
   ownerSessionNotificationsTable,
   ownerSessionsTable,
   ownerUsersTable,
+  ownerCredentialsTable,
 } from "@workspace/db";
 
 const scrypt = promisify(nodeScrypt);
 const tokenHash = (token: string) => createHash("sha256").update(token).digest("hex");
 
 export class OwnerConfigurationError extends Error {}
+
+export async function ownerCredentials() {
+  const [configured] = await db.select().from(ownerCredentialsTable).limit(1);
+  if (configured) return configured;
+  const email = process.env.OWNER_EMAIL?.trim().toLowerCase();
+  const password = process.env.OWNER_PASSWORD;
+  if (!email || !password) return null;
+  if (password.length < 8) throw new OwnerConfigurationError("OWNER_PASSWORD must be at least 8 characters");
+  return { id: 0, email, passwordHash: await hashOwnerPassword(password), updatedAt: new Date(), updatedBy: null };
+}
 
 export async function hashOwnerPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -30,28 +41,31 @@ export async function verifyOwnerPassword(password: string, encoded: string) {
 let seedPromise: Promise<void> | undefined;
 export function ensureOwnerSeeded() {
   seedPromise ??= (async () => {
-    const email = process.env.OWNER_EMAIL?.trim().toLowerCase();
+    const configured = await db.select().from(ownerCredentialsTable).limit(1);
+    const email = configured[0]?.email ?? process.env.OWNER_EMAIL?.trim().toLowerCase();
     const password = process.env.OWNER_PASSWORD;
-    if (!email || !password) throw new OwnerConfigurationError("OWNER_EMAIL and OWNER_PASSWORD must be configured");
-    if (password.length < 8) throw new OwnerConfigurationError("OWNER_PASSWORD must be at least 8 characters");
+    if (!email || (!configured[0] && !password)) throw new OwnerConfigurationError("Owner credentials must be configured");
+    if (!configured[0] && password!.length < 8) throw new OwnerConfigurationError("OWNER_PASSWORD must be at least 8 characters");
     const name = process.env.OWNER_NAME?.trim() || "Owner";
 
     const [existing] = await db.select({
       id: ownerUsersTable.id,
       passwordHash: ownerUsersTable.passwordHash,
-    }).from(ownerUsersTable)
-      .where(eq(ownerUsersTable.email, email)).limit(1);
+      email: ownerUsersTable.email,
+    }).from(ownerUsersTable).limit(1);
     if (!existing) {
       await db.insert(ownerUsersTable).values({
         email,
         name,
-        passwordHash: await hashOwnerPassword(password),
+        passwordHash: configured[0]?.passwordHash ?? await hashOwnerPassword(password!),
         isActive: true,
       });
-    } else if (!(await verifyOwnerPassword(password, existing.passwordHash))) {
+    } else if (configured[0] && (existing.email !== email || existing.passwordHash !== configured[0].passwordHash)) {
+      await db.update(ownerUsersTable).set({ email, passwordHash: configured[0].passwordHash, name }).where(eq(ownerUsersTable.id, existing.id));
+    } else if (!configured[0] && !(await verifyOwnerPassword(password!, existing.passwordHash))) {
       await db.update(ownerUsersTable).set({
         name,
-        passwordHash: await hashOwnerPassword(password),
+        passwordHash: await hashOwnerPassword(password!),
       }).where(eq(ownerUsersTable.id, existing.id));
     }
   })().catch((error) => {

@@ -32,6 +32,7 @@ export * from "./admin-users";
 export * from "./admin-sessions";
 export * from "./admin-permissions";
 export * from "./owner-users";
+export * from "./owner-credentials";
 export * from "./owner-sessions";
 export * from "./owner-session-notifications";
 export * from "./wholesale-distributors";

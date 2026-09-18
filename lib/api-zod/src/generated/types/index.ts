@@ -182,6 +182,8 @@ export * from './otpRequest';
 export * from './otpRequestResult';
 export * from './otpVerification';
 export * from './ownerAuthSession';
+export * from './ownerCredentialsInput';
+export * from './ownerCredentialsStatus';
 export * from './ownerLoginInput';
 export * from './ownerSession';
 export * from './ownerSessionNotification';

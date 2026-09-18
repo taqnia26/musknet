@@ -131,6 +131,8 @@ import type {
   OtpRequestResult,
   OtpVerification,
   OwnerAuthSession,
+  OwnerCredentialsInput,
+  OwnerCredentialsStatus,
   OwnerLoginInput,
   OwnerSession,
   OwnerSessionNotification,
@@ -252,6 +254,12 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+
+
+
+
+
+
 export const getListCategoriesUrl = () => {
 
 
@@ -322,6 +330,12 @@ export function useListCategories<TData = Awaited<ReturnType<typeof listCategori
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
 
 export const getListProductsUrl = (params?: ListProductsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -400,6 +414,13 @@ export function useListProducts<TData = Awaited<ReturnType<typeof listProducts>>
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getGetProductUrl = (slug: string,) => {
 
 
@@ -1926,6 +1947,142 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getOwnerLoginMutationOptions(options));
+    }
+
+export const getGetOwnerCredentialsSettingsUrl = () => {
+
+
+
+
+  return `/api/admin/settings/owner-credentials`
+}
+
+export const getOwnerCredentialsSettings = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerCredentialsStatus> => {
+
+  return customFetch<OwnerCredentialsStatus>(getGetOwnerCredentialsSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOwnerCredentialsSettingsQueryKey = () => {
+    return [
+    `/api/admin/settings/owner-credentials`
+    ] as const;
+    }
+
+
+export const getGetOwnerCredentialsSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getOwnerCredentialsSettings>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerCredentialsSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOwnerCredentialsSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwnerCredentialsSettings>>> = ({ signal }) => getOwnerCredentialsSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOwnerCredentialsSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOwnerCredentialsSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getOwnerCredentialsSettings>>>
+export type GetOwnerCredentialsSettingsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+
+export function useGetOwnerCredentialsSettings<TData = Awaited<ReturnType<typeof getOwnerCredentialsSettings>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerCredentialsSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOwnerCredentialsSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateOwnerCredentialsSettingsUrl = () => {
+
+
+
+
+  return `/api/admin/settings/owner-credentials`
+}
+
+export const updateOwnerCredentialsSettings = async (ownerCredentialsInput: OwnerCredentialsInput, options?: Parameters<typeof customFetch>[1]): Promise<OwnerCredentialsStatus> => {
+
+  return customFetch<OwnerCredentialsStatus>(getUpdateOwnerCredentialsSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ownerCredentialsInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateOwnerCredentialsSettingsMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOwnerCredentialsSettings>>, TError,{data: BodyType<OwnerCredentialsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateOwnerCredentialsSettings>>, TError,{data: BodyType<OwnerCredentialsInput>}, TContext> => {
+
+const mutationKey = ['updateOwnerCredentialsSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateOwnerCredentialsSettings>>, {data: BodyType<OwnerCredentialsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateOwnerCredentialsSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateOwnerCredentialsSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateOwnerCredentialsSettings>>>
+    export type UpdateOwnerCredentialsSettingsMutationBody = BodyType<OwnerCredentialsInput>
+    export type UpdateOwnerCredentialsSettingsMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>
+
+    export const useUpdateOwnerCredentialsSettings = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateOwnerCredentialsSettings>>, TError,{data: BodyType<OwnerCredentialsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateOwnerCredentialsSettings>>,
+        TError,
+        {data: BodyType<OwnerCredentialsInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateOwnerCredentialsSettingsMutationOptions(options));
     }
 
 export const getOwnerLogoutUrl = () => {

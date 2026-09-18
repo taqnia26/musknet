@@ -28,6 +28,7 @@ import {
   Network,
   Moon,
   Sun
+  ,KeyRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -126,6 +127,7 @@ const navStructure = [
       { href: '/admin/integrations', labelEn: 'Integrations Shell', labelAr: 'واجهة التكاملات' },
     ]
   },
+  { href: '/admin/settings/owner-credentials', icon: KeyRound, labelEn: 'Owner credentials', labelAr: 'بيانات دخول المالك', superAdminOnly: true, direct: true },
 ];
 
 function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any, location: string, lang: string, setOpen?: (open: boolean) => void }) {

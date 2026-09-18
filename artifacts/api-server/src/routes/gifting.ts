@@ -5,7 +5,7 @@ import { adminFromToken, publicAdmin } from "../lib/admin-auth";
 import { permit } from "./admin";
 
 const router: IRouter = Router();
-router.use(async (req, res, next) => {
+router.use("/admin/gifting-issues", async (req, res, next) => {
   try {
     const token = req.header("authorization")?.startsWith("Bearer ") ? req.header("authorization")!.slice(7) : undefined;
     const user = await adminFromToken(token);

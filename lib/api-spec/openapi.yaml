@@ -458,6 +458,25 @@ paths:
       tags: [owner]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerLoginInput" } } } }
       responses: { "200": { description: Signed in, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerAuthSession" } } } }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" }, "503": { $ref: "#/components/responses/ServiceUnavailable" } }
+  /admin/settings/owner-credentials:
+    get:
+      operationId: getOwnerCredentialsSettings
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Safe owner credential status, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerCredentialsStatus" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      operationId: updateOwnerCredentialsSettings
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerCredentialsInput" } } } }
+      responses:
+        "200": { description: Updated safe status, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerCredentialsStatus" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /owner/auth/logout:
     post:
       operationId: ownerLogout
@@ -1841,6 +1860,20 @@ components:
       properties:
         email: { type: string, pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$' }
         password: { type: string, minLength: 8 }
+    OwnerCredentialsInput:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string }
+        password: { type: string, minLength: 8, writeOnly: true }
+        passwordConfirmation: { type: string, minLength: 8, writeOnly: true }
+    OwnerCredentialsStatus:
+      type: object
+      required: [configured, email, updatedAt]
+      properties:
+        configured: { type: boolean }
+        email: { type: ["string", "null"] }
+        updatedAt: { type: ["string", "null"], format: date-time }
     AdminAuthSession:
       type: object
       required: [token, user]

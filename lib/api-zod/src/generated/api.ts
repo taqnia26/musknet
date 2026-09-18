@@ -630,6 +630,32 @@ export const OwnerLoginResponse = zod.object({
 })
 
 
+export const GetOwnerCredentialsSettingsResponse = zod.object({
+  "configured": zod.boolean(),
+  "email": zod.string().nullable(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+export const updateOwnerCredentialsSettingsBodyPasswordMin = 8;
+
+export const updateOwnerCredentialsSettingsBodyPasswordConfirmationMin = 8;
+
+
+
+export const UpdateOwnerCredentialsSettingsBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string().min(updateOwnerCredentialsSettingsBodyPasswordMin).optional(),
+  "passwordConfirmation": zod.string().min(updateOwnerCredentialsSettingsBodyPasswordConfirmationMin).optional()
+})
+
+export const UpdateOwnerCredentialsSettingsResponse = zod.object({
+  "configured": zod.boolean(),
+  "email": zod.string().nullable(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
 export const OwnerLogoutResponse = zod.void()
 
 

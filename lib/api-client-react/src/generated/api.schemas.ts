@@ -306,6 +306,22 @@ export interface OwnerLoginInput {
   password: string;
 }
 
+export interface OwnerCredentialsInput {
+  email: string;
+  /** @minLength 8 */
+  password?: string;
+  /** @minLength 8 */
+  passwordConfirmation?: string;
+}
+
+export interface OwnerCredentialsStatus {
+  configured: boolean;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
 export interface AdminUser {
   id: number;
   email: string;

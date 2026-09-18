@@ -28,6 +28,7 @@ import AdminIntegrations from '@/pages/admin/integrations';
 import AdminAccounting from '@/pages/admin/accounting';
 import AdminPurchases from '@/pages/admin/purchases';
 import AdminGiftingIssues from '@/pages/admin/gifting-issues';
+import OwnerCredentialsSettings from '@/pages/admin/owner-credentials';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
@@ -78,6 +79,7 @@ export default function AdminRoutes() {
         <Route path="/admin/whatsapp/settings" component={AdminWhatsAppSettings} />
         <Route path="/admin/marketing" component={AdminMarketingPlaceholder} />
         <Route path="/admin/integrations" component={AdminIntegrations} />
+        <Route path="/admin/settings/owner-credentials" component={OwnerCredentialsSettings} />
       </Switch>
     </AdminLayout>
   );

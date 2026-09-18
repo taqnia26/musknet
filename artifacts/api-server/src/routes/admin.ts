@@ -35,6 +35,8 @@ import {
   journalEntryLinesTable,
   distributorContractsTable,
   siteContentTable,
+  ownerCredentialsTable,
+  ownerUsersTable,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -45,6 +47,7 @@ import {
   revokeAdminSession,
   verifyAdminPassword,
 } from "../lib/admin-auth";
+import { hashOwnerPassword } from "../lib/owner-auth";
 import { updateOrderAndIssueInvoice } from "../lib/invoices";
 import {
   AccountingConflictError,
@@ -164,6 +167,49 @@ router.post("/admin/auth/logout", route(async (req, res) => {
 }));
 router.get("/admin/auth/me", route(async (_req, res) => {
   res.json(Api.GetAdminMeResponse.parse(await publicAdmin(res.locals.admin)));
+}));
+
+router.get("/admin/settings/owner-credentials", superOnly, route(async (_req, res) => {
+  const [configured] = await db.select({
+    email: ownerCredentialsTable.email,
+    updatedAt: ownerCredentialsTable.updatedAt,
+  }).from(ownerCredentialsTable).limit(1);
+  res.json({ configured: Boolean(configured), email: configured?.email ?? null, updatedAt: configured?.updatedAt ?? null });
+}));
+
+router.put("/admin/settings/owner-credentials", superOnly, route(async (req, res) => {
+  const input = req.body as Record<string, unknown>;
+  const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+  const password = typeof input.password === "string" ? input.password : undefined;
+  const passwordConfirmation = typeof input.passwordConfirmation === "string" ? input.passwordConfirmation : undefined;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || (password !== undefined && password.length < 8) || (passwordConfirmation !== undefined && passwordConfirmation.length < 8)) {
+    res.status(400).json({ error: "A valid email and password of at least 8 characters are required" });
+    return;
+  }
+  if (password && password !== passwordConfirmation) {
+    res.status(400).json({ error: "Password confirmation does not match" });
+    return;
+  }
+  const [current] = await db.select().from(ownerCredentialsTable).limit(1);
+  if (!current && !password) {
+    res.status(400).json({ error: "A password is required when configuring owner credentials" });
+    return;
+  }
+  const passwordHash = password ? await hashOwnerPassword(password) : current!.passwordHash;
+  const admin = res.locals.admin as typeof adminUsersTable.$inferSelect;
+  await db.insert(ownerCredentialsTable).values({
+    id: 1, email, passwordHash, updatedBy: admin.id,
+  }).onConflictDoUpdate({
+    target: ownerCredentialsTable.id,
+    set: { email, passwordHash, updatedBy: admin.id, updatedAt: new Date() },
+  });
+  const [owner] = await db.select({ id: ownerUsersTable.id }).from(ownerUsersTable).limit(1);
+  if (owner) {
+    await db.update(ownerUsersTable).set({ email, passwordHash }).where(eq(ownerUsersTable.id, owner.id));
+  } else {
+    await db.insert(ownerUsersTable).values({ email, name: "Owner", passwordHash, isActive: true });
+  }
+  res.json({ configured: true, email, updatedAt: new Date() });
 }));
 
 router.get("/admin/dashboard", permit("dashboard", "view"), route(async (_req, res) => {
