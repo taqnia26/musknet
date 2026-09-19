@@ -20,7 +20,8 @@ import {
   orderAttributionsTable,
 } from "@workspace/db";
 import { ensureAdminSeeded } from "./admin-auth";
-import { updateOrderAndIssueInvoice } from "./invoices";
+import { postFulfillmentCogs, updateOrderAndIssueInvoice } from "./invoices";
+import { ensureStandardAccountingChart } from "./accounting";
 
 type ProductSeed = {
   id: number;
@@ -799,6 +800,7 @@ export async function createOrderForUser(
   trustedPayment?: { confirmedByProvider: true; environment?: NodeJS.ProcessEnv },
   referralCode?: string | null,
 ) {
+  await ensureStandardAccountingChart();
   const createdOrder = await db.transaction(async (tx) => {
     const [cart] = await tx.select().from(cartsTable).where(eq(cartsTable.userId, userId)).limit(1);
     if (!cart) return null;
@@ -901,6 +903,7 @@ export async function createOrderForUser(
       quantity: record.quantity,
       unitPrice: product.price,
       totalPrice: product.price * record.quantity,
+      costSnapshot: product.averageCost,
       imageUrl: product.images[0]?.url ?? null,
     }))).returning();
     for (const { record, product } of items) {
@@ -918,9 +921,15 @@ export async function createOrderForUser(
         quantityBefore,
         quantityAfter,
         reason: `Order ${orderNumber}`,
+        unitCost: product.averageCost,
+        totalCost: (Number(product.averageCost) * record.quantity).toFixed(4),
+        sourceType: "order",
+        sourceId: String(created.id),
+        eventKey: `sale-fulfillment:${created.id}:${product.id}`,
         performedBy: null,
       });
     }
+    await postFulfillmentCogs(tx, created.id, null, created.orderNumber, created.createdAt.toISOString().slice(0, 10));
     await tx.delete(cartItemsTable).where(eq(cartItemsTable.cartId, cart.id));
     return mapOrder(created, createdItems);
   });

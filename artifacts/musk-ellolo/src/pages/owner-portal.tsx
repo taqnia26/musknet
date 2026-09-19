@@ -5,7 +5,9 @@ import {
   getGetOwnerMeQueryKey,
   getListOwnerSessionNotificationsQueryKey,
   getListOwnerSessionsQueryKey,
+  getGetOwnerOperationsSummaryQueryKey,
   type OwnerSession,
+  type OwnerOperationsSummary,
   useGetOwnerMe,
   useListOwnerSessionNotifications,
   useListOwnerSessions,
@@ -13,6 +15,7 @@ import {
   useReadOwnerSessionNotification,
   useRevokeOtherOwnerSessions,
   useRevokeOwnerSession,
+  useGetOwnerOperationsSummary,
 } from '@workspace/api-client-react';
 import {
   BellRing,
@@ -118,6 +121,9 @@ export default function OwnerPortal() {
       refetchOnMount: 'always',
       refetchInterval: 5_000,
     },
+  });
+  const { data: operationsSummary, isLoading: operationsLoading } = useGetOwnerOperationsSummary({
+    query: { enabled: hasToken, retry: false, refetchInterval: 30_000, queryKey: getGetOwnerOperationsSummaryQueryKey() },
   });
   const logoutMutation = useOwnerLogout();
   const revokeMutation = useRevokeOwnerSession();
@@ -386,7 +392,7 @@ export default function OwnerPortal() {
               t={t}
             />
           ) : location === '/owner' ? (
-            <OwnerOverview ownerName={owner.name} t={t} />
+            <OwnerOverview ownerName={owner.name} t={t} summary={operationsSummary} loading={operationsLoading} />
           ) : location === '/owner/obligations' ? (
             <OwnerObligations />
           ) : location === '/owner/products' ? (
@@ -404,7 +410,9 @@ export default function OwnerPortal() {
   );
 }
 
-function OwnerOverview({ ownerName, t }: { ownerName: string; t: (ar: string, en: string) => string }) {
+function OwnerOverview({ ownerName, t, summary, loading }: { ownerName: string; t: (ar: string, en: string) => string; summary?: OwnerOperationsSummary; loading: boolean }) {
+  const opening = summary?.openingBalance;
+  const openingLabel = opening?.status === 'approved' ? t('معتمد ومرحل', 'Approved & posted') : opening ? `${t('قيد', 'In')} ${opening.status}` : t('لم تُنشأ مسودة', 'No draft');
   return (
     <div className="space-y-7">
       <div>
@@ -418,10 +426,10 @@ function OwnerOverview({ ownerName, t }: { ownerName: string; t: (ar: string, en
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { labelAr: 'إجمالي الإيرادات', labelEn: 'Total revenue', icon: CircleDollarSign },
-          { labelAr: 'العملاء', labelEn: 'Customers', icon: Store },
-          { labelAr: 'الالتزامات', labelEn: 'Obligations', icon: WalletCards },
-          { labelAr: 'الفواتير', labelEn: 'Invoices', icon: FileText },
+          { labelAr: 'كمية المخزون', labelEn: 'Inventory quantity', value: loading ? '…' : String(summary?.inventory?.quantity ?? 0), noteAr: 'الكمية الحالية', noteEn: 'Current quantity', icon: Boxes },
+          { labelAr: 'قيمة المخزون', labelEn: 'Inventory value', value: loading ? '…' : `${summary?.inventory?.value ?? '0.0000'} SAR`, noteAr: 'بالمتوسط المرجح', noteEn: 'Weighted average', icon: Package },
+          { labelAr: 'حركات مرحّلة', labelEn: 'Posted events', value: loading ? '…' : `${summary?.events?.posted ?? 0}/${summary?.events?.total ?? 0}`, noteAr: 'حركات مترابطة', noteEn: 'Linked events', icon: CircleDollarSign },
+          { labelAr: 'الرصيد الافتتاحي', labelEn: 'Opening balance', value: openingLabel, noteAr: opening?.sourceFileName ?? 'مصدر الملف غير مرحل', noteEn: opening?.sourceFileName ?? 'Workbook source not posted', icon: FileText },
         ].map((metric) => {
           const Icon = metric.icon;
           return (
@@ -430,8 +438,8 @@ function OwnerOverview({ ownerName, t }: { ownerName: string; t: (ar: string, en
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm text-[#7e7b75] dark:text-[#96989d]">{t(metric.labelAr, metric.labelEn)}</p>
-                  <p className="mt-7 text-3xl font-bold">—</p>
-                  <p className="mt-2 text-xs text-[#a09d96] dark:text-[#6f7176]">{t('بانتظار ملفات البيانات', 'Waiting for data files')}</p>
+                   <p className="mt-7 text-2xl font-bold">{metric.value}</p>
+                   <p className="mt-2 text-xs text-[#a09d96] dark:text-[#6f7176]">{t(metric.noteAr, metric.noteEn)}</p>
                 </div>
                 <div className="rounded-xl bg-[#fbf4d8] p-3 text-[#ba8d00] dark:bg-[#282619] dark:text-[#e3b723]"><Icon className="h-5 w-5" /></div>
               </div>
@@ -440,15 +448,27 @@ function OwnerOverview({ ownerName, t }: { ownerName: string; t: (ar: string, en
         })}
       </div>
 
-      <section className="min-h-[290px] rounded-2xl border border-[#e5e2dc] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-colors dark:border-[#24262a] dark:bg-[#111214]">
+      <section className="rounded-2xl border border-[#e5e2dc] bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-colors dark:border-[#24262a] dark:bg-[#111214]">
         <div className="flex items-center gap-3 border-b border-dashed border-[#e8e5de] pb-5 dark:border-[#2a2c30]">
           <div className="rounded-lg bg-[#fbf4d8] p-2 text-[#c09300] dark:bg-[#282619] dark:text-[#e3b723]"><CircleDollarSign className="h-5 w-5" /></div>
           <h2 className="text-lg font-bold">{t('الإيرادات والأرباح', 'Revenue and profit')}</h2>
         </div>
-        <div className="flex min-h-[210px] flex-col items-center justify-center text-center">
-          <FileText className="mb-3 h-8 w-8 text-[#d0cbbf] dark:text-[#55575c]" />
-          <p className="font-medium text-[#66635d] dark:text-[#c2c3c6]">{t('القسم جاهز لاستقبال بياناتك', 'This section is ready for your data')}</p>
-          <p className="mt-2 text-sm text-[#9a9790] dark:text-[#77797e]">{t('سيتم تفريغ الملفات التي سترسلها هنا', 'The files you provide will be populated here')}</p>
+        <div className="grid gap-3 pt-5 sm:grid-cols-3">
+          <Link href="/owner/products" className="rounded-xl border border-[#e5e2dc] p-4 transition hover:border-[#d4ad31] dark:border-[#2c2e32]">
+            <Package className="mb-2 h-5 w-5 text-[#ba8d00]" />
+            <p className="font-medium">{t('المنتجات والمخزون', 'Products & inventory')}</p>
+            <p className="mt-1 text-xs text-[#89867f]">{t('عرض المصدر الخام والمطابقة التشغيلية', 'View raw source and operational reconciliation')}</p>
+          </Link>
+          <Link href="/owner/manufacturing" className="rounded-xl border border-[#e5e2dc] p-4 transition hover:border-[#d4ad31] dark:border-[#2c2e32]">
+            <Boxes className="mb-2 h-5 w-5 text-[#ba8d00]" />
+            <p className="font-medium">{t('التصنيع', 'Manufacturing')}</p>
+            <p className="mt-1 text-xs text-[#89867f]">{t('دفعات التصنيع واستهلاك المواد', 'Batches and material consumption')}</p>
+          </Link>
+          <Link href="/owner/obligations" className="rounded-xl border border-[#e5e2dc] p-4 transition hover:border-[#d4ad31] dark:border-[#2c2e32]">
+            <WalletCards className="mb-2 h-5 w-5 text-[#ba8d00]" />
+            <p className="font-medium">{t('الالتزامات والقيود', 'Liabilities & journals')}</p>
+            <p className="mt-1 text-xs text-[#89867f]">{t('متابعة أثر الحركات على المالية', 'Follow financial impact of linked events')}</p>
+          </Link>
         </div>
       </section>
     </div>

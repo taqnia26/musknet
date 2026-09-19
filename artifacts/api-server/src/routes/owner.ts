@@ -1,11 +1,14 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import * as Api from "@workspace/api-zod";
-import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, ne, sql } from "drizzle-orm";
 import {
   db,
   ownerSessionNotificationsTable,
   ownerSessionsTable,
   ownerUsersTable,
+  operationEventsTable,
+  openingBalanceImportsTable,
+  productsTable,
 } from "@workspace/db";
 import {
   createOwnerSession,
@@ -15,6 +18,7 @@ import {
   revokeOwnerSession,
   verifyOwnerPassword,
 } from "../lib/owner-auth";
+import { openingBalanceReconciliation } from "../lib/operations";
 
 const router: IRouter = Router();
 const bearer = (req: Request) => {
@@ -87,6 +91,36 @@ router.post("/owner/auth/logout", route(async (req, res) => {
 
 router.get("/owner/auth/me", route(async (_req, res) => {
   res.json(Api.GetOwnerMeResponse.parse(publicOwner(res.locals.owner)));
+}));
+
+router.get("/owner/operations/summary", route(async (_req, res) => {
+  const [[inventory], [events], [lastImport]] = await Promise.all([
+    db.select({
+      quantity: sql<number>`coalesce(sum(${productsTable.stockQuantity}), 0)`,
+      value: sql<string>`coalesce(sum(${productsTable.stockQuantity} * ${productsTable.averageCost}), 0)::text`,
+    }).from(productsTable).where(eq(productsTable.isActive, true)),
+    db.select({
+      total: sql<number>`count(*)`,
+      posted: sql<number>`count(*) filter (where ${operationEventsTable.status} = 'posted')`,
+      pending: sql<number>`count(*) filter (where ${operationEventsTable.status} = 'pending')`,
+    }).from(operationEventsTable),
+    db.select({ id: openingBalanceImportsTable.id, status: openingBalanceImportsTable.status,
+      sourceFileName: openingBalanceImportsTable.sourceFileName, sourceSheet: openingBalanceImportsTable.sourceSheet,
+      createdAt: openingBalanceImportsTable.createdAt }).from(openingBalanceImportsTable)
+      .orderBy(desc(openingBalanceImportsTable.createdAt)).limit(1),
+  ]);
+  res.json({ inventory: { quantity: Number(inventory?.quantity ?? 0), value: inventory?.value ?? "0.0000" },
+    events: { total: Number(events?.total ?? 0), posted: Number(events?.posted ?? 0), pending: Number(events?.pending ?? 0) },
+    openingBalance: lastImport ?? null,
+  });
+}));
+
+router.get("/owner/operations/opening-balances/:id", route(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) { res.status(400).json({ error: "Invalid import id" }); return; }
+  const rows = await openingBalanceReconciliation(id);
+  if (!rows.length) { res.status(404).json({ error: "Opening balance import not found" }); return; }
+  res.json(rows[0]);
 }));
 
 router.get("/owner/sessions", route(async (_req, res) => {

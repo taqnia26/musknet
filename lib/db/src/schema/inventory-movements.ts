@@ -1,4 +1,5 @@
-import { integer, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { adminUsersTable } from "./admin-users";
@@ -18,9 +19,17 @@ export const inventoryMovementsTable = pgTable("inventory_movements", {
   quantityBefore: integer("quantity_before").notNull(),
   quantityAfter: integer("quantity_after").notNull(),
   reason: text("reason"),
+  unitCost: numeric("unit_cost", { precision: 19, scale: 4, mode: "string" }),
+  totalCost: numeric("total_cost", { precision: 19, scale: 4, mode: "string" }),
+  sourceType: text("source_type"),
+  sourceId: text("source_id"),
+  eventKey: text("event_key"),
   performedBy: integer("performed_by").references(() => adminUsersTable.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("inventory_movements_event_key_unique").on(table.eventKey)
+    .where(sql`${table.eventKey} is not null`),
+]);
 
 export const insertInventoryMovementSchema = createInsertSchema(inventoryMovementsTable).omit({ id: true, createdAt: true });
 export type InsertInventoryMovement = z.infer<typeof insertInventoryMovementSchema>;

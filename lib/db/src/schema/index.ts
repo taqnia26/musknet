@@ -49,3 +49,5 @@ export * from "./distributor-contracts";
 export * from "./site-content";
 export * from "./gifting-issues";
 export * from "./influencers";
+export * from "./operations";
+export * from "./operations-documents";

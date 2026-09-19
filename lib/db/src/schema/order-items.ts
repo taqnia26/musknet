@@ -1,4 +1,4 @@
-import { doublePrecision, integer, pgTable, serial, text } from "drizzle-orm/pg-core";
+import { doublePrecision, integer, numeric, pgTable, serial, text } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { ordersTable } from "./orders";
@@ -11,6 +11,7 @@ export const orderItemsTable = pgTable("storefront_order_items", {
   quantity: integer("quantity").notNull(),
   unitPrice: doublePrecision("unit_price").notNull(),
   totalPrice: doublePrecision("total_price").notNull(),
+  costSnapshot: numeric("cost_snapshot", { precision: 19, scale: 4, mode: "string" }).notNull().default("0"),
   imageUrl: text("image_url"),
 });
 

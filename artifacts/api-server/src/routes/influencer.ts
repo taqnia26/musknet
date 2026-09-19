@@ -27,7 +27,7 @@ const change = (current: number, previous: number) => ({ absolute: current - pre
 async function dashboardPeriod(influencerId: number, start: Date, end: Date, includeEnd: boolean) {
   const orderDate = includeEnd ? lte(ordersTable.createdAt, end) : lt(ordersTable.createdAt, end);
   const visitDate = includeEnd ? lte(influencerVisitsTable.createdAt, end) : lt(influencerVisitsTable.createdAt, end);
-  const paidWhere = and(eq(orderAttributionsTable.influencerId, influencerId), eq(ordersTable.paymentStatus, "paid"), gte(ordersTable.createdAt, start), orderDate);
+  const paidWhere = and(eq(orderAttributionsTable.influencerId, influencerId), eq(ordersTable.paymentStatus, "paid"), sql`${ordersTable.status} <> 'cancelled'`, gte(ordersTable.createdAt, start), orderDate);
   const [[orderSummary], [visitSummary], series] = await Promise.all([
     db.select({ orders: count(), sales: sum(ordersTable.total), commission: sum(orderAttributionsTable.commissionAmount) }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(paidWhere),
     db.select({ visits: sql<number>`count(distinct (${influencerVisitsTable.visitorKey}, date(${influencerVisitsTable.createdAt})))` }).from(influencerVisitsTable).where(and(eq(influencerVisitsTable.influencerId, influencerId), gte(influencerVisitsTable.createdAt, start), visitDate)),
@@ -67,7 +67,7 @@ router.get("/influencer/dashboard", asyncRoute(async (req, res) => {
   ]);
   const changes = Object.fromEntries((Object.keys(currentPeriod.summary) as (keyof DashboardSummary)[]).map(key => [key, change(currentPeriod.summary[key], previousPeriod.summary[key])]));
   const codes = await db.select({ id: couponsTable.id, code: couponsTable.code, discountType: couponsTable.discountType, discountValue: couponsTable.discountValue, isActive: couponsTable.isActive, usageLimit: couponsTable.usageLimit, timesUsed: couponsTable.timesUsed, attributedUses: sql<number>`count(${ordersTable.id})` }).from(influencerCouponsTable).innerJoin(couponsTable, eq(influencerCouponsTable.couponId, couponsTable.id)).leftJoin(orderAttributionsTable, and(eq(orderAttributionsTable.influencerId, user.id), eq(orderAttributionsTable.source, "coupon"))).leftJoin(ordersTable, and(eq(ordersTable.id, orderAttributionsTable.orderId), eq(ordersTable.couponCode, couponsTable.code), eq(ordersTable.paymentStatus, "paid"))).where(eq(influencerCouponsTable.influencerId, user.id)).groupBy(couponsTable.id);
-  const orders = await db.select({ orderNumber: ordersTable.orderNumber, total: ordersTable.total, commission: orderAttributionsTable.commissionAmount, source: orderAttributionsTable.source, status: ordersTable.paymentStatus, createdAt: ordersTable.createdAt }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(and(eq(orderAttributionsTable.influencerId, user.id), gte(ordersTable.createdAt, start), lte(ordersTable.createdAt, end), eq(ordersTable.paymentStatus, "paid"))).orderBy(desc(ordersTable.createdAt)).limit(100);
+  const orders = await db.select({ orderNumber: ordersTable.orderNumber, total: ordersTable.total, commission: orderAttributionsTable.commissionAmount, source: orderAttributionsTable.source, status: ordersTable.paymentStatus, createdAt: ordersTable.createdAt }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(and(eq(orderAttributionsTable.influencerId, user.id), gte(ordersTable.createdAt, start), lte(ordersTable.createdAt, end), eq(ordersTable.paymentStatus, "paid"), sql`${ordersTable.status} <> 'cancelled'`)).orderBy(desc(ordersTable.createdAt)).limit(100);
   res.json({ range: { from: start.toISOString(), to: end.toISOString() }, previousRange: { from: previousStart.toISOString(), to: previousEnd.toISOString() }, summary: currentPeriod.summary, previousSummary: previousPeriod.summary, changes, series: currentPeriod.series, previousSeries: previousPeriod.series, referralUrl: `/?ref=${encodeURIComponent(user.referralCode)}`, codes, orders });
 }));
 
@@ -98,7 +98,7 @@ router.get("/admin/influencers", asyncRoute(async (req, res) => {
     })
       .from(orderAttributionsTable)
       .innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id))
-      .where(and(eq(orderAttributionsTable.influencerId, u.id), eq(ordersTable.paymentStatus, "paid")));
+      .where(and(eq(orderAttributionsTable.influencerId, u.id), eq(ordersTable.paymentStatus, "paid"), sql`${ordersTable.status} <> 'cancelled'`));
     const [visitSummary] = await db.select({
       visits: sql<number>`count(distinct (${influencerVisitsTable.visitorKey}, date(${influencerVisitsTable.createdAt})))`,
     }).from(influencerVisitsTable).where(eq(influencerVisitsTable.influencerId, u.id));

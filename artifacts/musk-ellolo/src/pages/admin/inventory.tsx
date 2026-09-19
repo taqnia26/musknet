@@ -22,6 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
+import { OpeningBalanceReconciliation } from '@/components/admin/opening-balance-reconciliation';
 
 function InventoryHistoryDialog({
   productId,
@@ -263,6 +264,8 @@ export default function AdminInventory() {
           <p className="text-muted-foreground mt-1">{t('مراقبة وتحديث كميات المنتجات', 'Monitor and update product quantities')}</p>
         </div>
       </div>
+
+      {canEdit && <OpeningBalanceReconciliation />}
 
       <div className="bg-card p-6 rounded-xl border shadow-sm h-[350px]" dir="ltr">
         <h3 className="font-bold mb-4 rtl:text-right">{t('مستويات المخزون (أعلى 10 منتجات)', 'Stock Levels (Top 10 Products)')}</h3>

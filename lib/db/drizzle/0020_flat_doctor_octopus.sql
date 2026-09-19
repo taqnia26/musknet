@@ -1,0 +1,3 @@
+ALTER TABLE "storefront_order_items" ADD COLUMN "cost_snapshot" numeric(19, 4) DEFAULT '0' NOT NULL;--> statement-breakpoint
+ALTER TABLE "purchase_receipts" ADD CONSTRAINT "purchase_receipts_paid_amount_nonnegative" CHECK ("purchase_receipts"."paid_amount" >= 0);--> statement-breakpoint
+ALTER TABLE "purchase_receipts" ADD CONSTRAINT "purchase_receipts_paid_amount_lte_amount" CHECK ("purchase_receipts"."paid_amount" <= "purchase_receipts"."amount");

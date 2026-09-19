@@ -1428,6 +1428,110 @@ paths:
       operationId: unlinkInfluencerCoupon
       tags: [admin]
       responses: { "204": { description: Unlinked } }
+  /admin/operations/opening-balances:
+    get:
+      operationId: adminListOpeningBalanceImports
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses:
+        "200": { description: Opening balance reconciliation imports, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OpeningBalanceReconciliation" } } } } }
+    post:
+      operationId: adminCreateOpeningBalanceImport
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceImportInput" } }
+      responses:
+        "201": { description: Draft opening balance import, content: { application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceImport" } } } }
+  /admin/finance/purchase-receipts:
+    post:
+      operationId: adminCreatePurchaseReceipt
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceiptInput" } } }
+      responses: { "201": { description: Draft receipt, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceipt" } } } } }
+    get:
+      operationId: adminListPurchaseReceipts
+      tags: [Admin Finance]
+      responses:
+        "200": { description: Purchase receipts, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PurchaseReceipt" } } } } }
+  /admin/finance/purchase-receipts/{id}/payments:
+    post:
+      operationId: adminCreatePurchaseReceiptPayment
+      tags: [Admin Finance]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceiptPaymentInput" } } }
+      responses:
+        "201": { description: Payment, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceiptPayment" } } } }
+  /admin/finance/purchase-receipts/{id}/post:
+    post:
+      operationId: adminPostPurchaseReceipt
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Posted receipt, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceipt" } } } } }
+  /admin/manufacturing/batches/{id}/inputs:
+    post:
+      operationId: adminAddManufacturingInputs
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/ManufacturingInputsInput" } } }
+      responses: { "201": { description: Explicit manufacturing input lines, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ManufacturingInput" } } } } } }
+  /admin/operations/opening-balances/{id}/review:
+    post:
+      operationId: adminReviewOpeningBalanceImport
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Import moved to review, content: { application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceImport" } } } } }
+  /admin/operations/opening-balances/{id}/lines/{lineId}:
+    patch:
+      operationId: adminMapOpeningBalanceLine
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/AdminId" }
+        - { name: lineId, in: path, required: true, schema: { type: number, multipleOf: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceMappingInput" } }
+      responses: { "200": { description: Mapped opening line, content: { application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceLineInput" } } } } }
+  /admin/operations/opening-balances/{id}/approve:
+    post:
+      operationId: adminApproveOpeningBalanceImport
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceApprovalInput" } }
+      responses: { "200": { description: Applied opening balances and journal, content: { application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceImport" } } } } }
+  /owner/operations/summary:
+    get:
+      operationId: getOwnerOperationsSummary
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      responses: { "200": { description: Linked operations summary, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerOperationsSummary" } } } } }
+  /owner/operations/opening-balances/{id}:
+    get:
+      operationId: getOwnerOpeningBalanceReconciliation
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/OwnerSessionId" }]
+      responses: { "200": { description: Opening balance reconciliation, content: { application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceReconciliation" } } } } }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -3139,3 +3243,124 @@ components:
       required: [couponId]
       properties:
         couponId: { type: number, multipleOf: 1, minimum: 1 }
+    OpeningBalanceImportInput:
+      type: object
+      required: [importKey, sourceFileName, sourceSheet, lines]
+      properties:
+        importKey: { type: string, minLength: 1 }
+        sourceFileName: { type: string, minLength: 1 }
+        sourceSheet: { type: string, minLength: 1 }
+        lines: { type: array, items: { $ref: "#/components/schemas/OpeningBalanceLineInput" }, minItems: 1 }
+    OpeningBalanceLineInput:
+      type: object
+      required: [sourceRow, sourceLabel, openingQuantity, fullBatchUnitCost, provenance]
+      properties:
+        sourceRow: { type: number, multipleOf: 1, minimum: 1 }
+        sourceLabel: { type: string }
+        sourceQuantity: { type: [string, number] }
+        openingQuantity: { type: number, multipleOf: 1, minimum: 0 }
+        fullBatchUnitCost: { type: [string, number], minimum: 0 }
+        productId: { type: [number, "null"], multipleOf: 1 }
+        mappingNote: { type: [string, "null"] }
+        provenance: { type: object, required: [file, sheet, row], properties: { file: { type: string }, sheet: { type: string }, row: { type: number, multipleOf: 1 } } }
+    OpeningBalanceApprovalInput:
+      type: object
+      required: [entryDate]
+      properties:
+        entryDate: { type: string, format: date }
+    OpeningBalanceMappingInput:
+      type: object
+      properties:
+        productId: { type: [number, "null"], multipleOf: 1 }
+        mappingNote: { type: [string, "null"] }
+    OpeningBalanceImport:
+      type: object
+      required: [id, importKey, sourceFileName, sourceSheet, valuationMethod, status]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        importKey: { type: string }
+        sourceFileName: { type: string }
+        sourceSheet: { type: string }
+        valuationMethod: { type: string, enum: [weighted_average] }
+        status: { type: string, enum: [draft, review, approved, rejected] }
+    OpeningBalanceReconciliation:
+      allOf:
+        - $ref: "#/components/schemas/OpeningBalanceImport"
+        - type: object
+          properties:
+            lineCount: { type: number, multipleOf: 1 }
+            mappedCount: { type: number, multipleOf: 1 }
+            unmappedCount: { type: number, multipleOf: 1 }
+            lines: { type: array, items: { $ref: "#/components/schemas/OpeningBalanceLineInput" } }
+    OwnerOperationsSummary:
+      type: object
+      required: [inventory, events, openingBalance]
+      properties:
+        inventory: { type: object, properties: { quantity: { type: number }, value: { type: string } } }
+        events: { type: object, properties: { total: { type: number }, posted: { type: number }, pending: { type: number } } }
+        openingBalance: { allOf: [{ $ref: "#/components/schemas/OpeningBalanceImport" }], nullable: true }
+    PurchaseReceiptInput:
+      type: object
+      required: [receiptNumber, vendorName, receiptDate, lines]
+      properties:
+        receiptNumber: { type: string }
+        vendorName: { type: string }
+        vendorReference: { type: [string, "null"] }
+        purchaseId: { type: [number, "null"], multipleOf: 1 }
+        receiptDate: { type: string, format: date }
+        paymentStatus: { type: string, enum: [unpaid, paid, partial] }
+        paymentSource: { type: string, enum: [company_account, owner_account] }
+        paidAmount: { type: [string, number], minimum: 0 }
+        paymentReference: { type: [string, "null"] }
+        lines: { type: array, minItems: 1, items: { $ref: "#/components/schemas/PurchaseReceiptLineInput" } }
+    PurchaseReceiptLineInput:
+      type: object
+      required: [productId, quantity, unitCost]
+      properties:
+        productId: { type: number, multipleOf: 1, minimum: 1 }
+        quantity: { type: number, multipleOf: 1, minimum: 1 }
+        unitCost: { type: [string, number], minimum: 0 }
+    PurchaseReceiptPaymentInput:
+      type: object
+      required: [paymentKey, paymentDate, amount, paymentSource]
+      properties:
+        paymentKey: { type: string, minLength: 1 }
+        paymentDate: { type: string, format: date }
+        amount: { type: [string, number], minimum: 0 }
+        paymentSource: { type: string, enum: [company_account, owner_account] }
+        paymentReference: { type: [string, "null"] }
+    PurchaseReceiptPayment:
+      type: object
+      required: [id, receiptId, paymentKey, paymentDate, amount, paymentSource]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        receiptId: { type: number, multipleOf: 1 }
+        paymentKey: { type: string }
+        paymentDate: { type: string, format: date }
+        amount: { type: string }
+        paymentSource: { type: string, enum: [company_account, owner_account] }
+        paymentReference: { type: [string, "null"] }
+    PurchaseReceipt:
+      type: object
+      required: [id, receiptNumber, vendorName, receiptDate, amount, status, paymentStatus]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        receiptNumber: { type: string }
+        vendorName: { type: string }
+        receiptDate: { type: string, format: date }
+        amount: { type: string }
+        paidAmount: { type: string }
+        paymentReference: { type: [string, "null"] }
+        status: { type: string, enum: [draft, posted, voided] }
+        paymentStatus: { type: string, enum: [unpaid, paid, partial] }
+    ManufacturingInputsInput:
+      type: object
+      required: [lines]
+      properties:
+        lines: { type: array, minItems: 1, items: { $ref: "#/components/schemas/ManufacturingInput" } }
+    ManufacturingInput:
+      type: object
+      required: [materialProductId, quantity]
+      properties:
+        materialProductId: { type: number, multipleOf: 1, minimum: 1 }
+        quantity: { type: number, multipleOf: 1, minimum: 1 }

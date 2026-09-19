@@ -1,0 +1,2 @@
+DROP INDEX "purchase_receipt_payments_key_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "purchase_receipt_payments_receipt_key_unique" ON "purchase_receipt_payments" USING btree ("receipt_id","payment_key");

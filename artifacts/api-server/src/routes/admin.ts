@@ -37,6 +37,10 @@ import {
   siteContentTable,
   ownerCredentialsTable,
   ownerUsersTable,
+  openingBalanceImportsTable,
+  openingBalanceLinesTable,
+  operationEventsTable,
+  purchaseReceiptsTable,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -48,7 +52,7 @@ import {
   verifyAdminPassword,
 } from "../lib/admin-auth";
 import { hashOwnerPassword } from "../lib/owner-auth";
-import { updateOrderAndIssueInvoice } from "../lib/invoices";
+import { postFulfillmentCogs, updateOrderAndIssueInvoice } from "../lib/invoices";
 import {
   AccountingConflictError,
   AccountingNotFoundError,
@@ -63,6 +67,7 @@ import {
 } from "../lib/accounting";
 import { ObjectStorageService } from "../lib/object-storage";
 import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
+import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch } from "../lib/operations";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -147,6 +152,74 @@ const parsedJson = (schema: { parse(value: unknown): unknown }, value: unknown, 
   res.status(status).json(value);
 };
 
+router.get("/admin/operations/opening-balances", permit("inventory", "view"), route(async (req, res) => {
+  const raw = req.query.importId;
+  const importId = raw === undefined ? undefined : Number(raw);
+  if (importId !== undefined && (!Number.isSafeInteger(importId) || importId < 1)) {
+    res.status(400).json({ error: "Invalid importId" }); return;
+  }
+  res.json(await openingBalanceReconciliation(importId));
+}));
+router.post("/admin/operations/opening-balances", permit("inventory", "edit"), route(async (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const lines = Array.isArray(body.lines) ? body.lines : [];
+  if (typeof body.importKey !== "string" || typeof body.sourceFileName !== "string" || typeof body.sourceSheet !== "string" || !lines.length) {
+    res.status(400).json({ error: "Import key, source file/sheet, and lines are required" }); return;
+  }
+  try {
+    const row = await createOpeningBalanceImport({
+      importKey: body.importKey, sourceFileName: body.sourceFileName, sourceSheet: body.sourceSheet,
+      createdBy: res.locals.admin.id,
+      lines: lines.map((value) => {
+        const line = value as Record<string, unknown>;
+        if (!Number.isSafeInteger(Number(line.sourceRow)) || typeof line.sourceLabel !== "string" ||
+          !Number.isSafeInteger(Number(line.openingQuantity)) || Number(line.openingQuantity) < 0 ||
+          typeof line.fullBatchUnitCost !== "number" && typeof line.fullBatchUnitCost !== "string" ||
+          !line.provenance || typeof line.provenance !== "object") throw new Error("Each opening line must preserve its source row, label, quantity, cost and provenance");
+        return { sourceRow: Number(line.sourceRow), sourceLabel: line.sourceLabel,
+          sourceQuantity: String(line.sourceQuantity ?? line.openingQuantity), openingQuantity: Number(line.openingQuantity),
+          fullBatchUnitCost: line.fullBatchUnitCost as string | number, productId: line.productId == null ? null : Number(line.productId),
+          mappingNote: line.mappingNote == null ? null : String(line.mappingNote), provenance: line.provenance as { file: string; sheet: string; row: number } };
+      }),
+    });
+    res.status(201).json(row);
+  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid opening balance import" }); }
+}));
+router.post("/admin/operations/opening-balances/:id/review", permit("inventory", "edit"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) { res.status(400).json({ error: "Invalid import id" }); return; }
+  const row = await reviewOpeningBalanceImport(id);
+  if (!row) { res.status(409).json({ error: "Only a draft import can be moved to review" }); return; }
+  res.json(row);
+}));
+router.patch("/admin/operations/opening-balances/:id/lines/:lineId", permit("inventory", "edit"), route(async (req, res) => {
+  const importId = Number(req.params.id);
+  const lineId = Number(req.params.lineId);
+  const productId = req.body?.productId == null ? null : Number(req.body.productId);
+  const mappingNote = req.body?.mappingNote == null ? null : String(req.body.mappingNote);
+  if (!Number.isSafeInteger(importId) || !Number.isSafeInteger(lineId) || importId < 1 || lineId < 1 ||
+    (productId !== null && (!Number.isSafeInteger(productId) || productId < 1))) {
+    res.status(400).json({ error: "Valid import, line and product ids are required" }); return;
+  }
+  if (productId !== null) {
+    const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, productId)).limit(1);
+    if (!product) { res.status(404).json({ error: "Product not found" }); return; }
+  }
+  let line;
+  try { line = await mapOpeningBalanceLine(importId, lineId, productId, mappingNote); }
+  catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Opening balance mapping failed" }); return; }
+  if (!line) { res.status(404).json({ error: "Opening balance line not found" }); return; }
+  res.json(line);
+}));
+router.post("/admin/operations/opening-balances/:id/approve", permit("finance", "edit"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  const entryDate = typeof req.body?.entryDate === "string" ? req.body.entryDate : utcDateString(new Date());
+  if (!Number.isSafeInteger(id) || id < 1 || !/^\d{4}-\d{2}-\d{2}$/.test(entryDate)) { res.status(400).json({ error: "Valid import id and entryDate are required" }); return; }
+  try {
+    res.json(await approveOpeningBalanceImport(id, res.locals.admin.id, entryDate));
+  } catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Opening balance approval failed" }); }
+}));
+
 router.post("/admin/auth/login", route(async (req, res) => {
   const body = parse(Api.AdminLoginBody, req.body, res);
   if (!body) return;
@@ -215,7 +288,7 @@ router.put("/admin/settings/owner-credentials", superOnly, route(async (req, res
 router.get("/admin/dashboard", permit("dashboard", "view"), route(async (_req, res) => {
   if (res.headersSent) return;
   const [[revenue], [orders], [customers], [products], [lowStock], [pending], [coupons], [distributors]] = await Promise.all([
-    db.select({ value: sum(ordersTable.total) }).from(ordersTable).where(eq(ordersTable.paymentStatus, "paid")),
+    db.select({ value: sum(ordersTable.total) }).from(ordersTable).where(and(eq(ordersTable.paymentStatus, "paid"), sql`${ordersTable.status} <> 'cancelled'`)),
     db.select({ value: count() }).from(ordersTable),
     db.select({ value: count() }).from(customersTable),
     db.select({ value: count() }).from(productsTable).where(eq(productsTable.isActive, true)),
@@ -407,7 +480,7 @@ router.get("/admin/analytics/dashboard", permit("dashboard", "view"), route(asyn
     })
       .from(ordersTable)
       .where(and(
-        eq(ordersTable.paymentStatus, "paid"),
+        eq(ordersTable.paymentStatus, "paid"), sql`${ordersTable.status} <> 'cancelled'`,
         gte(ordersTable.createdAt, start),
         lt(ordersTable.createdAt, endExclusive),
       ))
@@ -421,7 +494,7 @@ router.get("/admin/analytics/dashboard", permit("dashboard", "view"), route(asyn
       .from(orderItemsTable)
       .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
       .where(and(
-        eq(ordersTable.paymentStatus, "paid"),
+        eq(ordersTable.paymentStatus, "paid"), sql`${ordersTable.status} <> 'cancelled'`,
         gte(ordersTable.createdAt, start),
         lt(ordersTable.createdAt, endExclusive),
       ))
@@ -717,6 +790,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         quantity,
         unitPrice: product.price,
         totalPrice: Math.round(product.price * quantity * 100) / 100,
+        costSnapshot: product.averageCost,
         imageUrl: product.images[0]?.url ?? null,
       })));
 
@@ -734,9 +808,15 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
           quantityBefore: product.stockQuantity,
           quantityAfter,
           reason: `Admin order ${orderNumber}`,
+          unitCost: product.averageCost,
+          totalCost: (Number(product.averageCost) * quantity).toFixed(4),
+          sourceType: "order",
+          sourceId: String(created.id),
+          eventKey: `sale-fulfillment:${created.id}:${product.id}`,
           performedBy: (res.locals.admin as typeof adminUsersTable.$inferSelect).id,
         });
       }
+      await postFulfillmentCogs(tx, created.id, res.locals.admin.id, created.orderNumber, created.createdAt.toISOString().slice(0, 10));
       return created;
     });
     res.status(201).json(Api.AdminCreateOrderResponse.parse(order));
@@ -1176,6 +1256,60 @@ router.post("/admin/finance/purchases", permit("finance", "edit"), route(async (
   }, req.header("idempotency-key"));
   parsedJson(Api.AdminCreatePurchaseResponse, row, res, 201);
 }));
+router.post("/admin/finance/purchase-receipts", permit("finance", "edit"), route(async (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const lines = Array.isArray(body.lines) ? body.lines : [];
+  if (typeof body.receiptNumber !== "string" || typeof body.vendorName !== "string" ||
+    typeof body.receiptDate !== "string" || !lines.length) {
+    res.status(400).json({ error: "Receipt number, vendor, date, and at least one line are required" }); return;
+  }
+  try {
+    const receipt = await createPurchaseReceipt({
+      receiptNumber: body.receiptNumber, vendorName: body.vendorName, vendorReference: body.vendorReference == null ? null : String(body.vendorReference),
+      purchaseId: body.purchaseId == null ? null : Number(body.purchaseId), receiptDate: isoDate(body.receiptDate),
+      paymentStatus: body.paymentStatus as "unpaid" | "paid" | "partial" | undefined,
+      paymentSource: body.paymentSource as "company_account" | "owner_account" | undefined,
+      paidAmount: body.paidAmount == null ? undefined : body.paidAmount as string | number,
+      paymentReference: body.paymentReference == null ? null : String(body.paymentReference),
+      createdBy: res.locals.admin.id,
+      lines: lines.map((value) => {
+        const line = value as Record<string, unknown>;
+        const productId = Number(line.productId); const quantity = Number(line.quantity);
+        if (!Number.isSafeInteger(productId) || productId < 1 || !Number.isSafeInteger(quantity) || quantity < 1 ||
+          (typeof line.unitCost !== "number" && typeof line.unitCost !== "string")) throw new Error("Each receipt line needs a product, positive quantity, and unit cost");
+        return { productId, quantity, unitCost: line.unitCost as string | number };
+      }),
+    });
+    res.status(201).json(receipt);
+  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid purchase receipt" }); }
+}));
+router.get("/admin/finance/purchase-receipts", permit("finance", "view"), route(async (_req, res) => {
+  res.json(await db.select().from(purchaseReceiptsTable).orderBy(desc(purchaseReceiptsTable.receiptDate)));
+}));
+router.post("/admin/finance/purchase-receipts/:id/payments", permit("finance", "edit"), route(async (req, res) => {
+  const receiptId = Number(req.params.id);
+  const body = req.body as Record<string, unknown>;
+  const paymentKey = typeof body.paymentKey === "string" && body.paymentKey.trim()
+    ? body.paymentKey.trim() : req.header("idempotency-key");
+  if (!Number.isSafeInteger(receiptId) || receiptId < 1 || !paymentKey ||
+    typeof body.paymentDate !== "string" || typeof body.amount !== "number" && typeof body.amount !== "string" ||
+    body.paymentSource !== "company_account" && body.paymentSource !== "owner_account") {
+    res.status(400).json({ error: "Receipt id, payment key, date, positive amount, and payment source are required" }); return;
+  }
+  try {
+    res.status(201).json(await createPurchaseReceiptPayment({
+      receiptId, paymentKey, paymentDate: isoDate(body.paymentDate), amount: body.amount as string | number,
+      paymentSource: body.paymentSource, paymentReference: body.paymentReference == null ? null : String(body.paymentReference),
+      createdBy: res.locals.admin.id,
+    }));
+  } catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Purchase receipt payment failed" }); }
+}));
+router.post("/admin/finance/purchase-receipts/:id/post", permit("finance", "edit"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) { res.status(400).json({ error: "Invalid receipt id" }); return; }
+  try { res.json(await postPurchaseReceipt(id, res.locals.admin.id)); }
+  catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Purchase receipt posting failed" }); }
+}));
 router.get("/admin/finance/purchases/:id", permit("finance", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetPurchaseParams, req.params, res); if (!params) return;
   const [row] = await db.select().from(purchasesTable).where(eq(purchasesTable.id, params.id)).limit(1);
@@ -1216,7 +1350,7 @@ async function financeMetrics(from: string, to: string) {
   const endExclusive = nextUtcDate(to);
   const [[orders], [expenses]] = await Promise.all([
     db.select({ revenue: sum(ordersTable.total), orderCount: count() }).from(ordersTable)
-      .where(and(eq(ordersTable.paymentStatus, "paid"), gte(ordersTable.createdAt, start), lt(ordersTable.createdAt, endExclusive))),
+      .where(and(eq(ordersTable.paymentStatus, "paid"), sql`${ordersTable.status} <> 'cancelled'`, gte(ordersTable.createdAt, start), lt(ordersTable.createdAt, endExclusive))),
     db.select({ value: sum(expensesTable.amount) }).from(expensesTable)
       .where(and(gte(expensesTable.expenseDate, from), lte(expensesTable.expenseDate, to))),
   ]);
@@ -1346,6 +1480,7 @@ router.get("/admin/manufacturing/batches", permit("manufacturing", "view"), rout
 }));
 router.post("/admin/manufacturing/batches", permit("manufacturing", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateManufacturingBatchBody, req.body, res); if (!body) return;
+  if (body.status === "approved") { res.status(400).json({ error: "Create the batch, add explicit inputs, then approve it" }); return; }
   if (body.expiryDate && !validDateRange(body.productionDate, body.expiryDate)) { res.status(400).json({ error: "Expiry date cannot precede production date" }); return; }
   const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, body.productId)).limit(1);
   if (!product) { res.status(400).json({ error: "Product not found" }); return; }
@@ -1360,11 +1495,28 @@ router.get("/admin/manufacturing/batches/:id", permit("manufacturing", "view"), 
   if (!row) { res.status(404).json({ error: "Manufacturing batch not found" }); return; }
   parsedJson(Api.AdminGetManufacturingBatchResponse, row, res);
 }));
+router.post("/admin/manufacturing/batches/:id/inputs", permit("manufacturing", "edit"), route(async (req, res) => {
+  const batchId = Number(req.params.id);
+  const input: unknown[] = Array.isArray(req.body?.lines) ? req.body.lines : [];
+  if (!Number.isSafeInteger(batchId) || batchId < 1 || !input.length) { res.status(400).json({ error: "Batch id and input lines are required" }); return; }
+  try {
+    const lines = input.map((value) => {
+      const line = value as Record<string, unknown>;
+      const materialProductId = Number(line.materialProductId); const quantity = Number(line.quantity);
+      if (!Number.isSafeInteger(materialProductId) || materialProductId < 1 || !Number.isSafeInteger(quantity) || quantity < 1) {
+        throw new Error("Each material input needs a product and positive quantity");
+      }
+      return { materialProductId, quantity };
+    });
+    res.status(201).json(await addManufacturingInputs(batchId, lines));
+  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid manufacturing inputs" }); }
+}));
 router.patch("/admin/manufacturing/batches/:id", permit("manufacturing", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateManufacturingBatchParams, req.params, res);
   const body = parse(Api.AdminUpdateManufacturingBatchBody.partial(), req.body, res); if (!params || !body) return;
   const [existing] = await db.select().from(manufacturingBatchesTable).where(eq(manufacturingBatchesTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Manufacturing batch not found" }); return; }
+  if (existing.status === "approved") { res.status(409).json({ error: "Approved manufacturing batches are immutable" }); return; }
   const productionDate = body.productionDate ? isoDate(body.productionDate) : existing.productionDate;
   const expiryDate = body.expiryDate === null ? null : body.expiryDate ? isoDate(body.expiryDate) : existing.expiryDate;
   if (expiryDate && !validDateRange(productionDate, expiryDate)) { res.status(400).json({ error: "Expiry date cannot precede production date" }); return; }
@@ -1372,13 +1524,27 @@ router.patch("/admin/manufacturing/batches/:id", permit("manufacturing", "edit")
     const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, body.productId)).limit(1);
     if (!product) { res.status(400).json({ error: "Product not found" }); return; }
   }
-  const [row] = await db.update(manufacturingBatchesTable).set({ ...body, productionDate, expiryDate })
-    .where(eq(manufacturingBatchesTable.id, params.id)).returning();
-  parsedJson(Api.AdminUpdateManufacturingBatchResponse, row, res);
+  const wantsApprove = body.status === "approved";
+  if (wantsApprove) {
+    const { status: _status, ...updates } = body;
+    const row = await approveManufacturingBatch(params.id, res.locals.admin.id, {
+      ...updates, status: "quality_check",
+      productionDate, expiryDate,
+    });
+    parsedJson(Api.AdminUpdateManufacturingBatchResponse, row, res);
+    return;
+  }
+  const [updated] = await db.update(manufacturingBatchesTable).set({
+    ...body, productionDate, expiryDate,
+  }).where(and(eq(manufacturingBatchesTable.id, params.id), sql`${manufacturingBatchesTable.status} <> 'approved'`)).returning();
+  if (!updated) { res.status(409).json({ error: "Approved manufacturing batches are immutable" }); return; }
+  parsedJson(Api.AdminUpdateManufacturingBatchResponse, updated, res);
 }));
 router.delete("/admin/manufacturing/batches/:id", permit("manufacturing", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDeleteManufacturingBatchParams, req.params, res); if (!params) return;
-  const [row] = await db.delete(manufacturingBatchesTable).where(eq(manufacturingBatchesTable.id, params.id)).returning({ id: manufacturingBatchesTable.id });
+  const [existing] = await db.select({ status: manufacturingBatchesTable.status }).from(manufacturingBatchesTable).where(eq(manufacturingBatchesTable.id, params.id)).limit(1);
+  if (existing?.status === "approved") { res.status(409).json({ error: "Approved manufacturing batches are immutable" }); return; }
+  const [row] = await db.delete(manufacturingBatchesTable).where(and(eq(manufacturingBatchesTable.id, params.id), sql`${manufacturingBatchesTable.status} <> 'approved'`)).returning({ id: manufacturingBatchesTable.id });
   if (!row) { res.status(404).json({ error: "Manufacturing batch not found" }); return; }
   res.sendStatus(204);
 }));

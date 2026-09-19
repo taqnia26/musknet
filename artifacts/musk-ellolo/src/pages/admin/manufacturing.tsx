@@ -5,6 +5,7 @@ import {
   useAdminUpdateManufacturingBatch,
   useAdminDeleteManufacturingBatch,
   useAdminListProducts,
+  useAdminAddManufacturingInputs,
   useGetAdminMe,
   getAdminListManufacturingBatchesQueryKey
 } from '@workspace/api-client-react';
@@ -28,6 +29,7 @@ export default function AdminManufacturing() {
   
   const [isOpen, setIsOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<any>(null);
+  const [inputLines, setInputLines] = useState<{ materialProductId: string; quantity: string }[]>([]);
   
   const { data: batches, isLoading } = useAdminListManufacturingBatches();
   const { data: products } = useAdminListProducts({});
@@ -36,6 +38,7 @@ export default function AdminManufacturing() {
   const createMutation = useAdminCreateManufacturingBatch();
   const updateMutation = useAdminUpdateManufacturingBatch();
   const deleteMutation = useAdminDeleteManufacturingBatch();
+  const addInputsMutation = useAdminAddManufacturingInputs();
   const { toast } = useToast();
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
@@ -59,14 +62,26 @@ export default function AdminManufacturing() {
       status: formData.get('status') as any,
     };
 
-    if (editingBatch) {
-      updateMutation.mutate({ id: editingBatch.id, data }, {
+    const updateBatch = () => updateMutation.mutate({ id: editingBatch.id, data }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListManufacturingBatchesQueryKey() });
           setIsOpen(false);
           toast({ title: t('تم الحفظ', 'Saved') });
         }
       });
+
+    if (editingBatch) {
+      const lines = inputLines.map((line) => ({ materialProductId: Number(line.materialProductId), quantity: Number(line.quantity) }));
+      if (lines.some((line) => !Number.isInteger(line.materialProductId) || line.materialProductId < 1 || !Number.isInteger(line.quantity) || line.quantity < 1)) {
+        toast({ title: t('تحقق من مواد التصنيع', 'Check manufacturing materials'), description: t('اختر مادة وأدخل كمية صحيحة لكل بند.', 'Choose a material and valid quantity for each line.'), variant: 'destructive' });
+        return;
+      }
+      if (lines.length) {
+        addInputsMutation.mutate({ id: editingBatch.id, data: { lines } }, {
+          onSuccess: updateBatch,
+          onError: (error) => toast({ title: t('تعذر تسجيل مواد التصنيع', 'Could not record manufacturing inputs'), description: String((error as Error).message), variant: 'destructive' }),
+        });
+      } else updateBatch();
     } else {
       createMutation.mutate({ data }, {
         onSuccess: () => {
@@ -102,7 +117,7 @@ export default function AdminManufacturing() {
           <p className="text-muted-foreground mt-1">{t('إدارة دفعات الإنتاج والتصنيع', 'Manage production batches')}</p>
         </div>
         {canEdit && (
-          <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if (!v) setEditingBatch(null); }}>
+             <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if (!v) { setEditingBatch(null); setInputLines([]); } }}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4 me-2" />{t('إضافة دفعة', 'Add Batch')}</Button>
             </DialogTrigger>
@@ -146,8 +161,29 @@ export default function AdminManufacturing() {
                     <option value="rejected">{t('مرفوض', 'Rejected')}</option>
                   </select>
                 </div>
+                {editingBatch && editingBatch.status !== 'approved' && (
+                  <div className="col-span-2 space-y-2 rounded-md border bg-muted/20 p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-sm font-medium">{t('مواد التصنيع الفعلية', 'Actual material inputs')}</label>
+                        <p className="text-xs text-muted-foreground">{t('يجب تسجيل المواد قبل اعتماد الدفعة؛ سيخصم النظام المخزون ويتحقق من التكلفة.', 'Record materials before approval; the system will consume stock and validate cost.')}</p>
+                      </div>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setInputLines([...inputLines, { materialProductId: '', quantity: '1' }])}><Plus className="me-1 h-3 w-3" />{t('إضافة مادة', 'Add material')}</Button>
+                    </div>
+                    {inputLines.map((line, index) => (
+                      <div key={index} className="grid grid-cols-[1fr_120px_auto] gap-2">
+                        <select value={line.materialProductId} onChange={(event) => setInputLines(inputLines.map((item, itemIndex) => itemIndex === index ? { ...item, materialProductId: event.target.value } : item))} className="h-9 rounded-md border bg-background px-2 text-sm">
+                          <option value="">{t('اختر مادة', 'Select material')}</option>
+                          {products?.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
+                        </select>
+                        <Input type="number" min="1" step="1" value={line.quantity} onChange={(event) => setInputLines(inputLines.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => setInputLines(inputLines.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="col-span-2 flex justify-end mt-4">
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>{t('حفظ', 'Save')}</Button>
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending || addInputsMutation.isPending}>{t('حفظ', 'Save')}</Button>
                 </div>
               </form>
             </DialogContent>

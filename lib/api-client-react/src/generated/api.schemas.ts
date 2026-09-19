@@ -2120,6 +2120,225 @@ export interface CouponLink {
   couponId: number;
 }
 
+export type OpeningBalanceLineInputProvenance = {
+  file: string;
+  sheet: string;
+  row: number;
+};
+
+export interface OpeningBalanceLineInput {
+  /** @minimum 1 */
+  sourceRow: number;
+  sourceLabel: string;
+  sourceQuantity?: string | number;
+  /** @minimum 0 */
+  openingQuantity: number;
+  /** @minimum 0 */
+  fullBatchUnitCost: string | number;
+  /** @nullable */
+  productId?: number | null;
+  /** @nullable */
+  mappingNote?: string | null;
+  provenance: OpeningBalanceLineInputProvenance;
+}
+
+export interface OpeningBalanceImportInput {
+  /** @minLength 1 */
+  importKey: string;
+  /** @minLength 1 */
+  sourceFileName: string;
+  /** @minLength 1 */
+  sourceSheet: string;
+  /** @minItems 1 */
+  lines: OpeningBalanceLineInput[];
+}
+
+export interface OpeningBalanceApprovalInput {
+  entryDate: string;
+}
+
+export interface OpeningBalanceMappingInput {
+  /** @nullable */
+  productId?: number | null;
+  /** @nullable */
+  mappingNote?: string | null;
+}
+
+export type OpeningBalanceImportValuationMethod = typeof OpeningBalanceImportValuationMethod[keyof typeof OpeningBalanceImportValuationMethod];
+
+
+export const OpeningBalanceImportValuationMethod = {
+  weighted_average: 'weighted_average',
+} as const;
+
+export type OpeningBalanceImportStatus = typeof OpeningBalanceImportStatus[keyof typeof OpeningBalanceImportStatus];
+
+
+export const OpeningBalanceImportStatus = {
+  draft: 'draft',
+  review: 'review',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface OpeningBalanceImport {
+  id: number;
+  importKey: string;
+  sourceFileName: string;
+  sourceSheet: string;
+  valuationMethod: OpeningBalanceImportValuationMethod;
+  status: OpeningBalanceImportStatus;
+}
+
+export type OpeningBalanceReconciliation = OpeningBalanceImport & {
+  lineCount?: number;
+  mappedCount?: number;
+  unmappedCount?: number;
+  lines?: OpeningBalanceLineInput[];
+};
+
+export type OwnerOperationsSummaryInventory = {
+  quantity?: number;
+  value?: string;
+};
+
+export type OwnerOperationsSummaryEvents = {
+  total?: number;
+  posted?: number;
+  pending?: number;
+};
+
+export interface OwnerOperationsSummary {
+  inventory: OwnerOperationsSummaryInventory;
+  events: OwnerOperationsSummaryEvents;
+  openingBalance: OpeningBalanceImport | null;
+}
+
+export type PurchaseReceiptInputPaymentStatus = typeof PurchaseReceiptInputPaymentStatus[keyof typeof PurchaseReceiptInputPaymentStatus];
+
+
+export const PurchaseReceiptInputPaymentStatus = {
+  unpaid: 'unpaid',
+  paid: 'paid',
+  partial: 'partial',
+} as const;
+
+export type PurchaseReceiptInputPaymentSource = typeof PurchaseReceiptInputPaymentSource[keyof typeof PurchaseReceiptInputPaymentSource];
+
+
+export const PurchaseReceiptInputPaymentSource = {
+  company_account: 'company_account',
+  owner_account: 'owner_account',
+} as const;
+
+export interface PurchaseReceiptLineInput {
+  /** @minimum 1 */
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+  /** @minimum 0 */
+  unitCost: string | number;
+}
+
+export interface PurchaseReceiptInput {
+  receiptNumber: string;
+  vendorName: string;
+  /** @nullable */
+  vendorReference?: string | null;
+  /** @nullable */
+  purchaseId?: number | null;
+  receiptDate: string;
+  paymentStatus?: PurchaseReceiptInputPaymentStatus;
+  paymentSource?: PurchaseReceiptInputPaymentSource;
+  /** @minimum 0 */
+  paidAmount?: string | number;
+  /** @nullable */
+  paymentReference?: string | null;
+  /** @minItems 1 */
+  lines: PurchaseReceiptLineInput[];
+}
+
+export type PurchaseReceiptPaymentInputPaymentSource = typeof PurchaseReceiptPaymentInputPaymentSource[keyof typeof PurchaseReceiptPaymentInputPaymentSource];
+
+
+export const PurchaseReceiptPaymentInputPaymentSource = {
+  company_account: 'company_account',
+  owner_account: 'owner_account',
+} as const;
+
+export interface PurchaseReceiptPaymentInput {
+  /** @minLength 1 */
+  paymentKey: string;
+  paymentDate: string;
+  /** @minimum 0 */
+  amount: string | number;
+  paymentSource: PurchaseReceiptPaymentInputPaymentSource;
+  /** @nullable */
+  paymentReference?: string | null;
+}
+
+export type PurchaseReceiptPaymentPaymentSource = typeof PurchaseReceiptPaymentPaymentSource[keyof typeof PurchaseReceiptPaymentPaymentSource];
+
+
+export const PurchaseReceiptPaymentPaymentSource = {
+  company_account: 'company_account',
+  owner_account: 'owner_account',
+} as const;
+
+export interface PurchaseReceiptPayment {
+  id: number;
+  receiptId: number;
+  paymentKey: string;
+  paymentDate: string;
+  amount: string;
+  paymentSource: PurchaseReceiptPaymentPaymentSource;
+  /** @nullable */
+  paymentReference?: string | null;
+}
+
+export type PurchaseReceiptStatus = typeof PurchaseReceiptStatus[keyof typeof PurchaseReceiptStatus];
+
+
+export const PurchaseReceiptStatus = {
+  draft: 'draft',
+  posted: 'posted',
+  voided: 'voided',
+} as const;
+
+export type PurchaseReceiptPaymentStatus = typeof PurchaseReceiptPaymentStatus[keyof typeof PurchaseReceiptPaymentStatus];
+
+
+export const PurchaseReceiptPaymentStatus = {
+  unpaid: 'unpaid',
+  paid: 'paid',
+  partial: 'partial',
+} as const;
+
+export interface PurchaseReceipt {
+  id: number;
+  receiptNumber: string;
+  vendorName: string;
+  receiptDate: string;
+  amount: string;
+  paidAmount?: string;
+  /** @nullable */
+  paymentReference?: string | null;
+  status: PurchaseReceiptStatus;
+  paymentStatus: PurchaseReceiptPaymentStatus;
+}
+
+export interface ManufacturingInput {
+  /** @minimum 1 */
+  materialProductId: number;
+  /** @minimum 1 */
+  quantity: number;
+}
+
+export interface ManufacturingInputsInput {
+  /** @minItems 1 */
+  lines: ManufacturingInput[];
+}
+
 /**
  * Invalid request
  */

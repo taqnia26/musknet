@@ -4181,3 +4181,438 @@ export const UnlinkInfluencerCouponParams = zod.object({
 export const UnlinkInfluencerCouponResponse = zod.void()
 
 
+export const adminListOpeningBalanceImportsResponseOneIdMultipleOf = 1;
+
+export const adminListOpeningBalanceImportsResponseTwoLineCountMultipleOf = 1;
+
+export const adminListOpeningBalanceImportsResponseTwoMappedCountMultipleOf = 1;
+
+export const adminListOpeningBalanceImportsResponseTwoUnmappedCountMultipleOf = 1;
+
+export const adminListOpeningBalanceImportsResponseTwoLinesItemSourceRowMultipleOf = 1;
+
+export const adminListOpeningBalanceImportsResponseTwoLinesItemOpeningQuantityMin = 0;
+export const adminListOpeningBalanceImportsResponseTwoLinesItemOpeningQuantityMultipleOf = 1;
+
+export const adminListOpeningBalanceImportsResponseTwoLinesItemFullBatchUnitCostMinOne = 0;
+
+export const adminListOpeningBalanceImportsResponseTwoLinesItemFullBatchUnitCostMinTwo = 0;
+
+export const adminListOpeningBalanceImportsResponseTwoLinesItemProductIdMultipleOf = 1;
+
+export const adminListOpeningBalanceImportsResponseTwoLinesItemProvenanceRowMultipleOf = 1;
+
+
+
+export const AdminListOpeningBalanceImportsResponseItem = zod.object({
+  "id": zod.number().multipleOf(adminListOpeningBalanceImportsResponseOneIdMultipleOf),
+  "importKey": zod.string(),
+  "sourceFileName": zod.string(),
+  "sourceSheet": zod.string(),
+  "valuationMethod": zod.enum(['weighted_average']),
+  "status": zod.enum(['draft', 'review', 'approved', 'rejected'])
+}).and(zod.object({
+  "lineCount": zod.number().multipleOf(adminListOpeningBalanceImportsResponseTwoLineCountMultipleOf).optional(),
+  "mappedCount": zod.number().multipleOf(adminListOpeningBalanceImportsResponseTwoMappedCountMultipleOf).optional(),
+  "unmappedCount": zod.number().multipleOf(adminListOpeningBalanceImportsResponseTwoUnmappedCountMultipleOf).optional(),
+  "lines": zod.array(zod.object({
+  "sourceRow": zod.number().min(1).multipleOf(adminListOpeningBalanceImportsResponseTwoLinesItemSourceRowMultipleOf),
+  "sourceLabel": zod.string(),
+  "sourceQuantity": zod.union([zod.string(),zod.number()]).optional(),
+  "openingQuantity": zod.number().min(adminListOpeningBalanceImportsResponseTwoLinesItemOpeningQuantityMin).multipleOf(adminListOpeningBalanceImportsResponseTwoLinesItemOpeningQuantityMultipleOf),
+  "fullBatchUnitCost": zod.union([zod.string().min(adminListOpeningBalanceImportsResponseTwoLinesItemFullBatchUnitCostMinOne),zod.number().min(adminListOpeningBalanceImportsResponseTwoLinesItemFullBatchUnitCostMinTwo)]),
+  "productId": zod.number().multipleOf(adminListOpeningBalanceImportsResponseTwoLinesItemProductIdMultipleOf).nullish(),
+  "mappingNote": zod.string().nullish(),
+  "provenance": zod.object({
+  "file": zod.string(),
+  "sheet": zod.string(),
+  "row": zod.number().multipleOf(adminListOpeningBalanceImportsResponseTwoLinesItemProvenanceRowMultipleOf)
+})
+})).optional()
+}))
+export const AdminListOpeningBalanceImportsResponse = zod.array(AdminListOpeningBalanceImportsResponseItem)
+
+
+
+
+
+export const adminCreateOpeningBalanceImportBodyLinesItemSourceRowMultipleOf = 1;
+
+export const adminCreateOpeningBalanceImportBodyLinesItemOpeningQuantityMin = 0;
+export const adminCreateOpeningBalanceImportBodyLinesItemOpeningQuantityMultipleOf = 1;
+
+export const adminCreateOpeningBalanceImportBodyLinesItemFullBatchUnitCostMinOne = 0;
+
+export const adminCreateOpeningBalanceImportBodyLinesItemFullBatchUnitCostMinTwo = 0;
+
+export const adminCreateOpeningBalanceImportBodyLinesItemProductIdMultipleOf = 1;
+
+export const adminCreateOpeningBalanceImportBodyLinesItemProvenanceRowMultipleOf = 1;
+
+
+
+
+export const AdminCreateOpeningBalanceImportBody = zod.object({
+  "importKey": zod.string().min(1),
+  "sourceFileName": zod.string().min(1),
+  "sourceSheet": zod.string().min(1),
+  "lines": zod.array(zod.object({
+  "sourceRow": zod.number().min(1).multipleOf(adminCreateOpeningBalanceImportBodyLinesItemSourceRowMultipleOf),
+  "sourceLabel": zod.string(),
+  "sourceQuantity": zod.union([zod.string(),zod.number()]).optional(),
+  "openingQuantity": zod.number().min(adminCreateOpeningBalanceImportBodyLinesItemOpeningQuantityMin).multipleOf(adminCreateOpeningBalanceImportBodyLinesItemOpeningQuantityMultipleOf),
+  "fullBatchUnitCost": zod.union([zod.string().min(adminCreateOpeningBalanceImportBodyLinesItemFullBatchUnitCostMinOne),zod.number().min(adminCreateOpeningBalanceImportBodyLinesItemFullBatchUnitCostMinTwo)]),
+  "productId": zod.number().multipleOf(adminCreateOpeningBalanceImportBodyLinesItemProductIdMultipleOf).nullish(),
+  "mappingNote": zod.string().nullish(),
+  "provenance": zod.object({
+  "file": zod.string(),
+  "sheet": zod.string(),
+  "row": zod.number().multipleOf(adminCreateOpeningBalanceImportBodyLinesItemProvenanceRowMultipleOf)
+})
+})).min(1)
+})
+
+export const adminCreateOpeningBalanceImportResponseIdMultipleOf = 1;
+
+
+
+export const AdminCreateOpeningBalanceImportResponse = zod.object({
+  "id": zod.number().multipleOf(adminCreateOpeningBalanceImportResponseIdMultipleOf),
+  "importKey": zod.string(),
+  "sourceFileName": zod.string(),
+  "sourceSheet": zod.string(),
+  "valuationMethod": zod.enum(['weighted_average']),
+  "status": zod.enum(['draft', 'review', 'approved', 'rejected'])
+})
+
+
+export const adminCreatePurchaseReceiptBodyPurchaseIdMultipleOf = 1;
+
+export const adminCreatePurchaseReceiptBodyPaidAmountMinOne = 0;
+
+export const adminCreatePurchaseReceiptBodyPaidAmountMinTwo = 0;
+
+export const adminCreatePurchaseReceiptBodyLinesItemProductIdMultipleOf = 1;
+
+export const adminCreatePurchaseReceiptBodyLinesItemQuantityMultipleOf = 1;
+
+export const adminCreatePurchaseReceiptBodyLinesItemUnitCostMinOne = 0;
+
+export const adminCreatePurchaseReceiptBodyLinesItemUnitCostMinTwo = 0;
+
+
+
+
+export const AdminCreatePurchaseReceiptBody = zod.object({
+  "receiptNumber": zod.string(),
+  "vendorName": zod.string(),
+  "vendorReference": zod.string().nullish(),
+  "purchaseId": zod.number().multipleOf(adminCreatePurchaseReceiptBodyPurchaseIdMultipleOf).nullish(),
+  "receiptDate": zod.coerce.date(),
+  "paymentStatus": zod.enum(['unpaid', 'paid', 'partial']).optional(),
+  "paymentSource": zod.enum(['company_account', 'owner_account']).optional(),
+  "paidAmount": zod.union([zod.string().min(adminCreatePurchaseReceiptBodyPaidAmountMinOne),zod.number().min(adminCreatePurchaseReceiptBodyPaidAmountMinTwo)]).optional(),
+  "paymentReference": zod.string().nullish(),
+  "lines": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminCreatePurchaseReceiptBodyLinesItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(adminCreatePurchaseReceiptBodyLinesItemQuantityMultipleOf),
+  "unitCost": zod.union([zod.string().min(adminCreatePurchaseReceiptBodyLinesItemUnitCostMinOne),zod.number().min(adminCreatePurchaseReceiptBodyLinesItemUnitCostMinTwo)])
+})).min(1)
+})
+
+export const adminCreatePurchaseReceiptResponseIdMultipleOf = 1;
+
+
+
+export const AdminCreatePurchaseReceiptResponse = zod.object({
+  "id": zod.number().multipleOf(adminCreatePurchaseReceiptResponseIdMultipleOf),
+  "receiptNumber": zod.string(),
+  "vendorName": zod.string(),
+  "receiptDate": zod.coerce.date(),
+  "amount": zod.string(),
+  "paidAmount": zod.string().optional(),
+  "paymentReference": zod.string().nullish(),
+  "status": zod.enum(['draft', 'posted', 'voided']),
+  "paymentStatus": zod.enum(['unpaid', 'paid', 'partial'])
+})
+
+
+export const adminListPurchaseReceiptsResponseIdMultipleOf = 1;
+
+
+
+export const AdminListPurchaseReceiptsResponseItem = zod.object({
+  "id": zod.number().multipleOf(adminListPurchaseReceiptsResponseIdMultipleOf),
+  "receiptNumber": zod.string(),
+  "vendorName": zod.string(),
+  "receiptDate": zod.coerce.date(),
+  "amount": zod.string(),
+  "paidAmount": zod.string().optional(),
+  "paymentReference": zod.string().nullish(),
+  "status": zod.enum(['draft', 'posted', 'voided']),
+  "paymentStatus": zod.enum(['unpaid', 'paid', 'partial'])
+})
+export const AdminListPurchaseReceiptsResponse = zod.array(AdminListPurchaseReceiptsResponseItem)
+
+
+export const AdminCreatePurchaseReceiptPaymentParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+
+export const adminCreatePurchaseReceiptPaymentBodyAmountMinOne = 0;
+
+export const adminCreatePurchaseReceiptPaymentBodyAmountMinTwo = 0;
+
+
+
+export const AdminCreatePurchaseReceiptPaymentBody = zod.object({
+  "paymentKey": zod.string().min(1),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.union([zod.string().min(adminCreatePurchaseReceiptPaymentBodyAmountMinOne),zod.number().min(adminCreatePurchaseReceiptPaymentBodyAmountMinTwo)]),
+  "paymentSource": zod.enum(['company_account', 'owner_account']),
+  "paymentReference": zod.string().nullish()
+})
+
+export const adminCreatePurchaseReceiptPaymentResponseIdMultipleOf = 1;
+
+export const adminCreatePurchaseReceiptPaymentResponseReceiptIdMultipleOf = 1;
+
+
+
+export const AdminCreatePurchaseReceiptPaymentResponse = zod.object({
+  "id": zod.number().multipleOf(adminCreatePurchaseReceiptPaymentResponseIdMultipleOf),
+  "receiptId": zod.number().multipleOf(adminCreatePurchaseReceiptPaymentResponseReceiptIdMultipleOf),
+  "paymentKey": zod.string(),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.string(),
+  "paymentSource": zod.enum(['company_account', 'owner_account']),
+  "paymentReference": zod.string().nullish()
+})
+
+
+export const AdminPostPurchaseReceiptParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminPostPurchaseReceiptResponseIdMultipleOf = 1;
+
+
+
+export const AdminPostPurchaseReceiptResponse = zod.object({
+  "id": zod.number().multipleOf(adminPostPurchaseReceiptResponseIdMultipleOf),
+  "receiptNumber": zod.string(),
+  "vendorName": zod.string(),
+  "receiptDate": zod.coerce.date(),
+  "amount": zod.string(),
+  "paidAmount": zod.string().optional(),
+  "paymentReference": zod.string().nullish(),
+  "status": zod.enum(['draft', 'posted', 'voided']),
+  "paymentStatus": zod.enum(['unpaid', 'paid', 'partial'])
+})
+
+
+export const AdminAddManufacturingInputsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminAddManufacturingInputsBodyLinesItemMaterialProductIdMultipleOf = 1;
+
+export const adminAddManufacturingInputsBodyLinesItemQuantityMultipleOf = 1;
+
+
+
+
+export const AdminAddManufacturingInputsBody = zod.object({
+  "lines": zod.array(zod.object({
+  "materialProductId": zod.number().min(1).multipleOf(adminAddManufacturingInputsBodyLinesItemMaterialProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(adminAddManufacturingInputsBodyLinesItemQuantityMultipleOf)
+})).min(1)
+})
+
+export const adminAddManufacturingInputsResponseMaterialProductIdMultipleOf = 1;
+
+export const adminAddManufacturingInputsResponseQuantityMultipleOf = 1;
+
+
+
+export const AdminAddManufacturingInputsResponseItem = zod.object({
+  "materialProductId": zod.number().min(1).multipleOf(adminAddManufacturingInputsResponseMaterialProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(adminAddManufacturingInputsResponseQuantityMultipleOf)
+})
+export const AdminAddManufacturingInputsResponse = zod.array(AdminAddManufacturingInputsResponseItem)
+
+
+export const AdminReviewOpeningBalanceImportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminReviewOpeningBalanceImportResponseIdMultipleOf = 1;
+
+
+
+export const AdminReviewOpeningBalanceImportResponse = zod.object({
+  "id": zod.number().multipleOf(adminReviewOpeningBalanceImportResponseIdMultipleOf),
+  "importKey": zod.string(),
+  "sourceFileName": zod.string(),
+  "sourceSheet": zod.string(),
+  "valuationMethod": zod.enum(['weighted_average']),
+  "status": zod.enum(['draft', 'review', 'approved', 'rejected'])
+})
+
+
+export const adminMapOpeningBalanceLinePathLineIdMultipleOf = 1;
+
+
+
+export const AdminMapOpeningBalanceLineParams = zod.object({
+  "id": zod.coerce.number(),
+  "lineId": zod.coerce.number().multipleOf(adminMapOpeningBalanceLinePathLineIdMultipleOf)
+})
+
+export const adminMapOpeningBalanceLineBodyProductIdMultipleOf = 1;
+
+
+
+export const AdminMapOpeningBalanceLineBody = zod.object({
+  "productId": zod.number().multipleOf(adminMapOpeningBalanceLineBodyProductIdMultipleOf).nullish(),
+  "mappingNote": zod.string().nullish()
+})
+
+export const adminMapOpeningBalanceLineResponseSourceRowMultipleOf = 1;
+
+export const adminMapOpeningBalanceLineResponseOpeningQuantityMin = 0;
+export const adminMapOpeningBalanceLineResponseOpeningQuantityMultipleOf = 1;
+
+export const adminMapOpeningBalanceLineResponseFullBatchUnitCostMinOne = 0;
+
+export const adminMapOpeningBalanceLineResponseFullBatchUnitCostMinTwo = 0;
+
+export const adminMapOpeningBalanceLineResponseProductIdMultipleOf = 1;
+
+export const adminMapOpeningBalanceLineResponseProvenanceRowMultipleOf = 1;
+
+
+
+export const AdminMapOpeningBalanceLineResponse = zod.object({
+  "sourceRow": zod.number().min(1).multipleOf(adminMapOpeningBalanceLineResponseSourceRowMultipleOf),
+  "sourceLabel": zod.string(),
+  "sourceQuantity": zod.union([zod.string(),zod.number()]).optional(),
+  "openingQuantity": zod.number().min(adminMapOpeningBalanceLineResponseOpeningQuantityMin).multipleOf(adminMapOpeningBalanceLineResponseOpeningQuantityMultipleOf),
+  "fullBatchUnitCost": zod.union([zod.string().min(adminMapOpeningBalanceLineResponseFullBatchUnitCostMinOne),zod.number().min(adminMapOpeningBalanceLineResponseFullBatchUnitCostMinTwo)]),
+  "productId": zod.number().multipleOf(adminMapOpeningBalanceLineResponseProductIdMultipleOf).nullish(),
+  "mappingNote": zod.string().nullish(),
+  "provenance": zod.object({
+  "file": zod.string(),
+  "sheet": zod.string(),
+  "row": zod.number().multipleOf(adminMapOpeningBalanceLineResponseProvenanceRowMultipleOf)
+})
+})
+
+
+export const AdminApproveOpeningBalanceImportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminApproveOpeningBalanceImportBody = zod.object({
+  "entryDate": zod.coerce.date()
+})
+
+export const adminApproveOpeningBalanceImportResponseIdMultipleOf = 1;
+
+
+
+export const AdminApproveOpeningBalanceImportResponse = zod.object({
+  "id": zod.number().multipleOf(adminApproveOpeningBalanceImportResponseIdMultipleOf),
+  "importKey": zod.string(),
+  "sourceFileName": zod.string(),
+  "sourceSheet": zod.string(),
+  "valuationMethod": zod.enum(['weighted_average']),
+  "status": zod.enum(['draft', 'review', 'approved', 'rejected'])
+})
+
+
+export const getOwnerOperationsSummaryResponseOpeningBalanceOneIdMultipleOf = 1;
+
+
+
+export const GetOwnerOperationsSummaryResponse = zod.object({
+  "inventory": zod.object({
+  "quantity": zod.number().optional(),
+  "value": zod.string().optional()
+}),
+  "events": zod.object({
+  "total": zod.number().optional(),
+  "posted": zod.number().optional(),
+  "pending": zod.number().optional()
+}),
+  "openingBalance": zod.object({
+  "id": zod.number().multipleOf(getOwnerOperationsSummaryResponseOpeningBalanceOneIdMultipleOf),
+  "importKey": zod.string(),
+  "sourceFileName": zod.string(),
+  "sourceSheet": zod.string(),
+  "valuationMethod": zod.enum(['weighted_average']),
+  "status": zod.enum(['draft', 'review', 'approved', 'rejected'])
+}).nullable()
+})
+
+
+export const getOwnerOpeningBalanceReconciliationPathIdMultipleOf = 1;
+
+
+
+export const GetOwnerOpeningBalanceReconciliationParams = zod.object({
+  "id": zod.coerce.number().min(1).multipleOf(getOwnerOpeningBalanceReconciliationPathIdMultipleOf)
+})
+
+export const getOwnerOpeningBalanceReconciliationResponseOneIdMultipleOf = 1;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoLineCountMultipleOf = 1;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoMappedCountMultipleOf = 1;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoUnmappedCountMultipleOf = 1;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemSourceRowMultipleOf = 1;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemOpeningQuantityMin = 0;
+export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemOpeningQuantityMultipleOf = 1;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemFullBatchUnitCostMinOne = 0;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemFullBatchUnitCostMinTwo = 0;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemProductIdMultipleOf = 1;
+
+export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemProvenanceRowMultipleOf = 1;
+
+
+
+export const GetOwnerOpeningBalanceReconciliationResponse = zod.object({
+  "id": zod.number().multipleOf(getOwnerOpeningBalanceReconciliationResponseOneIdMultipleOf),
+  "importKey": zod.string(),
+  "sourceFileName": zod.string(),
+  "sourceSheet": zod.string(),
+  "valuationMethod": zod.enum(['weighted_average']),
+  "status": zod.enum(['draft', 'review', 'approved', 'rejected'])
+}).and(zod.object({
+  "lineCount": zod.number().multipleOf(getOwnerOpeningBalanceReconciliationResponseTwoLineCountMultipleOf).optional(),
+  "mappedCount": zod.number().multipleOf(getOwnerOpeningBalanceReconciliationResponseTwoMappedCountMultipleOf).optional(),
+  "unmappedCount": zod.number().multipleOf(getOwnerOpeningBalanceReconciliationResponseTwoUnmappedCountMultipleOf).optional(),
+  "lines": zod.array(zod.object({
+  "sourceRow": zod.number().min(1).multipleOf(getOwnerOpeningBalanceReconciliationResponseTwoLinesItemSourceRowMultipleOf),
+  "sourceLabel": zod.string(),
+  "sourceQuantity": zod.union([zod.string(),zod.number()]).optional(),
+  "openingQuantity": zod.number().min(getOwnerOpeningBalanceReconciliationResponseTwoLinesItemOpeningQuantityMin).multipleOf(getOwnerOpeningBalanceReconciliationResponseTwoLinesItemOpeningQuantityMultipleOf),
+  "fullBatchUnitCost": zod.union([zod.string().min(getOwnerOpeningBalanceReconciliationResponseTwoLinesItemFullBatchUnitCostMinOne),zod.number().min(getOwnerOpeningBalanceReconciliationResponseTwoLinesItemFullBatchUnitCostMinTwo)]),
+  "productId": zod.number().multipleOf(getOwnerOpeningBalanceReconciliationResponseTwoLinesItemProductIdMultipleOf).nullish(),
+  "mappingNote": zod.string().nullish(),
+  "provenance": zod.object({
+  "file": zod.string(),
+  "sheet": zod.string(),
+  "row": zod.number().multipleOf(getOwnerOpeningBalanceReconciliationResponseTwoLinesItemProvenanceRowMultipleOf)
+})
+})).optional()
+}))
+
+

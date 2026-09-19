@@ -67,7 +67,7 @@ export function OwnerWorkbookSection({ title, sheetNames }: WorkbookSectionProps
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">{title}</h1>
-        <p className="mt-2 text-sm text-[#85817a] dark:text-[#8f9196]">البيانات معروضة من أوراق ملف Excel كما وردت، دون إنشاء بنود إضافية.</p>
+          <p className="mt-2 text-sm text-[#85817a] dark:text-[#8f9196]">مرجع مصدر خام: البيانات معروضة من أوراق ملف Excel كما وردت، دون إنشاء بنود إضافية. · Raw source reference: no additional entries are inferred.</p>
       </div>
 
       {sheetNames.length > 1 && (

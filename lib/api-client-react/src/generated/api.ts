@@ -134,8 +134,16 @@ import type {
   ManufacturingBatch,
   ManufacturingBatchInput,
   ManufacturingBatchUpdate,
+  ManufacturingInput,
+  ManufacturingInputsInput,
   MonthlyFinanceMetrics,
   NotFoundResponse,
+  OpeningBalanceApprovalInput,
+  OpeningBalanceImport,
+  OpeningBalanceImportInput,
+  OpeningBalanceLineInput,
+  OpeningBalanceMappingInput,
+  OpeningBalanceReconciliation,
   Order,
   OrderInput,
   OtpRequest,
@@ -145,6 +153,7 @@ import type {
   OwnerCredentialsInput,
   OwnerCredentialsStatus,
   OwnerLoginInput,
+  OwnerOperationsSummary,
   OwnerSession,
   OwnerSessionNotification,
   OwnerUser,
@@ -158,6 +167,10 @@ import type {
   PurchaseInput,
   PurchaseInvoiceUploadInput,
   PurchaseInvoiceUploadResponse,
+  PurchaseReceipt,
+  PurchaseReceiptInput,
+  PurchaseReceiptPayment,
+  PurchaseReceiptPaymentInput,
   RateLimitedResponse,
   ServiceUnavailableResponse,
   SiteContent,
@@ -10645,4 +10658,814 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getUnlinkInfluencerCouponMutationOptions(options));
     }
+
+export const getAdminListOpeningBalanceImportsUrl = () => {
+
+
+
+
+  return `/api/admin/operations/opening-balances`
+}
+
+export const adminListOpeningBalanceImports = async ( options?: Parameters<typeof customFetch>[1]): Promise<OpeningBalanceReconciliation[]> => {
+
+  return customFetch<OpeningBalanceReconciliation[]>(getAdminListOpeningBalanceImportsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListOpeningBalanceImportsQueryKey = () => {
+    return [
+    `/api/admin/operations/opening-balances`
+    ] as const;
+    }
+
+
+export const getAdminListOpeningBalanceImportsQueryOptions = <TData = Awaited<ReturnType<typeof adminListOpeningBalanceImports>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListOpeningBalanceImports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListOpeningBalanceImportsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListOpeningBalanceImports>>> = ({ signal }) => adminListOpeningBalanceImports({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListOpeningBalanceImports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListOpeningBalanceImportsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListOpeningBalanceImports>>>
+export type AdminListOpeningBalanceImportsQueryError = ErrorType<unknown>
+
+
+
+export function useAdminListOpeningBalanceImports<TData = Awaited<ReturnType<typeof adminListOpeningBalanceImports>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListOpeningBalanceImports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListOpeningBalanceImportsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateOpeningBalanceImportUrl = () => {
+
+
+
+
+  return `/api/admin/operations/opening-balances`
+}
+
+export const adminCreateOpeningBalanceImport = async (openingBalanceImportInput: OpeningBalanceImportInput, options?: Parameters<typeof customFetch>[1]): Promise<OpeningBalanceImport> => {
+
+  return customFetch<OpeningBalanceImport>(getAdminCreateOpeningBalanceImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(openingBalanceImportInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateOpeningBalanceImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateOpeningBalanceImport>>, TError,{data: BodyType<OpeningBalanceImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateOpeningBalanceImport>>, TError,{data: BodyType<OpeningBalanceImportInput>}, TContext> => {
+
+const mutationKey = ['adminCreateOpeningBalanceImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateOpeningBalanceImport>>, {data: BodyType<OpeningBalanceImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateOpeningBalanceImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateOpeningBalanceImportMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateOpeningBalanceImport>>>
+    export type AdminCreateOpeningBalanceImportMutationBody = BodyType<OpeningBalanceImportInput>
+    export type AdminCreateOpeningBalanceImportMutationError = ErrorType<unknown>
+
+    export const useAdminCreateOpeningBalanceImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateOpeningBalanceImport>>, TError,{data: BodyType<OpeningBalanceImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateOpeningBalanceImport>>,
+        TError,
+        {data: BodyType<OpeningBalanceImportInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateOpeningBalanceImportMutationOptions(options));
+    }
+
+export const getAdminCreatePurchaseReceiptUrl = () => {
+
+
+
+
+  return `/api/admin/finance/purchase-receipts`
+}
+
+export const adminCreatePurchaseReceipt = async (purchaseReceiptInput: PurchaseReceiptInput, options?: Parameters<typeof customFetch>[1]): Promise<PurchaseReceipt> => {
+
+  return customFetch<PurchaseReceipt>(getAdminCreatePurchaseReceiptUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(purchaseReceiptInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreatePurchaseReceiptMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreatePurchaseReceipt>>, TError,{data: BodyType<PurchaseReceiptInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreatePurchaseReceipt>>, TError,{data: BodyType<PurchaseReceiptInput>}, TContext> => {
+
+const mutationKey = ['adminCreatePurchaseReceipt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreatePurchaseReceipt>>, {data: BodyType<PurchaseReceiptInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreatePurchaseReceipt(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreatePurchaseReceiptMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreatePurchaseReceipt>>>
+    export type AdminCreatePurchaseReceiptMutationBody = BodyType<PurchaseReceiptInput>
+    export type AdminCreatePurchaseReceiptMutationError = ErrorType<unknown>
+
+    export const useAdminCreatePurchaseReceipt = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreatePurchaseReceipt>>, TError,{data: BodyType<PurchaseReceiptInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreatePurchaseReceipt>>,
+        TError,
+        {data: BodyType<PurchaseReceiptInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreatePurchaseReceiptMutationOptions(options));
+    }
+
+export const getAdminListPurchaseReceiptsUrl = () => {
+
+
+
+
+  return `/api/admin/finance/purchase-receipts`
+}
+
+export const adminListPurchaseReceipts = async ( options?: Parameters<typeof customFetch>[1]): Promise<PurchaseReceipt[]> => {
+
+  return customFetch<PurchaseReceipt[]>(getAdminListPurchaseReceiptsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListPurchaseReceiptsQueryKey = () => {
+    return [
+    `/api/admin/finance/purchase-receipts`
+    ] as const;
+    }
+
+
+export const getAdminListPurchaseReceiptsQueryOptions = <TData = Awaited<ReturnType<typeof adminListPurchaseReceipts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListPurchaseReceipts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListPurchaseReceiptsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListPurchaseReceipts>>> = ({ signal }) => adminListPurchaseReceipts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListPurchaseReceipts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListPurchaseReceiptsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListPurchaseReceipts>>>
+export type AdminListPurchaseReceiptsQueryError = ErrorType<unknown>
+
+
+
+export function useAdminListPurchaseReceipts<TData = Awaited<ReturnType<typeof adminListPurchaseReceipts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListPurchaseReceipts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListPurchaseReceiptsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreatePurchaseReceiptPaymentUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/finance/purchase-receipts/${id}/payments`
+}
+
+export const adminCreatePurchaseReceiptPayment = async (id: number,
+    purchaseReceiptPaymentInput: PurchaseReceiptPaymentInput, options?: Parameters<typeof customFetch>[1]): Promise<PurchaseReceiptPayment> => {
+
+  return customFetch<PurchaseReceiptPayment>(getAdminCreatePurchaseReceiptPaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(purchaseReceiptPaymentInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreatePurchaseReceiptPaymentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreatePurchaseReceiptPayment>>, TError,{id: number;data: BodyType<PurchaseReceiptPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreatePurchaseReceiptPayment>>, TError,{id: number;data: BodyType<PurchaseReceiptPaymentInput>}, TContext> => {
+
+const mutationKey = ['adminCreatePurchaseReceiptPayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreatePurchaseReceiptPayment>>, {id: number;data: BodyType<PurchaseReceiptPaymentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminCreatePurchaseReceiptPayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreatePurchaseReceiptPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreatePurchaseReceiptPayment>>>
+    export type AdminCreatePurchaseReceiptPaymentMutationBody = BodyType<PurchaseReceiptPaymentInput>
+    export type AdminCreatePurchaseReceiptPaymentMutationError = ErrorType<unknown>
+
+    export const useAdminCreatePurchaseReceiptPayment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreatePurchaseReceiptPayment>>, TError,{id: number;data: BodyType<PurchaseReceiptPaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreatePurchaseReceiptPayment>>,
+        TError,
+        {id: number;data: BodyType<PurchaseReceiptPaymentInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreatePurchaseReceiptPaymentMutationOptions(options));
+    }
+
+export const getAdminPostPurchaseReceiptUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/finance/purchase-receipts/${id}/post`
+}
+
+export const adminPostPurchaseReceipt = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<PurchaseReceipt> => {
+
+  return customFetch<PurchaseReceipt>(getAdminPostPurchaseReceiptUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminPostPurchaseReceiptMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPostPurchaseReceipt>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminPostPurchaseReceipt>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminPostPurchaseReceipt'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminPostPurchaseReceipt>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminPostPurchaseReceipt(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminPostPurchaseReceiptMutationResult = NonNullable<Awaited<ReturnType<typeof adminPostPurchaseReceipt>>>
+
+    export type AdminPostPurchaseReceiptMutationError = ErrorType<unknown>
+
+    export const useAdminPostPurchaseReceipt = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPostPurchaseReceipt>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminPostPurchaseReceipt>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminPostPurchaseReceiptMutationOptions(options));
+    }
+
+export const getAdminAddManufacturingInputsUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/manufacturing/batches/${id}/inputs`
+}
+
+export const adminAddManufacturingInputs = async (id: number,
+    manufacturingInputsInput: ManufacturingInputsInput, options?: Parameters<typeof customFetch>[1]): Promise<ManufacturingInput[]> => {
+
+  return customFetch<ManufacturingInput[]>(getAdminAddManufacturingInputsUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(manufacturingInputsInput)
+  }
+);}
+
+
+
+
+
+export const getAdminAddManufacturingInputsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAddManufacturingInputs>>, TError,{id: number;data: BodyType<ManufacturingInputsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminAddManufacturingInputs>>, TError,{id: number;data: BodyType<ManufacturingInputsInput>}, TContext> => {
+
+const mutationKey = ['adminAddManufacturingInputs'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminAddManufacturingInputs>>, {id: number;data: BodyType<ManufacturingInputsInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminAddManufacturingInputs(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminAddManufacturingInputsMutationResult = NonNullable<Awaited<ReturnType<typeof adminAddManufacturingInputs>>>
+    export type AdminAddManufacturingInputsMutationBody = BodyType<ManufacturingInputsInput>
+    export type AdminAddManufacturingInputsMutationError = ErrorType<unknown>
+
+    export const useAdminAddManufacturingInputs = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAddManufacturingInputs>>, TError,{id: number;data: BodyType<ManufacturingInputsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminAddManufacturingInputs>>,
+        TError,
+        {id: number;data: BodyType<ManufacturingInputsInput>},
+        TContext
+      > => {
+      return useMutation(getAdminAddManufacturingInputsMutationOptions(options));
+    }
+
+export const getAdminReviewOpeningBalanceImportUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/operations/opening-balances/${id}/review`
+}
+
+export const adminReviewOpeningBalanceImport = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<OpeningBalanceImport> => {
+
+  return customFetch<OpeningBalanceImport>(getAdminReviewOpeningBalanceImportUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminReviewOpeningBalanceImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReviewOpeningBalanceImport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminReviewOpeningBalanceImport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminReviewOpeningBalanceImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminReviewOpeningBalanceImport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminReviewOpeningBalanceImport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminReviewOpeningBalanceImportMutationResult = NonNullable<Awaited<ReturnType<typeof adminReviewOpeningBalanceImport>>>
+
+    export type AdminReviewOpeningBalanceImportMutationError = ErrorType<unknown>
+
+    export const useAdminReviewOpeningBalanceImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminReviewOpeningBalanceImport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminReviewOpeningBalanceImport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminReviewOpeningBalanceImportMutationOptions(options));
+    }
+
+export const getAdminMapOpeningBalanceLineUrl = (id: number,
+    lineId: number,) => {
+
+
+
+
+  return `/api/admin/operations/opening-balances/${id}/lines/${lineId}`
+}
+
+export const adminMapOpeningBalanceLine = async (id: number,
+    lineId: number,
+    openingBalanceMappingInput: OpeningBalanceMappingInput, options?: Parameters<typeof customFetch>[1]): Promise<OpeningBalanceLineInput> => {
+
+  return customFetch<OpeningBalanceLineInput>(getAdminMapOpeningBalanceLineUrl(id,lineId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(openingBalanceMappingInput)
+  }
+);}
+
+
+
+
+
+export const getAdminMapOpeningBalanceLineMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminMapOpeningBalanceLine>>, TError,{id: number;lineId: number;data: BodyType<OpeningBalanceMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminMapOpeningBalanceLine>>, TError,{id: number;lineId: number;data: BodyType<OpeningBalanceMappingInput>}, TContext> => {
+
+const mutationKey = ['adminMapOpeningBalanceLine'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminMapOpeningBalanceLine>>, {id: number;lineId: number;data: BodyType<OpeningBalanceMappingInput>}> = (props) => {
+          const {id,lineId,data} = props ?? {};
+
+          return  adminMapOpeningBalanceLine(id,lineId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminMapOpeningBalanceLineMutationResult = NonNullable<Awaited<ReturnType<typeof adminMapOpeningBalanceLine>>>
+    export type AdminMapOpeningBalanceLineMutationBody = BodyType<OpeningBalanceMappingInput>
+    export type AdminMapOpeningBalanceLineMutationError = ErrorType<unknown>
+
+    export const useAdminMapOpeningBalanceLine = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminMapOpeningBalanceLine>>, TError,{id: number;lineId: number;data: BodyType<OpeningBalanceMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminMapOpeningBalanceLine>>,
+        TError,
+        {id: number;lineId: number;data: BodyType<OpeningBalanceMappingInput>},
+        TContext
+      > => {
+      return useMutation(getAdminMapOpeningBalanceLineMutationOptions(options));
+    }
+
+export const getAdminApproveOpeningBalanceImportUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/operations/opening-balances/${id}/approve`
+}
+
+export const adminApproveOpeningBalanceImport = async (id: number,
+    openingBalanceApprovalInput: OpeningBalanceApprovalInput, options?: Parameters<typeof customFetch>[1]): Promise<OpeningBalanceImport> => {
+
+  return customFetch<OpeningBalanceImport>(getAdminApproveOpeningBalanceImportUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(openingBalanceApprovalInput)
+  }
+);}
+
+
+
+
+
+export const getAdminApproveOpeningBalanceImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminApproveOpeningBalanceImport>>, TError,{id: number;data: BodyType<OpeningBalanceApprovalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminApproveOpeningBalanceImport>>, TError,{id: number;data: BodyType<OpeningBalanceApprovalInput>}, TContext> => {
+
+const mutationKey = ['adminApproveOpeningBalanceImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminApproveOpeningBalanceImport>>, {id: number;data: BodyType<OpeningBalanceApprovalInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminApproveOpeningBalanceImport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminApproveOpeningBalanceImportMutationResult = NonNullable<Awaited<ReturnType<typeof adminApproveOpeningBalanceImport>>>
+    export type AdminApproveOpeningBalanceImportMutationBody = BodyType<OpeningBalanceApprovalInput>
+    export type AdminApproveOpeningBalanceImportMutationError = ErrorType<unknown>
+
+    export const useAdminApproveOpeningBalanceImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminApproveOpeningBalanceImport>>, TError,{id: number;data: BodyType<OpeningBalanceApprovalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminApproveOpeningBalanceImport>>,
+        TError,
+        {id: number;data: BodyType<OpeningBalanceApprovalInput>},
+        TContext
+      > => {
+      return useMutation(getAdminApproveOpeningBalanceImportMutationOptions(options));
+    }
+
+export const getGetOwnerOperationsSummaryUrl = () => {
+
+
+
+
+  return `/api/owner/operations/summary`
+}
+
+export const getOwnerOperationsSummary = async ( options?: Parameters<typeof customFetch>[1]): Promise<OwnerOperationsSummary> => {
+
+  return customFetch<OwnerOperationsSummary>(getGetOwnerOperationsSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOwnerOperationsSummaryQueryKey = () => {
+    return [
+    `/api/owner/operations/summary`
+    ] as const;
+    }
+
+
+export const getGetOwnerOperationsSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getOwnerOperationsSummary>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerOperationsSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOwnerOperationsSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwnerOperationsSummary>>> = ({ signal }) => getOwnerOperationsSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOwnerOperationsSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOwnerOperationsSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getOwnerOperationsSummary>>>
+export type GetOwnerOperationsSummaryQueryError = ErrorType<unknown>
+
+
+
+export function useGetOwnerOperationsSummary<TData = Awaited<ReturnType<typeof getOwnerOperationsSummary>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerOperationsSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOwnerOperationsSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetOwnerOpeningBalanceReconciliationUrl = (id: number,) => {
+
+
+
+
+  return `/api/owner/operations/opening-balances/${id}`
+}
+
+export const getOwnerOpeningBalanceReconciliation = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<OpeningBalanceReconciliation> => {
+
+  return customFetch<OpeningBalanceReconciliation>(getGetOwnerOpeningBalanceReconciliationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOwnerOpeningBalanceReconciliationQueryKey = (id: number,) => {
+    return [
+    `/api/owner/operations/opening-balances/${id}`
+    ] as const;
+    }
+
+
+export const getGetOwnerOpeningBalanceReconciliationQueryOptions = <TData = Awaited<ReturnType<typeof getOwnerOpeningBalanceReconciliation>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerOpeningBalanceReconciliation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOwnerOpeningBalanceReconciliationQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOwnerOpeningBalanceReconciliation>>> = ({ signal }) => getOwnerOpeningBalanceReconciliation(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOwnerOpeningBalanceReconciliation>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOwnerOpeningBalanceReconciliationQueryResult = NonNullable<Awaited<ReturnType<typeof getOwnerOpeningBalanceReconciliation>>>
+export type GetOwnerOpeningBalanceReconciliationQueryError = ErrorType<unknown>
+
+
+
+export function useGetOwnerOpeningBalanceReconciliation<TData = Awaited<ReturnType<typeof getOwnerOpeningBalanceReconciliation>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOwnerOpeningBalanceReconciliation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOwnerOpeningBalanceReconciliationQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

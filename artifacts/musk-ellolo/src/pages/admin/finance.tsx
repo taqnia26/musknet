@@ -26,6 +26,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart } from 'recharts';
 import { useLocation } from 'wouter';
+import { PurchaseReceiptForm } from '@/components/admin/purchase-receipt-form';
 
 function OverviewTab() {
   const { t, lang } = useLanguage();
@@ -324,7 +325,7 @@ export default function AdminFinance() {
   const { data: currentUser } = useGetAdminMe();
   const canEdit = hasPermission(currentUser, 'finance', 'edit');
   const canDelete = hasPermission(currentUser, 'finance', 'delete');
-  const initialTab = location.endsWith('/expenses') ? 'expenses' : location.endsWith('/reports') ? 'monthly' : 'overview';
+  const initialTab = location.endsWith('/expenses') ? 'expenses' : location.endsWith('/reports') ? 'monthly' : location.endsWith('/purchases') ? 'purchases' : 'overview';
 
   return (
     <div className="space-y-6">
@@ -334,14 +335,16 @@ export default function AdminFinance() {
       </div>
 
       <Tabs key={initialTab} defaultValue={initialTab} className="w-full">
-        <TabsList className="grid grid-cols-3 lg:w-[450px]">
+        <TabsList className="grid grid-cols-4 lg:w-[600px]">
           <TabsTrigger value="overview">{t('نظرة عامة', 'Overview')}</TabsTrigger>
           <TabsTrigger value="expenses">{t('المصروفات', 'Expenses')}</TabsTrigger>
           <TabsTrigger value="monthly">{t('تقارير شهرية', 'Monthly')}</TabsTrigger>
+          <TabsTrigger value="purchases">{t('المشتريات', 'Purchases')}</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><OverviewTab /></TabsContent>
         <TabsContent value="expenses"><ExpensesTab canEdit={canEdit} canDelete={canDelete} /></TabsContent>
         <TabsContent value="monthly"><MonthlyTab /></TabsContent>
+        <TabsContent value="purchases"><PurchaseReceiptForm /></TabsContent>
       </Tabs>
     </div>
   );
