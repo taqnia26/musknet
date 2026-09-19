@@ -6,6 +6,7 @@
 - [Lazy video request tests](lazy-video-request-tests.md) — currentSrc can be selected without a fetch; assert actual requests and readyState when testing preload="none".
 - [Integration readiness states](integration-readiness-states.md) — distinguish saved setup from a verified live connection, and never persist provider secrets in app tables.
 - [Numeric query literals](numeric-query-literals.md) — generated Zod literal unions reject Express query strings unless values are normalized before parsing.
+- [OpenAPI integer codegen](openapi-integer-codegen.md) — model integer responses as number + multipleOf 1 until generated Zod stops emitting unsupported z.int().
 - [Styled Excel rows](styled-excel-rows.md) — Excel row ranges can include many formatted but valueless rows; report scanned, populated, and unique counts separately.
 - [Ledger totals after API tests](ledger-totals-after-api-tests.md) — integration tests can change development ledger totals; recalculate immediately before and after accounting imports.
 - [PDFKit bundle runtime helpers](pdfkit-bundle-runtime-helpers.md) — bundled PDFKit/fontkit servers must declare @swc/helpers as a direct runtime dependency.

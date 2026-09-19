@@ -2015,14 +2015,54 @@ export type InfluencerInput = InfluencerLogin & {
   commissionRate?: number;
 };
 
-export type InfluencerDashboardSummary = { [key: string]: unknown };
-
 export type InfluencerDashboardCodesItem = { [key: string]: unknown };
 
 export type InfluencerDashboardOrdersItem = { [key: string]: unknown };
 
+export interface InfluencerDashboardRange {
+  from: string;
+  to: string;
+}
+
+export interface InfluencerDashboardSummary {
+  visits: number;
+  attributedPaidOrders: number;
+  sales: number;
+  commission: number;
+  conversionRate: number;
+  averageOrderValue: number;
+}
+
+export interface InfluencerDashboardChange {
+  absolute: number;
+  /** @nullable */
+  percent: number | null;
+}
+
+export interface InfluencerDashboardChanges {
+  visits: InfluencerDashboardChange;
+  attributedPaidOrders: InfluencerDashboardChange;
+  sales: InfluencerDashboardChange;
+  commission: InfluencerDashboardChange;
+  conversionRate: InfluencerDashboardChange;
+  averageOrderValue: InfluencerDashboardChange;
+}
+
+export interface InfluencerDashboardSeriesPoint {
+  day: string;
+  orders: number;
+  sales: number;
+  commission: number;
+}
+
 export interface InfluencerDashboard {
+  range: InfluencerDashboardRange;
+  previousRange: InfluencerDashboardRange;
   summary: InfluencerDashboardSummary;
+  previousSummary: InfluencerDashboardSummary;
+  changes: InfluencerDashboardChanges;
+  series: InfluencerDashboardSeriesPoint[];
+  previousSeries: InfluencerDashboardSeriesPoint[];
   referralUrl: string;
   codes: InfluencerDashboardCodesItem[];
   orders: InfluencerDashboardOrdersItem[];

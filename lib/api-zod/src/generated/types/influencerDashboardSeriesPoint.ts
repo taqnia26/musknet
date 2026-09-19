@@ -6,11 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InfluencerDashboardSummary {
-  visits: number;
-  attributedPaidOrders: number;
+export interface InfluencerDashboardSeriesPoint {
+  day: Date;
+  orders: number;
   sales: number;
   commission: number;
-  conversionRate: number;
-  averageOrderValue: number;
 }

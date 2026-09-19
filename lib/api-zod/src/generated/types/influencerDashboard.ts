@@ -5,12 +5,21 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { InfluencerDashboardChanges } from './influencerDashboardChanges';
 import type { InfluencerDashboardCodesItem } from './influencerDashboardCodesItem';
 import type { InfluencerDashboardOrdersItem } from './influencerDashboardOrdersItem';
+import type { InfluencerDashboardRange } from './influencerDashboardRange';
+import type { InfluencerDashboardSeriesPoint } from './influencerDashboardSeriesPoint';
 import type { InfluencerDashboardSummary } from './influencerDashboardSummary';
 
 export interface InfluencerDashboard {
+  range: InfluencerDashboardRange;
+  previousRange: InfluencerDashboardRange;
   summary: InfluencerDashboardSummary;
+  previousSummary: InfluencerDashboardSummary;
+  changes: InfluencerDashboardChanges;
+  series: InfluencerDashboardSeriesPoint[];
+  previousSeries: InfluencerDashboardSeriesPoint[];
   referralUrl: string;
   codes: InfluencerDashboardCodesItem[];
   orders: InfluencerDashboardOrdersItem[];

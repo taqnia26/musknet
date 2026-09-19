@@ -3043,12 +3043,58 @@ components:
             commissionRate: { type: number, minimum: 0, maximum: 100 }
     InfluencerDashboard:
       type: object
-      required: [summary, referralUrl, codes, orders]
+      required: [range, previousRange, summary, previousSummary, changes, series, previousSeries, referralUrl, codes, orders]
       properties:
-        summary: { type: object, additionalProperties: true }
+        range: { $ref: "#/components/schemas/InfluencerDashboardRange" }
+        previousRange: { $ref: "#/components/schemas/InfluencerDashboardRange" }
+        summary: { $ref: "#/components/schemas/InfluencerDashboardSummary" }
+        previousSummary: { $ref: "#/components/schemas/InfluencerDashboardSummary" }
+        changes: { $ref: "#/components/schemas/InfluencerDashboardChanges" }
+        series: { type: array, items: { $ref: "#/components/schemas/InfluencerDashboardSeriesPoint" } }
+        previousSeries: { type: array, items: { $ref: "#/components/schemas/InfluencerDashboardSeriesPoint" } }
         referralUrl: { type: string }
         codes: { type: array, items: { type: object, additionalProperties: true } }
         orders: { type: array, items: { type: object, additionalProperties: true } }
+    InfluencerDashboardRange:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+    InfluencerDashboardSummary:
+      type: object
+      required: [visits, attributedPaidOrders, sales, commission, conversionRate, averageOrderValue]
+      properties:
+        visits: { type: number, multipleOf: 1 }
+        attributedPaidOrders: { type: number, multipleOf: 1 }
+        sales: { type: number }
+        commission: { type: number }
+        conversionRate: { type: number }
+        averageOrderValue: { type: number }
+    InfluencerDashboardChange:
+      type: object
+      required: [absolute, percent]
+      properties:
+        absolute: { type: number }
+        percent: { type: [number, "null"] }
+    InfluencerDashboardChanges:
+      type: object
+      required: [visits, attributedPaidOrders, sales, commission, conversionRate, averageOrderValue]
+      properties:
+        visits: { $ref: "#/components/schemas/InfluencerDashboardChange" }
+        attributedPaidOrders: { $ref: "#/components/schemas/InfluencerDashboardChange" }
+        sales: { $ref: "#/components/schemas/InfluencerDashboardChange" }
+        commission: { $ref: "#/components/schemas/InfluencerDashboardChange" }
+        conversionRate: { $ref: "#/components/schemas/InfluencerDashboardChange" }
+        averageOrderValue: { $ref: "#/components/schemas/InfluencerDashboardChange" }
+    InfluencerDashboardSeriesPoint:
+      type: object
+      required: [day, orders, sales, commission]
+      properties:
+        day: { type: string, format: date }
+        orders: { type: number, multipleOf: 1 }
+        sales: { type: number }
+        commission: { type: number }
     InfluencerPatchBody:
       type: object
       properties:

@@ -121,4 +121,35 @@ describe("paid metrics and attribution invariants", () => {
     expect(result.body.orders[0].source).toBe("coupon");
     await db.delete(ordersTable).where(inArray(ordersTable.id, [paid.id, pending.id]));
   });
+
+  it("compares the selected dashboard range with the immediately preceding equivalent range", async () => {
+    const user = await influencer();
+    const phone = `+9665${Date.now()}${Math.floor(Math.random() * 10)}`; phones.push(phone);
+    const [customer] = await db.insert(customersTable).values({ name: "Comparison Test", phone }).returning();
+    const now = Date.now();
+    const common = { userId: customer.id, shippingCost: 0, discount: 0, tax: 0, address: "{}", shippingMethod: "standard", paymentMethod: "card", paymentStatus: "paid" as const };
+    const [currentOrder] = await db.insert(ordersTable).values({ ...common, orderNumber: `CURRENT-${now}`, subtotal: 200, total: 200, createdAt: new Date(now - 5 * 86400000) }).returning();
+    const [previousOrder] = await db.insert(ordersTable).values({ ...common, orderNumber: `PREVIOUS-${now}`, subtotal: 100, total: 100, createdAt: new Date(now - 35 * 86400000) }).returning();
+    await db.insert(orderAttributionsTable).values([
+      { orderId: currentOrder.id, influencerId: user.id, source: "referral", commissionRate: 10, commissionAmount: 20 },
+      { orderId: previousOrder.id, influencerId: user.id, source: "referral", commissionRate: 10, commissionAmount: 10 },
+    ]);
+    await db.insert(influencerVisitsTable).values([
+      { influencerId: user.id, visitorKey: `current-a-${now}`, landingPath: "/", createdAt: new Date(now - 5 * 86400000) },
+      { influencerId: user.id, visitorKey: `current-b-${now}`, landingPath: "/", createdAt: new Date(now - 4 * 86400000) },
+      { influencerId: user.id, visitorKey: `previous-${now}`, landingPath: "/", createdAt: new Date(now - 35 * 86400000) },
+    ]);
+
+    const token = await createInfluencerSession(user.id);
+    const result = await request(app).get("/api/influencer/dashboard?rangeDays=30").set("Authorization", `Bearer ${token}`).expect(200);
+
+    expect(result.body.summary.sales).toBe(200);
+    expect(result.body.previousSummary.sales).toBe(100);
+    expect(result.body.changes.sales).toEqual({ absolute: 100, percent: 1 });
+    expect(result.body.changes.visits).toEqual({ absolute: 1, percent: 1 });
+    expect(result.body.changes.conversionRate.absolute).toBeCloseTo(-0.5);
+    expect(result.body.series).toHaveLength(1);
+    expect(result.body.previousSeries).toHaveLength(1);
+    await db.delete(ordersTable).where(inArray(ordersTable.id, [currentOrder.id, previousOrder.id]));
+  });
 });

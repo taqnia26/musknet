@@ -3890,8 +3890,83 @@ export const InfluencerDashboardQueryParams = zod.object({
   "to": zod.date().optional()
 })
 
+export const influencerDashboardResponseSummaryVisitsMultipleOf = 1;
+
+export const influencerDashboardResponseSummaryAttributedPaidOrdersMultipleOf = 1;
+
+export const influencerDashboardResponsePreviousSummaryVisitsMultipleOf = 1;
+
+export const influencerDashboardResponsePreviousSummaryAttributedPaidOrdersMultipleOf = 1;
+
+export const influencerDashboardResponseSeriesItemOrdersMultipleOf = 1;
+
+export const influencerDashboardResponsePreviousSeriesItemOrdersMultipleOf = 1;
+
+
+
 export const InfluencerDashboardResponse = zod.object({
-  "summary": zod.record(zod.string(), zod.unknown()),
+  "range": zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date()
+}),
+  "previousRange": zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date()
+}),
+  "summary": zod.object({
+  "visits": zod.number().multipleOf(influencerDashboardResponseSummaryVisitsMultipleOf),
+  "attributedPaidOrders": zod.number().multipleOf(influencerDashboardResponseSummaryAttributedPaidOrdersMultipleOf),
+  "sales": zod.number(),
+  "commission": zod.number(),
+  "conversionRate": zod.number(),
+  "averageOrderValue": zod.number()
+}),
+  "previousSummary": zod.object({
+  "visits": zod.number().multipleOf(influencerDashboardResponsePreviousSummaryVisitsMultipleOf),
+  "attributedPaidOrders": zod.number().multipleOf(influencerDashboardResponsePreviousSummaryAttributedPaidOrdersMultipleOf),
+  "sales": zod.number(),
+  "commission": zod.number(),
+  "conversionRate": zod.number(),
+  "averageOrderValue": zod.number()
+}),
+  "changes": zod.object({
+  "visits": zod.object({
+  "absolute": zod.number(),
+  "percent": zod.number().nullable()
+}),
+  "attributedPaidOrders": zod.object({
+  "absolute": zod.number(),
+  "percent": zod.number().nullable()
+}),
+  "sales": zod.object({
+  "absolute": zod.number(),
+  "percent": zod.number().nullable()
+}),
+  "commission": zod.object({
+  "absolute": zod.number(),
+  "percent": zod.number().nullable()
+}),
+  "conversionRate": zod.object({
+  "absolute": zod.number(),
+  "percent": zod.number().nullable()
+}),
+  "averageOrderValue": zod.object({
+  "absolute": zod.number(),
+  "percent": zod.number().nullable()
+})
+}),
+  "series": zod.array(zod.object({
+  "day": zod.coerce.date(),
+  "orders": zod.number().multipleOf(influencerDashboardResponseSeriesItemOrdersMultipleOf),
+  "sales": zod.number(),
+  "commission": zod.number()
+})),
+  "previousSeries": zod.array(zod.object({
+  "day": zod.coerce.date(),
+  "orders": zod.number().multipleOf(influencerDashboardResponsePreviousSeriesItemOrdersMultipleOf),
+  "sales": zod.number(),
+  "commission": zod.number()
+})),
   "referralUrl": zod.string(),
   "codes": zod.array(zod.record(zod.string(), zod.unknown())),
   "orders": zod.array(zod.record(zod.string(), zod.unknown()))

@@ -7,14 +7,14 @@ import {
   getInfluencerMeQueryKey,
   getInfluencerDashboardQueryKey
 } from '@workspace/api-client-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { saveInfluencerToken, getAuthToken, removeInfluencerToken } from '@/lib/auth-token';
 import {
-  Copy, ExternalLink, LogOut, Share2, TrendingUp, ShoppingBag, Eye, Wallet,
-  UserRound, Activity, BarChart3, Check, Sparkles, Globe
+  Copy, ExternalLink, LogOut, Share2, TrendingUp, TrendingDown, ShoppingBag, Eye, Wallet,
+  UserRound, Activity, BarChart3, Check, Sparkles, Globe, Minus
 } from 'lucide-react';
 
 const money = (value: unknown) => `${Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR`;
@@ -131,17 +131,25 @@ function Login() {
   );
 }
 
-function MetricCard({ title, value, subtitle, icon: Icon, trend, valueColor, testId }: any) {
+function MetricCard({ title, value, subtitle, icon: Icon, change, changeValue, valueColor, testId, t }: any) {
+  const direction = Number(change?.absolute ?? 0);
+  const TrendIcon = direction > 0 ? TrendingUp : direction < 0 ? TrendingDown : Minus;
+  const trendClass = direction > 0
+    ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30'
+    : direction < 0
+      ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30'
+      : 'text-stone-500 dark:text-stone-400 bg-stone-100 dark:bg-stone-800';
+  const percent = change?.percent;
   return (
     <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 p-5 transition-all hover:shadow-md group">
       <div className="flex justify-between items-start mb-4">
         <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-950 text-stone-700 dark:text-stone-300 group-hover:bg-amber-50 group-hover:text-amber-600 dark:group-hover:bg-amber-950/30 dark:group-hover:text-amber-400 transition-colors">
           <Icon className="w-5 h-5" />
         </div>
-        {trend && (
-          <div className="flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded-full">
-            <TrendingUp className="w-3 h-3" />
-            <span>{trend}</span>
+        {change && (
+          <div className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${trendClass}`} data-testid={`${testId}-change-percent`}>
+            <TrendIcon className="w-3 h-3" />
+            <span>{percent === null ? t('غير متاح', 'N/A') : `${direction > 0 ? '+' : ''}${(Number(percent) * 100).toFixed(1)}%`}</span>
           </div>
         )}
       </div>
@@ -153,6 +161,11 @@ function MetricCard({ title, value, subtitle, icon: Icon, trend, valueColor, tes
           </p>
           {subtitle && <span className="text-sm text-stone-500 dark:text-stone-400 font-medium">{subtitle}</span>}
         </div>
+        {change && (
+          <p className="mt-2 text-xs font-medium text-stone-500 dark:text-stone-400" data-testid={`${testId}-change-value`}>
+            {direction > 0 ? '+' : ''}{changeValue(change.absolute)} {t('مقارنة بالفترة السابقة', 'vs previous period')}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -183,31 +196,53 @@ function Dashboard() {
   }, [hasToken, me.error, setLocation]);
 
   const smartInsight = useMemo(() => {
-    const summary = (dashboard.data as any)?.summary;
-    if (!summary) return null;
-    const paid = Number(summary.attributedPaidOrders || 0);
-    const conv = Number(summary.conversionRate || 0);
-    const comm = Number(summary.commission || 0);
-    const visits = Number(summary.visits || 0);
-
-    if (paid > 0 && comm > 0) {
-      return t(
-        `أداء رائع! لقد حققت ${paid} طلبات مدفوعة، بعمولة إجمالية قدرها ${money(comm)}.`,
-        `Great performance! You generated ${paid} paid orders, earning a total of ${money(comm)}.`
-      );
-    } else if (visits > 50 && paid === 0) {
-      return t(
-        'لديك زيارات جيدة ولكن لم تتحول إلى طلبات بعد. جرب التحدث عن تجربتك الشخصية مع المنتجات.',
-        'You have good traffic but no paid orders yet. Try sharing your personal experience with the products.'
-      );
-    } else if (conv > 0.03) {
-      return t(
-        `معدل التحويل الخاص بك يبلغ ${(conv * 100).toFixed(1)}% وهو معدل ممتاز. استمر في مشاركة الرابط!`,
-        `Your conversion rate is ${(conv * 100).toFixed(1)}%, which is excellent. Keep sharing your link!`
-      );
-    }
-    return t('شارك رابطك للحصول على زيارات وطلبات إضافية.', 'Share your link to generate more visits and orders.');
+    const changes = (dashboard.data as any)?.changes;
+    if (!changes) return null;
+    const labels: Record<string, string> = {
+      visits: t('الزيارات', 'visits'),
+      attributedPaidOrders: t('الطلبات المدفوعة', 'paid orders'),
+      sales: t('المبيعات', 'sales'),
+      commission: t('العمولة', 'commission'),
+      conversionRate: t('معدل التحويل', 'conversion rate'),
+      averageOrderValue: t('متوسط قيمة الطلب', 'average order value'),
+    };
+    const actions: Record<string, string> = {
+      visits: t('كرّر القنوات والمحتوى اللذين جذبا الزيارات.', 'Repeat the channels and content that attracted visits.'),
+      attributedPaidOrders: t('كرّر الرسائل والعروض التي دفعت المتابعين للشراء.', 'Repeat the messages and offers that drove purchases.'),
+      sales: t('ركّز على المنتجات والمحتوى اللذين حققا هذه المبيعات.', 'Focus on the products and content that produced these sales.'),
+      commission: t('استمر في الترويج للمنتجات الأعلى عائدًا.', 'Keep promoting the products producing the strongest return.'),
+      conversionRate: t('حافظ على وضوح الدعوة للشراء والرابط.', 'Keep the purchase call-to-action and link clear.'),
+      averageOrderValue: t('استمر في اقتراح مجموعات ومنتجات مكملة.', 'Keep recommending bundles and complementary products.'),
+    };
+    const entries = Object.entries(changes).map(([key, raw]) => {
+      const item = raw as { absolute: number; percent: number | null };
+      const score = item.percent === null ? (item.absolute > 0 ? Number.POSITIVE_INFINITY : item.absolute < 0 ? Number.NEGATIVE_INFINITY : 0) : item.percent;
+      return { key, ...item, score };
+    });
+    const improvement = entries.filter(item => item.absolute > 0).sort((a, b) => b.score - a.score)[0];
+    const decline = entries.filter(item => item.absolute < 0).sort((a, b) => a.score - b.score)[0];
+    const formatPercent = (item: typeof entries[number]) => item.percent === null ? t('تحسن جديد من دون أساس سابق للنسبة', 'a new improvement without a prior percentage baseline') : `${Math.abs(item.percent * 100).toFixed(1)}%`;
+    const parts = [];
+    if (improvement) parts.push(t(`أكبر تحسن: ${labels[improvement.key]} بنسبة ${formatPercent(improvement)}. ${actions[improvement.key]}`, `Biggest improvement: ${labels[improvement.key]} by ${formatPercent(improvement)}. ${actions[improvement.key]}`));
+    if (decline) parts.push(t(`أكبر تراجع: ${labels[decline.key]} بنسبة ${formatPercent(decline)}. راجع ما تغيّر في المحتوى أو العرض خلال هذه الفترة.`, `Biggest decline: ${labels[decline.key]} by ${formatPercent(decline)}. Review what changed in your content or offer during this period.`));
+    return parts.length ? parts.join(' ') : t('أداؤك مستقر مقارنة بالفترة السابقة المماثلة.', 'Your performance is stable compared with the equivalent previous period.');
   }, [dashboard.data, t]);
+
+  const chartData = useMemo(() => {
+    const data = dashboard.data as any;
+    if (!data?.range || !data?.previousRange) return [];
+    const dayKey = (value: string) => Date.parse(`${value.slice(0, 10)}T00:00:00.000Z`);
+    const currentStart = dayKey(data.range.from);
+    const previousStart = dayKey(data.previousRange.from);
+    const current = new Map((data.series ?? []).map((point: any) => [Math.round((dayKey(point.day) - currentStart) / 86400000), Number(point.sales ?? 0)]));
+    const previous = new Map((data.previousSeries ?? []).map((point: any) => [Math.round((dayKey(point.day) - previousStart) / 86400000), Number(point.sales ?? 0)]));
+    const points = Math.max(1, Math.round((dayKey(data.range.to) - currentStart) / 86400000) + 1);
+    return Array.from({ length: points }, (_, index) => ({
+      day: new Date(currentStart + index * 86400000).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' }),
+      currentSales: current.get(index) ?? 0,
+      previousSales: previous.get(index) ?? 0,
+    }));
+  }, [dashboard.data, lang]);
 
   if (!hasToken || me.isLoading) {
     return (
@@ -243,6 +278,7 @@ function Dashboard() {
   const user = me.data;
   const data = dashboard.data as any;
   const summary = data?.summary ?? {};
+  const changes = data?.changes ?? {};
 
   const copyLink = async () => {
     if (data?.referralUrl) {
@@ -398,6 +434,9 @@ function Dashboard() {
             title={t('إجمالي الأرباح', 'Total Earnings')}
             value={money(summary.commission)}
             icon={Wallet}
+            change={changes.commission}
+            changeValue={money}
+            t={t}
             valueColor="text-emerald-600 dark:text-emerald-400"
             testId="metric-earnings"
           />
@@ -405,30 +444,45 @@ function Dashboard() {
             title={t('المبيعات المحققة', 'Generated Sales')}
             value={money(summary.sales)}
             icon={TrendingUp}
+            change={changes.sales}
+            changeValue={money}
+            t={t}
             testId="metric-sales"
           />
           <MetricCard
             title={t('الطلبات المدفوعة', 'Paid Orders')}
             value={text(summary.attributedPaidOrders, '0')}
             icon={ShoppingBag}
+            change={changes.attributedPaidOrders}
+            changeValue={(value: number) => Number(value).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+            t={t}
             testId="metric-orders"
           />
           <MetricCard
             title={t('الزيارات', 'Link Visits')}
             value={text(summary.visits, '0')}
             icon={Eye}
+            change={changes.visits}
+            changeValue={(value: number) => Number(value).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+            t={t}
             testId="metric-visits"
           />
           <MetricCard
             title={t('معدل التحويل', 'Conversion Rate')}
             value={`${(Number(summary.conversionRate ?? 0) * 100).toFixed(1)}%`}
             icon={Activity}
+            change={changes.conversionRate}
+            changeValue={(value: number) => `${(Number(value) * 100).toFixed(1)} ${t('نقطة مئوية', 'pp')}`}
+            t={t}
             testId="metric-conversion"
           />
           <MetricCard
             title={t('متوسط قيمة الطلب', 'Average Order Value')}
             value={money(summary.averageOrderValue)}
             icon={BarChart3}
+            change={changes.averageOrderValue}
+            changeValue={money}
+            t={t}
             testId="metric-aov"
           />
         </section>
@@ -441,22 +495,26 @@ function Dashboard() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-lg font-bold text-stone-900 dark:text-white mb-1">{t('مؤشر الأداء', 'Performance Trend')}</h2>
-                <p className="text-sm font-medium text-stone-500">{t('المبيعات خلال الفترة المحددة', 'Sales over selected period')}</p>
+                <p className="text-sm font-medium text-stone-500">{t('المبيعات مقارنة بالفترة السابقة المماثلة', 'Sales compared with the equivalent previous period')}</p>
               </div>
             </div>
 
-            {!data?.series?.length ? (
+            {!data?.series?.length && !data?.previousSeries?.length ? (
               <div className="h-72 flex items-center justify-center border-2 border-dashed border-stone-200 dark:border-stone-800 rounded-xl bg-stone-50 dark:bg-stone-950/50">
                 <p className="text-sm font-medium text-stone-500">{t('لا توجد بيانات كافية في هذا النطاق', 'Not enough data in this range')}</p>
               </div>
             ) : (
               <div className="h-72 w-full" data-testid="chart-performance">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data.series as any[]} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                  <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#d97706" stopOpacity={0.3}/>
                         <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorPreviousSales" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#78716c" stopOpacity={0.18}/>
+                        <stop offset="95%" stopColor="#78716c" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-stone-200 dark:text-stone-800" />
@@ -476,13 +534,23 @@ function Dashboard() {
                       tickFormatter={(value) => `${value.toLocaleString()}`}
                     />
                     <Tooltip
-                      formatter={(value: number) => [money(value), t('المبيعات', 'Sales')]}
+                      formatter={(value: number, name: string) => [money(value), name === 'currentSales' ? t('الفترة الحالية', 'Current period') : t('الفترة السابقة', 'Previous period')]}
                       contentStyle={{ backgroundColor: 'var(--tw-colors-stone-900)', borderColor: 'var(--tw-colors-stone-800)', borderRadius: '12px', fontWeight: 600, color: 'white' }}
                       itemStyle={{ color: '#d97706' }}
                     />
+                    <Legend formatter={(value) => value === 'currentSales' ? t('الفترة الحالية', 'Current period') : t('الفترة السابقة', 'Previous period')} />
                     <Area
                       type="monotone"
-                      dataKey="sales"
+                      dataKey="previousSales"
+                      stroke="#78716c"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      fillOpacity={1}
+                      fill="url(#colorPreviousSales)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="currentSales"
                       stroke="#d97706"
                       strokeWidth={3}
                       fillOpacity={1}

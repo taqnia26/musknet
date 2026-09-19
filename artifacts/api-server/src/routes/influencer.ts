@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { randomBytes } from "node:crypto";
-import { and, count, desc, eq, gte, lte, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, lt, lte, sql, sum } from "drizzle-orm";
 import * as Api from "@workspace/api-zod";
 import { db, influencersTable, influencerSessionsTable, influencerVisitsTable, influencerCouponsTable, couponsTable, orderAttributionsTable, ordersTable } from "@workspace/db";
 import { createInfluencerSession, hashInfluencerPassword, influencerFromToken, revokeInfluencerSession, verifyInfluencerPassword } from "../lib/influencer-auth";
@@ -22,6 +22,30 @@ async function admin(req: Request, res: Response, action: "view" | "edit") {
   return user;
 }
 function profile(user: typeof influencersTable.$inferSelect) { return { id: user.id, name: user.name, email: user.email, imageUrl: user.imageUrl, referralCode: user.referralCode, commissionRate: user.commissionRate, isActive: user.isActive }; }
+type DashboardSummary = { visits: number; attributedPaidOrders: number; sales: number; commission: number; conversionRate: number; averageOrderValue: number };
+const change = (current: number, previous: number) => ({ absolute: current - previous, percent: previous === 0 ? null : (current - previous) / Math.abs(previous) });
+async function dashboardPeriod(influencerId: number, start: Date, end: Date, includeEnd: boolean) {
+  const orderDate = includeEnd ? lte(ordersTable.createdAt, end) : lt(ordersTable.createdAt, end);
+  const visitDate = includeEnd ? lte(influencerVisitsTable.createdAt, end) : lt(influencerVisitsTable.createdAt, end);
+  const paidWhere = and(eq(orderAttributionsTable.influencerId, influencerId), eq(ordersTable.paymentStatus, "paid"), gte(ordersTable.createdAt, start), orderDate);
+  const [[orderSummary], [visitSummary], series] = await Promise.all([
+    db.select({ orders: count(), sales: sum(ordersTable.total), commission: sum(orderAttributionsTable.commissionAmount) }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(paidWhere),
+    db.select({ visits: sql<number>`count(distinct (${influencerVisitsTable.visitorKey}, date(${influencerVisitsTable.createdAt})))` }).from(influencerVisitsTable).where(and(eq(influencerVisitsTable.influencerId, influencerId), gte(influencerVisitsTable.createdAt, start), visitDate)),
+    db.select({ day: sql<string>`to_char(date_trunc('day', ${ordersTable.createdAt}), 'YYYY-MM-DD')`, orders: count(), sales: sum(ordersTable.total), commission: sum(orderAttributionsTable.commissionAmount) }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(paidWhere).groupBy(sql`date_trunc('day', ${ordersTable.createdAt})`).orderBy(sql`date_trunc('day', ${ordersTable.createdAt})`),
+  ]);
+  const attributedPaidOrders = Number(orderSummary?.orders ?? 0);
+  const sales = Number(orderSummary?.sales ?? 0);
+  const visits = Number(visitSummary?.visits ?? 0);
+  const summary: DashboardSummary = {
+    visits,
+    attributedPaidOrders,
+    sales,
+    commission: Number(orderSummary?.commission ?? 0),
+    conversionRate: visits ? attributedPaidOrders / visits : 0,
+    averageOrderValue: attributedPaidOrders ? sales / attributedPaidOrders : 0,
+  };
+  return { summary, series: series.map(point => ({ ...point, orders: Number(point.orders), sales: Number(point.sales ?? 0), commission: Number(point.commission ?? 0) })) };
+}
 
 router.post("/influencer/auth/login", asyncRoute(async (req, res) => {
   const body = parse(Api.InfluencerLoginBody, req.body, res); if (!body) return;
@@ -36,14 +60,15 @@ router.get("/influencer/dashboard", asyncRoute(async (req, res) => {
   const user = await influencerFromToken(bearer(req)); if (!user) { res.status(401).json({ error: "Influencer authentication required" }); return; }
   const dateRange = range(req.query, res); if (!dateRange) return;
   const end = dateRange.to ?? new Date(), start = dateRange.from ?? new Date(end.getTime() - (dateRange.rangeDays ?? 30) * 86400000);
-  const paidWhere = and(eq(orderAttributionsTable.influencerId, user.id), eq(ordersTable.paymentStatus, "paid"), gte(ordersTable.createdAt, start), lte(ordersTable.createdAt, end));
-  const [summary] = await db.select({ orders: count(), sales: sum(ordersTable.total), commission: sum(orderAttributionsTable.commissionAmount) }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(paidWhere);
-  const [visitSummary] = await db.select({ visits: sql<number>`count(distinct (${influencerVisitsTable.visitorKey}, date(${influencerVisitsTable.createdAt})))` }).from(influencerVisitsTable).where(and(eq(influencerVisitsTable.influencerId, user.id), gte(influencerVisitsTable.createdAt, start), lte(influencerVisitsTable.createdAt, end)));
-  const paidOrders = Number(summary?.orders ?? 0), sales = Number(summary?.sales ?? 0);
-  const daily = await db.select({ day: sql<string>`to_char(date_trunc('day', ${ordersTable.createdAt}), 'YYYY-MM-DD')`, orders: count(), sales: sum(ordersTable.total), commission: sum(orderAttributionsTable.commissionAmount) }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(paidWhere).groupBy(sql`date_trunc('day', ${ordersTable.createdAt})`).orderBy(sql`date_trunc('day', ${ordersTable.createdAt})`);
+  const previousEnd = start, previousStart = new Date(start.getTime() - (end.getTime() - start.getTime()));
+  const [currentPeriod, previousPeriod] = await Promise.all([
+    dashboardPeriod(user.id, start, end, true),
+    dashboardPeriod(user.id, previousStart, previousEnd, false),
+  ]);
+  const changes = Object.fromEntries((Object.keys(currentPeriod.summary) as (keyof DashboardSummary)[]).map(key => [key, change(currentPeriod.summary[key], previousPeriod.summary[key])]));
   const codes = await db.select({ id: couponsTable.id, code: couponsTable.code, discountType: couponsTable.discountType, discountValue: couponsTable.discountValue, isActive: couponsTable.isActive, usageLimit: couponsTable.usageLimit, timesUsed: couponsTable.timesUsed, attributedUses: sql<number>`count(${ordersTable.id})` }).from(influencerCouponsTable).innerJoin(couponsTable, eq(influencerCouponsTable.couponId, couponsTable.id)).leftJoin(orderAttributionsTable, and(eq(orderAttributionsTable.influencerId, user.id), eq(orderAttributionsTable.source, "coupon"))).leftJoin(ordersTable, and(eq(ordersTable.id, orderAttributionsTable.orderId), eq(ordersTable.couponCode, couponsTable.code), eq(ordersTable.paymentStatus, "paid"))).where(eq(influencerCouponsTable.influencerId, user.id)).groupBy(couponsTable.id);
   const orders = await db.select({ orderNumber: ordersTable.orderNumber, total: ordersTable.total, commission: orderAttributionsTable.commissionAmount, source: orderAttributionsTable.source, status: ordersTable.paymentStatus, createdAt: ordersTable.createdAt }).from(orderAttributionsTable).innerJoin(ordersTable, eq(orderAttributionsTable.orderId, ordersTable.id)).where(and(eq(orderAttributionsTable.influencerId, user.id), gte(ordersTable.createdAt, start), lte(ordersTable.createdAt, end), eq(ordersTable.paymentStatus, "paid"))).orderBy(desc(ordersTable.createdAt)).limit(100);
-  res.json({ range: { from: start.toISOString(), to: end.toISOString() }, summary: { visits: Number(visitSummary?.visits ?? 0), attributedPaidOrders: paidOrders, sales, commission: Number(summary?.commission ?? 0), conversionRate: Number(visitSummary?.visits ?? 0) ? paidOrders / Number(visitSummary?.visits) : 0, averageOrderValue: paidOrders ? sales / paidOrders : 0 }, series: daily, referralUrl: `/?ref=${encodeURIComponent(user.referralCode)}`, codes, orders });
+  res.json({ range: { from: start.toISOString(), to: end.toISOString() }, previousRange: { from: previousStart.toISOString(), to: previousEnd.toISOString() }, summary: currentPeriod.summary, previousSummary: previousPeriod.summary, changes, series: currentPeriod.series, previousSeries: previousPeriod.series, referralUrl: `/?ref=${encodeURIComponent(user.referralCode)}`, codes, orders });
 }));
 
 router.get("/influencer/capture", asyncRoute(async (req, res) => {
