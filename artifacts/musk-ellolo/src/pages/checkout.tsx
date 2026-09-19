@@ -1,4 +1,4 @@
-import { useGetCart, useGetCheckoutQuote, useCreateOrder, useValidateCoupon } from '@workspace/api-client-react';
+import { getGetCurrentUserQueryKey, useGetCart, useGetCheckoutQuote, useCreateOrder, useGetCurrentUser, useValidateCoupon } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,13 @@ export default function Checkout() {
   const { toast } = useToast();
   
   const { data: cart, isLoading: isLoadingCart } = useGetCart();
+  const {
+    data: currentUser,
+    isLoading: isLoadingUser,
+    isError: isUserError,
+  } = useGetCurrentUser({
+    query: { retry: false, queryKey: getGetCurrentUserQueryKey() },
+  });
   
   const [couponCode, setCouponCode] = useState('');
   const [activeCoupon, setActiveCoupon] = useState<string | null>(null);
@@ -53,15 +60,22 @@ export default function Checkout() {
   const {
     data: quote,
     isPending: isLoadingQuote,
+    isError: isQuoteError,
     mutate: requestCheckoutQuote,
   } = useGetCheckoutQuote();
   const city = form.watch('city');
 
   useEffect(() => {
-    if (cart && cart.items.length > 0 && city.trim().length >= 2) {
+    if (currentUser && cart && cart.items.length > 0 && city.trim().length >= 2) {
       requestCheckoutQuote({ data: { city, couponCode: activeCoupon } });
     }
-  }, [activeCoupon, cart?.id, city, requestCheckoutQuote]);
+  }, [activeCoupon, cart?.id, city, currentUser, requestCheckoutQuote]);
+
+  useEffect(() => {
+    if (!isLoadingCart && !isLoadingUser && isUserError && cart && cart.items.length > 0) {
+      setLocation('/auth/register?returnTo=%2Fcheckout');
+    }
+  }, [cart, isLoadingCart, isLoadingUser, isUserError, setLocation]);
 
   // Redirect if cart empty
   useEffect(() => {
@@ -105,11 +119,25 @@ export default function Checkout() {
     });
   };
 
-  if (isLoadingCart || isLoadingQuote || !cart || cart.items.length === 0) {
+  if (isLoadingCart || isLoadingUser || isUserError || (currentUser && isLoadingQuote) || !cart || cart.items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 max-w-6xl grid md:grid-cols-2 gap-12">
         <div className="space-y-8"><Skeleton className="h-12 w-1/3" /><Skeleton className="h-64 w-full" /></div>
         <div className="space-y-8"><Skeleton className="h-12 w-1/3" /><Skeleton className="h-96 w-full" /></div>
+      </div>
+    );
+  }
+
+  if (isQuoteError || !quote) {
+    return (
+      <div className="container mx-auto max-w-xl px-4 py-16 text-center">
+        <div className="rounded-2xl border bg-card p-8 shadow-sm">
+          <h1 className="mb-3 text-2xl font-bold">{t('تعذر حساب خيارات التوصيل', 'Unable to load delivery options')}</h1>
+          <p className="mb-6 text-muted-foreground">{t('تحقق من الاتصال ثم أعد المحاولة.', 'Check your connection and try again.')}</p>
+          <Button onClick={() => requestCheckoutQuote({ data: { city, couponCode: activeCoupon } })}>
+            {t('إعادة المحاولة', 'Try again')}
+          </Button>
+        </div>
       </div>
     );
   }

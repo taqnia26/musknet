@@ -989,6 +989,48 @@ export interface AdminOrderUpdate {
   adminNotes?: string | null;
 }
 
+export interface AdminOrderLineInput {
+  /** @minimum 1 */
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+}
+
+export type AdminOrderInputPaymentMethod = typeof AdminOrderInputPaymentMethod[keyof typeof AdminOrderInputPaymentMethod];
+
+
+export const AdminOrderInputPaymentMethod = {
+  cash: 'cash',
+  'bank-transfer': 'bank-transfer',
+  moyasar: 'moyasar',
+} as const;
+
+export interface AdminOrderAddress {
+  label: string;
+  city: string;
+  district: string;
+  street: string;
+  buildingNo: string;
+  /** @nullable */
+  additionalInfo: string | null;
+  isDefault: boolean;
+}
+
+export interface AdminOrderInput {
+  /** @minimum 1 */
+  userId: number;
+  /** @minItems 1 */
+  items: AdminOrderLineInput[];
+  orderAddress: AdminOrderAddress;
+  /** @minLength 1 */
+  shippingMethod: string;
+  paymentMethod: AdminOrderInputPaymentMethod;
+  /** @minimum 0 */
+  shippingCost?: number;
+  /** @nullable */
+  adminNotes?: string | null;
+}
+
 export interface AdminInvoice {
   id: number;
   /** @nullable */
@@ -1005,17 +1047,6 @@ export interface AdminInvoice {
   totalAmount: number;
   qrCodeData: string;
   createdAt: string;
-}
-
-export interface AdminOrderAddress {
-  label: string;
-  city: string;
-  district: string;
-  street: string;
-  buildingNo: string;
-  /** @nullable */
-  additionalInfo: string | null;
-  isDefault: boolean;
 }
 
 export interface AdminOrderCustomer {
@@ -2294,3 +2325,4 @@ export const InfluencerDashboardRangeDays = {
 export type CaptureInfluencerReferralParams = {
 ref: string;
 };
+

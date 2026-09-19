@@ -61,6 +61,7 @@ import type {
   AdminLoginInput,
   AdminOrder,
   AdminOrderDetail,
+  AdminOrderInput,
   AdminOrderUpdate,
   AdminPermission,
   AdminPermissionAssignment,
@@ -99,6 +100,7 @@ import type {
   Employee,
   EmployeeInput,
   EmployeeUpdate,
+  Error,
   Exhibition,
   ExhibitionInput,
   ExhibitionProduct,
@@ -5108,6 +5110,71 @@ export function useAdminListOrders<TData = Awaited<ReturnType<typeof adminListOr
 
 
 
+
+export const getAdminCreateOrderUrl = () => {
+
+
+
+
+  return `/api/admin/orders`
+}
+
+export const adminCreateOrder = async (adminOrderInput: AdminOrderInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminOrder> => {
+
+  return customFetch<AdminOrder>(getAdminCreateOrderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminOrderInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateOrderMutationOptions = <TError = ErrorType<BadRequestResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateOrder>>, TError,{data: BodyType<AdminOrderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateOrder>>, TError,{data: BodyType<AdminOrderInput>}, TContext> => {
+
+const mutationKey = ['adminCreateOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateOrder>>, {data: BodyType<AdminOrderInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateOrder(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateOrder>>>
+    export type AdminCreateOrderMutationBody = BodyType<AdminOrderInput>
+    export type AdminCreateOrderMutationError = ErrorType<BadRequestResponse | Error>
+
+    export const useAdminCreateOrder = <TError = ErrorType<BadRequestResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateOrder>>, TError,{data: BodyType<AdminOrderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateOrder>>,
+        TError,
+        {data: BodyType<AdminOrderInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateOrderMutationOptions(options));
+    }
 
 export const getAdminGetOrderUrl = (id: number,) => {
 
@@ -10578,3 +10645,4 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getUnlinkInfluencerCouponMutationOptions(options));
     }
+

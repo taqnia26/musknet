@@ -23,6 +23,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { CreateOrderDialog } from '@/components/admin/create-order-dialog';
 
 export default function AdminOrders() {
   const { t, lang } = useLanguage();
@@ -94,6 +95,7 @@ export default function AdminOrders() {
           <h1 className="text-3xl font-bold tracking-tight">{t('الطلبات', 'Orders')}</h1>
           <p className="text-muted-foreground mt-1">{t('متابعة وإدارة طلبات العملاء', 'Track and manage customer orders')}</p>
         </div>
+        {hasPermission(currentUser, 'orders', 'edit') && <CreateOrderDialog />}
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4">

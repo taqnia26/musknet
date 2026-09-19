@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { KeyRound } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { saveAuthToken } from '@/lib/auth-token';
+import { safeReturnTo } from '@/lib/safe-return-to';
 
 export default function VerifyOtp() {
   const { t } = useLanguage();
@@ -15,6 +16,7 @@ export default function VerifyOtp() {
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const phone = searchParams.get('phone') || '';
+  const returnTo = safeReturnTo(searchParams.get('returnTo'), '/account');
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -24,9 +26,9 @@ export default function VerifyOtp() {
 
   useEffect(() => {
     if (!phone) {
-      setLocation('/auth/register');
+      setLocation(`/auth/register?returnTo=${encodeURIComponent(returnTo)}`);
     }
-  }, [phone, setLocation]);
+  }, [phone, returnTo, setLocation]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +48,7 @@ export default function VerifyOtp() {
         // Invalidate auth queries
         queryClient.clear();
         
-        setLocation('/account');
+        setLocation(returnTo);
       },
       onError: (err: any) => {
         toast({
@@ -101,7 +103,7 @@ export default function VerifyOtp() {
           </Button>
           
           <div className="text-center pt-4">
-            <button type="button" onClick={() => setLocation('/auth/register')} className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">
+            <button type="button" onClick={() => setLocation(`/auth/register?returnTo=${encodeURIComponent(returnTo)}`)} className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">
               {t('تغيير رقم الهاتف', 'Change phone number')}
             </button>
           </div>

@@ -54,6 +54,11 @@ export function ensureAdminSeeded() {
         isSuperAdmin: true,
         isActive: true,
       });
+    } else {
+      // The account identified by ADMIN_EMAIL is the configured root administrator.
+      // Reconcile legacy rows that may have been created before this guarantee existed.
+      await db.update(adminUsersTable).set({ isSuperAdmin: true, isActive: true })
+        .where(eq(adminUsersTable.id, existing[0].id));
     }
   })().catch((error) => {
     seedPromise = undefined;

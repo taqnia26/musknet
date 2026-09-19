@@ -783,6 +783,15 @@ paths:
           in: query
           schema: { type: string, enum: [all, new, processing, shipped, delivered, cancelled], default: all }
       responses: { "200": { description: Orders, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminOrder" } } } } } }
+    post:
+      operationId: adminCreateOrder
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrderInput" } } } }
+      responses:
+        "201": { description: Order created, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrder" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Insufficient inventory, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/orders/{id}:
     get:
       operationId: adminGetOrder
@@ -2396,6 +2405,26 @@ components:
         status: { type: string, enum: [new, processing, shipped, delivered, cancelled] }
         paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
         trackingNumber: { type: [string, "null"] }
+        adminNotes: { type: [string, "null"] }
+    AdminOrderLineInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId: { type: number, minimum: 1, multipleOf: 1 }
+        quantity: { type: number, minimum: 1, multipleOf: 1 }
+    AdminOrderInput:
+      type: object
+      required: [userId, items, orderAddress, shippingMethod, paymentMethod]
+      properties:
+        userId: { type: number, minimum: 1, multipleOf: 1 }
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/AdminOrderLineInput" }
+        orderAddress: { $ref: "#/components/schemas/AdminOrderAddress" }
+        shippingMethod: { type: string, minLength: 1 }
+        paymentMethod: { type: string, enum: [cash, bank-transfer, moyasar] }
+        shippingCost: { type: number, minimum: 0 }
         adminNotes: { type: [string, "null"] }
     AdminInvoice:
       type: object

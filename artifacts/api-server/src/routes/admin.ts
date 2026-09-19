@@ -644,6 +644,124 @@ router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => 
   if (query.status !== "all") rows = rows.filter((row) => row.status === query.status);
   res.json(Api.AdminListOrdersResponse.parse(rows));
 }));
+router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
+  const duplicateProductIds = body.items
+    .map((item) => item.productId)
+    .filter((productId, index, ids) => ids.indexOf(productId) !== index);
+  if (duplicateProductIds.length > 0) {
+    res.status(400).json({ error: "Each product can appear only once in an order" });
+    return;
+  }
+
+  try {
+    const order = await db.transaction(async (tx) => {
+      const [customer] = await tx.select({ id: customersTable.id, isActive: customersTable.isActive })
+        .from(customersTable).where(eq(customersTable.id, body.userId)).limit(1);
+      if (!customer?.isActive) throw new Error("CUSTOMER_UNAVAILABLE");
+
+      const selectedProducts: Array<{
+        product: typeof productsTable.$inferSelect;
+        quantity: number;
+      }> = [];
+      for (const item of [...body.items].sort((left, right) => left.productId - right.productId)) {
+        await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${item.productId} for update`);
+        const [product] = await tx.select().from(productsTable)
+          .where(and(eq(productsTable.id, item.productId), eq(productsTable.isActive, true)))
+          .limit(1);
+        if (!product) throw new Error("PRODUCT_UNAVAILABLE");
+        if (product.stockQuantity < item.quantity) {
+          throw new Error(`INSUFFICIENT_STOCK:${product.nameAr}:${product.stockQuantity}`);
+        }
+        selectedProducts.push({ product, quantity: item.quantity });
+      }
+
+      const subtotal = Math.round(selectedProducts.reduce(
+        (sum, item) => sum + item.product.price * item.quantity,
+        0,
+      ) * 100) / 100;
+      const shippingCost = body.shippingCost ?? (
+        /الرياض|riyadh/i.test(body.orderAddress.city.trim()) ? 20 : 30
+      );
+      const tax = Math.round(subtotal * 0.15 * 100) / 100;
+      const total = Math.round((subtotal + shippingCost + tax) * 100) / 100;
+      const orderNumber = `ME-${randomBytes(5).toString("hex").toUpperCase()}`;
+      const [created] = await tx.insert(ordersTable).values({
+        userId: body.userId,
+        orderNumber,
+        subtotal,
+        shippingCost,
+        discount: 0,
+        tax,
+        total,
+        address: JSON.stringify(body.orderAddress),
+        shippingMethod: body.shippingMethod,
+        paymentMethod: body.paymentMethod,
+        adminNotes: body.adminNotes ?? null,
+      }).returning();
+
+      await tx.insert(orderAddressesTable).values({
+        orderId: created.id,
+        label: body.orderAddress.label,
+        city: body.orderAddress.city,
+        district: body.orderAddress.district,
+        street: body.orderAddress.street,
+        buildingNo: body.orderAddress.buildingNo,
+        additionalInfo: body.orderAddress.additionalInfo,
+        isDefault: body.orderAddress.isDefault,
+      });
+      await tx.insert(orderItemsTable).values(selectedProducts.map(({ product, quantity }) => ({
+        orderId: created.id,
+        productId: product.id,
+        productName: product.nameAr,
+        quantity,
+        unitPrice: product.price,
+        totalPrice: Math.round(product.price * quantity * 100) / 100,
+        imageUrl: product.images[0]?.url ?? null,
+      })));
+
+      for (const { product, quantity } of selectedProducts) {
+        const quantityAfter = product.stockQuantity - quantity;
+        const [updated] = await tx.update(productsTable)
+          .set({ stockQuantity: quantityAfter })
+          .where(and(eq(productsTable.id, product.id), eq(productsTable.stockQuantity, product.stockQuantity)))
+          .returning({ id: productsTable.id });
+        if (!updated) throw new Error("INVENTORY_CHANGED");
+        await tx.insert(inventoryMovementsTable).values({
+          productId: product.id,
+          movementType: "decrease",
+          quantityChange: -quantity,
+          quantityBefore: product.stockQuantity,
+          quantityAfter,
+          reason: `Admin order ${orderNumber}`,
+          performedBy: (res.locals.admin as typeof adminUsersTable.$inferSelect).id,
+        });
+      }
+      return created;
+    });
+    res.status(201).json(Api.AdminCreateOrderResponse.parse(order));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "CUSTOMER_UNAVAILABLE") {
+      res.status(400).json({ error: "Customer was not found or is inactive" });
+      return;
+    }
+    if (message === "PRODUCT_UNAVAILABLE") {
+      res.status(400).json({ error: "A selected product was not found or is inactive" });
+      return;
+    }
+    if (message.startsWith("INSUFFICIENT_STOCK:")) {
+      const [, productName, available] = message.split(":");
+      res.status(409).json({ error: `Insufficient stock for ${productName}. Available: ${available}` });
+      return;
+    }
+    if (message === "INVENTORY_CHANGED") {
+      res.status(409).json({ error: "Inventory changed while the order was being created. Please try again." });
+      return;
+    }
+    throw error;
+  }
+}));
 router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetOrderParams, req.params, res); if (!params) return;
   const [row] = await db.select().from(ordersTable).where(eq(ordersTable.id, params.id)).limit(1);

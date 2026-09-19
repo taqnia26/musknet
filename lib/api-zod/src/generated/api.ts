@@ -1999,6 +1999,60 @@ export const AdminListOrdersResponseItem = zod.object({
 export const AdminListOrdersResponse = zod.array(AdminListOrdersResponseItem)
 
 
+export const adminCreateOrderBodyUserIdMultipleOf = 1;
+
+export const adminCreateOrderBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminCreateOrderBodyItemsItemQuantityMultipleOf = 1;
+
+
+
+export const adminCreateOrderBodyShippingCostMin = 0;
+
+
+
+export const AdminCreateOrderBody = zod.object({
+  "userId": zod.number().min(1).multipleOf(adminCreateOrderBodyUserIdMultipleOf),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminCreateOrderBodyItemsItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(adminCreateOrderBodyItemsItemQuantityMultipleOf)
+})).min(1),
+  "orderAddress": zod.object({
+  "label": zod.string(),
+  "city": zod.string(),
+  "district": zod.string(),
+  "street": zod.string(),
+  "buildingNo": zod.string(),
+  "additionalInfo": zod.string().nullable(),
+  "isDefault": zod.boolean()
+}),
+  "shippingMethod": zod.string().min(1),
+  "paymentMethod": zod.enum(['cash', 'bank-transfer', 'moyasar']),
+  "shippingCost": zod.number().min(adminCreateOrderBodyShippingCostMin).optional(),
+  "adminNotes": zod.string().nullish()
+})
+
+export const AdminCreateOrderResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "orderNumber": zod.string(),
+  "subtotal": zod.number(),
+  "shippingCost": zod.number(),
+  "discount": zod.number(),
+  "tax": zod.number(),
+  "total": zod.number(),
+  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
+  "trackingNumber": zod.string().nullish(),
+  "address": zod.string().optional(),
+  "shippingMethod": zod.string(),
+  "paymentMethod": zod.string(),
+  "adminNotes": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
 export const AdminGetOrderParams = zod.object({
   "id": zod.coerce.number()
 })
@@ -4125,3 +4179,5 @@ export const UnlinkInfluencerCouponParams = zod.object({
 })
 
 export const UnlinkInfluencerCouponResponse = zod.void()
+
+

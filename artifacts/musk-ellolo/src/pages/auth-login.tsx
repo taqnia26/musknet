@@ -1,15 +1,18 @@
 import { useRequestOtp } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
-import { useLocation } from 'wouter';
+import { useLocation, useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Smartphone } from 'lucide-react';
+import { safeReturnTo } from '@/lib/safe-return-to';
 
 export default function Login() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
+  const returnTo = safeReturnTo(new URLSearchParams(searchString).get('returnTo'), '/account');
   const { toast } = useToast();
   
   const [phone, setPhone] = useState('');
@@ -25,7 +28,7 @@ export default function Login() {
     requestOtp.mutate({ data: { phone } }, {
       onSuccess: (res) => {
         // Pass phone to next step via sessionStorage or similar, here we'll just encode in URL for simplicity
-        setLocation(`/auth/verify-otp?phone=${encodeURIComponent(phone)}`);
+        setLocation(`/auth/verify-otp?phone=${encodeURIComponent(phone)}&returnTo=${encodeURIComponent(returnTo)}`);
         
         // Show dev code if available (for testing)
         if (res.devCode) {

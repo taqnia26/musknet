@@ -244,7 +244,7 @@ export default function AdminInventory() {
   const [selectedProduct, setSelectedProduct] = useState<{ id: number; name: string; stock: number; sku: string | null } | null>(null);
 
   const { data: currentUser } = useGetAdminMe();
-  const { data: inventory, isLoading } = useAdminListInventory({ search, lowStock: lowStockOnly });
+  const { data: inventory, isLoading, isError } = useAdminListInventory({ search, lowStock: lowStockOnly });
 
   const canEdit = hasPermission(currentUser, 'inventory', 'edit');
 
@@ -314,6 +314,8 @@ export default function AdminInventory() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+            ) : isError ? (
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-destructive">{t('تعذر تحميل المخزون. تأكد من صلاحية عرض المخزون ثم أعد تسجيل الدخول.', 'Unable to load inventory. Confirm the inventory view permission, then sign in again.')}</TableCell></TableRow>
             ) : inventory?.length === 0 ? (
               <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t('لا توجد منتجات', 'No products found')}</TableCell></TableRow>
             ) : (

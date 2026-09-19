@@ -29,6 +29,7 @@ let categoryId: number;
 let productId: number;
 let customerId: number;
 let orderId: number;
+let createdAdminOrderId: number;
 
 beforeAll(async () => {
   process.env.ADMIN_EMAIL = seedEmail;
@@ -115,6 +116,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (createdAdminOrderId) await db.delete(ordersTable).where(eq(ordersTable.id, createdAdminOrderId));
   if (orderId) await db.delete(invoicesTable).where(eq(invoicesTable.orderId, orderId));
   if (orderId) await db.delete(ordersTable).where(eq(ordersTable.id, orderId));
   if (productId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
@@ -180,6 +182,56 @@ describe.sequential("admin route authorization", () => {
     expect(response.body.nameEn).toBe("Partially updated product");
     expect(response.body.nameAr).toBe("منتج اختبار الإدارة");
     expect(response.body.categoryId).toBe(categoryId);
+  });
+
+  it("creates an admin order and records the inventory decrease", async () => {
+    const response = await request(app)
+      .post("/api/admin/orders")
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({
+        userId: customerId,
+        items: [{ productId, quantity: 2 }],
+        orderAddress: {
+          label: "Office",
+          city: "Riyadh",
+          district: "Olaya",
+          street: "King Fahd Road",
+          buildingNo: "20",
+          additionalInfo: null,
+          isDefault: false,
+        },
+        shippingMethod: "admin-standard",
+        paymentMethod: "cash",
+      })
+      .expect(201);
+
+    createdAdminOrderId = response.body.id;
+    expect(response.body).toMatchObject({
+      userId: customerId,
+      subtotal: 200,
+      shippingCost: 20,
+      tax: 30,
+      total: 250,
+      paymentStatus: "pending",
+    });
+
+    const [product] = await db.select({ stockQuantity: productsTable.stockQuantity })
+      .from(productsTable).where(eq(productsTable.id, productId)).limit(1);
+    expect(product.stockQuantity).toBe(3);
+    const [movement] = await db.select().from(inventoryMovementsTable)
+      .where(and(
+        eq(inventoryMovementsTable.productId, productId),
+        eq(inventoryMovementsTable.reason, `Admin order ${response.body.orderNumber}`),
+      ))
+      .limit(1);
+    expect(movement).toMatchObject({
+      quantityChange: -2,
+      quantityBefore: 5,
+      quantityAfter: 3,
+      performedBy: superId,
+    });
+    // Keep this test isolated from the inventory-adjustment cases below.
+    await db.update(productsTable).set({ stockQuantity: 5 }).where(eq(productsTable.id, productId));
   });
 
   it("returns a clear error without contacting storage when image storage is not configured", async () => {

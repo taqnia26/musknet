@@ -110,13 +110,13 @@ export default function OwnerLogin() {
                         {...field}
                         dir="ltr"
                         data-testid="input-owner-password"
-                        className="h-12 rounded-[10px] border-[#deddd8] bg-white px-4 pe-12 text-[16px] shadow-sm focus-visible:ring-[#e5b526]"
+                        className="h-12 rounded-[10px] border-[#deddd8] bg-white px-4 pr-12 text-[16px] shadow-sm focus-visible:ring-[#e5b526]"
                       />
                     </FormControl>
                     <button
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
-                      className="absolute inset-y-0 end-1 flex w-11 items-center justify-center text-[#777] transition-colors hover:text-black"
+                      className="absolute inset-y-0 right-1 flex w-11 items-center justify-center text-[#777] transition-colors hover:text-black"
                       data-testid="button-toggle-owner-password"
                       aria-label={showPassword ? t('إخفاء كلمة المرور', 'Hide password') : t('إظهار كلمة المرور', 'Show password')}
                     >
