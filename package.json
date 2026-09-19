@@ -20,7 +20,8 @@
     "@google-cloud/storage": "^8.0.1",
     "@playwright/test": "^1.62.1",
     "@replit/connectors-sdk": "^0.4.1",
-    "google-auth-library": "^11.0.2"
+    "google-auth-library": "^11.0.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "prettier": "^3.9.6",

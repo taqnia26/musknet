@@ -4,6 +4,7 @@ import {
   immediateObligations,
   recurringObligations,
   thirdPartyRights,
+  trailingObligationRows,
   unnamedNameAmountRows,
   type ObligationDetailRow,
 } from '@/data/owner-obligations';
@@ -121,6 +122,10 @@ export function OwnerObligations() {
 
       <Section title={debts.title}>
         <DetailTable rows={debts.rows} />
+      </Section>
+
+      <Section>
+        <NameAmountTable rows={trailingObligationRows} />
       </Section>
     </div>
   );

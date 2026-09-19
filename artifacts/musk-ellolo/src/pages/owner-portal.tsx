@@ -47,6 +47,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import { OwnerObligations } from '@/components/owner/owner-obligations';
+import { OwnerWorkbookSection } from '@/components/owner/owner-workbook-section';
 
 type OwnerNavItem = {
   href: string;
@@ -388,6 +389,12 @@ export default function OwnerPortal() {
             <OwnerOverview ownerName={owner.name} t={t} />
           ) : location === '/owner/obligations' ? (
             <OwnerObligations />
+          ) : location === '/owner/products' ? (
+            <OwnerWorkbookSection title={t('المنتجات', 'Products')} sheetNames={['المخزون الكلي', 'المخوزن الفعلي']} />
+          ) : location === '/owner/payment-plan' ? (
+            <OwnerWorkbookSection title={t('خطة السداد', 'Payment plan')} sheetNames={['خطة السداد']} />
+          ) : location === '/owner/manufacturing' ? (
+            <OwnerWorkbookSection title={t('التصنيع', 'Manufacturing')} sheetNames={['الكميات التي تم تصنيعها ']} />
           ) : (
             <PendingOwnerSection item={selectedItem} t={t} />
           )}

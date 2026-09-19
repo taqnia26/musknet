@@ -68,6 +68,10 @@ export const unnamedNameAmountRows = [
   { name: 'ملاك ', amount: 200000 },
 ];
 
+export const trailingObligationRows = [
+  { name: 'سعر البيع النهائي ' },
+];
+
 export const debts: { title: string; rows: ObligationDetailRow[] } = {
   title: 'مديونيات',
   rows: [
