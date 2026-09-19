@@ -236,7 +236,7 @@ export default function OwnerPortal() {
 
       <nav className="flex-1 overflow-y-auto px-3 py-5">
         <button type="button" className="mb-1 flex w-full items-center justify-between rounded-xl px-4 py-3 text-[#555] hover:bg-[#f3f1ec] dark:text-[#c1c2c5] dark:hover:bg-white/5">
-          <span className="flex items-center gap-3"><CircleDollarSign className="h-5 w-5" />{t('الجملة — B2B', 'Wholesale — B2B')}</span>
+          <span className="flex items-center gap-3"><CircleDollarSign className="h-5 w-5" />B2B</span>
           <ChevronDown className="h-4 w-4" />
         </button>
         <button type="button" className="mb-1 flex w-full items-center justify-between rounded-xl px-4 py-3 text-[#555] hover:bg-[#f3f1ec] dark:text-[#c1c2c5] dark:hover:bg-white/5">

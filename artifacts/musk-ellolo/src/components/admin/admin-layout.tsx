@@ -109,11 +109,11 @@ const navStructure = [
     ]
   },
   {
-    labelEn: 'B2B', labelAr: 'الجملة B2B', icon: Warehouse, module: 'distributors',
+    labelEn: 'B2B', labelAr: 'B2B', icon: Warehouse, module: 'distributors',
     children: [
       { href: '/admin/distributors', labelEn: 'Distributors', labelAr: 'الموزعين' },
       { href: '/admin/contracts', labelEn: 'Contracts', labelAr: 'العقود', module: 'contracts' },
-      { href: '/admin/distributor-catalog', labelEn: 'B2B Catalog', labelAr: 'كتالوج الجملة', module: 'distributors' },
+      { href: '/admin/distributor-catalog', labelEn: 'B2B Catalog', labelAr: 'كتالوج B2B', module: 'distributors' },
     ]
   },
   {
