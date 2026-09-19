@@ -46,6 +46,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
+import { OwnerObligations } from '@/components/owner/owner-obligations';
 
 type OwnerNavItem = {
   href: string;
@@ -385,6 +386,8 @@ export default function OwnerPortal() {
             />
           ) : location === '/owner' ? (
             <OwnerOverview ownerName={owner.name} t={t} />
+          ) : location === '/owner/obligations' ? (
+            <OwnerObligations />
           ) : (
             <PendingOwnerSection item={selectedItem} t={t} />
           )}
