@@ -62,6 +62,7 @@ export * from './adminListEmployeesParams';
 export * from './adminListInventoryParams';
 export * from './adminListInventorySort';
 export * from './adminListInventoryStockStatus';
+export * from './adminListInvoicesChannel';
 export * from './adminListInvoicesParams';
 export * from './adminListJournalEntriesParams';
 export * from './adminListOrdersParams';

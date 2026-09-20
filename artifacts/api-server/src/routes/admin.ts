@@ -934,15 +934,18 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     createdAt: invoicesTable.createdAt,
   }).from(invoicesTable)
     .leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
-    .where(search ? or(
-      ilike(invoicesTable.invoiceNumber, `%${search}%`),
-      ilike(invoicesTable.sellerName, `%${search}%`),
-      ilike(invoicesTable.sellerVatNumber, `%${search}%`),
-      ilike(invoicesTable.buyerName, `%${search}%`),
-      ilike(invoicesTable.buyerTaxNumber, `%${search}%`),
-      ilike(invoicesTable.buyerCommercialRegistrationNumber, `%${search}%`),
-      ilike(ordersTable.orderNumber, `%${search}%`),
-    ) : undefined)
+    .where(and(
+      query.channel === "companies" ? sql`${invoicesTable.distributorId} is not null` : undefined,
+      search ? or(
+        ilike(invoicesTable.invoiceNumber, `%${search}%`),
+        ilike(invoicesTable.sellerName, `%${search}%`),
+        ilike(invoicesTable.sellerVatNumber, `%${search}%`),
+        ilike(invoicesTable.buyerName, `%${search}%`),
+        ilike(invoicesTable.buyerTaxNumber, `%${search}%`),
+        ilike(invoicesTable.buyerCommercialRegistrationNumber, `%${search}%`),
+        ilike(ordersTable.orderNumber, `%${search}%`),
+      ) : undefined,
+    ))
     .orderBy(desc(invoicesTable.sequenceNumber));
   const itemRows = rows.length
     ? await db.select().from(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, rows.map((row) => row.id))).orderBy(invoiceItemsTable.id)

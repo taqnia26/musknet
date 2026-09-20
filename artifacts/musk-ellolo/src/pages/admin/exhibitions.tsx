@@ -198,8 +198,8 @@ export default function AdminExhibitions() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('المعارض', 'Exhibitions')}</h1>
-          <p className="text-muted-foreground mt-1">{t('إدارة المعارض والفعاليات', 'Manage exhibitions and events')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('مبيعات المعارض', 'Exhibition Sales')}</h1>
+          <p className="text-muted-foreground mt-1">{t('إدارة المعارض وكميات مبيعاتها', 'Manage exhibitions and their sales quantities')}</p>
         </div>
         {canEdit && (
           <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if (!v) setEditingExhibition(null); }}>

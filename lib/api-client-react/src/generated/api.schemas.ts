@@ -2590,7 +2590,16 @@ export const AdminListOrdersStatus = {
 
 export type AdminListInvoicesParams = {
 search?: AdminSearchParameter;
+channel?: AdminListInvoicesChannel;
 };
+
+export type AdminListInvoicesChannel = typeof AdminListInvoicesChannel[keyof typeof AdminListInvoicesChannel];
+
+
+export const AdminListInvoicesChannel = {
+  all: 'all',
+  companies: 'companies',
+} as const;
 
 export type AdminListCouponsParams = {
 search?: AdminSearchParameter;

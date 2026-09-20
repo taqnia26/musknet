@@ -812,7 +812,12 @@ paths:
       summary: List and search issued ZATCA invoices
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
-      parameters: [{ $ref: "#/components/parameters/AdminSearch" }]
+      parameters:
+        - $ref: "#/components/parameters/AdminSearch"
+        - name: channel
+          in: query
+          required: false
+          schema: { type: string, enum: [all, companies], default: all }
       responses:
         "200":
           description: Issued invoices

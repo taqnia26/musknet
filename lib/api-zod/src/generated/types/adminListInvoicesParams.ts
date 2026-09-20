@@ -5,8 +5,10 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminListInvoicesChannel } from './adminListInvoicesChannel';
 import type { AdminSearchParameter } from './adminSearchParameter';
 
 export type AdminListInvoicesParams = {
 search?: AdminSearchParameter;
+channel?: AdminListInvoicesChannel;
 };

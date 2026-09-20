@@ -92,8 +92,8 @@ export default function AdminOrders() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('الطلبات', 'Orders')}</h1>
-          <p className="text-muted-foreground mt-1">{t('متابعة وإدارة طلبات العملاء', 'Track and manage customer orders')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('مبيعات أونلاين', 'Online Sales')}</h1>
+          <p className="text-muted-foreground mt-1">{t('متابعة وإدارة طلبات المتجر', 'Track and manage storefront orders')}</p>
         </div>
         {hasPermission(currentUser, 'orders', 'edit') && <CreateOrderDialog />}
       </div>

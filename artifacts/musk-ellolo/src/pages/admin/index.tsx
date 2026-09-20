@@ -46,6 +46,12 @@ export default function AdminRoutes() {
   return (
     <AdminLayout>
       <Switch>
+        <Route path="/admin/customers/individuals" component={AdminCustomers} />
+        <Route path="/admin/customers/companies" component={AdminDistributors} />
+        <Route path="/admin/sales/online" component={AdminOrders} />
+        <Route path="/admin/sales/companies" component={AdminInvoices} />
+        <Route path="/admin/sales/exhibitions" component={AdminExhibitions} />
+        <Route path="/admin/marketing/coupons" component={AdminCoupons} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin/categories" component={AdminCategories} />

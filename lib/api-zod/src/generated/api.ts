@@ -2164,8 +2164,11 @@ export const AdminUpdateOrderResponse = zod.object({
 /**
  * @summary List and search issued ZATCA invoices
  */
+export const adminListInvoicesQueryChannelDefault = `all`;
+
 export const AdminListInvoicesQueryParams = zod.object({
-  "search": zod.coerce.string().optional()
+  "search": zod.coerce.string().optional(),
+  "channel": zod.enum(['all', 'companies']).default(adminListInvoicesQueryChannelDefault)
 })
 
 export const AdminListInvoicesResponseItem = zod.object({

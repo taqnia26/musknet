@@ -169,14 +169,17 @@ export default function AdminInvoices() {
   const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
   const { data: currentUser } = useGetAdminMe();
 
-  const { data: invoices, isLoading, isError } = useAdminListInvoices({ search: search || undefined });
+  const { data: invoices, isLoading, isError } = useAdminListInvoices({
+    search: search || undefined,
+    channel: 'companies',
+  });
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('الفواتير الضريبية', 'Tax Invoices')}</h1>
-          <p className="text-muted-foreground mt-1">{t('سجل الفواتير الضريبية المبسطة ZATCA', 'ZATCA Simplified Tax Invoices log')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('مبيعات الشركات', 'Company Sales')}</h1>
+          <p className="text-muted-foreground mt-1">{t('فواتير البيع المرتبطة بالشركات والموزعين', 'Sales invoices linked to companies and distributors')}</p>
         </div>
         {hasPermission(currentUser, 'invoices', 'edit') && <CreateDistributorInvoiceDialog />}
       </div>

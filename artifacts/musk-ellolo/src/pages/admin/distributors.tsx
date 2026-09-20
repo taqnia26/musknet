@@ -99,8 +99,8 @@ export default function AdminDistributors() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('الموزعين', 'Distributors')}</h1>
-          <p className="text-muted-foreground mt-1">{t('إدارة حسابات الموزعين وتفاصيلهم', 'Manage distributor accounts and details')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('الشركات', 'Companies')}</h1>
+          <p className="text-muted-foreground mt-1">{t('إدارة حسابات الشركات والموزعين وتفاصيلهم', 'Manage company and distributor accounts and details')}</p>
         </div>
         {hasPermission(currentUser, 'distributors', 'edit') && (
           <Dialog open={isDialogOpen} onOpenChange={(v) => { setIsDialogOpen(v); if (!v) { setEditingId(null); form.reset(); } }}>

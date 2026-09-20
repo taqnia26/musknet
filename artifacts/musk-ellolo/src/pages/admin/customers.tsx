@@ -63,8 +63,8 @@ export default function AdminCustomers() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('العملاء', 'Customers')}</h1>
-          <p className="text-muted-foreground mt-1">{t('إدارة حسابات العملاء', 'Manage customer accounts')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('الأفراد', 'Individuals')}</h1>
+          <p className="text-muted-foreground mt-1">{t('إدارة حسابات عملاء المتجر', 'Manage storefront customer accounts')}</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(v) => { setIsDialogOpen(v); if (!v) { setSelectedCustomer(null); } }}>
           <DialogContent>

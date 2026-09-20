@@ -42,9 +42,8 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 // Hierarchical Navigation matching requirements
-const navStructure = [
+export const navStructure = [
   { href: '/admin', icon: LayoutDashboard, labelEn: 'Dashboard', labelAr: 'لوحة المتابعة', module: 'dashboard', direct: true },
-  { href: '/admin/orders', icon: ShoppingCart, labelEn: 'Orders', labelAr: 'الطلبات', module: 'orders', direct: true },
   {
     labelEn: 'Products', labelAr: 'المنتجات', icon: Package, module: 'products',
     children: [
@@ -55,9 +54,10 @@ const navStructure = [
     ]
   },
   {
-    labelEn: 'Customers', labelAr: 'العملاء', icon: Users, module: 'customers',
+    labelEn: 'Customers', labelAr: 'العملاء', icon: Users,
     children: [
-      { href: '/admin/customers', labelEn: 'Manage Customers', labelAr: 'إدارة العملاء' },
+      { href: '/admin/customers/individuals', labelEn: 'Individuals', labelAr: 'الأفراد', module: 'customers' },
+      { href: '/admin/customers/companies', labelEn: 'Companies', labelAr: 'الشركات', module: 'distributors' },
     ]
   },
   { href: '/admin/influencers', icon: UserCog, labelEn: 'Influencers', labelAr: 'المشاهير', module: 'dashboard', direct: true },
@@ -69,17 +69,18 @@ const navStructure = [
     ]
   },
   {
-    labelEn: 'Sales', labelAr: 'المبيعات', icon: Banknote, module: 'orders',
+    labelEn: 'Sales', labelAr: 'المبيعات', icon: Banknote,
     children: [
-      { href: '/admin/coupons', labelEn: 'Coupons', labelAr: 'الكوبونات', module: 'coupons' },
-      { href: '/admin/invoices', labelEn: 'Invoices', labelAr: 'الفواتير', module: 'invoices' },
-      { href: '/admin/exhibitions', labelEn: 'Exhibitions', labelAr: 'المعارض', module: 'exhibitions' },
+      { href: '/admin/sales/online', labelEn: 'Online Sales', labelAr: 'مبيعات أونلاين', module: 'orders' },
+      { href: '/admin/sales/companies', labelEn: 'Company Sales', labelAr: 'مبيعات الشركات', module: 'invoices' },
+      { href: '/admin/sales/exhibitions', labelEn: 'Exhibition Sales', labelAr: 'مبيعات المعارض', module: 'exhibitions' },
     ]
   },
   {
-    labelEn: 'Marketing', labelAr: 'التسويق', icon: Tags, module: 'dashboard',
+    labelEn: 'Marketing', labelAr: 'التسويق', icon: Tags,
     children: [
-      { href: '/admin/marketing', labelEn: 'Campaigns', labelAr: 'الحملات' },
+      { href: '/admin/marketing', labelEn: 'Campaigns', labelAr: 'الحملات', module: 'dashboard' },
+      { href: '/admin/marketing/coupons', labelEn: 'Coupons', labelAr: 'الكوبونات', module: 'coupons' },
     ]
   },
   {
@@ -111,7 +112,6 @@ const navStructure = [
   {
     labelEn: 'B2B', labelAr: 'B2B', icon: Warehouse, module: 'distributors',
     children: [
-      { href: '/admin/distributors', labelEn: 'Distributors', labelAr: 'الموزعين' },
       { href: '/admin/contracts', labelEn: 'Contracts', labelAr: 'العقود', module: 'contracts' },
       { href: '/admin/distributor-catalog', labelEn: 'B2B Catalog', labelAr: 'كتالوج B2B', module: 'distributors' },
     ]
@@ -131,16 +131,26 @@ const navStructure = [
   { href: '/admin/settings/owner-credentials', icon: KeyRound, labelEn: 'Owner credentials', labelAr: 'بيانات دخول المالك', superAdminOnly: true, direct: true },
 ];
 
+export const isAdminNavActive = (href: string, location: string) =>
+  location === href || (href !== '/admin' && location.startsWith(href));
+
+export const visibleAdminNavChildren = (item: any, user: any) =>
+  item.children?.filter((child: any) => {
+    if (child.superAdminOnly && !user.isSuperAdmin) return false;
+    if (child.module && child.module !== 'dashboard' && !hasPermission(user, child.module, 'view')) return false;
+    return true;
+  }) ?? [];
+
 function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any, location: string, lang: string, setOpen?: (open: boolean) => void }) {
   const [isOpen, setIsOpen] = useState(
-    item.children?.some((child: any) => location === child.href || (child.href !== '/admin' && location.startsWith(child.href)))
+    item.children?.some((child: any) => isAdminNavActive(child.href, location))
   );
 
   if (item.superAdminOnly && !user.isSuperAdmin) return null;
   if (item.module && item.module !== 'dashboard' && !hasPermission(user, item.module, 'view')) return null;
 
   if (item.direct) {
-    const isActive = location === item.href || (item.href !== '/admin' && location.startsWith(item.href));
+    const isActive = isAdminNavActive(item.href, location);
     return (
       <Link href={item.href}>
         <span
@@ -161,15 +171,11 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
   }
 
   // Filter children based on permissions
-  const validChildren = item.children?.filter((child: any) => {
-    if (child.superAdminOnly && !user.isSuperAdmin) return false;
-    if (child.module && child.module !== 'dashboard' && !hasPermission(user, child.module, 'view')) return false;
-    return true;
-  });
+  const validChildren = visibleAdminNavChildren(item, user);
 
   if (!validChildren || validChildren.length === 0) return null;
 
-  const hasActiveChild = validChildren.some((child: any) => location === child.href || (child.href !== '/admin' && location.startsWith(child.href)));
+  const hasActiveChild = validChildren.some((child: any) => isAdminNavActive(child.href, location));
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
@@ -187,7 +193,7 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
       </CollapsibleTrigger>
       <CollapsibleContent className="pl-9 rtl:pl-0 rtl:pr-9 space-y-0.5 mt-0.5 overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
         {validChildren.map((child: any) => {
-          const isChildActive = location === child.href || (child.href !== '/admin' && location.startsWith(child.href));
+          const isChildActive = isAdminNavActive(child.href, location);
           return (
             <Link key={child.href} href={child.href}>
               <span

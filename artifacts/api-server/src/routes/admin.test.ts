@@ -316,6 +316,13 @@ describe.sequential("admin route authorization", () => {
     });
     expect(Buffer.from(invoice.qrCodeData, "base64")[0]).toBe(1);
 
+    const companySales = await request(app)
+      .get("/api/admin/invoices?channel=companies")
+      .set("Authorization", `Bearer ${superToken}`)
+      .expect(200);
+    expect(companySales.body.some((item: { orderId: number }) => item.orderId === orderId)).toBe(false);
+    expect(companySales.body.every((item: { distributorId: number | null }) => item.distributorId !== null)).toBe(true);
+
     const qr = await request(app)
       .get(`/api/admin/invoices/${invoice.id}/qr`)
       .set("Authorization", `Bearer ${superToken}`)
