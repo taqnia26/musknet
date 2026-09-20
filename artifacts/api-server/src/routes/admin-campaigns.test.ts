@@ -19,6 +19,8 @@ const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 const userIds: number[] = [];
 const couponIds: number[] = [];
 let campaignId: number;
+
+let inactiveCouponId: number;
 let editorToken: string;
 let viewerToken: string;
 let outsiderToken: string;
@@ -59,26 +61,13 @@ beforeAll(async () => {
     { code: `CAMPAIGN-B-${suffix}`, discountType: "fixed", discountValue: 25 },
     { code: `CAMPAIGN-C-${suffix}`, discountType: "percentage", discountValue: 15 },
   ]).returning();
-  couponIds.push(...coupons.map((coupon) => coupon.id));
-});
 
-afterAll(async () => {
-  if (campaignId) {
-    await db.delete(campaignCouponsTable).where(eq(campaignCouponsTable.campaignId, campaignId));
-    await db.delete(campaignsTable).where(eq(campaignsTable.id, campaignId));
-  }
-  if (couponIds.length) await db.delete(couponsTable).where(inArray(couponsTable.id, couponIds));
-  if (userIds.length) {
-    await db.delete(adminSessionsTable).where(inArray(adminSessionsTable.adminUserId, userIds));
-    await db.delete(adminUserPermissionsTable).where(inArray(adminUserPermissionsTable.adminUserId, userIds));
-    await db.delete(adminUsersTable).where(inArray(adminUsersTable.id, userIds));
-  }
-  delete process.env.ADMIN_EMAIL;
-  delete process.env.ADMIN_PASSWORD;
-});
-
-describe.sequential("admin campaign lifecycle and authorization", () => {
-  it("creates, updates, pauses, and links multiple coupons to a campaign", async () => {
+  const [inactiveCoupon] = await db.insert(couponsTable).values({
+    code: `CAMPAIGN-INACTIVE-${suffix}`,
+    discountType: "percentage",
+    discountValue: 5,
+    isActive: false,
+  }).returning();
     const created = await request(app).post("/api/admin/campaigns").set(auth(editorToken)).send({
       name: "Launch Campaign",
       channel: "instagram",
@@ -128,6 +117,12 @@ describe.sequential("admin campaign lifecycle and authorization", () => {
     }).expect(400);
 
     const [stored] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, campaignId));
+
+    const missingCouponId = 2147483647;
+
+    const links = await db.select({ couponId: campaignCouponsTable.couponId })
+      .from(campaignCouponsTable)
+      .where(eq(campaignCouponsTable.campaignId, campaignId));
     expect(stored.startsAt.toISOString()).toBe("2027-01-01T00:00:00.000Z");
     expect(stored.endsAt.toISOString()).toBe("2027-01-31T23:59:59.000Z");
   });
@@ -161,3 +156,11 @@ describe.sequential("admin campaign lifecycle and authorization", () => {
     await request(app).get("/api/admin/campaigns/coupon-options").set(auth(outsiderToken)).expect(403);
   });
 });
+
+    const stored = await db.select({ id: campaignsTable.id }).from(campaignsTable)
+      .where(eq(campaignsTable.name, `Missing Coupon Campaign ${suffix}`));
+
+    const response = await request(app).patch(`/api/admin/campaigns/${campaignId}`)
+      .set(auth(editorToken))
+      .send({ name: "Should Not Be Saved", couponIds: [couponIds[0], inactiveCouponId] })
+      .expect(400);

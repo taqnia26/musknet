@@ -893,7 +893,7 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaignInput" } } } }
       responses:
         "201": { description: Campaign, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaign" } } } }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400": { description: Invalid campaign dates or a referenced coupon is missing or inactive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
   /admin/campaigns/coupon-options:
     get:
@@ -912,7 +912,7 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaignUpdate" } } } }
       responses:
         "200": { description: Campaign, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaign" } } } }
-        "400": { $ref: "#/components/responses/BadRequest" }
+        "400": { description: Invalid campaign dates or a referenced coupon is missing or inactive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
   /admin/campaigns/{id}/pause:

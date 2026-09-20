@@ -1019,6 +1019,26 @@ async function campaignWithCoupons(campaign: typeof campaignsTable.$inferSelect)
   return { ...campaign, coupons };
 }
 
+class UnavailableCampaignCouponsError extends Error {
+  constructor(readonly couponIds: number[]) {
+    super(`Campaign coupons are missing or inactive: ${couponIds.join(", ")}`);
+  }
+}
+
+async function assertCampaignCouponsAvailable(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  couponIds: number[],
+) {
+  if (!couponIds.length) return;
+  const available = await tx.select({ id: couponsTable.id })
+    .from(couponsTable)
+    .where(and(inArray(couponsTable.id, couponIds), eq(couponsTable.isActive, true)))
+    .for("update");
+  const availableIds = new Set(available.map((coupon) => coupon.id));
+  const unavailableIds = couponIds.filter((couponId) => !availableIds.has(couponId));
+  if (unavailableIds.length) throw new UnavailableCampaignCouponsError(unavailableIds);
+}
+
 router.get("/admin/campaigns", permit("campaigns", "view"), route(async (_req, res) => {
   const rows = await db.select().from(campaignsTable).orderBy(desc(campaignsTable.startsAt), desc(campaignsTable.id));
   res.json(Api.AdminListCampaignsResponse.parse(await Promise.all(rows.map(campaignWithCoupons))));
@@ -1037,22 +1057,31 @@ router.post("/admin/campaigns", permit("campaigns", "edit"), route(async (req, r
   if (body.endsAt <= body.startsAt) {
     res.status(400).json({ error: "Campaign end must be after its start" }); return;
   }
-  const campaign = await db.transaction(async (tx) => {
-    const [created] = await tx.insert(campaignsTable).values({
-      name: body.name.trim(),
-      channel: body.channel.trim(),
-      status: body.status,
-      startsAt: body.startsAt,
-      endsAt: body.endsAt,
-    }).returning();
-    if (body.couponIds.length) {
-      await tx.insert(campaignCouponsTable).values(body.couponIds.map((couponId) => ({
-        campaignId: created.id,
-        couponId,
-      })));
+  let campaign: typeof campaignsTable.$inferSelect;
+  try {
+    campaign = await db.transaction(async (tx) => {
+      await assertCampaignCouponsAvailable(tx, body.couponIds);
+      const [created] = await tx.insert(campaignsTable).values({
+        name: body.name.trim(),
+        channel: body.channel.trim(),
+        status: body.status,
+        startsAt: body.startsAt,
+        endsAt: body.endsAt,
+      }).returning();
+      if (body.couponIds.length) {
+        await tx.insert(campaignCouponsTable).values(body.couponIds.map((couponId) => ({
+          campaignId: created.id,
+          couponId,
+        })));
+      }
+      return created;
+    });
+  } catch (error) {
+    if (error instanceof UnavailableCampaignCouponsError) {
+      res.status(400).json({ error: error.message }); return;
     }
-    return created;
-  });
+    throw error;
+  }
   res.status(201).json(Api.AdminCreateCampaignResponse.parse(await campaignWithCoupons(campaign)));
 }));
 
@@ -1069,25 +1098,34 @@ router.patch("/admin/campaigns/:id", permit("campaigns", "edit"), route(async (r
   if (endsAt <= startsAt) {
     res.status(400).json({ error: "Campaign end must be after its start" }); return;
   }
-  const campaign = await db.transaction(async (tx) => {
-    const { couponIds, ...changes } = body;
-    const [updated] = await tx.update(campaignsTable).set({
-      ...changes,
-      name: changes.name?.trim(),
-      channel: changes.channel?.trim(),
-      updatedAt: new Date(),
-    }).where(eq(campaignsTable.id, params.id)).returning();
-    if (couponIds) {
-      await tx.delete(campaignCouponsTable).where(eq(campaignCouponsTable.campaignId, params.id));
-      if (couponIds.length) {
-        await tx.insert(campaignCouponsTable).values(couponIds.map((couponId) => ({
-          campaignId: params.id,
-          couponId,
-        })));
+  let campaign: typeof campaignsTable.$inferSelect;
+  try {
+    campaign = await db.transaction(async (tx) => {
+      const { couponIds, ...changes } = body;
+      if (couponIds) await assertCampaignCouponsAvailable(tx, couponIds);
+      const [updated] = await tx.update(campaignsTable).set({
+        ...changes,
+        name: changes.name?.trim(),
+        channel: changes.channel?.trim(),
+        updatedAt: new Date(),
+      }).where(eq(campaignsTable.id, params.id)).returning();
+      if (couponIds) {
+        await tx.delete(campaignCouponsTable).where(eq(campaignCouponsTable.campaignId, params.id));
+        if (couponIds.length) {
+          await tx.insert(campaignCouponsTable).values(couponIds.map((couponId) => ({
+            campaignId: params.id,
+            couponId,
+          })));
+        }
       }
+      return updated;
+    });
+  } catch (error) {
+    if (error instanceof UnavailableCampaignCouponsError) {
+      res.status(400).json({ error: error.message }); return;
     }
-    return updated;
-  });
+    throw error;
+  }
   res.json(Api.AdminUpdateCampaignResponse.parse(await campaignWithCoupons(campaign)));
 }));
 
