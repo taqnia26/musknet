@@ -27,6 +27,7 @@ export * from "./order-items";
 export * from "./categories";
 export * from "./products";
 export * from "./coupons";
+export * from "./campaigns";
 export * from "./order-addresses";
 export * from "./admin-users";
 export * from "./admin-sessions";

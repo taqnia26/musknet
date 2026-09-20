@@ -25,6 +25,10 @@ import type {
   AddressInput,
   AdminAnalyticsDashboard,
   AdminAuthSession,
+  AdminCampaign,
+  AdminCampaignCoupon,
+  AdminCampaignInput,
+  AdminCampaignUpdate,
   AdminCategory,
   AdminCategoryInput,
   AdminCategoryUpdate,
@@ -5833,6 +5837,344 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminDisableCouponMutationOptions(options));
+    }
+
+export const getAdminListCampaignsUrl = () => {
+
+
+
+
+  return `/api/admin/campaigns`
+}
+
+export const adminListCampaigns = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaign[]> => {
+
+  return customFetch<AdminCampaign[]>(getAdminListCampaignsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListCampaignsQueryKey = () => {
+    return [
+    `/api/admin/campaigns`
+    ] as const;
+    }
+
+
+export const getAdminListCampaignsQueryOptions = <TData = Awaited<ReturnType<typeof adminListCampaigns>>, TError = ErrorType<ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListCampaignsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListCampaigns>>> = ({ signal }) => adminListCampaigns({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListCampaigns>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListCampaignsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListCampaigns>>>
+export type AdminListCampaignsQueryError = ErrorType<ForbiddenResponse>
+
+
+
+export function useAdminListCampaigns<TData = Awaited<ReturnType<typeof adminListCampaigns>>, TError = ErrorType<ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListCampaigns>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListCampaignsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateCampaignUrl = () => {
+
+
+
+
+  return `/api/admin/campaigns`
+}
+
+export const adminCreateCampaign = async (adminCampaignInput: AdminCampaignInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaign> => {
+
+  return customFetch<AdminCampaign>(getAdminCreateCampaignUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminCampaignInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateCampaignMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCampaign>>, TError,{data: BodyType<AdminCampaignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateCampaign>>, TError,{data: BodyType<AdminCampaignInput>}, TContext> => {
+
+const mutationKey = ['adminCreateCampaign'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateCampaign>>, {data: BodyType<AdminCampaignInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateCampaign(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateCampaignMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateCampaign>>>
+    export type AdminCreateCampaignMutationBody = BodyType<AdminCampaignInput>
+    export type AdminCreateCampaignMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    export const useAdminCreateCampaign = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCampaign>>, TError,{data: BodyType<AdminCampaignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateCampaign>>,
+        TError,
+        {data: BodyType<AdminCampaignInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateCampaignMutationOptions(options));
+    }
+
+export const getAdminListCampaignCouponOptionsUrl = () => {
+
+
+
+
+  return `/api/admin/campaigns/coupon-options`
+}
+
+export const adminListCampaignCouponOptions = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignCoupon[]> => {
+
+  return customFetch<AdminCampaignCoupon[]>(getAdminListCampaignCouponOptionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListCampaignCouponOptionsQueryKey = () => {
+    return [
+    `/api/admin/campaigns/coupon-options`
+    ] as const;
+    }
+
+
+export const getAdminListCampaignCouponOptionsQueryOptions = <TData = Awaited<ReturnType<typeof adminListCampaignCouponOptions>>, TError = ErrorType<ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListCampaignCouponOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListCampaignCouponOptionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListCampaignCouponOptions>>> = ({ signal }) => adminListCampaignCouponOptions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListCampaignCouponOptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListCampaignCouponOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof adminListCampaignCouponOptions>>>
+export type AdminListCampaignCouponOptionsQueryError = ErrorType<ForbiddenResponse>
+
+
+
+export function useAdminListCampaignCouponOptions<TData = Awaited<ReturnType<typeof adminListCampaignCouponOptions>>, TError = ErrorType<ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListCampaignCouponOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListCampaignCouponOptionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminUpdateCampaignUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/campaigns/${id}`
+}
+
+export const adminUpdateCampaign = async (id: number,
+    adminCampaignUpdate: AdminCampaignUpdate, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaign> => {
+
+  return customFetch<AdminCampaign>(getAdminUpdateCampaignUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminCampaignUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateCampaignMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCampaign>>, TError,{id: number;data: BodyType<AdminCampaignUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCampaign>>, TError,{id: number;data: BodyType<AdminCampaignUpdate>}, TContext> => {
+
+const mutationKey = ['adminUpdateCampaign'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateCampaign>>, {id: number;data: BodyType<AdminCampaignUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateCampaign(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateCampaignMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateCampaign>>>
+    export type AdminUpdateCampaignMutationBody = BodyType<AdminCampaignUpdate>
+    export type AdminUpdateCampaignMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>
+
+    export const useAdminUpdateCampaign = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCampaign>>, TError,{id: number;data: BodyType<AdminCampaignUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateCampaign>>,
+        TError,
+        {id: number;data: BodyType<AdminCampaignUpdate>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateCampaignMutationOptions(options));
+    }
+
+export const getAdminPauseCampaignUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/campaigns/${id}/pause`
+}
+
+export const adminPauseCampaign = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaign> => {
+
+  return customFetch<AdminCampaign>(getAdminPauseCampaignUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminPauseCampaignMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPauseCampaign>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminPauseCampaign>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminPauseCampaign'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminPauseCampaign>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminPauseCampaign(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminPauseCampaignMutationResult = NonNullable<Awaited<ReturnType<typeof adminPauseCampaign>>>
+
+    export type AdminPauseCampaignMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+    export const useAdminPauseCampaign = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPauseCampaign>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminPauseCampaign>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminPauseCampaignMutationOptions(options));
     }
 
 export const getAdminListCustomersUrl = (params?: AdminListCustomersParams,) => {

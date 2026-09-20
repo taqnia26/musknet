@@ -10,6 +10,8 @@ import {
   adminUserPermissionsTable,
   adminUsersTable,
   categoriesTable,
+  campaignCouponsTable,
+  campaignsTable,
   couponsTable,
   customersTable,
   db,
@@ -1006,6 +1008,94 @@ router.patch("/admin/coupons/:id", permit("coupons", "edit"), route(async (req, 
 router.delete("/admin/coupons/:id", permit("coupons", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDisableCouponParams, req.params, res); if (!params) return;
   await db.update(couponsTable).set({ isActive: false }).where(eq(couponsTable.id, params.id)); res.sendStatus(204);
+}));
+
+async function campaignWithCoupons(campaign: typeof campaignsTable.$inferSelect) {
+  const coupons = await db.select({ id: couponsTable.id, code: couponsTable.code })
+    .from(campaignCouponsTable)
+    .innerJoin(couponsTable, eq(campaignCouponsTable.couponId, couponsTable.id))
+    .where(eq(campaignCouponsTable.campaignId, campaign.id))
+    .orderBy(couponsTable.code);
+  return { ...campaign, coupons };
+}
+
+router.get("/admin/campaigns", permit("campaigns", "view"), route(async (_req, res) => {
+  const rows = await db.select().from(campaignsTable).orderBy(desc(campaignsTable.startsAt), desc(campaignsTable.id));
+  res.json(Api.AdminListCampaignsResponse.parse(await Promise.all(rows.map(campaignWithCoupons))));
+}));
+
+router.get("/admin/campaigns/coupon-options", permit("campaigns", "view"), route(async (_req, res) => {
+  const rows = await db.select({ id: couponsTable.id, code: couponsTable.code })
+    .from(couponsTable)
+    .where(eq(couponsTable.isActive, true))
+    .orderBy(couponsTable.code);
+  res.json(Api.AdminListCampaignCouponOptionsResponse.parse(rows));
+}));
+
+router.post("/admin/campaigns", permit("campaigns", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateCampaignBody, req.body, res); if (!body) return;
+  if (body.endsAt <= body.startsAt) {
+    res.status(400).json({ error: "Campaign end must be after its start" }); return;
+  }
+  const campaign = await db.transaction(async (tx) => {
+    const [created] = await tx.insert(campaignsTable).values({
+      name: body.name.trim(),
+      channel: body.channel.trim(),
+      status: body.status,
+      startsAt: body.startsAt,
+      endsAt: body.endsAt,
+    }).returning();
+    if (body.couponIds.length) {
+      await tx.insert(campaignCouponsTable).values(body.couponIds.map((couponId) => ({
+        campaignId: created.id,
+        couponId,
+      })));
+    }
+    return created;
+  });
+  res.status(201).json(Api.AdminCreateCampaignResponse.parse(await campaignWithCoupons(campaign)));
+}));
+
+router.patch("/admin/campaigns/:id", permit("campaigns", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateCampaignParams, req.params, res);
+  const body = parse(Api.AdminUpdateCampaignBody, req.body, res); if (!params || !body) return;
+  const [current] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, params.id)).limit(1);
+  if (!current) { res.status(404).json({ error: "Campaign not found" }); return; }
+  const startsAt = body.startsAt ?? current.startsAt;
+  const endsAt = body.endsAt ?? current.endsAt;
+  if (endsAt <= startsAt) {
+    res.status(400).json({ error: "Campaign end must be after its start" }); return;
+  }
+  const campaign = await db.transaction(async (tx) => {
+    const { couponIds, ...changes } = body;
+    const [updated] = await tx.update(campaignsTable).set({
+      ...changes,
+      name: changes.name?.trim(),
+      channel: changes.channel?.trim(),
+      updatedAt: new Date(),
+    }).where(eq(campaignsTable.id, params.id)).returning();
+    if (couponIds) {
+      await tx.delete(campaignCouponsTable).where(eq(campaignCouponsTable.campaignId, params.id));
+      if (couponIds.length) {
+        await tx.insert(campaignCouponsTable).values(couponIds.map((couponId) => ({
+          campaignId: params.id,
+          couponId,
+        })));
+      }
+    }
+    return updated;
+  });
+  res.json(Api.AdminUpdateCampaignResponse.parse(await campaignWithCoupons(campaign)));
+}));
+
+router.post("/admin/campaigns/:id/pause", permit("campaigns", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminPauseCampaignParams, req.params, res); if (!params) return;
+  const [campaign] = await db.update(campaignsTable)
+    .set({ status: "paused", updatedAt: new Date() })
+    .where(eq(campaignsTable.id, params.id))
+    .returning();
+  if (!campaign) { res.status(404).json({ error: "Campaign not found" }); return; }
+  res.json(Api.AdminPauseCampaignResponse.parse(await campaignWithCoupons(campaign)));
 }));
 
 router.get("/admin/customers", permit("customers", "view"), route(async (req, res) => {

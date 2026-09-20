@@ -1193,6 +1193,74 @@ export interface AdminCouponInput {
 
 export type AdminCouponUpdate = AdminCouponInput;
 
+export interface AdminCampaignCoupon {
+  id: number;
+  code: string;
+}
+
+export type AdminCampaignStatus = typeof AdminCampaignStatus[keyof typeof AdminCampaignStatus];
+
+
+export const AdminCampaignStatus = {
+  draft: 'draft',
+  active: 'active',
+  paused: 'paused',
+} as const;
+
+export interface AdminCampaign {
+  id: number;
+  name: string;
+  channel: string;
+  status: AdminCampaignStatus;
+  startsAt: string;
+  endsAt: string;
+  coupons: AdminCampaignCoupon[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AdminCampaignInputStatus = typeof AdminCampaignInputStatus[keyof typeof AdminCampaignInputStatus];
+
+
+export const AdminCampaignInputStatus = {
+  draft: 'draft',
+  active: 'active',
+  paused: 'paused',
+} as const;
+
+export interface AdminCampaignInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 1 */
+  channel: string;
+  status: AdminCampaignInputStatus;
+  startsAt: string;
+  endsAt: string;
+  /** @items.minimum 1 */
+  couponIds: number[];
+}
+
+export type AdminCampaignUpdateStatus = typeof AdminCampaignUpdateStatus[keyof typeof AdminCampaignUpdateStatus];
+
+
+export const AdminCampaignUpdateStatus = {
+  draft: 'draft',
+  active: 'active',
+  paused: 'paused',
+} as const;
+
+export interface AdminCampaignUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @minLength 1 */
+  channel?: string;
+  status?: AdminCampaignUpdateStatus;
+  startsAt?: string;
+  endsAt?: string;
+  /** @items.minimum 1 */
+  couponIds?: number[];
+}
+
 export interface AdminCustomer {
   id: number;
   phone: string;

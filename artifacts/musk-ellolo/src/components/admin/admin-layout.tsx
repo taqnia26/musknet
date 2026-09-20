@@ -79,7 +79,7 @@ export const navStructure = [
   {
     labelEn: 'Marketing', labelAr: 'التسويق', icon: Tags,
     children: [
-      { href: '/admin/marketing', labelEn: 'Campaigns', labelAr: 'الحملات', module: 'dashboard' },
+      { href: '/admin/marketing', labelEn: 'Campaigns', labelAr: 'الحملات', module: 'campaigns' },
       { href: '/admin/marketing/coupons', labelEn: 'Coupons', labelAr: 'الكوبونات', module: 'coupons' },
     ]
   },

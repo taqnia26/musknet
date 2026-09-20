@@ -878,6 +878,53 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       responses: { "204": { description: Disabled } }
+  /admin/campaigns:
+    get:
+      operationId: adminListCampaigns
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses:
+        "200": { description: Campaigns, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminCampaign" } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: adminCreateCampaign
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaignInput" } } } }
+      responses:
+        "201": { description: Campaign, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaign" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/campaigns/coupon-options:
+    get:
+      operationId: adminListCampaignCouponOptions
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses:
+        "200": { description: Coupon options available to campaigns, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminCampaignCoupon" } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/campaigns/{id}:
+    patch:
+      operationId: adminUpdateCampaign
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaignUpdate" } } } }
+      responses:
+        "200": { description: Campaign, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaign" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/campaigns/{id}/pause:
+    post:
+      operationId: adminPauseCampaign
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200": { description: Paused campaign, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaign" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /admin/customers:
     get:
       operationId: adminListCustomers
@@ -2686,6 +2733,44 @@ components:
         isActive: { type: boolean }
     AdminCouponUpdate:
       allOf: [{ $ref: "#/components/schemas/AdminCouponInput" }]
+    AdminCampaignCoupon:
+      type: object
+      required: [id, code]
+      properties:
+        id: { type: number }
+        code: { type: string }
+    AdminCampaign:
+      type: object
+      required: [id, name, channel, status, startsAt, endsAt, coupons, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        channel: { type: string }
+        status: { type: string, enum: [draft, active, paused] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        coupons: { type: array, items: { $ref: "#/components/schemas/AdminCampaignCoupon" } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminCampaignInput:
+      type: object
+      required: [name, channel, status, startsAt, endsAt, couponIds]
+      properties:
+        name: { type: string, minLength: 1 }
+        channel: { type: string, minLength: 1 }
+        status: { type: string, enum: [draft, active, paused] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        couponIds: { type: array, items: { type: number, minimum: 1, multipleOf: 1 }, uniqueItems: true }
+    AdminCampaignUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        channel: { type: string, minLength: 1 }
+        status: { type: string, enum: [draft, active, paused] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        couponIds: { type: array, items: { type: number, minimum: 1, multipleOf: 1 }, uniqueItems: true }
     AdminCustomer:
       type: object
       required: [id, phone, name, phoneVerified, isActive, createdAt, updatedAt]

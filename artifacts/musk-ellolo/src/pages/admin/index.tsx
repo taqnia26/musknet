@@ -30,6 +30,7 @@ import AdminPurchases from '@/pages/admin/purchases';
 import AdminGiftingIssues from '@/pages/admin/gifting-issues';
 import OwnerCredentialsSettings from '@/pages/admin/owner-credentials';
 import AdminInfluencers from '@/pages/admin/influencers';
+import AdminCampaigns from '@/pages/admin/campaigns';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
@@ -85,19 +86,10 @@ export default function AdminRoutes() {
         <Route path="/admin/whatsapp/inbox" component={AdminWhatsAppInbox} />
         <Route path="/admin/whatsapp/templates" component={AdminWhatsAppTemplates} />
         <Route path="/admin/whatsapp/settings" component={AdminWhatsAppSettings} />
-        <Route path="/admin/marketing" component={AdminMarketingPlaceholder} />
+        <Route path="/admin/marketing" component={AdminCampaigns} />
         <Route path="/admin/integrations" component={AdminIntegrations} />
         <Route path="/admin/settings/owner-credentials" component={OwnerCredentialsSettings} />
       </Switch>
     </AdminLayout>
-  );
-}
-
-function AdminMarketingPlaceholder() {
-  return (
-    <div className="rounded-xl border bg-card p-8">
-      <h1 className="text-3xl font-bold">التسويق / Marketing</h1>
-      <p className="mt-2 text-muted-foreground">واجهة الحملات التسويقية ستكون متاحة هنا.</p>
-    </div>
   );
 }

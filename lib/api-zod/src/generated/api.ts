@@ -2366,6 +2366,116 @@ export const AdminDisableCouponParams = zod.object({
 export const AdminDisableCouponResponse = zod.void()
 
 
+export const AdminListCampaignsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "channel": zod.string(),
+  "status": zod.enum(['draft', 'active', 'paused']),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "coupons": zod.array(zod.object({
+  "id": zod.number(),
+  "code": zod.string()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListCampaignsResponse = zod.array(AdminListCampaignsResponseItem)
+
+
+
+
+export const adminCreateCampaignBodyCouponIdsItemMultipleOf = 1;
+
+
+
+export const AdminCreateCampaignBody = zod.object({
+  "name": zod.string().min(1),
+  "channel": zod.string().min(1),
+  "status": zod.enum(['draft', 'active', 'paused']),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "couponIds": zod.array(zod.number().min(1).multipleOf(adminCreateCampaignBodyCouponIdsItemMultipleOf))
+})
+
+export const AdminCreateCampaignResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "channel": zod.string(),
+  "status": zod.enum(['draft', 'active', 'paused']),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "coupons": zod.array(zod.object({
+  "id": zod.number(),
+  "code": zod.string()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminListCampaignCouponOptionsResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string()
+})
+export const AdminListCampaignCouponOptionsResponse = zod.array(AdminListCampaignCouponOptionsResponseItem)
+
+
+export const AdminUpdateCampaignParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+export const adminUpdateCampaignBodyCouponIdsItemMultipleOf = 1;
+
+
+
+export const AdminUpdateCampaignBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "channel": zod.string().min(1).optional(),
+  "status": zod.enum(['draft', 'active', 'paused']).optional(),
+  "startsAt": zod.coerce.date().optional(),
+  "endsAt": zod.coerce.date().optional(),
+  "couponIds": zod.array(zod.number().min(1).multipleOf(adminUpdateCampaignBodyCouponIdsItemMultipleOf)).optional()
+})
+
+export const AdminUpdateCampaignResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "channel": zod.string(),
+  "status": zod.enum(['draft', 'active', 'paused']),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "coupons": zod.array(zod.object({
+  "id": zod.number(),
+  "code": zod.string()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminPauseCampaignParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminPauseCampaignResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "channel": zod.string(),
+  "status": zod.enum(['draft', 'active', 'paused']),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "coupons": zod.array(zod.object({
+  "id": zod.number(),
+  "code": zod.string()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
 export const adminListCustomersQueryStatusDefault = `all`;
 
 export const AdminListCustomersQueryParams = zod.object({

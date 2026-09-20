@@ -176,6 +176,13 @@
       "when": 1789895024479,
       "tag": "0024_amused_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789900384600,
+      "tag": "0025_sticky_firelord",
+      "breakpoints": true
     }
   ]
 }
