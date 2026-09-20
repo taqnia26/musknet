@@ -55,7 +55,7 @@ export default function OwnerCredentialsSettings() {
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-5">
-            <div className="space-y-2"><Label htmlFor="owner-email">{t('البريد الإلكتروني', 'Email address')}</Label><Input id="owner-email" type="email" required value={currentEmail} onChange={(e) => setEmail(e.target.value)} dir="ltr" /></div>
+            <div className="space-y-2"><Label htmlFor="owner-email">{t('البريد الإلكتروني', 'Email address')}</Label><Input id="owner-email" type="email" required value={currentEmail} onChange={(e) => setEmail(e.target.value)} autoComplete="username" dir="ltr" /></div>
             <div className="space-y-2"><Label htmlFor="owner-password">{t('كلمة المرور الجديدة', 'New password')}</Label><Input id="owner-password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" dir="ltr" /></div>
             <div className="space-y-2"><Label htmlFor="owner-password-confirmation">{t('تأكيد كلمة المرور', 'Confirm password')}</Label><Input id="owner-password-confirmation" type="password" required minLength={8} value={confirmation} onChange={(e) => setConfirmation(e.target.value)} autoComplete="new-password" dir="ltr" /></div>
             {message && <div className={`flex items-center gap-2 rounded-lg p-3 text-sm ${message.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-destructive/10 text-destructive'}`}>{message.ok ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}{message.text}</div>}

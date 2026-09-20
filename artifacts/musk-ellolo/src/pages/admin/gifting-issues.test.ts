@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { issueUses } from './gifting-issues-config';
 
-describe('gifting issue form options', () => {
-  it('offers only the four approved uses for new issues', () => {
+describe('product movement form options', () => {
+  it('offers all approved movement types', () => {
     expect(issueUses.map((item) => item.value)).toEqual([
       'B2B_EVALUATION',
       'TESTER',
       'VIP_GIFT',
       'INFLUENCERS',
+      'DAMAGED',
+      'OTHER',
     ]);
   });
 

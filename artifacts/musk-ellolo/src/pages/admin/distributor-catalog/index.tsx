@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, Save, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Save, Image as ImageIcon, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,17 @@ export default function AdminDistributorCatalog() {
     distributorNameOverride: string;
     distributorImageOverride: string;
   } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredCatalog = catalog?.filter(item => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      item.nameAr?.toLowerCase().includes(q) ||
+      item.nameEn?.toLowerCase().includes(q) ||
+      item.distributorNameOverride?.toLowerCase().includes(q)
+    );
+  });
 
   const startEditing = (item: any) => {
     setEditingId(item.id);
@@ -90,10 +101,20 @@ export default function AdminDistributorCatalog() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">كتالوج الموزعين / B2B Catalog</h1>
           <p className="text-muted-foreground mt-2">إدارة المنتجات المعروضة للموزعين وتخصيص أسمائها وصورها</p>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="بحث في المنتجات..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pr-9 rtl:pr-9 ltr:pl-9 rtl:pl-3"
+            data-testid="input-catalog-search"
+          />
         </div>
       </div>
 
@@ -109,7 +130,7 @@ export default function AdminDistributorCatalog() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {catalog?.map((item) => {
+            {filteredCatalog?.map((item) => {
               const isEditing = editingId === item.id;
               
               return (
@@ -195,10 +216,10 @@ export default function AdminDistributorCatalog() {
               );
             })}
             
-            {catalog?.length === 0 && (
+            {filteredCatalog?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                  لا توجد منتجات حالياً.
+                  {searchQuery ? 'لا توجد نتائج بحث تطابق مدخلاتك.' : 'لا توجد منتجات حالياً.'}
                 </TableCell>
               </TableRow>
             )}

@@ -9,6 +9,13 @@ import AdminOrders from '@/pages/admin/orders';
 import AdminCoupons from '@/pages/admin/coupons';
 import AdminCustomers from '@/pages/admin/customers';
 import AdminInventory from '@/pages/admin/inventory';
+import AdminInventoryLocations from '@/pages/admin/inventory/locations';
+import AdminInventoryTransfers from '@/pages/admin/inventory/transfers';
+import AdminInventoryCounts from '@/pages/admin/inventory/cycle-counts';
+import AdminInventoryMovements from '@/pages/admin/inventory/movements';
+import AdminInventoryReports from '@/pages/admin/inventory/reports';
+import AdminInventoryPurchases from '@/pages/admin/inventory/purchases';
+import AdminNotFound from '@/pages/admin/not-found';
 import AdminDistributors from '@/pages/admin/distributors';
 import AdminContractsList from '@/pages/admin/contracts/index';
 import AdminContractForm from '@/pages/admin/contracts/form';
@@ -65,9 +72,18 @@ export default function AdminRoutes() {
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/influencers" component={AdminInfluencers} />
         <Route path="/admin/customers" component={AdminCustomers} />
-        {/* Keep the inventory center mounted for every operational child path. */}
-        <Route path="/admin/inventory/:rest*" component={AdminInventory} />
-        <Route path="/admin/inventory" component={AdminInventory} />
+        <Route path="/admin/inventory/locations" component={AdminInventoryLocations} />
+        <Route path="/admin/inventory/balances">
+          {() => <AdminInventory titleKey="balances" />}
+        </Route>
+        <Route path="/admin/inventory/purchases" component={AdminInventoryPurchases} />
+        <Route path="/admin/inventory/transfers" component={AdminInventoryTransfers} />
+        <Route path="/admin/inventory/counts" component={AdminInventoryCounts} />
+        <Route path="/admin/inventory/movements" component={AdminInventoryMovements} />
+        <Route path="/admin/inventory/reports" component={AdminInventoryReports} />
+        <Route path="/admin/inventory">
+          {() => <AdminInventory titleKey="overview" />}
+        </Route>
         <Route path="/admin/gifting-issues" component={AdminGiftingIssues} />
         <Route path="/admin/distributors" component={AdminDistributors} />
         <Route path="/admin/distributor-catalog" component={AdminDistributorCatalog} />
@@ -95,6 +111,7 @@ export default function AdminRoutes() {
         <Route path="/admin/marketing" component={AdminCampaigns} />
         <Route path="/admin/integrations" component={AdminIntegrations} />
         <Route path="/admin/settings/owner-credentials" component={OwnerCredentialsSettings} />
+        <Route component={AdminNotFound} />
       </Switch>
     </AdminLayout>
   );

@@ -10934,7 +10934,7 @@ export const getGetAdminGiftingIssuesUrl = (params?: GetAdminGiftingIssuesParams
 }
 
 /**
- * @summary Gifts and testers archive
+ * @summary Product movement log
  */
 export const getAdminGiftingIssues = async (params?: GetAdminGiftingIssuesParams, options?: Parameters<typeof customFetch>[1]): Promise<GetAdminGiftingIssues200> => {
 
@@ -10981,7 +10981,7 @@ export type GetAdminGiftingIssuesQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Gifts and testers archive
+ * @summary Product movement log
  */
 
 export function useGetAdminGiftingIssues<TData = Awaited<ReturnType<typeof getAdminGiftingIssues>>, TError = ErrorType<unknown>>(

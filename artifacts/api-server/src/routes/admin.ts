@@ -80,6 +80,7 @@ import { ObjectStorageService } from "../lib/object-storage";
 import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
 import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch, ensureDefaultInventoryLocation, listInventoryLocations, lookupInventoryBarcode, listInventoryBalances, transferInventory, sendInventoryTransfer, receiveInventoryTransfer, inventoryValueReport, inventoryCsv, createInventoryPurchaseOrder, receiveInventoryPurchaseOrder, createCycleCount, approveCycleCount, inventoryReorderSuggestions, inventoryMovementReport, inventoryAgingReport, inventoryValuationReport, inventoryAuditReport, inventoryReconciliationReport, adjustOperationalBalances } from "../lib/operations";
 import { createSmsaShippingLabel } from "../lib/shipping-carriers";
+import { assertShippingStatusTransition, canApplyCarrierShippingStatus, ShippingStatusTransitionError } from "../lib/shipping-status";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -1238,17 +1239,23 @@ router.patch("/admin/shipping/:id", route(async (req, res) => {
   if (!(await canUseShipping(res, channel, "edit"))) {
     res.status(403).json({ error: "Insufficient permission" }); return;
   }
+  if (body.status !== undefined) {
+    try {
+      assertShippingStatusTransition(existing.status, body.status);
+    } catch (error) {
+      if (error instanceof ShippingStatusTransitionError) {
+        res.status(409).json({ error: error.message });
+        return;
+      }
+      throw error;
+    }
+  }
   await db.transaction(async (tx) => {
     await tx.update(shipmentsTable).set(body).where(eq(shipmentsTable.id, params.id));
-    if (channel === "online" && existing.orderId) {
-      const orderStatus = body.status === "delivered" ? "delivered"
-        : body.status === "in_transit" ? "shipped"
-        : body.status === "cancelled" ? "cancelled"
-        : undefined;
-      await tx.update(ordersTable).set({
-        ...(body.trackingNumber !== undefined ? { trackingNumber: body.trackingNumber } : {}),
-        ...(orderStatus ? { status: orderStatus } : {}),
-      }).where(eq(ordersTable.id, existing.orderId));
+    if (channel === "online" && existing.orderId && body.trackingNumber !== undefined) {
+      await tx.update(ordersTable)
+        .set({ trackingNumber: body.trackingNumber })
+        .where(eq(ordersTable.id, existing.orderId));
     }
   });
   const row = (await shippingRows(channel)).find((item) => item.shipment.id === params.id)!;
@@ -1268,6 +1275,17 @@ router.post("/admin/shipping/:id/label", route(async (req, res) => {
   }
   if (row.shipment.trackingNumber && row.shipment.labelUrl && row.shipment.integrationStatus === "active") {
     res.json(Api.AdminCreateShippingLabelResponse.parse(publicShipment(row))); return;
+  }
+  if (row.shipment.status !== "ready") {
+    try {
+      assertShippingStatusTransition(row.shipment.status, "ready");
+    } catch (error) {
+      if (error instanceof ShippingStatusTransitionError) {
+        res.status(409).json({ error: error.message });
+        return;
+      }
+      throw error;
+    }
   }
 
   const [integration] = await db.select().from(adminIntegrationsTable)
@@ -1364,18 +1382,18 @@ router.post("/shipping/webhooks/:carrier", route(async (req, res) => {
   const status = carrierStatusToShipmentStatus[body.status];
   const occurredAt = body.occurredAt ? new Date(body.occurredAt) : new Date();
   await db.transaction(async (tx) => {
+    const shouldAdvance = canApplyCarrierShippingStatus(shipment.status, status);
     await tx.update(shipmentsTable).set({
-      status,
+      ...(shouldAdvance ? { status } : {}),
       integrationStatus: "active",
       integrationError: null,
       ...(body.actualCost != null ? { actualCost: body.actualCost } : {}),
-      ...(status === "in_transit" && !shipment.shippedAt ? { shippedAt: occurredAt } : {}),
-      ...(status === "delivered" ? { deliveredAt: occurredAt } : {}),
+      ...(shouldAdvance && status === "in_transit" && !shipment.shippedAt ? { shippedAt: occurredAt } : {}),
+      ...(shouldAdvance && status === "delivered" ? { deliveredAt: occurredAt } : {}),
     }).where(eq(shipmentsTable.id, shipment.id));
-    if (shipment.orderId) {
+    if (shipment.orderId && shouldAdvance) {
       const orderStatus = status === "delivered" ? "delivered"
         : status === "in_transit" ? "shipped"
-        : status === "cancelled" ? "cancelled"
         : undefined;
       if (orderStatus) {
         await tx.update(ordersTable).set({ status: orderStatus })
@@ -1388,7 +1406,10 @@ router.post("/shipping/webhooks/:carrier", route(async (req, res) => {
       carrierEventId: body.eventId,
       eventType: "tracking_update",
       status,
-      outcome: "success",
+      outcome: shouldAdvance ? "success" : "ignored",
+      ...(!shouldAdvance && shipment.status !== status
+        ? { errorMessage: `Ignored invalid shipment status transition from '${shipment.status}' to '${status}'` }
+        : {}),
       payload: body,
     });
   });
@@ -1955,6 +1976,10 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
     });
     return;
   }
+  // Ensure account lookups used by the opening entry are available before the
+  // product transaction begins. The product, operational balance, movement and
+  // journal itself are still committed atomically below.
+  await ensureStandardAccountingChart();
   const item = await db.transaction(async (tx) => {
     const slugBase = body.sku.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `product-${Date.now()}`;
     const [created] = await tx.insert(productsTable).values({
@@ -1983,6 +2008,17 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
         sourceType: "product_creation", sourceId: String(created.id), eventKey: `product-creation:${created.id}`,
         performedBy: res.locals.admin.id,
       });
+      await postJournalEntry({
+        entryDate: new Date().toISOString().slice(0, 10),
+        description: `Opening inventory: ${created.nameEn || created.sku}`,
+        createdBy: res.locals.admin.id,
+        sourceType: "product_creation",
+        sourceId: String(created.id),
+        lines: [
+          { accountCode: "1140", debit: (created.stockQuantity * Number(created.averageCost)).toFixed(4) },
+          { accountCode: "3100", credit: (created.stockQuantity * Number(created.averageCost)).toFixed(4) },
+        ],
+      }, tx);
     }
     return {
       id: created.id, nameAr: created.nameAr, nameEn: created.nameEn, sku: created.sku,
@@ -2149,7 +2185,15 @@ router.get("/admin/hr/employees", permit("hr", "view"), route(async (req, res) =
   parsedJson(Api.AdminListEmployeesResponse, rows, res);
 }));
 router.post("/admin/hr/employees", permit("hr", "edit"), route(async (req, res) => {
+  const rawSalary = req.body?.salary;
+  if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "salary") &&
+      (typeof rawSalary !== "number" || !Number.isFinite(rawSalary) || rawSalary <= 0)) {
+    res.status(400).json({ error: "Employee salary must be greater than zero" }); return;
+  }
   const body = parse(Api.AdminCreateEmployeeBody, req.body, res); if (!body) return;
+  if (!Number.isFinite(body.salary) || body.salary <= 0) {
+    res.status(400).json({ error: "Employee salary must be greater than zero" }); return;
+  }
   if (body.adminUserId != null) {
     const [admin] = await db.select({ id: adminUsersTable.id }).from(adminUsersTable).where(eq(adminUsersTable.id, body.adminUserId)).limit(1);
     if (!admin) { res.status(400).json({ error: "Admin user not found" }); return; }
@@ -2159,7 +2203,15 @@ router.post("/admin/hr/employees", permit("hr", "edit"), route(async (req, res) 
 }));
 router.patch("/admin/hr/employees/:id", permit("hr", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateEmployeeParams, req.params, res);
+  const rawSalary = req.body?.salary;
+  if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "salary") &&
+      (typeof rawSalary !== "number" || !Number.isFinite(rawSalary) || rawSalary <= 0)) {
+    res.status(400).json({ error: "Employee salary must be greater than zero" }); return;
+  }
   const body = parse(Api.AdminUpdateEmployeeBody.partial(), req.body, res); if (!params || !body) return;
+  if (body.salary !== undefined && (!Number.isFinite(body.salary) || body.salary <= 0)) {
+    res.status(400).json({ error: "Employee salary must be greater than zero" }); return;
+  }
   if (body.adminUserId != null) {
     const [admin] = await db.select({ id: adminUsersTable.id }).from(adminUsersTable).where(eq(adminUsersTable.id, body.adminUserId)).limit(1);
     if (!admin) { res.status(400).json({ error: "Admin user not found" }); return; }
@@ -2183,6 +2235,15 @@ router.get("/admin/hr/attendance", permit("hr", "view"), route(async (_req, res)
 }));
 router.post("/admin/hr/attendance", permit("hr", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateAttendanceBody, req.body, res); if (!body) return;
+  if (body.checkInTime != null && body.checkOutTime != null) {
+    const toSeconds = (value: string) => {
+      const parts = value.split(":").map(Number);
+      return (parts[0] ?? 0) * 3600 + (parts[1] ?? 0) * 60 + (parts[2] ?? 0);
+    };
+    if (toSeconds(body.checkOutTime) <= toSeconds(body.checkInTime)) {
+      res.status(400).json({ error: "Check-out time must be later than check-in time" }); return;
+    }
+  }
   const [employee] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, body.employeeId)).limit(1);
   if (!employee) { res.status(400).json({ error: "Employee not found" }); return; }
   const [duplicate] = await db.select({ id: attendanceRecordsTable.id }).from(attendanceRecordsTable)
@@ -2232,6 +2293,16 @@ router.get("/admin/hr/payroll", permit("hr", "view"), route(async (_req, res) =>
 }));
 router.post("/admin/hr/payroll", permit("hr", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreatePayrollBody, req.body, res); if (!body) return;
+  if (!Number.isInteger(body.month) || body.month < 1 || body.month > 12) {
+    res.status(400).json({ error: "Payroll month must be an integer between 1 and 12" }); return;
+  }
+  if (!Number.isInteger(body.year) || body.year < 1900 || body.year > 2200) {
+    res.status(400).json({ error: "Payroll year must be a reasonable integer between 1900 and 2200" }); return;
+  }
+  if (![body.baseSalary, body.bonuses, body.deductions].every(Number.isFinite) ||
+      body.baseSalary < 0 || body.bonuses < 0 || body.deductions < 0) {
+    res.status(400).json({ error: "Payroll amounts must be finite and non-negative" }); return;
+  }
   const [employee] = await db.select({ id: employeesTable.id }).from(employeesTable).where(eq(employeesTable.id, body.employeeId)).limit(1);
   if (!employee) { res.status(400).json({ error: "Employee not found" }); return; }
   const netSalary = body.baseSalary + body.bonuses - body.deductions;

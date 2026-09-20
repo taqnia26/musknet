@@ -19,4 +19,6 @@ export const GiftingIssueCategory = {
   TESTER: 'TESTER',
   VIP_GIFT: 'VIP_GIFT',
   INFLUENCERS: 'INFLUENCERS',
+  DAMAGED: 'DAMAGED',
+  OTHER: 'OTHER',
 } as const;

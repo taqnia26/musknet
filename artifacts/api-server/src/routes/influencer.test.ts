@@ -91,6 +91,13 @@ describe("paid metrics and attribution invariants", () => {
     expect(Api.InfluencerPatchBody.safeParse({ isActive: "false" }).success).toBe(false);
   });
 
+  it("rejects commission rates outside 0-100 before persistence", () => {
+    expect(Api.InfluencerPatchBody.safeParse({ commissionRate: -0.01 }).success).toBe(false);
+    expect(Api.InfluencerPatchBody.safeParse({ commissionRate: 100.01 }).success).toBe(false);
+    expect(Api.InfluencerPatchBody.safeParse({ commissionRate: 0 }).success).toBe(true);
+    expect(Api.InfluencerPatchBody.safeParse({ commissionRate: 100 }).success).toBe(true);
+  });
+
   it("models coupon ownership as a single persisted association", async () => {
     const first = await influencer(), second = await influencer();
     const [coupon] = await db.insert(couponsTable).values({ code: `TEST${Date.now()}`, discountType: "percentage", discountValue: 10 }).returning();

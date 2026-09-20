@@ -162,6 +162,11 @@ export default function AdminInfluencers() {
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     setMessage('');
+    const commissionRate = Number(form.commissionRate);
+    if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 100) {
+      setMessage(t('يجب أن تكون نسبة العمولة بين 0 و100٪. أدخل قيمة صحيحة قبل الحفظ.', 'Commission must be between 0 and 100%. Enter a valid value before saving.'));
+      return;
+    }
     const data: {
       name: string;
       email: string;
@@ -173,7 +178,7 @@ export default function AdminInfluencers() {
       name: form.name,
       email: form.email,
       referralCode: form.referralCode,
-      commissionRate: Number(form.commissionRate),
+      commissionRate,
       imageUrl: form.imageUrl || null,
     };
     if (form.password) data.password = form.password;
@@ -258,6 +263,9 @@ export default function AdminInfluencers() {
                 className="mt-2"
                 required={!selected && ['name', 'email', 'password', 'referralCode'].includes(key)}
                 type={key === 'password' ? 'password' : key === 'commissionRate' ? 'number' : key === 'email' ? 'email' : 'text'}
+                min={key === 'commissionRate' ? 0 : undefined}
+                max={key === 'commissionRate' ? 100 : undefined}
+                step={key === 'commissionRate' ? 'any' : undefined}
                 dir={key === 'name' ? undefined : 'ltr'}
                 value={form[key]}
                 data-testid={`input-influencer-${key}`}

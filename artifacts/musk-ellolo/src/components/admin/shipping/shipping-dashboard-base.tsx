@@ -338,7 +338,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
   }
 
   const isB2B = channel === 'b2b';
-  const pageTitle = isB2B ? t('شحنات B2B', 'B2B Shipments') : t('شحنات المتجر', 'Online Shipments');
+  const pageTitle = isB2B ? t('شحنات B2B', 'B2B Shipments') : t('شحنات الأفراد', 'Individual Shipments');
   const sourceLabel = isB2B ? t('رقم الفاتورة', 'Invoice No.') : t('رقم الطلب', 'Order No.');
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 1;

@@ -15,7 +15,7 @@ describe('admin commercial navigation', () => {
       ['Companies', 'الشركات'],
     ]);
     expect(group('Sales').children?.map(({ labelEn, labelAr }) => [labelEn, labelAr])).toEqual([
-      ['Online Sales', 'مبيعات أونلاين'],
+      ['Individual Sales', 'مبيعات الأفراد'],
       ['Company Sales', 'مبيعات الشركات'],
       ['Exhibition Sales', 'مبيعات المعارض'],
     ]);

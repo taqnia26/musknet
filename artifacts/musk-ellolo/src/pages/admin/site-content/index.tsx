@@ -31,11 +31,11 @@ export default function AdminSiteContent() {
 
   useEffect(() => {
     if (content) {
-      setLocalItems(content.filter(c => c.key !== 'seller_legal_profile').map(c => ({ 
-        key: c.key, 
-        data: typeof c.data === 'string' ? c.data : JSON.stringify(c.data, null, 2) 
+      setLocalItems(content.filter(c => c.key !== 'seller_legal_profile').map(c => ({
+        key: c.key,
+        data: typeof c.data === 'string' ? c.data : JSON.stringify(c.data, null, 2)
       })));
-      
+
       const legalProfile = content.find(c => c.key === 'seller_legal_profile');
       if (legalProfile && typeof legalProfile.data === 'object' && legalProfile.data) {
         setSellerLegalProfile({ ...defaultSellerLegalProfile, ...(legalProfile.data as any) });
@@ -44,6 +44,27 @@ export default function AdminSiteContent() {
   }, [content]);
 
   const handleSave = () => {
+    // Validate legal profile fields
+    const requiredLegalFields = [
+      { key: 'sellerName', label: 'اسم الشركة / المؤسسة' },
+      { key: 'sellerCrNumber', label: 'رقم السجل التجاري' },
+      { key: 'sellerCrDate', label: 'تاريخ السجل' },
+      { key: 'sellerCrIssuer', label: 'مصدر السجل' },
+      { key: 'sellerAddress', label: 'العنوان الوطني / مقر الشركة' },
+      { key: 'sellerRepName', label: 'الممثل القانوني الافتراضي' },
+      { key: 'sellerRepTitle', label: 'صفة الممثل الافتراضي' },
+    ];
+
+    const missingFields = requiredLegalFields.filter(f => !sellerLegalProfile[f.key as keyof typeof defaultSellerLegalProfile]?.trim());
+    if (missingFields.length > 0) {
+      toast({
+        title: 'حقول مطلوبة مفقودة / Missing required fields',
+        description: `الرجاء تعبئة: ${missingFields.map(f => f.label).join('، ')}`,
+        variant: 'destructive'
+      });
+      return;
+    }
+
     try {
       const itemsToSave = localItems.map(item => {
         let parsedData: unknown = item.data;
@@ -71,15 +92,23 @@ export default function AdminSiteContent() {
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: getAdminListSiteContentQueryKey() });
-            toast({ title: 'تم الحفظ', description: 'تم حفظ المحتوى بنجاح' });
+            toast({ title: 'تم الحفظ', description: 'تم حفظ المحتوى بنجاح / Content saved successfully' });
           },
-          onError: () => {
-            toast({ title: 'خطأ', description: 'فشل في حفظ المحتوى', variant: 'destructive' });
+          onError: (error: any) => {
+            toast({
+              title: 'خطأ / Error',
+              description: error?.response?.data?.error || error?.message || 'فشل في حفظ المحتوى / Failed to save content',
+              variant: 'destructive'
+            });
           }
         }
       );
-    } catch (err) {
-      toast({ title: 'خطأ', description: 'حدث خطأ أثناء حفظ البيانات', variant: 'destructive' });
+    } catch (err: any) {
+      toast({
+        title: 'خطأ / Error',
+        description: err?.message || 'حدث خطأ أثناء حفظ البيانات / An error occurred while saving',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -137,56 +166,77 @@ export default function AdminSiteContent() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label>اسم الشركة / المؤسسة</Label>
-            <Input 
-              value={sellerLegalProfile.sellerName} 
-              onChange={(e) => updateSellerField('sellerName', e.target.value)} 
+            <Label htmlFor="sellerName">اسم الشركة / المؤسسة *</Label>
+            <Input
+              id="sellerName"
+              name="sellerName"
+              required
+              value={sellerLegalProfile.sellerName}
+              onChange={(e) => updateSellerField('sellerName', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>رقم السجل التجاري</Label>
-            <Input 
-              value={sellerLegalProfile.sellerCrNumber} 
-              onChange={(e) => updateSellerField('sellerCrNumber', e.target.value)} 
+            <Label htmlFor="sellerCrNumber">رقم السجل التجاري *</Label>
+            <Input
+              id="sellerCrNumber"
+              name="sellerCrNumber"
+              required
+              value={sellerLegalProfile.sellerCrNumber}
+              onChange={(e) => updateSellerField('sellerCrNumber', e.target.value)}
               dir="ltr"
               className="text-right"
             />
           </div>
           <div className="space-y-2">
-            <Label>تاريخ السجل</Label>
-            <Input 
-              value={sellerLegalProfile.sellerCrDate} 
-              onChange={(e) => updateSellerField('sellerCrDate', e.target.value)} 
+            <Label htmlFor="sellerCrDate">تاريخ السجل *</Label>
+            <Input
+              id="sellerCrDate"
+              name="sellerCrDate"
+              required
+              value={sellerLegalProfile.sellerCrDate}
+              onChange={(e) => updateSellerField('sellerCrDate', e.target.value)}
               dir="ltr"
               className="text-right"
             />
           </div>
           <div className="space-y-2">
-            <Label>مصدر السجل</Label>
-            <Input 
-              value={sellerLegalProfile.sellerCrIssuer} 
-              onChange={(e) => updateSellerField('sellerCrIssuer', e.target.value)} 
+            <Label htmlFor="sellerCrIssuer">مصدر السجل *</Label>
+            <Input
+              id="sellerCrIssuer"
+              name="sellerCrIssuer"
+              required
+              value={sellerLegalProfile.sellerCrIssuer}
+              onChange={(e) => updateSellerField('sellerCrIssuer', e.target.value)}
             />
           </div>
           <div className="space-y-2 md:col-span-2">
-            <Label>العنوان الوطني / مقر الشركة</Label>
-            <Input 
-              value={sellerLegalProfile.sellerAddress} 
-              onChange={(e) => updateSellerField('sellerAddress', e.target.value)} 
+            <Label htmlFor="sellerAddress">العنوان الوطني / مقر الشركة *</Label>
+            <Input
+              id="sellerAddress"
+              name="sellerAddress"
+              required
+              value={sellerLegalProfile.sellerAddress}
+              onChange={(e) => updateSellerField('sellerAddress', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>الممثل القانوني الافتراضي</Label>
-            <Input 
-              value={sellerLegalProfile.sellerRepName} 
-              onChange={(e) => updateSellerField('sellerRepName', e.target.value)} 
+            <Label htmlFor="sellerRepName">الممثل القانوني الافتراضي *</Label>
+            <Input
+              id="sellerRepName"
+              name="sellerRepName"
+              required
+              value={sellerLegalProfile.sellerRepName}
+              onChange={(e) => updateSellerField('sellerRepName', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label>صفة الممثل الافتراضي</Label>
-            <Input 
-              value={sellerLegalProfile.sellerRepTitle} 
-              onChange={(e) => updateSellerField('sellerRepTitle', e.target.value)} 
+            <Label htmlFor="sellerRepTitle">صفة الممثل الافتراضي *</Label>
+            <Input
+              id="sellerRepTitle"
+              name="sellerRepTitle"
+              required
+              value={sellerLegalProfile.sellerRepTitle}
+              onChange={(e) => updateSellerField('sellerRepTitle', e.target.value)}
             />
           </div>
         </CardContent>
@@ -202,8 +252,8 @@ export default function AdminSiteContent() {
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
                       <Label>المفتاح (Key)</Label>
-                      <Input 
-                        value={item.key} 
+                      <Input
+                        value={item.key}
                         onChange={(e) => updateItem(index, 'key', e.target.value)}
                         disabled={!item.isNew}
                         className="font-mono text-left"
@@ -212,7 +262,7 @@ export default function AdminSiteContent() {
                     </div>
                     <div className="space-y-2">
                       <Label>القيمة (Data / JSON)</Label>
-                      <Textarea 
+                      <Textarea
                         value={item.data}
                         onChange={(e) => updateItem(index, 'data', e.target.value)}
                         rows={typeof item.data === 'string' && (item.data.trim().startsWith('{') || item.data.trim().startsWith('[')) ? 6 : 2}

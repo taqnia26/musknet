@@ -19,7 +19,7 @@ export interface EmployeeInput {
   position: string;
   /** @minLength 1 */
   department: string;
-  /** @minimum 0 */
+  /** @exclusiveMinimum 0 */
   salary: number;
   hireDate: Date;
   isActive?: boolean;

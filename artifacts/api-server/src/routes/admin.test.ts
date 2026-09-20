@@ -1,17 +1,21 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import {
   adminPermissionsTable,
   adminIntegrationsTable,
   adminSessionsTable,
   adminUserPermissionsTable,
   adminUsersTable,
+  accountingAccountsTable,
   categoriesTable,
   customersTable,
   db,
   inventoryBalancesTable,
   inventoryMovementsTable,
+  journalEntriesTable,
+  journalEntryLinesTable,
+  journalEntryAuditTable,
   invoicesTable,
   orderAddressesTable,
   orderItemsTable,
@@ -22,6 +26,8 @@ import {
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
+import * as accounting from "../lib/accounting";
+import * as Api from "@workspace/api-zod";
 
 const seedEmail = `route-super-${Date.now()}@example.com`;
 const createdIds: number[] = [];
@@ -37,6 +43,16 @@ let createdAdminOrderId: number;
 let inventoryCreatedProductId: number;
 let shippingShipmentId: number;
 let previousSmsaIntegration: typeof adminIntegrationsTable.$inferSelect | undefined;
+
+describe("admin validation contracts", () => {
+  it("accepts practical phone formats but rejects alphabetic or implausible values", () => {
+    const valid = { companyName: "شركة اختبار", contactName: "مسؤول", phone: "+966 (50) 123-4567" };
+    expect(Api.AdminCreateDistributorBody.safeParse(valid).success).toBe(true);
+    expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, phone: "0550ABC123" }).success).toBe(false);
+    expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, phone: "123" }).success).toBe(false);
+    expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, phone: "1234567890123456" }).success).toBe(false);
+  });
+});
 
 beforeAll(async () => {
   process.env.ADMIN_EMAIL = seedEmail;
@@ -134,7 +150,22 @@ afterAll(async () => {
     await db.delete(adminIntegrationsTable).where(eq(adminIntegrationsTable.providerId, "smsa"));
   }
   if (createdAdminOrderId) await db.delete(ordersTable).where(eq(ordersTable.id, createdAdminOrderId));
-  if (inventoryCreatedProductId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, inventoryCreatedProductId));
+  if (inventoryCreatedProductId) {
+    const entries = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "product_creation"), eq(journalEntriesTable.sourceId, String(inventoryCreatedProductId))));
+    if (entries.length) {
+      await db.execute(sql`alter table journal_entry_lines disable trigger journal_entry_lines_immutable`);
+      await db.execute(sql`alter table journal_entries disable trigger journal_entries_immutable`);
+      await db.transaction(async (tx) => {
+        await tx.delete(journalEntryAuditTable).where(eq(journalEntryAuditTable.journalEntryId, entries[0].id));
+        await tx.delete(journalEntryLinesTable).where(eq(journalEntryLinesTable.journalEntryId, entries[0].id));
+        await tx.delete(journalEntriesTable).where(eq(journalEntriesTable.id, entries[0].id));
+      });
+      await db.execute(sql`alter table journal_entry_lines enable trigger journal_entry_lines_immutable`);
+      await db.execute(sql`alter table journal_entries enable trigger journal_entries_immutable`);
+    }
+    await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, inventoryCreatedProductId));
+  }
   if (inventoryCreatedProductId) await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, inventoryCreatedProductId));
   if (inventoryCreatedProductId) await db.delete(productsTable).where(eq(productsTable.id, inventoryCreatedProductId));
   if (orderId) await db.delete(invoicesTable).where(eq(invoicesTable.orderId, orderId));
@@ -494,6 +525,47 @@ describe.sequential("admin route authorization", () => {
       movementType: "increase", quantityBefore: 0, quantityAfter: 9,
       sourceType: "product_creation", performedBy: superId,
     });
+    const [entry] = await db.select().from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "product_creation"), eq(journalEntriesTable.sourceId, String(inventoryCreatedProductId))));
+    expect(entry).toBeDefined();
+    const lines = await db.select({
+      code: accountingAccountsTable.code, debit: journalEntryLinesTable.debit, credit: journalEntryLinesTable.credit,
+    }).from(journalEntryLinesTable)
+      .innerJoin(accountingAccountsTable, eq(accountingAccountsTable.id, journalEntryLinesTable.accountId))
+      .where(eq(journalEntryLinesTable.journalEntryId, entry.id));
+    expect(lines).toEqual(expect.arrayContaining([
+      { code: "1140", debit: "270.0000", credit: "0.0000" },
+      { code: "3100", debit: "0.0000", credit: "270.0000" },
+    ]));
+  });
+
+  it("does not post an opening journal for zero opening quantity", async () => {
+    const sku = `INV-ZERO-${Date.now()}`;
+    const response = await request(app).post("/api/admin/inventory")
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({ nameAr: "صفر", nameEn: "Zero", sku, categoryId, price: 10, openingQuantity: 0, openingUnitCost: 30, reorderPoint: 0, targetStockQuantity: 0 })
+      .expect(201);
+    const entries = await db.select().from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "product_creation"), eq(journalEntriesTable.sourceId, String(response.body.id))));
+    expect(entries).toHaveLength(0);
+    await db.delete(productsTable).where(eq(productsTable.id, response.body.id));
+  });
+
+  it("rolls back product creation when opening journal posting fails", async () => {
+    const sku = `INV-ROLLBACK-${Date.now()}`;
+    const beforeProducts = await db.select({ id: productsTable.id }).from(productsTable);
+    const beforeBalances = await db.select({ id: inventoryBalancesTable.id }).from(inventoryBalancesTable);
+    const beforeMovements = await db.select({ id: inventoryMovementsTable.id }).from(inventoryMovementsTable);
+    const failure = vi.spyOn(accounting, "postJournalEntry").mockRejectedValueOnce(new Error("forced journal failure"));
+    await request(app).post("/api/admin/inventory")
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({ nameAr: "فشل", nameEn: "Rollback", sku, categoryId, price: 10, openingQuantity: 3, openingUnitCost: 30, reorderPoint: 0, targetStockQuantity: 0 })
+      .expect(500);
+    failure.mockRestore();
+    expect(await db.select({ id: productsTable.id }).from(productsTable)).toHaveLength(beforeProducts.length);
+    expect(await db.select({ id: inventoryBalancesTable.id }).from(inventoryBalancesTable)).toHaveLength(beforeBalances.length);
+    expect(await db.select({ id: inventoryMovementsTable.id }).from(inventoryMovementsTable)).toHaveLength(beforeMovements.length);
+    expect(await db.select().from(productsTable).where(eq(productsTable.sku, sku))).toHaveLength(0);
   });
 
   it("filters inventory using saved thresholds and returns a real summary", async () => {

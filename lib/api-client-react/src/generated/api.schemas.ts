@@ -2164,7 +2164,7 @@ export interface Employee {
   email: string | null;
   position: string;
   department: string;
-  /** @minimum 0 */
+  /** @exclusiveMinimum 0 */
   salary: number;
   hireDate: string;
   isActive: boolean;
@@ -2185,7 +2185,7 @@ export interface EmployeeInput {
   position: string;
   /** @minLength 1 */
   department: string;
-  /** @minimum 0 */
+  /** @exclusiveMinimum 0 */
   salary: number;
   hireDate: string;
   isActive?: boolean;
@@ -2882,6 +2882,8 @@ export const GiftingIssueCategory = {
   TESTER: 'TESTER',
   VIP_GIFT: 'VIP_GIFT',
   INFLUENCERS: 'INFLUENCERS',
+  DAMAGED: 'DAMAGED',
+  OTHER: 'OTHER',
 } as const;
 
 export interface GiftingIssue {
@@ -2890,6 +2892,8 @@ export interface GiftingIssue {
   recipientName?: string | null;
   category: GiftingIssueCategory;
   comment: string;
+  /** @nullable */
+  reason?: string | null;
   /** @nullable */
   occasion?: string | null;
   /** @nullable */
@@ -2913,33 +2917,59 @@ export interface GiftingIssue {
   importedAt: string;
 }
 
+export interface GiftingIssueLineInput {
+  /** @minimum 1 */
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+}
+
 export type GiftingIssueInputCategory = typeof GiftingIssueInputCategory[keyof typeof GiftingIssueInputCategory];
 
 
 export const GiftingIssueInputCategory = {
+  VIP: 'VIP',
+  Sample: 'Sample',
+  Damage: 'Damage',
+  Marketing: 'Marketing',
+  Tester: 'Tester',
   B2B_EVALUATION: 'B2B_EVALUATION',
   TESTER: 'TESTER',
   VIP_GIFT: 'VIP_GIFT',
   INFLUENCERS: 'INFLUENCERS',
+  DAMAGED: 'DAMAGED',
+  OTHER: 'OTHER',
 } as const;
 
-export interface GiftingIssueInput {
-  /** @minimum 1 */
+export type GiftingIssueInput = ({
+  /** @minItems 1 */
+  lines: GiftingIssueLineInput[];
+} | {
+  /**
+     * Legacy single-line form
+     * @minimum 1
+     */
   productId: number;
-  category: GiftingIssueInputCategory;
-  /** @minimum 1 */
+  /**
+     * Legacy single-line form
+     * @minimum 1
+     */
   quantity: number;
+}) & {
+  category: GiftingIssueInputCategory;
   issueDate?: string;
   /** @maxLength 200 */
   recipientName?: string;
   /** @maxLength 500 */
   occasion?: string;
+  /** @maxLength 500 */
+  reason?: string;
   /**
      * @minLength 1
      * @maxLength 200
      */
   idempotencyKey: string;
-}
+};
 
 export interface InfluencerLogin {
   email: string;

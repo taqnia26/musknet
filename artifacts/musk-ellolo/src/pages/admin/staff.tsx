@@ -209,7 +209,7 @@ export default function AdminStaff() {
                 <FormField control={form.control} name="password" render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('كلمة المرور', 'Password')} {editingId && <span className="text-muted-foreground text-xs">({t('اتركه فارغاً لعدم التغيير', 'leave blank to keep current')})</span>}</FormLabel>
-                    <FormControl><Input type="password" {...field} dir="ltr" /></FormControl>
+                     <FormControl><Input {...field} type="password" autoComplete="new-password" dir="ltr" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />

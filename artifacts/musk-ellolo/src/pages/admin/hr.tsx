@@ -29,6 +29,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
+const mutationErrorMessage = (error: any, fallback: string) =>
+  error?.response?.data?.error || error?.data?.error || error?.message || fallback;
+
 function EmployeesTab({ canEdit }: { canEdit: boolean }) {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
@@ -55,6 +58,11 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
       isActive: formData.get('isActive') === 'true',
       adminUserId: formData.get('adminUserId') ? Number(formData.get('adminUserId')) : null,
     };
+
+    if (!Number.isFinite(data.salary) || data.salary <= 0) {
+      toast({ title: t('الراتب يجب أن يكون أكبر من صفر', 'Salary must be greater than zero'), variant: 'destructive' });
+      return;
+    }
 
     if (editingEmployee) {
       updateMutation.mutate({ id: editingEmployee.id, data }, {
@@ -123,7 +131,7 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('الراتب', 'Salary')}</label>
-                  <Input name="salary" type="number" required defaultValue={editingEmployee?.salary} />
+                   <Input name="salary" type="number" min="0.01" step="0.01" required defaultValue={editingEmployee?.salary} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('تاريخ التعيين', 'Hire Date')}</label>
@@ -148,8 +156,8 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
           </Dialog>
         )}
       </div>
-      <div className="border rounded-md bg-card shadow-sm">
-        <Table>
+      <div className="border rounded-md bg-card shadow-sm overflow-x-auto">
+        <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
               <TableHead>{t('الاسم', 'Name')}</TableHead>
@@ -199,6 +207,8 @@ function AttendanceTab({ canEdit }: { canEdit: boolean }) {
   const { data: attendance, isLoading } = useAdminListAttendance({});
   const { data: employees } = useAdminListEmployees({});
   const [isOpen, setIsOpen] = useState(false);
+  const [filterEmp, setFilterEmp] = useState('');
+  const [filterDate, setFilterDate] = useState('');
   const queryClient = useQueryClient();
   const createMutation = useAdminCreateAttendance();
   const { toast } = useToast();
@@ -214,20 +224,61 @@ function AttendanceTab({ canEdit }: { canEdit: boolean }) {
       status: formData.get('status') as any,
       notes: formData.get('notes') as string || null,
     };
+     if (data.checkInTime && data.checkOutTime) {
+       const toSeconds = (value: string) => {
+         const parts = value.split(':').map(Number);
+         return (parts[0] ?? 0) * 3600 + (parts[1] ?? 0) * 60 + (parts[2] ?? 0);
+       };
+       if (toSeconds(data.checkOutTime) <= toSeconds(data.checkInTime)) {
+         toast({ title: t('وقت الانصراف يجب أن يكون بعد وقت الحضور', 'Check-out time must be later than check-in time'), variant: 'destructive' });
+         return;
+       }
+     }
     createMutation.mutate({ data }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListAttendanceQueryKey() });
         setIsOpen(false);
         toast({ title: t('تم الحفظ', 'Saved') });
-      }
+       },
+        onError: (error) => toast({ title: mutationErrorMessage(error, t('تعذر حفظ الحضور', 'Unable to save attendance')), variant: 'destructive' })
     });
   };
 
   const getEmpName = (id: number) => employees?.find(e => e.id === id)?.name || id;
 
+  const filteredAttendance = attendance?.filter(record => {
+    if (filterEmp && record.employeeId.toString() !== filterEmp) return false;
+    if (filterDate && !record.date.startsWith(filterDate)) return false;
+    return true;
+  });
+
   return (
     <div className="space-y-4 mt-4">
-      <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={filterEmp}
+            onChange={(e) => setFilterEmp(e.target.value)}
+            className="h-10 px-3 rounded-md border border-input bg-background text-sm"
+            data-testid="select-filter-employee"
+          >
+            <option value="">{t('كل الموظفين', 'All Employees')}</option>
+            {employees?.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+          </select>
+          <Input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="w-auto h-10"
+            data-testid="input-filter-date"
+          />
+          {(filterEmp || filterDate) && (
+            <Button variant="ghost" onClick={() => { setFilterEmp(''); setFilterDate(''); }} data-testid="button-clear-filters">
+              <X className="h-4 w-4 me-2" />
+              {t('مسح', 'Clear')}
+            </Button>
+          )}
+        </div>
         {canEdit && (
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
@@ -280,8 +331,8 @@ function AttendanceTab({ canEdit }: { canEdit: boolean }) {
           </Dialog>
         )}
       </div>
-      <div className="border rounded-md">
-        <Table>
+      <div className="border rounded-md overflow-x-auto">
+        <Table className="min-w-[700px]">
           <TableHeader>
             <TableRow>
               <TableHead>{t('الموظف', 'Employee')}</TableHead>
@@ -292,9 +343,9 @@ function AttendanceTab({ canEdit }: { canEdit: boolean }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
-             !attendance?.length ? <TableRow><TableCell colSpan={5} className="text-center">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
-             attendance.map(record => (
+            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center py-12 animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
+             !filteredAttendance?.length ? <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
+             filteredAttendance.map(record => (
                <TableRow key={record.id}>
                  <TableCell className="font-medium">{getEmpName(record.employeeId)}</TableCell>
                  <TableCell>{format(new Date(record.date), 'yyyy-MM-dd')}</TableCell>
@@ -333,12 +384,17 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
       reason: formData.get('reason') as string,
       status: 'pending' as any,
     };
+     if (data.endDate < data.startDate) {
+       toast({ title: t('تاريخ نهاية الإجازة لا يمكن أن يسبق تاريخ البداية', 'Leave end date cannot precede start date'), variant: 'destructive' });
+       return;
+     }
     createMutation.mutate({ data }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListLeaveRequestsQueryKey() });
         setIsOpen(false);
         toast({ title: t('تم الحفظ', 'Saved') });
-      }
+       },
+       onError: (error) => toast({ title: mutationErrorMessage(error, t('تعذر حفظ طلب الإجازة', 'Unable to save leave request')), variant: 'destructive' })
     });
   };
 
@@ -347,7 +403,8 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListLeaveRequestsQueryKey() });
         toast({ title: t('تم التحديث', 'Updated') });
-      }
+      },
+      onError: (error) => toast({ title: mutationErrorMessage(error, t('تعذر تحديث طلب الإجازة', 'Unable to update leave request')), variant: 'destructive' })
     });
   };
 
@@ -402,8 +459,8 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
           </Dialog>
         )}
       </div>
-      <div className="border rounded-md">
-        <Table>
+      <div className="border rounded-md overflow-x-auto">
+        <Table className="min-w-[700px]">
           <TableHeader>
             <TableRow>
               <TableHead>{t('الموظف', 'Employee')}</TableHead>
@@ -483,12 +540,36 @@ function PayrollTab({ canEdit }: { canEdit: boolean }) {
       paymentStatus: formData.get('paymentStatus') as any,
       paymentDate: (formData.get('paymentStatus') === 'paid' && formData.get('paymentDate')) ? formData.get('paymentDate') as string : null,
     };
+     const employeeId = data.employeeId;
+     const netSalary = data.baseSalary + data.bonuses - data.deductions;
+     if (!employees?.some(employee => employee.id === employeeId)) {
+       toast({ title: t('يجب اختيار موظف صالح', 'Please select a valid employee'), variant: 'destructive' });
+       return;
+     }
+     if (!Number.isInteger(data.month) || data.month < 1 || data.month > 12) {
+       toast({ title: t('الشهر يجب أن يكون بين 1 و12', 'Month must be between 1 and 12'), variant: 'destructive' });
+       return;
+     }
+     if (!Number.isInteger(data.year) || data.year < 1900 || data.year > 2200) {
+       toast({ title: t('السنة يجب أن تكون رقماً صحيحاً معقولاً', 'Year must be a reasonable integer'), variant: 'destructive' });
+       return;
+     }
+     if (![data.baseSalary, data.bonuses, data.deductions].every(Number.isFinite) ||
+         data.baseSalary < 0 || data.bonuses < 0 || data.deductions < 0) {
+       toast({ title: t('قيم الرواتب يجب أن تكون غير سالبة', 'Payroll amounts must be non-negative'), variant: 'destructive' });
+       return;
+     }
+     if (netSalary < 0) {
+       toast({ title: t('لا يمكن أن يكون صافي الراتب سالباً', 'Computed net salary cannot be negative'), variant: 'destructive' });
+       return;
+     }
     createMutation.mutate({ data }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListPayrollQueryKey() });
         setIsOpen(false);
         toast({ title: t('تم الحفظ', 'Saved') });
-      }
+       },
+       onError: (error) => toast({ title: mutationErrorMessage(error, t('تعذر حفظ مسير الرواتب', 'Unable to save payroll')), variant: 'destructive' })
     });
   };
 
@@ -514,26 +595,26 @@ function PayrollTab({ canEdit }: { canEdit: boolean }) {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">{t('الشهر', 'Month')}</label>
-                    <Input name="month" type="number" min="1" max="12" required defaultValue={new Date().getMonth() + 1} />
+                    <label className="text-sm font-medium" htmlFor="input-month">{t('الشهر', 'Month')}</label>
+                    <Input id="input-month" name="month" type="number" min="1" max="12" required defaultValue={new Date().getMonth() + 1} />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">{t('السنة', 'Year')}</label>
-                    <Input name="year" type="number" min="2000" max="2100" required defaultValue={new Date().getFullYear()} />
+                    <label className="text-sm font-medium" htmlFor="input-year">{t('السنة', 'Year')}</label>
+                    <Input id="input-year" name="year" type="number" min="2000" max="2100" required defaultValue={new Date().getFullYear()} />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">{t('الأساسي', 'Base')}</label>
-                    <Input type="number" value={base} onChange={e => setBase(Number(e.target.value))} required />
+                    <label className="text-sm font-medium" htmlFor="input-base">{t('الأساسي', 'Base')}</label>
+                    <Input id="input-base" type="number" min="0" step="0.01" value={base} onChange={e => setBase(Number(e.target.value))} required />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">{t('الخصومات', 'Deductions')}</label>
-                    <Input type="number" value={deductions} onChange={e => setDeductions(Number(e.target.value))} required />
+                    <label className="text-sm font-medium" htmlFor="input-deductions">{t('الخصومات', 'Deductions')}</label>
+                    <Input id="input-deductions" type="number" min="0" step="0.01" value={deductions} onChange={e => setDeductions(Number(e.target.value))} required />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">{t('المكافآت', 'Bonuses')}</label>
-                    <Input type="number" value={bonuses} onChange={e => setBonuses(Number(e.target.value))} required />
+                    <label className="text-sm font-medium" htmlFor="input-bonuses">{t('المكافآت', 'Bonuses')}</label>
+                    <Input id="input-bonuses" type="number" min="0" step="0.01" value={bonuses} onChange={e => setBonuses(Number(e.target.value))} required />
                   </div>
                 </div>
                 <div className="p-3 bg-muted rounded-md flex justify-between items-center">
@@ -561,25 +642,29 @@ function PayrollTab({ canEdit }: { canEdit: boolean }) {
           </Dialog>
         )}
       </div>
-      <div className="border rounded-md">
-        <Table>
+      <div className="border rounded-md overflow-x-auto">
+        <Table className="min-w-[700px]">
           <TableHeader>
             <TableRow>
               <TableHead>{t('الموظف', 'Employee')}</TableHead>
               <TableHead>{t('الشهر/السنة', 'Period')}</TableHead>
               <TableHead>{t('الأساسي', 'Base')}</TableHead>
+              <TableHead>{t('المكافآت', 'Bonuses')}</TableHead>
+              <TableHead>{t('الخصومات', 'Deductions')}</TableHead>
               <TableHead>{t('الصافي', 'Net')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={5} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
-             !payroll?.length ? <TableRow><TableCell colSpan={5} className="text-center">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
+            {isLoading ? <TableRow><TableCell colSpan={7} className="text-center py-12 animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
+             !payroll?.length ? <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
              payroll.map(p => (
                <TableRow key={p.id}>
                  <TableCell className="font-medium">{getEmpName(p.employeeId)}</TableCell>
                  <TableCell>{p.month} / {p.year}</TableCell>
                  <TableCell>{p.baseSalary}</TableCell>
+                 <TableCell className="text-success">{p.bonuses}</TableCell>
+                 <TableCell className="text-destructive">{p.deductions}</TableCell>
                  <TableCell className="font-bold text-primary">{p.netSalary}</TableCell>
                  <TableCell>
                    <Badge variant={p.paymentStatus === 'paid' ? 'default' : 'secondary'} className={p.paymentStatus === 'paid' ? 'bg-success text-success-foreground' : ''}>

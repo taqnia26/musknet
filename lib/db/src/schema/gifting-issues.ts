@@ -6,7 +6,7 @@ import { adminUsersTable } from "./admin-users";
 
 export const giftingCategoryEnum = pgEnum("gifting_issue_category", [
   "VIP", "Sample", "Damage", "Marketing", "Tester",
-  "B2B_EVALUATION", "TESTER", "VIP_GIFT", "INFLUENCERS",
+  "B2B_EVALUATION", "TESTER", "VIP_GIFT", "INFLUENCERS", "DAMAGED", "OTHER",
 ]);
 
 export const giftingIssuesTable = pgTable("gifting_issues", {
@@ -14,6 +14,7 @@ export const giftingIssuesTable = pgTable("gifting_issues", {
   recipientName: text("recipient_name"),
   category: giftingCategoryEnum("category").notNull(),
   comment: text("comment").notNull().default(""),
+  reason: text("reason"),
   occasion: text("occasion"),
   program: text("program"),
   productId: integer("product_id").notNull().references(() => productsTable.id, { onDelete: "restrict" }),

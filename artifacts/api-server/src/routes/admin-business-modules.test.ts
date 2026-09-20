@@ -103,6 +103,22 @@ describe.sequential("admin business modules", () => {
       .send({}).expect(403);
   });
 
+  it("rejects non-positive employee salaries on create and patch", async () => {
+    for (const salary of [0, -1]) {
+      const response = await request(app).post("/api/admin/hr/employees").set(auth(superToken)).send({
+        name: "Invalid Salary Employee", nationalId: `N-${suffix}-${salary}`, phone: "0500000000",
+        position: "Maker", department: "Production", salary, hireDate: "2025-01-01",
+      }).expect(400);
+      expect(response.body.error).toContain("greater than zero");
+    }
+
+    await request(app).patch(`/api/admin/hr/employees/${employeeId}`).set(auth(superToken))
+      .send({ salary: 0 }).expect(400);
+    const validPatch = await request(app).patch(`/api/admin/hr/employees/${employeeId}`).set(auth(superToken))
+      .send({ salary: 5001 }).expect(200);
+    expect(validPatch.body.salary).toBe(5001);
+  });
+
   it("creates expenses and summarizes paid order revenue inclusively", async () => {
     await db.insert(customersTable).values({ id: base + 4, phone: `966${String(suffix).slice(-9)}`, name: "Finance Customer" });
     await db.insert(ordersTable).values({

@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { CheckCircle2, MessageCircle, Settings2 } from 'lucide-react';
+import { CheckCircle2, MessageCircle, Phone } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,13 +53,30 @@ export function AdminWhatsAppTemplates() {
 }
 
 export function AdminWhatsAppSettings() {
+  const { t } = useLanguage();
   return (
-    <WhatsAppPlaceholder
-      titleAr="إعدادات ربط WhatsApp"
-      titleEn="WhatsApp connection settings"
-      descriptionAr="تظهر هنا إعدادات الربط عند إضافة تكامل WhatsApp Business في مرحلة لاحقة."
-      descriptionEn="Connection settings will appear here when a WhatsApp Business integration is added later."
-      icon={Settings2}
-    />
+    <Card className="mx-auto max-w-2xl">
+      <CardHeader>
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <Phone className="h-6 w-6" />
+        </div>
+        <CardTitle>{t('واتساب الإدارة العامة', 'General Administration WhatsApp')}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <p className="text-muted-foreground">
+          {t('للتواصل المباشر مع الإدارة العامة عبر واتساب.', 'Contact General Administration directly through WhatsApp.')}
+        </p>
+        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">
+          <div className="text-sm text-muted-foreground">{t('رقم الإدارة العامة', 'General Administration number')}</div>
+          <div dir="ltr" className="mt-1 text-2xl font-bold tracking-wide">055 611 4848</div>
+        </div>
+        <Button asChild>
+          <a href="https://wa.me/966556114848" target="_blank" rel="noreferrer">
+            <MessageCircle className="me-2 h-4 w-4" />
+            {t('فتح محادثة واتساب', 'Open WhatsApp chat')}
+          </a>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

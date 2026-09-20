@@ -3237,7 +3237,7 @@ export const AdminCreateDistributorBody = zod.object({
   "companyName": zod.string().min(1),
   "contactName": zod.string().min(1),
   "email": zod.string().nullish(),
-  "phone": zod.string().min(1),
+  "phone": zod.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, "رقم الهاتف غير صالح. استخدم 8-15 رقماً / Invalid phone. Use 8-15 digits"),
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
@@ -3276,7 +3276,7 @@ export const AdminUpdateDistributorBody = zod.object({
   "companyName": zod.string().min(1),
   "contactName": zod.string().min(1),
   "email": zod.string().nullish(),
-  "phone": zod.string().min(1),
+  "phone": zod.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, "رقم الهاتف غير صالح. استخدم 8-15 رقماً / Invalid phone. Use 8-15 digits"),
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
@@ -3420,7 +3420,7 @@ export const AdminListEmployeesQueryParams = zod.object({
   "status": zod.enum(['active', 'inactive', 'all']).default(adminListEmployeesQueryStatusDefault)
 })
 
-export const adminListEmployeesResponseSalaryMin = 0;
+export const adminListEmployeesResponseSalaryExclusiveMin = 0;
 
 
 
@@ -3432,7 +3432,7 @@ export const AdminListEmployeesResponseItem = zod.object({
   "email": zod.string().nullable(),
   "position": zod.string(),
   "department": zod.string(),
-  "salary": zod.number().min(adminListEmployeesResponseSalaryMin),
+  "salary": zod.number().gt(adminListEmployeesResponseSalaryExclusiveMin),
   "hireDate": zod.coerce.date(),
   "isActive": zod.boolean(),
   "adminUserId": zod.number().nullable()
@@ -3445,7 +3445,7 @@ export const AdminListEmployeesResponse = zod.array(AdminListEmployeesResponseIt
 
 
 
-export const adminCreateEmployeeBodySalaryMin = 0;
+export const adminCreateEmployeeBodySalaryExclusiveMin = 0;
 
 
 
@@ -3456,13 +3456,13 @@ export const AdminCreateEmployeeBody = zod.object({
   "email": zod.string().nullish(),
   "position": zod.string().min(1),
   "department": zod.string().min(1),
-  "salary": zod.number().min(adminCreateEmployeeBodySalaryMin),
+  "salary": zod.number().gt(adminCreateEmployeeBodySalaryExclusiveMin),
   "hireDate": zod.coerce.date(),
   "isActive": zod.boolean().optional(),
   "adminUserId": zod.number().nullish()
 })
 
-export const adminCreateEmployeeResponseSalaryMin = 0;
+export const adminCreateEmployeeResponseSalaryExclusiveMin = 0;
 
 
 
@@ -3474,7 +3474,7 @@ export const AdminCreateEmployeeResponse = zod.object({
   "email": zod.string().nullable(),
   "position": zod.string(),
   "department": zod.string(),
-  "salary": zod.number().min(adminCreateEmployeeResponseSalaryMin),
+  "salary": zod.number().gt(adminCreateEmployeeResponseSalaryExclusiveMin),
   "hireDate": zod.coerce.date(),
   "isActive": zod.boolean(),
   "adminUserId": zod.number().nullable()
@@ -3490,7 +3490,7 @@ export const AdminUpdateEmployeeParams = zod.object({
 
 
 
-export const adminUpdateEmployeeBodyOneSalaryMin = 0;
+export const adminUpdateEmployeeBodyOneSalaryExclusiveMin = 0;
 
 
 
@@ -3501,13 +3501,13 @@ export const AdminUpdateEmployeeBody = zod.object({
   "email": zod.string().nullish(),
   "position": zod.string().min(1),
   "department": zod.string().min(1),
-  "salary": zod.number().min(adminUpdateEmployeeBodyOneSalaryMin),
+  "salary": zod.number().gt(adminUpdateEmployeeBodyOneSalaryExclusiveMin),
   "hireDate": zod.coerce.date(),
   "isActive": zod.boolean().optional(),
   "adminUserId": zod.number().nullish()
 })
 
-export const adminUpdateEmployeeResponseSalaryMin = 0;
+export const adminUpdateEmployeeResponseSalaryExclusiveMin = 0;
 
 
 
@@ -3519,7 +3519,7 @@ export const AdminUpdateEmployeeResponse = zod.object({
   "email": zod.string().nullable(),
   "position": zod.string(),
   "department": zod.string(),
-  "salary": zod.number().min(adminUpdateEmployeeResponseSalaryMin),
+  "salary": zod.number().gt(adminUpdateEmployeeResponseSalaryExclusiveMin),
   "hireDate": zod.coerce.date(),
   "isActive": zod.boolean(),
   "adminUserId": zod.number().nullable()
@@ -4583,10 +4583,10 @@ export const AdminCreateExhibitionProductResponse = zod.object({
 
 
 /**
- * @summary Gifts and testers archive
+ * @summary Product movement log
  */
 export const GetAdminGiftingIssuesQueryParams = zod.object({
-  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']).optional(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']).optional(),
   "search": zod.coerce.string().optional()
 })
 
@@ -4608,8 +4608,9 @@ export const GetAdminGiftingIssuesResponse = zod.object({
   "rows": zod.array(zod.object({
   "id": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemIdMultipleOf),
   "recipientName": zod.string().nullish(),
-  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
   "comment": zod.string(),
+  "reason": zod.string().nullish(),
   "occasion": zod.string().nullish(),
   "program": zod.string().nullish(),
   "productId": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemProductIdMultipleOf),
@@ -4633,27 +4634,41 @@ export const GetAdminGiftingIssuesResponse = zod.object({
 })
 
 
-export const createAdminGiftingIssueBodyProductIdMultipleOf = 1;
+export const createAdminGiftingIssueBodyOneRecipientNameMax = 200;
 
-export const createAdminGiftingIssueBodyQuantityMultipleOf = 1;
+export const createAdminGiftingIssueBodyOneOccasionMax = 500;
 
-export const createAdminGiftingIssueBodyRecipientNameMax = 200;
+export const createAdminGiftingIssueBodyOneReasonMax = 500;
 
-export const createAdminGiftingIssueBodyOccasionMax = 500;
+export const createAdminGiftingIssueBodyOneIdempotencyKeyMax = 200;
 
-export const createAdminGiftingIssueBodyIdempotencyKeyMax = 200;
+export const createAdminGiftingIssueBodyTwoOneLinesItemProductIdMultipleOf = 1;
+
+export const createAdminGiftingIssueBodyTwoOneLinesItemQuantityMultipleOf = 1;
+
+
+export const createAdminGiftingIssueBodyTwoTwoProductIdMultipleOf = 1;
+
+export const createAdminGiftingIssueBodyTwoTwoQuantityMultipleOf = 1;
 
 
 
 export const CreateAdminGiftingIssueBody = zod.object({
-  "productId": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyProductIdMultipleOf),
-  "category": zod.enum(['B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']),
-  "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyQuantityMultipleOf),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
   "issueDate": zod.coerce.date().optional(),
-  "recipientName": zod.string().max(createAdminGiftingIssueBodyRecipientNameMax).optional(),
-  "occasion": zod.string().max(createAdminGiftingIssueBodyOccasionMax).optional(),
-  "idempotencyKey": zod.string().min(1).max(createAdminGiftingIssueBodyIdempotencyKeyMax)
-})
+  "recipientName": zod.string().max(createAdminGiftingIssueBodyOneRecipientNameMax).optional(),
+  "occasion": zod.string().max(createAdminGiftingIssueBodyOneOccasionMax).optional(),
+  "reason": zod.string().max(createAdminGiftingIssueBodyOneReasonMax).optional(),
+  "idempotencyKey": zod.string().min(1).max(createAdminGiftingIssueBodyOneIdempotencyKeyMax)
+}).and(zod.union([zod.object({
+  "lines": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoOneLinesItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoOneLinesItemQuantityMultipleOf)
+})).min(1)
+}),zod.object({
+  "productId": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoTwoProductIdMultipleOf).describe('Legacy single-line form'),
+  "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoTwoQuantityMultipleOf).describe('Legacy single-line form')
+})]))
 
 export const createAdminGiftingIssueResponseIdMultipleOf = 1;
 
@@ -4668,8 +4683,9 @@ export const createAdminGiftingIssueResponseSourceRowMultipleOf = 1;
 export const CreateAdminGiftingIssueResponse = zod.object({
   "id": zod.number().multipleOf(createAdminGiftingIssueResponseIdMultipleOf),
   "recipientName": zod.string().nullish(),
-  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
   "comment": zod.string(),
+  "reason": zod.string().nullish(),
   "occasion": zod.string().nullish(),
   "program": zod.string().nullish(),
   "productId": zod.number().multipleOf(createAdminGiftingIssueResponseProductIdMultipleOf),
@@ -4711,8 +4727,9 @@ export const getAdminGiftingIssuesIdResponseSourceRowMultipleOf = 1;
 export const GetAdminGiftingIssuesIdResponse = zod.object({
   "id": zod.number().multipleOf(getAdminGiftingIssuesIdResponseIdMultipleOf),
   "recipientName": zod.string().nullish(),
-  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
   "comment": zod.string(),
+  "reason": zod.string().nullish(),
   "occasion": zod.string().nullish(),
   "program": zod.string().nullish(),
   "productId": zod.number().multipleOf(getAdminGiftingIssuesIdResponseProductIdMultipleOf),
@@ -4900,7 +4917,7 @@ export const CreateInfluencerBody = zod.object({
 }).and(zod.object({
   "name": zod.string(),
   "referralCode": zod.string(),
-  "commissionRate": zod.number().min(createInfluencerBodyTwoCommissionRateMin).max(createInfluencerBodyTwoCommissionRateMax).optional()
+  "commissionRate": zod.number().min(createInfluencerBodyTwoCommissionRateMin, "نسبة العمولة لا يمكن أن تكون سالبة / Commission cannot be negative").max(createInfluencerBodyTwoCommissionRateMax, "نسبة العمولة لا يمكن أن تتجاوز 100٪ / Commission cannot exceed 100%").optional()
 }))
 
 export const createInfluencerResponseCouponIdsItemMultipleOf = 1;
@@ -4964,7 +4981,7 @@ export const UpdateInfluencerBody = zod.object({
   "password": zod.string().min(updateInfluencerBodyPasswordMin).optional(),
   "referralCode": zod.string().optional(),
   "imageUrl": zod.string().nullish(),
-  "commissionRate": zod.number().min(updateInfluencerBodyCommissionRateMin).max(updateInfluencerBodyCommissionRateMax).optional(),
+  "commissionRate": zod.number().min(updateInfluencerBodyCommissionRateMin, "نسبة العمولة لا يمكن أن تكون سالبة / Commission cannot be negative").max(updateInfluencerBodyCommissionRateMax, "نسبة العمولة لا يمكن أن تتجاوز 100٪ / Commission cannot exceed 100%").optional(),
   "isActive": zod.boolean().optional()
 })
 

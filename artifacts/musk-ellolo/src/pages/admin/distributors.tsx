@@ -18,7 +18,9 @@ import { getAdminListDistributorsQueryKey } from '@workspace/api-client-react';
 const distributorSchema = z.object({
   companyName: z.string().min(1),
   contactName: z.string().min(1),
-  phone: z.string().min(1),
+  phone: z.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, {
+    message: 'رقم الهاتف غير صالح. استخدم 8-15 رقماً (مثال: ‎+966 50 123 4567) / Invalid phone. Use 8-15 digits (e.g. +966 50 123 4567).',
+  }),
   email: z.string().email().nullable().optional(),
   city: z.string().nullable().optional(),
   address: z.string().nullable().optional(),

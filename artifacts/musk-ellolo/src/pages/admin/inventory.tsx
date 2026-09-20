@@ -146,7 +146,7 @@ function InventoryDetails({ item, open, onOpenChange, canEdit }: {
   );
 }
 
-export default function AdminInventory() {
+export default function AdminInventory({ titleKey = 'overview' }: { titleKey?: 'overview' | 'balances' }) {
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -198,8 +198,16 @@ export default function AdminInventory() {
     { title: t('منتجات نافدة', 'Out of stock'), value: summary.outOfStockProducts.toLocaleString(), icon: XCircle },
   ];
 
+  const isBalances = titleKey === 'balances';
+  const pageTitle = isBalances
+    ? t('الأصناف والأرصدة', 'Items & balances')
+    : t('مركز المخزون', 'Inventory center');
+  const pageDesc = isBalances
+    ? t('متابعة أرصدة المنتجات وحدود الطلب', 'Track product balances and reorder thresholds')
+    : t('إدارة الأرصدة والحدود والحركات من مكان واحد', 'Manage balances, thresholds, and movements in one place');
+
   return <div className="space-y-6">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-3xl font-bold">{t('مركز المخزون', 'Inventory center')}</h1><p className="mt-1 text-muted-foreground">{t('إدارة الأرصدة والحدود والحركات من مكان واحد', 'Manage balances, thresholds, and movements in one place')}</p></div>{canEdit && <Button onClick={() => setCreateOpen(true)}><PackagePlus className="me-2 h-4 w-4" />{t('إضافة منتج', 'Add product')}</Button>}</div>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-3xl font-bold">{pageTitle}</h1><p className="mt-1 text-muted-foreground">{pageDesc}</p></div>{canEdit && <Button onClick={() => setCreateOpen(true)}><PackagePlus className="me-2 h-4 w-4" />{t('إضافة منتج', 'Add product')}</Button>}</div>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(({ title, value, icon: Icon }) => <Card key={title}><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">{title}</CardTitle><Icon className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><p className="text-2xl font-bold">{value}</p></CardContent></Card>)}</div>
     <Card><CardHeader><CardTitle className="text-base">{t('الرصيد مقابل حدود المخزون', 'Stock versus saved thresholds')}</CardTitle></CardHeader><CardContent className="h-[320px]" dir="ltr"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis /><Tooltip /><Legend /><Bar dataKey="current" name={t('الحالي', 'Current')} fill="hsl(31 78% 66%)" /><Bar dataKey="reorder" name={t('حد الطلب', 'Reorder')} fill="hsl(0 48% 31%)" /><Bar dataKey="target" name={t('المستهدف', 'Target')} fill="hsl(17 57% 46%)" /></BarChart></ResponsiveContainer></CardContent></Card>
     <div className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-4"><div className="relative"><Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('بحث بالاسم أو SKU', 'Search name or SKU')} /></div><Select value={categoryId} onValueChange={setCategoryId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('كل التصنيفات', 'All categories')}</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{lang === 'ar' ? category.nameAr : category.nameEn}</SelectItem>)}</SelectContent></Select><Select value={stockStatus} onValueChange={(value) => setStockStatus(value as StockStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('كل الحالات', 'All statuses')}</SelectItem><SelectItem value="in_stock">{t('متوفر', 'In stock')}</SelectItem><SelectItem value="low">{t('منخفض', 'Low')}</SelectItem><SelectItem value="out">{t('نافد', 'Out')}</SelectItem></SelectContent></Select><Select value={sort} onValueChange={(value) => setSort(value as Sort)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="name_asc">{t('الاسم تصاعدياً', 'Name A-Z')}</SelectItem><SelectItem value="name_desc">{t('الاسم تنازلياً', 'Name Z-A')}</SelectItem><SelectItem value="quantity_asc">{t('الأقل كمية', 'Lowest quantity')}</SelectItem><SelectItem value="quantity_desc">{t('الأعلى كمية', 'Highest quantity')}</SelectItem><SelectItem value="value_desc">{t('الأعلى قيمة', 'Highest value')}</SelectItem></SelectContent></Select></div>

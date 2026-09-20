@@ -103,69 +103,44 @@ export default function AdminWhatsAppInbox() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedChatId) return;
-
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      text: newMessage.trim(),
-      isAgent: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'sent'
-    };
-
-    setMessages(prev => ({
-      ...prev,
-      [selectedChatId]: [...(prev[selectedChatId] || []), newMsg]
-    }));
-
-    setChats(prev => prev.map(chat => 
-      chat.id === selectedChatId 
-        ? { ...chat, lastMessage: newMsg.text, timestamp: newMsg.timestamp, unread: 0 }
-        : chat
-    ));
-
-    setNewMessage('');
-  };
-
-  const markAsRead = (chatId: string) => {
-    setChats(prev => prev.map(chat => 
-      chat.id === chatId ? { ...chat, unread: 0 } : chat
-    ));
+    toast({
+      title: t('واجهة تجريبية', 'Demo Interface'),
+      description: t('لا يمكن إرسال الرسائل فعلياً عبر واتساب في هذه النسخة التجريبية.', 'Cannot send real WhatsApp messages in this demo version.'),
+    });
   };
 
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);
-    markAsRead(chatId);
   };
 
   const toggleArchive = () => {
-    if (!selectedChatId) return;
-    setChats(prev => prev.map(chat => 
-      chat.id === selectedChatId 
-        ? { ...chat, status: chat.status === 'open' ? 'archived' : 'open' }
-        : chat
-    ));
-    setSelectedChatId(null);
+    toast({
+      title: t('واجهة تجريبية', 'Demo Interface'),
+      description: t('الأرشفة معطلة في النسخة التجريبية.', 'Archiving is disabled in the demo version.'),
+    });
   };
 
   const toggleClosed = () => {
-    if (!selectedChatId) return;
-    setChats(prev => prev.map(chat =>
-      chat.id === selectedChatId
-        ? { ...chat, status: chat.status === 'closed' ? 'open' : 'closed' }
-        : chat
-    ));
+    toast({
+      title: t('واجهة تجريبية', 'Demo Interface'),
+      description: t('إغلاق المحادثة معطل في النسخة التجريبية.', 'Closing conversation is disabled in the demo version.'),
+    });
   };
 
   const handleAttachment = () => {
     toast({
-      title: t('إرفاق تجريبي', 'Demo attachment'),
-      description: t('لم يتم رفع ملف. الربط الخارجي غير مفعّل في هذه المرحلة.', 'No file was uploaded. External integration is disabled at this stage.'),
+      title: t('واجهة تجريبية', 'Demo Interface'),
+      description: t('إرسال المرفقات معطل في النسخة التجريبية.', 'Sending attachments is disabled in the demo version.'),
     });
   };
 
   return (
-    <div className="h-[calc(100vh-10rem)] min-h-[560px] bg-card rounded-xl border flex overflow-hidden shadow-sm" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div className="space-y-4">
+      <div className="bg-primary/10 border border-primary/20 text-primary p-3 text-sm rounded-lg flex items-center justify-center font-medium gap-2">
+        <Mail className="h-4 w-4" />
+        {t('هذه واجهة تجريبية (صورية) لعرض تصميم صندوق الوارد. غير مربوطة حالياً بـ WhatsApp API.', 'This is a mock UI demonstrating the inbox design. It is not currently connected to the WhatsApp API.')}
+      </div>
+      <div className="h-[calc(100vh-14rem)] min-h-[560px] bg-card rounded-xl border flex overflow-hidden shadow-sm" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <div className={cn(
         "flex flex-col w-full md:w-72 lg:w-80 border-e shrink-0 transition-all duration-300",
         selectedChatId ? "hidden md:flex" : "flex"
@@ -217,7 +192,7 @@ export default function AdminWhatsAppInbox() {
                   </Avatar>
                   <div className="flex-1 overflow-hidden">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-semibold text-sm truncate">{chat.name}</span>
+                      <span className="font-semibold text-sm truncate">{chat.name} <span className="text-[10px] text-primary/70 mx-1">({t('عينة', 'Sample')})</span></span>
                       <span className="text-[10px] text-muted-foreground whitespace-nowrap ms-2">{chat.timestamp}</span>
                     </div>
                     <div className="flex justify-between items-center gap-2">
@@ -359,10 +334,10 @@ export default function AdminWhatsAppInbox() {
                   <Input 
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                     placeholder={selectedChat?.status === 'closed' ? t('أعد فتح المحادثة للرد', 'Reopen the conversation to reply') : t('اكتب رسالة...', 'Type a message...')}
+                    placeholder={selectedChat?.status === 'closed' ? t('أعد فتح المحادثة للرد', 'Reopen the conversation to reply') : t('اكتب رسالة...', 'Type a message...')}
                     className="border-0 bg-transparent h-12 px-4 shadow-none focus-visible:ring-0"
                     autoComplete="off"
-                     disabled={selectedChat?.status === 'closed'}
+                    readOnly
                   />
                 </div>
                 
@@ -415,6 +390,7 @@ export default function AdminWhatsAppInbox() {
           </ScrollArea>
         </aside>
       )}
+    </div>
     </div>
   );
 }

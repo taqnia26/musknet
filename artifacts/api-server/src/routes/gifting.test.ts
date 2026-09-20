@@ -1,10 +1,10 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
   accountingAccountsTable, adminUsersTable, categoriesTable, db, giftingIssuesTable,
   inventoryBalancesTable, inventoryMovementsTable, journalEntriesTable, journalEntryLinesTable,
-  productsTable,
+  journalEntryAuditTable, productsTable,
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession } from "../lib/admin-auth";
@@ -15,6 +15,7 @@ const email = `gifting-${suffix}@example.com`;
 let adminId: number;
 let categoryId: number;
 let productId: number;
+let secondProductId: number;
 let token: string;
 
 beforeAll(async () => {
@@ -33,12 +34,37 @@ beforeAll(async () => {
     price: 40, categoryId, stockQuantity: 5, averageCost: "12.5000", sku: `GIFT-${suffix}`,
   }).returning();
   productId = product.id;
+  const [secondProduct] = await db.insert(productsTable).values({
+    id: baseId + 2, nameAr: "منتج هدية ثان", nameEn: "Second gift product", slug: `second-gift-product-${suffix}`,
+    price: 60, categoryId, stockQuantity: 4, averageCost: "8.0000", sku: `GIFT-SECOND-${suffix}`,
+  }).returning();
+  secondProductId = secondProduct.id;
 });
 
 afterAll(async () => {
-  // Posted accounting records are intentionally immutable. Use unique IDs for
-  // each run and leave this complete audit chain intact, as the admin route
-  // integration suite does for its posted journals.
+  const issues = await db.select({ id: giftingIssuesTable.id }).from(giftingIssuesTable)
+    .where(inArray(giftingIssuesTable.productId, [productId, secondProductId]));
+  const entries = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
+    .where(or(
+      and(eq(journalEntriesTable.sourceType, "gifting_issue"), inArray(journalEntriesTable.sourceId, issues.map((issue) => String(issue.id)))),
+      and(eq(journalEntriesTable.sourceType, "gifting_issue_batch"), eq(journalEntriesTable.sourceId, `multi-%_${suffix}`)),
+    ));
+  if (entries.length) {
+    await db.execute(sql`alter table journal_entry_lines disable trigger journal_entry_lines_immutable`);
+    await db.execute(sql`alter table journal_entries disable trigger journal_entries_immutable`);
+    await db.transaction(async (tx) => {
+      await tx.delete(journalEntryAuditTable).where(inArray(journalEntryAuditTable.journalEntryId, entries.map((row) => row.id)));
+      await tx.delete(journalEntryLinesTable).where(inArray(journalEntryLinesTable.journalEntryId, entries.map((row) => row.id)));
+      await tx.delete(journalEntriesTable).where(inArray(journalEntriesTable.id, entries.map((row) => row.id)));
+    });
+    await db.execute(sql`alter table journal_entry_lines enable trigger journal_entry_lines_immutable`);
+    await db.execute(sql`alter table journal_entries enable trigger journal_entries_immutable`);
+  }
+  await db.delete(inventoryMovementsTable).where(inArray(inventoryMovementsTable.productId, [productId, secondProductId]));
+  await db.delete(giftingIssuesTable).where(inArray(giftingIssuesTable.productId, [productId, secondProductId]));
+  await db.delete(inventoryBalancesTable).where(inArray(inventoryBalancesTable.productId, [productId, secondProductId]));
+  await db.delete(productsTable).where(inArray(productsTable.id, [productId, secondProductId]));
+  await db.delete(categoriesTable).where(eq(categoriesTable.id, categoryId));
   delete process.env.ADMIN_EMAIL;
   delete process.env.ADMIN_PASSWORD;
 });
@@ -96,5 +122,69 @@ describe.sequential("gifting issue operations", () => {
     expect(product.stockQuantity).toBe(2);
     expect(await db.select().from(giftingIssuesTable).where(eq(giftingIssuesTable.idempotencyKey, `short-${suffix}`))).toHaveLength(0);
     expect(await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.eventKey, `gifting:short-${suffix}`))).toHaveLength(0);
+  });
+
+  it("issues multiple products atomically and requires reasons for damaged/other", async () => {
+    await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ lines: [{ productId: secondProductId, quantity: 1 }], category: "DAMAGED", idempotencyKey: `missing-reason-${suffix}` })
+      .expect(400);
+
+    const payload = {
+      lines: [{ productId: productId, quantity: 1 }, { productId: secondProductId, quantity: 2 }],
+      category: "OTHER", reason: "تحديث مخزون", recipientName: "نفس الشخص",
+      idempotencyKey: `multi-%_${suffix}`,
+    };
+    const response = await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`).send(payload).expect(201);
+    expect(response.body).toMatchObject({ category: "OTHER", reason: "تحديث مخزون", recipientName: "نفس الشخص" });
+    const [firstAfter] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    const [secondAfter] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
+    expect(firstAfter.stockQuantity).toBe(1);
+    expect(secondAfter.stockQuantity).toBe(2);
+    const [firstBalance] = await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
+    const [secondBalance] = await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, secondProductId));
+    expect(firstBalance.available).toBe(1);
+    expect(secondBalance.available).toBe(2);
+
+    const rows = await db.select().from(giftingIssuesTable)
+      .where(eq(giftingIssuesTable.dedupeKey, `manual:multi-%_${suffix}:line:${secondProductId}`));
+    expect(rows).toHaveLength(1);
+    const movements = await db.select().from(inventoryMovementsTable)
+      .where(sql`event_key like ${`gifting:multi-%_${suffix}:%`}`);
+    expect(movements).toHaveLength(2);
+    const [entry] = await db.select().from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "gifting_issue_batch"), eq(journalEntriesTable.sourceId, `multi-%_${suffix}`)));
+    expect(entry).toBeDefined();
+    expect(await db.select().from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "gifting_issue_batch"), eq(journalEntriesTable.sourceId, `multi-%_${suffix}`))))
+      .toHaveLength(1);
+    expect(movements.every((movement) => movement.sourceType === "gifting_issue_batch" && movement.sourceId === `multi-%_${suffix}`)).toBe(true);
+    const [journalTotals] = await db.select({
+      debit: sql<string>`coalesce(sum(${journalEntryLinesTable.debit}), 0)::numeric`,
+      credit: sql<string>`coalesce(sum(${journalEntryLinesTable.credit}), 0)::numeric`,
+    }).from(journalEntryLinesTable).where(eq(journalEntryLinesTable.journalEntryId, entry.id));
+    expect(journalTotals.debit).toBe(journalTotals.credit);
+
+    const duplicate = await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`).send({
+        ...payload,
+        lines: [...payload.lines].reverse(),
+      }).expect(201);
+    expect(duplicate.body.id).toBe(response.body.id);
+
+    const beforeRollback = await db.select().from(productsTable)
+      .where(sql`${productsTable.id} in (${productId}, ${secondProductId})`);
+    await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        lines: [{ productId, quantity: 1 }, { productId: secondProductId, quantity: 99 }],
+        category: "TESTER", idempotencyKey: `rollback-${suffix}`,
+      }).expect(409);
+    const afterRollback = await db.select().from(productsTable)
+      .where(sql`${productsTable.id} in (${productId}, ${secondProductId})`);
+    expect(afterRollback.map((row) => row.stockQuantity)).toEqual(beforeRollback.map((row) => row.stockQuantity));
+    expect(await db.select().from(giftingIssuesTable)
+      .where(sql`${giftingIssuesTable.dedupeKey} = ${`manual:rollback-${suffix}:batch`}`)).toHaveLength(0);
   });
 });

@@ -195,6 +195,7 @@ export * from './giftingIssue';
 export * from './giftingIssueCategory';
 export * from './giftingIssueInput';
 export * from './giftingIssueInputCategory';
+export * from './giftingIssueLineInput';
 export * from './healthStatus';
 export * from './homeContent';
 export * from './influencer';

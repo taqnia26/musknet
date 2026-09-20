@@ -135,6 +135,14 @@ describe.sequential("admin shipping dashboards", () => {
       .send({ carrier: "Carrier X", status: "delivered", actualCost: 22, collectedCost: 28, deliveredAt: "2026-09-06T10:00:00.000Z" })
       .expect(200);
     expect(response.body).toMatchObject({ carrier: "Carrier X", status: "delivered", actualCost: 22, collectedCost: 28 });
+    await request(app).patch(`/api/admin/shipping/${online.id}`).set(auth(adminToken))
+      .send({ status: "delivered" }).expect(409)
+      .then(({ body }) => expect(body.error).toMatch(/invalid shipment status transition/i));
+    await request(app).patch(`/api/admin/shipping/${online.id}`).set(auth(adminToken))
+      .send({ status: "in_transit" }).expect(409)
+      .then(({ body }) => expect(body.error).toMatch(/allowed next statuses: returned/i));
+    const [order] = await db.select({ status: ordersTable.status }).from(ordersTable).where(eq(ordersTable.id, ids.order));
+    expect(order.status).toBe("new");
   });
 
   it("registers shipping details for a source that has no shipment yet", async () => {

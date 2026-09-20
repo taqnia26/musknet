@@ -3,27 +3,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { MessageCircle, CheckCircle2, MessageSquare, Twitter, Instagram } from 'lucide-react';
+import { AlertTriangle, MessageCircle, CheckCircle2, MessageSquare, Twitter, Instagram } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { SiTiktok } from 'react-icons/si';
 
 const platforms = [
-  { id: 'whatsapp', nameEn: 'WhatsApp', nameAr: 'واتساب', icon: MessageCircle, interactions: '4,281', status: 'active', color: 'text-green-500' },
-  { id: 'tiktok', nameEn: 'TikTok', nameAr: 'تيك توك', icon: SiTiktok, interactions: '1,104', status: 'active', color: 'text-foreground' },
-  { id: 'twitter', nameEn: 'X (Twitter)', nameAr: 'إكس (تويتر)', icon: Twitter, interactions: '852', status: 'paused', color: 'text-foreground' },
-  { id: 'instagram', nameEn: 'Instagram', nameAr: 'انستقرام', icon: Instagram, interactions: '2,943', status: 'active', color: 'text-accent' },
+  { id: 'whatsapp', nameEn: 'WhatsApp', nameAr: 'واتساب', icon: MessageCircle, interactions: '—', status: 'paused', color: 'text-foreground' },
+  { id: 'tiktok', nameEn: 'TikTok', nameAr: 'تيك توك', icon: SiTiktok, interactions: '—', status: 'paused', color: 'text-foreground' },
+  { id: 'twitter', nameEn: 'X (Twitter)', nameAr: 'إكس (تويتر)', icon: Twitter, interactions: '—', status: 'paused', color: 'text-foreground' },
+  { id: 'instagram', nameEn: 'Instagram', nameAr: 'انستقرام', icon: Instagram, interactions: '—', status: 'paused', color: 'text-foreground' },
 ];
 
 const autoReplies = [
-  { platform: 'whatsapp', triggerAr: 'ترحيب جديد', triggerEn: 'New Welcome', active: true },
-  { platform: 'whatsapp', triggerAr: 'استفسار عن الطلب', triggerEn: 'Order Inquiry', active: true },
+  { platform: 'whatsapp', triggerAr: 'ترحيب جديد', triggerEn: 'New Welcome', active: false },
+  { platform: 'whatsapp', triggerAr: 'استفسار عن الطلب', triggerEn: 'Order Inquiry', active: false },
   { platform: 'whatsapp', triggerAr: 'أوقات العمل', triggerEn: 'Working Hours', active: false },
-  
-  { platform: 'tiktok', triggerAr: 'ترحيب تيك توك', triggerEn: 'TikTok Welcome', active: true },
-  { platform: 'tiktok', triggerAr: 'رابط المتجر', triggerEn: 'Store Link', active: true },
-  
-  { platform: 'instagram', triggerAr: 'رد الستوري', triggerEn: 'Story Reply', active: true },
-  { platform: 'instagram', triggerAr: 'السعر بالخاص', triggerEn: 'Price in DM', active: true },
+
+  { platform: 'tiktok', triggerAr: 'ترحيب تيك توك', triggerEn: 'TikTok Welcome', active: false },
+  { platform: 'tiktok', triggerAr: 'رابط المتجر', triggerEn: 'Store Link', active: false },
+
+  { platform: 'instagram', triggerAr: 'رد الستوري', triggerEn: 'Story Reply', active: false },
+  { platform: 'instagram', triggerAr: 'السعر بالخاص', triggerEn: 'Price in DM', active: false },
 ];
 
 export default function AdminChatbot() {
@@ -31,6 +31,20 @@ export default function AdminChatbot() {
 
   return (
     <div className="space-y-8">
+      <div className="rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-900 p-4 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-amber-800 dark:text-amber-400">
+              {t('معاينة الواجهة (الربط غير مفعل)', 'Interface Preview (Integration Not Active)')}
+            </h3>
+            <p className="text-sm text-amber-700 dark:text-amber-500/80 mt-1">
+              {t('هذه الصفحة مخصصة لمعاينة هيكل الردود. يجب إتمام ربط حسابات Meta Business و TikTok Business أولاً من قسم الإعدادات.', 'This page is a preview for reply structures. You must configure Meta Business and TikTok Business accounts in settings first.')}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div>
         <h1 className="text-3xl font-bold tracking-tight">{t('الشات بوت', 'Chatbot')}</h1>
         <p className="text-muted-foreground mt-1">{t('إدارة الردود التلقائية والتواصل الآلي', 'Manage auto-replies and automated communication')}</p>
@@ -44,7 +58,7 @@ export default function AdminChatbot() {
                 <platform.icon className={`h-5 w-5 ${platform.color}`} />
                 {lang === 'ar' ? platform.nameAr : platform.nameEn}
               </CardTitle>
-              <Badge variant={platform.status === 'active' ? 'default' : 'secondary'} 
+              <Badge variant={platform.status === 'active' ? 'default' : 'secondary'}
                      className={platform.status === 'active' ? 'bg-success hover:bg-success/90' : ''}>
                 {platform.status === 'active' ? t('نشط', 'Active') : t('متوقف', 'Paused')}
               </Badge>
@@ -61,17 +75,17 @@ export default function AdminChatbot() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader className="border-b bg-muted/30">
-              <CardTitle className="text-lg">{t('الردود التلقائية النشطة', 'Active Auto-replies')}</CardTitle>
+              <CardTitle className="text-lg">{t('قوالب الردود التلقائية', 'Auto-reply Templates')}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
-                {platforms.filter(p => p.status === 'active').map(platform => (
+                {platforms.map(platform => (
                   <div key={platform.id} className="p-6">
                     <h3 className="font-semibold text-lg flex items-center gap-2 mb-4">
                       <platform.icon className={`h-5 w-5 ${platform.color}`} />
                       {lang === 'ar' ? platform.nameAr : platform.nameEn}
                     </h3>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {autoReplies.filter(r => r.platform === platform.id).map((reply, i) => (
                         <div key={i} className="flex items-center justify-between bg-muted/20 p-4 rounded-xl border border-white/5 shadow-sm">
@@ -83,9 +97,10 @@ export default function AdminChatbot() {
                               {lang === 'ar' ? reply.triggerAr : reply.triggerEn}
                             </Label>
                           </div>
-                          <Switch 
-                            id={`toggle-${platform.id}-${i}`} 
-                            defaultChecked={reply.active} 
+                          <Switch
+                            id={`toggle-${platform.id}-${i}`}
+                            checked={false}
+                            disabled
                             dir="ltr"
                           />
                         </div>
@@ -129,10 +144,10 @@ export default function AdminChatbot() {
               ))}
 
               <Separator />
-              
+
               <div className="rounded-xl bg-primary/10 border border-primary/20 p-4 text-sm text-primary-foreground/90">
                 <p className="font-medium mb-1 text-primary">{t('ملاحظة النظام', 'System Note')}</p>
-                {lang === 'ar' 
+                {lang === 'ar'
                   ? 'هذه الواجهة مخصصة للعرض وتفعيل الردود الجاهزة. الربط الفعلي يعتمد على توفر حسابات Meta Business و TikTok Business.'
                   : 'This interface is for managing predefined replies. Actual integration requires Meta Business and TikTok Business accounts.'}
               </div>

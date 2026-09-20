@@ -10,8 +10,15 @@ export type GiftingIssueInputCategory = typeof GiftingIssueInputCategory[keyof t
 
 
 export const GiftingIssueInputCategory = {
+  VIP: 'VIP',
+  Sample: 'Sample',
+  Damage: 'Damage',
+  Marketing: 'Marketing',
+  Tester: 'Tester',
   B2B_EVALUATION: 'B2B_EVALUATION',
   TESTER: 'TESTER',
   VIP_GIFT: 'VIP_GIFT',
   INFLUENCERS: 'INFLUENCERS',
+  DAMAGED: 'DAMAGED',
+  OTHER: 'OTHER',
 } as const;

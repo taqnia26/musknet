@@ -49,7 +49,7 @@ export const navStructure = [
     children: [
       { href: '/admin/products', labelEn: 'Manage Products', labelAr: 'إدارة المنتجات' },
       { href: '/admin/categories', labelEn: 'Categories', labelAr: 'الفئات', module: 'categories' },
-      { href: '/admin/gifting-issues', labelEn: 'Gifts & Testers', labelAr: 'الهدايا والتيستر', module: 'inventory' },
+      { href: '/admin/gifting-issues', labelEn: 'Product Movement Log', labelAr: 'سجل حركة المنتجات', module: 'inventory' },
     ]
   },
   {
@@ -70,7 +70,7 @@ export const navStructure = [
   {
     labelEn: 'Sales', labelAr: 'المبيعات', icon: Banknote,
     children: [
-      { href: '/admin/sales/online', labelEn: 'Online Sales', labelAr: 'مبيعات أونلاين', module: 'orders' },
+      { href: '/admin/sales/online', labelEn: 'Individual Sales', labelAr: 'مبيعات الأفراد', module: 'orders' },
       { href: '/admin/sales/companies', labelEn: 'Company Sales', labelAr: 'مبيعات الشركات', module: 'invoices' },
       { href: '/admin/sales/exhibitions', labelEn: 'Exhibition Sales', labelAr: 'مبيعات المعارض', module: 'exhibitions' },
     ]
@@ -83,18 +83,18 @@ export const navStructure = [
     ]
   },
   {
-    labelEn: 'WhatsApp', labelAr: 'الواتساب', icon: MessageCircle, module: 'dashboard',
+    labelEn: 'Customer Service', labelAr: 'خدمة العملاء', icon: MessageCircle, module: 'dashboard',
     children: [
-      { href: '/admin/whatsapp/inbox', labelEn: 'Inbox', labelAr: 'صندوق الوارد' },
+      { href: '/admin/whatsapp/inbox', labelEn: 'Customer Service WhatsApp', labelAr: 'واتساب خدمة العملاء' },
       { href: '/admin/whatsapp/templates', labelEn: 'Templates', labelAr: 'القوالب' },
-      { href: '/admin/whatsapp/settings', labelEn: 'Connection settings', labelAr: 'إعدادات الربط' },
+      { href: '/admin/whatsapp/settings', labelEn: 'General Administration WhatsApp', labelAr: 'واتساب الإدارة العامة' },
     ]
   },
   { href: '/admin/chatbot', icon: MessageCircle, labelEn: 'Chatbot', labelAr: 'الشات بوت', module: 'dashboard', direct: true },
   {
     labelEn: 'Shipping', labelAr: 'الشحن', icon: Truck,
     children: [
-      { href: '/admin/shipping/online', labelEn: 'Online Shipments', labelAr: 'شحنات المتجر', module: 'orders' },
+      { href: '/admin/shipping/online', labelEn: 'Individual Shipments', labelAr: 'شحنات الأفراد', module: 'orders' },
       { href: '/admin/shipping/b2b', labelEn: 'B2B Shipments', labelAr: 'شحنات B2B', module: 'invoices' },
     ]
   },

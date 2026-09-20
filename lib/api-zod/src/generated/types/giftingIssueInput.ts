@@ -6,21 +6,34 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { GiftingIssueInputCategory } from './giftingIssueInputCategory';
+import type { GiftingIssueLineInput } from './giftingIssueLineInput';
 
-export interface GiftingIssueInput {
-  /** @minimum 1 */
+export type GiftingIssueInput = ({
+  /** @minItems 1 */
+  lines: GiftingIssueLineInput[];
+} | {
+  /**
+     * Legacy single-line form
+     * @minimum 1
+     */
   productId: number;
-  category: GiftingIssueInputCategory;
-  /** @minimum 1 */
+  /**
+     * Legacy single-line form
+     * @minimum 1
+     */
   quantity: number;
+}) & {
+  category: GiftingIssueInputCategory;
   issueDate?: Date;
   /** @maxLength 200 */
   recipientName?: string;
   /** @maxLength 500 */
   occasion?: string;
+  /** @maxLength 500 */
+  reason?: string;
   /**
      * @minLength 1
      * @maxLength 200
      */
   idempotencyKey: string;
-}
+};

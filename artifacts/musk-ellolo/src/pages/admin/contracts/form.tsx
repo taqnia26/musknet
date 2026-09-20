@@ -47,17 +47,17 @@ const contractSchema = z.object({
   showroomLocation: z.string().optional().nullable(),
   showroomCity: z.string().optional().nullable(),
   
-  marginPercent: z.string().optional().nullable(),
-  minOrderValue: z.string().optional().nullable(),
+  marginPercent: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
+  minOrderValue: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
   
-  vatRate: z.string().optional().nullable(),
-  latePaymentWeeklyRate: z.string().optional().nullable(),
-  latePaymentCapRate: z.string().optional().nullable(),
+  vatRate: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
+  latePaymentWeeklyRate: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
+  latePaymentCapRate: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
   
-  inspectionDays: z.coerce.number().optional().nullable(),
-  warrantyMonths: z.coerce.number().optional().nullable(),
-  deliveryDays: z.coerce.number().optional().nullable(),
-  paymentDays: z.coerce.number().optional().nullable(),
+  inspectionDays: z.coerce.number().min(0, 'يجب أن يكون رقماً غير سالب').optional().nullable(),
+  warrantyMonths: z.coerce.number().min(0, 'يجب أن يكون رقماً غير سالب').optional().nullable(),
+  deliveryDays: z.coerce.number().min(0, 'يجب أن يكون رقماً غير سالب').optional().nullable(),
+  paymentDays: z.coerce.number().min(0, 'يجب أن يكون رقماً غير سالب').optional().nullable(),
   
   notes: z.string().optional().nullable(),
 });
@@ -434,7 +434,7 @@ export default function AdminContractForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>نسبة الخصم / الهامش (%)</FormLabel>
-                    <FormControl><Input type="number" step="0.01" {...field} value={field.value || ''} /></FormControl>
+                    <FormControl><Input type="number" min="0" step="0.01" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -445,7 +445,7 @@ export default function AdminContractForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>أيام الدفع (آجل)</FormLabel>
-                    <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormControl><Input type="number" min="0" step="1" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -456,7 +456,7 @@ export default function AdminContractForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>أيام التوصيل (SLA)</FormLabel>
-                    <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormControl><Input type="number" min="0" step="1" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -467,7 +467,7 @@ export default function AdminContractForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>أيام الفحص والإرجاع</FormLabel>
-                    <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormControl><Input type="number" min="0" step="1" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -478,7 +478,7 @@ export default function AdminContractForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>مدة الضمان (بالأشهر)</FormLabel>
-                    <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormControl><Input type="number" min="0" step="1" {...field} value={field.value ?? ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

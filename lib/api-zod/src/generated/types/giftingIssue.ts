@@ -14,6 +14,8 @@ export interface GiftingIssue {
   category: GiftingIssueCategory;
   comment: string;
   /** @nullable */
+  reason?: string | null;
+  /** @nullable */
   occasion?: string | null;
   /** @nullable */
   program?: string | null;

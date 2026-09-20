@@ -15,7 +15,7 @@ export interface Employee {
   email: string | null;
   position: string;
   department: string;
-  /** @minimum 0 */
+  /** @exclusiveMinimum 0 */
   salary: number;
   hireDate: Date;
   isActive: boolean;
