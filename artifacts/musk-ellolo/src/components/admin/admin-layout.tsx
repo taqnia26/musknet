@@ -213,6 +213,16 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const { lang, setLang, t } = useLanguage();
   const { theme, setTheme } = useTheme();
+
+  // Admin theme preference is independent from the storefront. New admin
+  // sessions start in the reference dark identity, while explicit toggles persist.
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem('musk-admin-theme');
+    const adminTheme = storedTheme === 'light' ? 'light' : 'dark';
+    setTheme(adminTheme);
+    document.documentElement.classList.toggle('dark', adminTheme === 'dark');
+    document.documentElement.classList.toggle('light', adminTheme === 'light');
+  }, [setTheme]);
   const [isOpen, setIsOpen] = useState(false);
 
   const hasToken = !!getAdminToken();
@@ -244,10 +254,16 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   const toggleLanguage = () => setLang(lang === 'ar' ? 'en' : 'ar');
-  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    window.localStorage.setItem('musk-admin-theme', newTheme);
+    setTheme(newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    document.documentElement.classList.toggle('light', newTheme === 'light');
+  };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen bg-background"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>;
+    return <div className="admin-theme force-dark flex min-h-screen items-center justify-center bg-background"><div className="h-8 w-8 animate-spin rounded-full border-b-2 border-accent"></div></div>;
   }
 
   if (!user) return null;

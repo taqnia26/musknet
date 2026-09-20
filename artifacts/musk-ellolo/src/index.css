@@ -24,61 +24,61 @@
 html.admin-route {
   color-scheme: light;
   --background: 42 20% 98%;
-  --foreground: 0 0% 15%;
+  --foreground: 225 15% 5%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 15%;
+  --card-foreground: 225 15% 5%;
   --card-border: 42 10% 90%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 15%;
+  --popover-foreground: 225 15% 5%;
   --popover-border: 42 10% 90%;
   --border: 42 10% 90%;
   --input: 42 10% 88%;
-  --primary: 0 0% 15%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 47 70% 51%;
+  --primary-foreground: 225 15% 5%;
   --secondary: 42 10% 94%;
-  --secondary-foreground: 0 0% 15%;
+  --secondary-foreground: 225 15% 5%;
   --muted: 0 0% 96%;
   --muted-foreground: 0 0% 45%;
-  --accent: 42 45% 55%;
-  --accent-foreground: 0 0% 100%;
+  --accent: 47 70% 51%;
+  --accent-foreground: 225 15% 5%;
   --destructive: 0 60% 50%;
   --destructive-foreground: 0 0% 100%;
   --success: 145 45% 39%;
   --success-foreground: 0 0% 100%;
-  --ring: 42 45% 55%;
+  --ring: 47 70% 51%;
   --sidebar: 0 0% 100%;
-  --sidebar-foreground: 0 0% 25%;
+  --sidebar-foreground: 225 15% 5%;
   --sidebar-border: 42 10% 90%;
 }
 
 html.dark.admin-route {
   color-scheme: dark;
-  --background: 0 0% 11%;
-  --foreground: 42 20% 95%;
-  --card: 0 0% 14%;
-  --card-foreground: 42 20% 95%;
-  --card-border: 0 0% 20%;
-  --popover: 0 0% 14%;
-  --popover-foreground: 42 20% 95%;
-  --popover-border: 0 0% 20%;
-  --border: 0 0% 20%;
-  --input: 0 0% 24%;
-  --primary: 42 20% 95%;
-  --primary-foreground: 0 0% 11%;
-  --secondary: 0 0% 20%;
-  --secondary-foreground: 42 20% 95%;
-  --muted: 0 0% 18%;
-  --muted-foreground: 0 0% 65%;
-  --accent: 42 45% 60%;
-  --accent-foreground: 0 0% 11%;
+  --background: 225 15% 5%;
+  --foreground: 36 21% 95%;
+  --card: 220 16% 7%;
+  --card-foreground: 36 21% 95%;
+  --card-border: 222 16% 15%;
+  --popover: 220 16% 7%;
+  --popover-foreground: 36 21% 95%;
+  --popover-border: 222 16% 15%;
+  --border: 222 16% 15%;
+  --input: 222 16% 15%;
+  --primary: 47 70% 51%;
+  --primary-foreground: 225 15% 5%;
+  --secondary: 220 16% 12%;
+  --secondary-foreground: 36 21% 95%;
+  --muted: 220 16% 12%;
+  --muted-foreground: 220 10% 60%;
+  --accent: 47 70% 51%;
+  --accent-foreground: 225 15% 5%;
   --destructive: 0 60% 60%;
   --destructive-foreground: 0 0% 100%;
   --success: 145 45% 45%;
   --success-foreground: 0 0% 100%;
-  --ring: 42 45% 60%;
-  --sidebar: 0 0% 12%;
-  --sidebar-foreground: 42 20% 85%;
-  --sidebar-border: 0 0% 18%;
+  --ring: 47 70% 51%;
+  --sidebar: 220 16% 7%;
+  --sidebar-foreground: 36 21% 95%;
+  --sidebar-border: 222 16% 15%;
 }
 
 .site-intro__logo {
@@ -288,62 +288,62 @@ html.dark.admin-route {
   /* Admin Theme: dynamic light/dark brand surface, scoped away from the storefront */
   .admin-theme {
     --background: 42 20% 98%;
-    --foreground: 0 0% 15%;
+    --foreground: 225 15% 5%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 15%;
+    --card-foreground: 225 15% 5%;
     --card-border: 42 10% 90%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 15%;
+    --popover-foreground: 225 15% 5%;
     --popover-border: 42 10% 90%;
     --border: 42 10% 90%;
     --input: 42 10% 88%;
-    --primary: 0 0% 15%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 47 70% 51%;
+    --primary-foreground: 225 15% 5%;
     --secondary: 42 10% 94%;
-    --secondary-foreground: 0 0% 15%;
+    --secondary-foreground: 225 15% 5%;
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
-    --accent: 42 45% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 47 70% 51%;
+    --accent-foreground: 225 15% 5%;
     --destructive: 0 60% 50%;
     --destructive-foreground: 0 0% 100%;
     --success: 145 45% 39%;
     --success-foreground: 0 0% 100%;
-    --ring: 42 45% 55%;
+    --ring: 47 70% 51%;
     --sidebar: 0 0% 100%;
-    --sidebar-foreground: 0 0% 25%;
+    --sidebar-foreground: 225 15% 5%;
     --sidebar-border: 42 10% 90%;
     --font-sans: 'Open Sans', 'Tajawal', sans-serif;
-    --radius: 0.75rem;
+    --radius: 0.875rem; /* 14px radius */
   }
 
-  html.dark .admin-theme, .dark .admin-theme {
-    --background: 0 0% 11%;
-    --foreground: 42 20% 95%;
-    --card: 0 0% 14%;
-    --card-foreground: 42 20% 95%;
-    --card-border: 0 0% 20%;
-    --popover: 0 0% 14%;
-    --popover-foreground: 42 20% 95%;
-    --popover-border: 0 0% 20%;
-    --border: 0 0% 20%;
-    --input: 0 0% 24%;
-    --primary: 42 20% 95%;
-    --primary-foreground: 0 0% 11%;
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 42 20% 95%;
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 42 45% 60%;
-    --accent-foreground: 0 0% 11%;
+  html.dark .admin-theme, .dark .admin-theme, .admin-theme.force-dark {
+    --background: 225 15% 5%; /* #0b0c0f */
+    --foreground: 36 21% 95%; /* #f5f3f0 */
+    --card: 220 16% 7%; /* #0f1115 */
+    --card-foreground: 36 21% 95%;
+    --card-border: 222 16% 15%; 
+    --popover: 220 16% 7%;
+    --popover-foreground: 36 21% 95%;
+    --popover-border: 222 16% 15%;
+    --border: 222 16% 15%;
+    --input: 222 16% 15%;
+    --primary: 47 70% 51%; /* #d9b32b */
+    --primary-foreground: 225 15% 5%;
+    --secondary: 220 16% 12%;
+    --secondary-foreground: 36 21% 95%;
+    --muted: 220 16% 12%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 47 70% 51%;
+    --accent-foreground: 225 15% 5%;
     --destructive: 0 60% 60%;
     --destructive-foreground: 0 0% 100%;
     --success: 145 45% 45%;
     --success-foreground: 0 0% 100%;
-    --ring: 42 45% 60%;
-    --sidebar: 0 0% 12%;
-    --sidebar-foreground: 42 20% 85%;
-    --sidebar-border: 0 0% 18%;
+    --ring: 47 70% 51%;
+    --sidebar: 220 16% 7%;
+    --sidebar-foreground: 36 21% 95%;
+    --sidebar-border: 222 16% 15%;
   }
 
   html[lang="ar"] .admin-theme,
@@ -379,61 +379,61 @@ html.dark.admin-route {
   html.admin-route {
     color-scheme: light;
     --background: 42 20% 98%;
-    --foreground: 0 0% 15%;
+    --foreground: 225 15% 5%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 15%;
+    --card-foreground: 225 15% 5%;
     --card-border: 42 10% 90%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 15%;
+    --popover-foreground: 225 15% 5%;
     --popover-border: 42 10% 90%;
     --border: 42 10% 90%;
     --input: 42 10% 88%;
-    --primary: 0 0% 15%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 47 70% 51%;
+    --primary-foreground: 225 15% 5%;
     --secondary: 42 10% 94%;
-    --secondary-foreground: 0 0% 15%;
+    --secondary-foreground: 225 15% 5%;
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
-    --accent: 42 45% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 47 70% 51%;
+    --accent-foreground: 225 15% 5%;
     --destructive: 0 60% 50%;
     --destructive-foreground: 0 0% 100%;
     --success: 145 45% 39%;
     --success-foreground: 0 0% 100%;
-    --ring: 42 45% 55%;
+    --ring: 47 70% 51%;
     --sidebar: 0 0% 100%;
-    --sidebar-foreground: 0 0% 25%;
+    --sidebar-foreground: 225 15% 5%;
     --sidebar-border: 42 10% 90%;
   }
 
   html.dark.admin-route {
     color-scheme: dark;
-    --background: 0 0% 11%;
-    --foreground: 42 20% 95%;
-    --card: 0 0% 14%;
-    --card-foreground: 42 20% 95%;
-    --card-border: 0 0% 20%;
-    --popover: 0 0% 14%;
-    --popover-foreground: 42 20% 95%;
-    --popover-border: 0 0% 20%;
-    --border: 0 0% 20%;
-    --input: 0 0% 24%;
-    --primary: 42 20% 95%;
-    --primary-foreground: 0 0% 11%;
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 42 20% 95%;
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 42 45% 60%;
-    --accent-foreground: 0 0% 11%;
+    --background: 225 15% 5%;
+    --foreground: 36 21% 95%;
+    --card: 220 16% 7%;
+    --card-foreground: 36 21% 95%;
+    --card-border: 222 16% 15%;
+    --popover: 220 16% 7%;
+    --popover-foreground: 36 21% 95%;
+    --popover-border: 222 16% 15%;
+    --border: 222 16% 15%;
+    --input: 222 16% 15%;
+    --primary: 47 70% 51%;
+    --primary-foreground: 225 15% 5%;
+    --secondary: 220 16% 12%;
+    --secondary-foreground: 36 21% 95%;
+    --muted: 220 16% 12%;
+    --muted-foreground: 220 10% 60%;
+    --accent: 47 70% 51%;
+    --accent-foreground: 225 15% 5%;
     --destructive: 0 60% 60%;
     --destructive-foreground: 0 0% 100%;
     --success: 145 45% 45%;
     --success-foreground: 0 0% 100%;
-    --ring: 42 45% 60%;
-    --sidebar: 0 0% 12%;
-    --sidebar-foreground: 42 20% 85%;
-    --sidebar-border: 0 0% 18%;
+    --ring: 47 70% 51%;
+    --sidebar: 220 16% 7%;
+    --sidebar-foreground: 36 21% 95%;
+    --sidebar-border: 222 16% 15%;
   }
 
   html.admin-route body {

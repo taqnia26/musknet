@@ -71,39 +71,39 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="admin-theme min-h-screen bg-background text-foreground flex">
-      {/* Visual Side */}
-      <div className="hidden lg:flex w-1/2 relative bg-primary items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img
-            src="/site-assets/admin-profile-brand.jpg"
-            alt="Brand Pattern"
-            className="w-full h-full object-cover opacity-30 mix-blend-overlay grayscale"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
-        </div>
+    <div className="admin-theme force-dark relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0b0c0f] p-4 text-foreground">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-[38%] h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#d9b32b]/[0.035] blur-3xl" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0b0c0f_72%)]" />
       </div>
 
-      {/* Form Side */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12">
-        <div className="w-full max-w-md bg-card p-10 rounded-2xl shadow-sm border border-border">
-          <div className="mb-10 text-center">
-            <img
-              src="/site-assets/musk-ellolo-wordmark-black.png"
-              alt="Musk Ellolo"
-              className="mx-auto mb-7 w-[300px] max-w-full object-contain dark:hidden"
-            />
+      <div className="relative z-10 w-full max-w-[460px]">
+        <div className="mb-8 text-center">
+          <img
+            src="/site-assets/musk-ellolo-mark-white.png"
+            alt=""
+            className="mx-auto mb-5 h-20 w-20 object-contain"
+          />
+          <img
+            src="/site-assets/musk-ellolo-wordmark-white.png"
+            alt="Musk Ellolo"
+            className="mx-auto mb-6 w-[230px] max-w-full object-contain"
+          />
+          <h1 className="text-2xl font-bold tracking-tight text-[#f5f3f0]">
+            {t('إدارة النظام مسك اللولو', 'Musk Ellolo Atelier')}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t('لوحة التحكم — تسجيل الدخول', 'Admin console — sign in')}
+          </p>
+        </div>
+
+        <div className="w-full rounded-[14px] border border-white/[0.08] bg-[#0f1115]/95 p-7 shadow-[0_24px_80px_rgba(0,0,0,0.42)] sm:p-9">
+          <div className="sr-only">
             <img
               src="/site-assets/musk-ellolo-wordmark-white.png"
               alt="Musk Ellolo"
-              className="mx-auto mb-7 hidden w-[300px] max-w-full object-contain dark:block"
+              className="w-[230px]"
             />
-            <h1 className="text-2xl font-bold tracking-tight">
-              {t('إدارة النظام مسك اللولو', 'Musk Ellolo Atelier')}
-            </h1>
-            <p className="text-muted-foreground mt-2 text-sm">
-              {t('تسجيل الدخول للوحة التحكم', 'Sign in to admin panel')}
-            </p>
           </div>
 
           <Form {...form}>
@@ -119,7 +119,7 @@ export default function AdminLogin() {
                         type="email"
                         autoComplete="username"
                         placeholder="admin@example.com"
-                        className="bg-background"
+                        className="h-12 border-white/[0.09] bg-[#17191e] text-[#f5f3f0] placeholder:text-white/25 focus-visible:border-[#d9b32b]/70 focus-visible:ring-[#d9b32b]/25"
                         {...field}
                         dir="ltr"
                       />
@@ -139,7 +139,7 @@ export default function AdminLogin() {
                         <Input
                           type={showPassword ? 'text' : 'password'}
                           autoComplete="current-password"
-                          className="bg-background pr-11"
+                          className="h-12 border-white/[0.09] bg-[#17191e] pr-11 text-[#f5f3f0] focus-visible:border-[#d9b32b]/70 focus-visible:ring-[#d9b32b]/25"
                           {...field}
                           dir="ltr"
                         />
@@ -169,7 +169,7 @@ export default function AdminLogin() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full mt-8 h-12 text-md" disabled={loginMutation.isPending} data-testid="button-login-submit">
+              <Button type="submit" className="mt-8 h-12 w-full bg-[#d9b32b] text-base font-bold text-[#0b0c0f] shadow-[0_10px_28px_rgba(217,179,43,0.16)] hover:bg-[#e4c343]" disabled={loginMutation.isPending} data-testid="button-login-submit">
                 {loginMutation.isPending ? t('جاري تسجيل الدخول...', 'Signing in...') : t('دخول', 'Sign In')}
               </Button>
             </form>
