@@ -93,6 +93,13 @@ export const navStructure = [
   },
   { href: '/admin/chatbot', icon: MessageCircle, labelEn: 'Chatbot', labelAr: 'الشات بوت', module: 'dashboard', direct: true },
   {
+    labelEn: 'Shipping', labelAr: 'الشحن', icon: Truck,
+    children: [
+      { href: '/admin/shipping/online', labelEn: 'Online Shipments', labelAr: 'شحنات المتجر', module: 'orders' },
+      { href: '/admin/shipping/b2b', labelEn: 'B2B Shipments', labelAr: 'شحنات B2B', module: 'invoices' },
+    ]
+  },
+  {
     labelEn: 'Procurement', labelAr: 'المشتريات', icon: Truck, module: 'inventory',
     children: [
       { href: '/admin/manufacturing', labelEn: 'Manufacturing', labelAr: 'التصنيع', module: 'manufacturing' },

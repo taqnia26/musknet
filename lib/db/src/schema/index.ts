@@ -52,3 +52,4 @@ export * from "./gifting-issues";
 export * from "./influencers";
 export * from "./operations";
 export * from "./operations-documents";
+export * from "./shipments";

@@ -31,6 +31,8 @@ import AdminGiftingIssues from '@/pages/admin/gifting-issues';
 import OwnerCredentialsSettings from '@/pages/admin/owner-credentials';
 import AdminInfluencers from '@/pages/admin/influencers';
 import AdminCampaigns from '@/pages/admin/campaigns';
+import AdminOnlineShipping from '@/pages/admin/shipping/online';
+import AdminB2BShipping from '@/pages/admin/shipping/b2b';
 
 export default function AdminRoutes() {
   const [location] = useLocation();
@@ -57,6 +59,8 @@ export default function AdminRoutes() {
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin/categories" component={AdminCategories} />
         <Route path="/admin/orders" component={AdminOrders} />
+        <Route path="/admin/shipping/online" component={AdminOnlineShipping} />
+        <Route path="/admin/shipping/b2b" component={AdminB2BShipping} />
         <Route path="/admin/invoices" component={AdminInvoices} />
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/influencers" component={AdminInfluencers} />

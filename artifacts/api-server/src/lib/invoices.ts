@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, wholesaleDistributorsTable } from "@workspace/db";
+import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, wholesaleDistributorsTable, shipmentsTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 
@@ -112,6 +112,13 @@ export async function createDistributorInvoice(
       totalAmount,
       qrCodeData,
     }).returning();
+    await tx.insert(shipmentsTable).values({
+      channel: "b2b",
+      invoiceId: invoice.id,
+      destinationCity: distributor.city?.trim() || "Unknown",
+      destinationAddress: distributor.address,
+      status: "pending",
+    });
     const createdItems = await tx.insert(invoiceItemsTable).values(
       lines.map((line) => ({ ...line, invoiceId: invoice.id })),
     ).returning();

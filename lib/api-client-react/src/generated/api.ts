@@ -123,6 +123,7 @@ import type {
   GetAdminAnalyticsDashboardParams,
   GetAdminGiftingIssues200,
   GetAdminGiftingIssuesParams,
+  GetAdminShippingDashboardParams,
   GiftingIssue,
   HealthStatus,
   HomeContent,
@@ -182,6 +183,10 @@ import type {
   PurchaseReceiptPaymentInput,
   RateLimitedResponse,
   ServiceUnavailableResponse,
+  Shipment,
+  ShipmentInput,
+  ShipmentUpdate,
+  ShippingDashboard,
   SiteContent,
   SiteContentUpsert,
   TrackPageViewInput,
@@ -286,13 +291,6 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getListCategoriesUrl = () => {
 
 
@@ -363,13 +361,6 @@ export function useListCategories<TData = Awaited<ReturnType<typeof listCategori
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getListProductsUrl = (params?: ListProductsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -447,13 +438,6 @@ export function useListProducts<TData = Awaited<ReturnType<typeof listProducts>>
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getGetProductUrl = (slug: string,) => {
 
 
@@ -5566,6 +5550,233 @@ export function useAdminGetInvoiceQr<TData = Awaited<ReturnType<typeof adminGetI
 
 
 
+
+export const getGetAdminShippingDashboardUrl = (params: GetAdminShippingDashboardParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/shipping?${stringifiedParams}` : `/api/admin/shipping`
+}
+
+/**
+ * @summary Get online or B2B shipping operations and analytics
+ */
+export const getAdminShippingDashboard = async (params: GetAdminShippingDashboardParams, options?: Parameters<typeof customFetch>[1]): Promise<ShippingDashboard> => {
+
+  return customFetch<ShippingDashboard>(getGetAdminShippingDashboardUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminShippingDashboardQueryKey = (params?: GetAdminShippingDashboardParams,) => {
+    return [
+    `/api/admin/shipping`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAdminShippingDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getAdminShippingDashboard>>, TError = ErrorType<ForbiddenResponse>>(params: GetAdminShippingDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminShippingDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminShippingDashboardQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminShippingDashboard>>> = ({ signal }) => getAdminShippingDashboard(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminShippingDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminShippingDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminShippingDashboard>>>
+export type GetAdminShippingDashboardQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary Get online or B2B shipping operations and analytics
+ */
+
+export function useGetAdminShippingDashboard<TData = Awaited<ReturnType<typeof getAdminShippingDashboard>>, TError = ErrorType<ForbiddenResponse>>(
+ params: GetAdminShippingDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminShippingDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminShippingDashboardQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateShipmentUrl = () => {
+
+
+
+
+  return `/api/admin/shipping`
+}
+
+/**
+ * @summary Register a shipment for an eligible order or B2B invoice
+ */
+export const adminCreateShipment = async (shipmentInput: ShipmentInput, options?: Parameters<typeof customFetch>[1]): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getAdminCreateShipmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(shipmentInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateShipmentMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateShipment>>, TError,{data: BodyType<ShipmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateShipment>>, TError,{data: BodyType<ShipmentInput>}, TContext> => {
+
+const mutationKey = ['adminCreateShipment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateShipment>>, {data: BodyType<ShipmentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateShipment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateShipmentMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateShipment>>>
+    export type AdminCreateShipmentMutationBody = BodyType<ShipmentInput>
+    export type AdminCreateShipmentMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>
+
+    /**
+ * @summary Register a shipment for an eligible order or B2B invoice
+ */
+export const useAdminCreateShipment = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateShipment>>, TError,{data: BodyType<ShipmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateShipment>>,
+        TError,
+        {data: BodyType<ShipmentInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateShipmentMutationOptions(options));
+    }
+
+export const getAdminUpdateShipmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/shipping/${id}`
+}
+
+/**
+ * @summary Update carrier, tracking, status, dates, and actual carrier cost
+ */
+export const adminUpdateShipment = async (id: number,
+    shipmentUpdate: ShipmentUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getAdminUpdateShipmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(shipmentUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateShipmentMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateShipment>>, TError,{id: number;data: BodyType<ShipmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateShipment>>, TError,{id: number;data: BodyType<ShipmentUpdate>}, TContext> => {
+
+const mutationKey = ['adminUpdateShipment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateShipment>>, {id: number;data: BodyType<ShipmentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateShipment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateShipmentMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateShipment>>>
+    export type AdminUpdateShipmentMutationBody = BodyType<ShipmentUpdate>
+    export type AdminUpdateShipmentMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Update carrier, tracking, status, dates, and actual carrier cost
+ */
+export const useAdminUpdateShipment = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateShipment>>, TError,{id: number;data: BodyType<ShipmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateShipment>>,
+        TError,
+        {id: number;data: BodyType<ShipmentUpdate>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateShipmentMutationOptions(options));
+    }
 
 export const getAdminListCouponsUrl = (params?: AdminListCouponsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -12023,10 +12234,3 @@ export function useGetOwnerOpeningBalanceReconciliation<TData = Awaited<ReturnTy
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-

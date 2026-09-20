@@ -44,6 +44,7 @@ import {
   openingBalanceLinesTable,
   operationEventsTable,
   purchaseReceiptsTable,
+  shipmentsTable,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -154,6 +155,48 @@ const parsedJson = (schema: { parse(value: unknown): unknown }, value: unknown, 
   schema.parse(value);
   res.status(status).json(value);
 };
+
+const shippingStatusLabels: Record<string, { labelAr: string; labelEn: string }> = {
+  pending: { labelAr: "قيد الانتظار", labelEn: "Pending" },
+  ready: { labelAr: "جاهزة للشحن", labelEn: "Ready" },
+  in_transit: { labelAr: "في الطريق", labelEn: "In transit" },
+  delivered: { labelAr: "تم التوصيل", labelEn: "Delivered" },
+  returned: { labelAr: "مرتجعة", labelEn: "Returned" },
+  cancelled: { labelAr: "ملغاة", labelEn: "Cancelled" },
+};
+
+async function canUseShipping(res: Response, channel: "online" | "b2b", action: "view" | "edit") {
+  const user = res.locals.admin as typeof adminUsersTable.$inferSelect;
+  res.locals.permissions = await (await publicAdmin(user)).permissions;
+  return allowed(res, channel === "online" ? "orders" : "invoices", action);
+}
+
+async function shippingRows(channel: "online" | "b2b") {
+  if (channel === "online") {
+    return db.select({
+      shipment: shipmentsTable,
+      referenceNumber: ordersTable.orderNumber,
+      partyName: customersTable.name,
+    }).from(shipmentsTable)
+      .innerJoin(ordersTable, eq(shipmentsTable.orderId, ordersTable.id))
+      .innerJoin(customersTable, eq(ordersTable.userId, customersTable.id))
+      .where(eq(shipmentsTable.channel, "online"));
+  }
+  return db.select({
+    shipment: shipmentsTable,
+    referenceNumber: invoicesTable.invoiceNumber,
+    partyName: wholesaleDistributorsTable.companyName,
+  }).from(shipmentsTable)
+    .innerJoin(invoicesTable, eq(shipmentsTable.invoiceId, invoicesTable.id))
+    .innerJoin(wholesaleDistributorsTable, eq(invoicesTable.distributorId, wholesaleDistributorsTable.id))
+    .where(eq(shipmentsTable.channel, "b2b"));
+}
+
+const publicShipment = (row: Awaited<ReturnType<typeof shippingRows>>[number]) => ({
+  ...row.shipment,
+  referenceNumber: row.referenceNumber,
+  partyName: row.partyName,
+});
 
 router.get("/admin/operations/opening-balances", permit("inventory", "view"), route(async (req, res) => {
   const raw = req.query.importId;
@@ -801,6 +844,15 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         additionalInfo: body.orderAddress.additionalInfo,
         isDefault: body.orderAddress.isDefault,
       });
+      await tx.insert(shipmentsTable).values({
+        channel: "online",
+        orderId: created.id,
+        destinationCity: body.orderAddress.city,
+        destinationAddress: [body.orderAddress.district, body.orderAddress.street, body.orderAddress.buildingNo].filter(Boolean).join(", "),
+        serviceMethod: body.shippingMethod,
+        status: "pending",
+        collectedCost: shippingCost,
+      });
       await tx.insert(orderItemsTable).values(selectedProducts.map(({ product, quantity }) => ({
         orderId: created.id,
         productId: product.id,
@@ -985,6 +1037,136 @@ router.get("/admin/invoices/:id/qr", permit("invoices", "view"), route(async (re
     margin: 2,
   });
   res.type("image/png").send(png);
+}));
+
+router.get("/admin/shipping", route(async (req, res) => {
+  const query = parse(Api.GetAdminShippingDashboardQueryParams, {
+    ...req.query,
+    status: req.query.status ?? "all",
+    page: req.query.page ?? 1,
+    pageSize: req.query.pageSize ?? 20,
+    from: typeof req.query.from === "string" && req.query.from ? new Date(`${req.query.from}T00:00:00.000Z`) : undefined,
+    to: typeof req.query.to === "string" && req.query.to ? new Date(`${req.query.to}T00:00:00.000Z`) : undefined,
+  }, res); if (!query) return;
+  const page = query.page ?? 1;
+  const pageSize = query.pageSize ?? 20;
+  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
+    res.status(400).json({ error: "Invalid pagination" }); return;
+  }
+  if (!(await canUseShipping(res, query.channel, "view"))) {
+    res.status(403).json({ error: "Insufficient permission" }); return;
+  }
+  const from = query.from ? new Date(query.from) : null;
+  const to = query.to ? new Date(query.to) : null;
+  if (to) to.setUTCHours(23, 59, 59, 999);
+  const needle = query.search?.trim().toLocaleLowerCase();
+  let rows = (await shippingRows(query.channel)).filter(({ shipment, referenceNumber, partyName }) => {
+    if (from && shipment.createdAt < from) return false;
+    if (to && shipment.createdAt > to) return false;
+    if (query.status !== "all" && shipment.status !== query.status) return false;
+    if (query.city && shipment.destinationCity !== query.city) return false;
+    if (needle && ![referenceNumber, partyName, shipment.trackingNumber, shipment.carrier, shipment.destinationCity]
+      .some((value) => value?.toLocaleLowerCase().includes(needle))) return false;
+    return true;
+  });
+  rows = rows.sort((a, b) => b.shipment.createdAt.getTime() - a.shipment.createdAt.getTime());
+
+  const actualCosts = rows.map(({ shipment }) => shipment.actualCost).filter((value): value is number => value != null);
+  const totalActualCost = actualCosts.reduce((sumValue, value) => sumValue + value, 0);
+  const totalCollectedCost = rows.reduce((sumValue, { shipment }) => sumValue + (shipment.collectedCost ?? 0), 0);
+  const metric = (key: string, countValue: number, labels?: { labelAr: string; labelEn: string }) => ({
+    key, labelAr: labels?.labelAr ?? key, labelEn: labels?.labelEn ?? key, count: countValue,
+  });
+  const countBy = (values: string[]) => Array.from(values.reduce((map, value) => map.set(value, (map.get(value) ?? 0) + 1), new Map<string, number>()));
+  const statuses = countBy(rows.map(({ shipment }) => shipment.status))
+    .map(([key, value]) => metric(key, value, shippingStatusLabels[key]));
+  const destinations = countBy(rows.map(({ shipment }) => shipment.destinationCity))
+    .sort((a, b) => b[1] - a[1]).slice(0, 10).map(([key, value]) => metric(key, value));
+  const trend = countBy(rows.map(({ shipment }) => shipment.createdAt.toISOString().slice(0, 10)))
+    .map(([date, shipments]) => ({
+      date,
+      shipments,
+      actualCost: rows.filter(({ shipment }) => shipment.createdAt.toISOString().slice(0, 10) === date)
+        .reduce((sumValue, { shipment }) => sumValue + (shipment.actualCost ?? 0), 0),
+    })).sort((a, b) => a.date.localeCompare(b.date));
+  const items = rows.slice((page - 1) * pageSize, page * pageSize).map(publicShipment);
+  res.json(Api.GetAdminShippingDashboardResponse.parse({
+    channel: query.channel,
+    summary: {
+      shipmentCount: rows.length,
+      uniqueParties: new Set(rows.map((row) => row.partyName)).size,
+      totalActualCost,
+      averageActualCost: actualCosts.length ? totalActualCost / actualCosts.length : 0,
+      totalCollectedCost,
+    },
+    trend,
+    statuses,
+    destinations,
+    cities: [...new Set((await shippingRows(query.channel)).map(({ shipment }) => shipment.destinationCity))].sort(),
+    items,
+    total: rows.length,
+    page,
+    pageSize,
+  }));
+}));
+
+router.post("/admin/shipping", route(async (req, res) => {
+  const body = parse(Api.AdminCreateShipmentBody, req.body, res); if (!body) return;
+  if (!Number.isInteger(body.sourceId) || body.sourceId < 1
+    || (body.actualCost != null && body.actualCost < 0)
+    || (body.collectedCost != null && body.collectedCost < 0)) {
+    res.status(400).json({ error: "Invalid shipment input" }); return;
+  }
+  if (!(await canUseShipping(res, body.channel, "edit"))) {
+    res.status(403).json({ error: "Insufficient permission" }); return;
+  }
+  const source = body.channel === "online"
+    ? (await db.select({ id: ordersTable.id }).from(ordersTable).where(eq(ordersTable.id, body.sourceId)).limit(1))[0]
+    : (await db.select({ id: invoicesTable.id }).from(invoicesTable)
+      .where(and(eq(invoicesTable.id, body.sourceId), sql`${invoicesTable.distributorId} is not null`)).limit(1))[0];
+  if (!source) { res.status(400).json({ error: "Shipping source not found for this channel" }); return; }
+  const existing = body.channel === "online"
+    ? (await db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.orderId, body.sourceId)).limit(1))[0]
+    : (await db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.invoiceId, body.sourceId)).limit(1))[0];
+  if (existing) { res.status(409).json({ error: "A shipment is already registered for this source" }); return; }
+  const { sourceId, ...values } = body;
+  const [created] = await db.insert(shipmentsTable).values({
+    ...values,
+    orderId: body.channel === "online" ? sourceId : null,
+    invoiceId: body.channel === "b2b" ? sourceId : null,
+  }).returning();
+  const row = (await shippingRows(body.channel)).find((item) => item.shipment.id === created.id)!;
+  res.status(201).json(Api.AdminCreateShipmentResponse.parse(publicShipment(row)));
+}));
+
+router.patch("/admin/shipping/:id", route(async (req, res) => {
+  const params = parse(Api.AdminUpdateShipmentParams, req.params, res);
+  const body = parse(Api.AdminUpdateShipmentBody, req.body, res); if (!params || !body) return;
+  if ((body.actualCost != null && body.actualCost < 0)
+    || (body.collectedCost != null && body.collectedCost < 0)) {
+    res.status(400).json({ error: "Invalid shipment input" }); return;
+  }
+  const [existing] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Shipment not found" }); return; }
+  const channel = existing.channel as "online" | "b2b";
+  if (!(await canUseShipping(res, channel, "edit"))) {
+    res.status(403).json({ error: "Insufficient permission" }); return;
+  }
+  await db.transaction(async (tx) => {
+    await tx.update(shipmentsTable).set(body).where(eq(shipmentsTable.id, params.id));
+    if (channel === "online" && existing.orderId) {
+      const orderStatus = body.status === "delivered" ? "delivered"
+        : body.status === "in_transit" ? "shipped"
+        : body.status === "cancelled" ? "cancelled"
+        : undefined;
+      await tx.update(ordersTable).set({
+        ...(body.trackingNumber !== undefined ? { trackingNumber: body.trackingNumber } : {}),
+        ...(orderStatus ? { status: orderStatus } : {}),
+      }).where(eq(ordersTable.id, existing.orderId));
+    }
+  });
+  const row = (await shippingRows(channel)).find((item) => item.shipment.id === params.id)!;
+  res.json(Api.AdminUpdateShipmentResponse.parse(publicShipment(row)));
 }));
 
 router.get("/admin/coupons", permit("coupons", "view"), route(async (req, res) => {

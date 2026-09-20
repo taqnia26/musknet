@@ -1145,6 +1145,177 @@ export type AdminOrderDetail = AdminOrder & ({
   coupon: AdminOrderCoupon | null;
 });
 
+export type ShipmentChannel = typeof ShipmentChannel[keyof typeof ShipmentChannel];
+
+
+export const ShipmentChannel = {
+  online: 'online',
+  b2b: 'b2b',
+} as const;
+
+export type ShipmentStatus = typeof ShipmentStatus[keyof typeof ShipmentStatus];
+
+
+export const ShipmentStatus = {
+  pending: 'pending',
+  ready: 'ready',
+  in_transit: 'in_transit',
+  delivered: 'delivered',
+  returned: 'returned',
+  cancelled: 'cancelled',
+} as const;
+
+export interface Shipment {
+  id: number;
+  channel: ShipmentChannel;
+  /** @nullable */
+  orderId: number | null;
+  /** @nullable */
+  invoiceId: number | null;
+  referenceNumber: string;
+  partyName: string;
+  destinationCity: string;
+  /** @nullable */
+  destinationAddress: string | null;
+  /** @nullable */
+  carrier: string | null;
+  /** @nullable */
+  serviceMethod: string | null;
+  /** @nullable */
+  trackingNumber: string | null;
+  status: ShipmentStatus;
+  /** @nullable */
+  actualCost: number | null;
+  /** @nullable */
+  collectedCost: number | null;
+  /** @nullable */
+  shippedAt: string | null;
+  /** @nullable */
+  deliveredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ShipmentInputChannel = typeof ShipmentInputChannel[keyof typeof ShipmentInputChannel];
+
+
+export const ShipmentInputChannel = {
+  online: 'online',
+  b2b: 'b2b',
+} as const;
+
+export type ShipmentInputStatus = typeof ShipmentInputStatus[keyof typeof ShipmentInputStatus];
+
+
+export const ShipmentInputStatus = {
+  pending: 'pending',
+  ready: 'ready',
+  in_transit: 'in_transit',
+  delivered: 'delivered',
+  returned: 'returned',
+  cancelled: 'cancelled',
+} as const;
+
+export interface ShipmentInput {
+  channel: ShipmentInputChannel;
+  sourceId: number;
+  /** @minLength 1 */
+  destinationCity: string;
+  /** @nullable */
+  destinationAddress?: string | null;
+  /** @nullable */
+  carrier?: string | null;
+  /** @nullable */
+  serviceMethod?: string | null;
+  /** @nullable */
+  trackingNumber?: string | null;
+  status?: ShipmentInputStatus;
+  /** @nullable */
+  actualCost?: number | null;
+  /** @nullable */
+  collectedCost?: number | null;
+  /** @nullable */
+  shippedAt?: string | null;
+  /** @nullable */
+  deliveredAt?: string | null;
+}
+
+export type ShipmentUpdateStatus = typeof ShipmentUpdateStatus[keyof typeof ShipmentUpdateStatus];
+
+
+export const ShipmentUpdateStatus = {
+  pending: 'pending',
+  ready: 'ready',
+  in_transit: 'in_transit',
+  delivered: 'delivered',
+  returned: 'returned',
+  cancelled: 'cancelled',
+} as const;
+
+export interface ShipmentUpdate {
+  /** @minLength 1 */
+  destinationCity?: string;
+  /** @nullable */
+  destinationAddress?: string | null;
+  /** @nullable */
+  carrier?: string | null;
+  /** @nullable */
+  serviceMethod?: string | null;
+  /** @nullable */
+  trackingNumber?: string | null;
+  status?: ShipmentUpdateStatus;
+  /** @nullable */
+  actualCost?: number | null;
+  /** @nullable */
+  collectedCost?: number | null;
+  /** @nullable */
+  shippedAt?: string | null;
+  /** @nullable */
+  deliveredAt?: string | null;
+}
+
+export interface ShippingMetric {
+  key: string;
+  labelAr: string;
+  labelEn: string;
+  count: number;
+}
+
+export interface ShippingTrendPoint {
+  date: string;
+  shipments: number;
+  actualCost: number;
+}
+
+export interface ShippingSummary {
+  shipmentCount: number;
+  uniqueParties: number;
+  totalActualCost: number;
+  averageActualCost: number;
+  totalCollectedCost: number;
+}
+
+export type ShippingDashboardChannel = typeof ShippingDashboardChannel[keyof typeof ShippingDashboardChannel];
+
+
+export const ShippingDashboardChannel = {
+  online: 'online',
+  b2b: 'b2b',
+} as const;
+
+export interface ShippingDashboard {
+  channel: ShippingDashboardChannel;
+  summary: ShippingSummary;
+  trend: ShippingTrendPoint[];
+  statuses: ShippingMetric[];
+  destinations: ShippingMetric[];
+  cities: string[];
+  items: Shipment[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export type AdminCouponDiscountType = typeof AdminCouponDiscountType[keyof typeof AdminCouponDiscountType];
 
 
@@ -2715,6 +2886,38 @@ export const AdminListInvoicesChannel = {
   companies: 'companies',
 } as const;
 
+export type GetAdminShippingDashboardParams = {
+channel: GetAdminShippingDashboardChannel;
+from?: string;
+to?: string;
+status?: GetAdminShippingDashboardStatus;
+city?: string;
+search?: AdminSearchParameter;
+page?: number;
+pageSize?: number;
+};
+
+export type GetAdminShippingDashboardChannel = typeof GetAdminShippingDashboardChannel[keyof typeof GetAdminShippingDashboardChannel];
+
+
+export const GetAdminShippingDashboardChannel = {
+  online: 'online',
+  b2b: 'b2b',
+} as const;
+
+export type GetAdminShippingDashboardStatus = typeof GetAdminShippingDashboardStatus[keyof typeof GetAdminShippingDashboardStatus];
+
+
+export const GetAdminShippingDashboardStatus = {
+  all: 'all',
+  pending: 'pending',
+  ready: 'ready',
+  in_transit: 'in_transit',
+  delivered: 'delivered',
+  returned: 'returned',
+  cancelled: 'cancelled',
+} as const;
+
 export type AdminListCouponsParams = {
 search?: AdminSearchParameter;
 status?: AdminStatusParameter;
@@ -2834,4 +3037,3 @@ export const InfluencerDashboardRangeDays = {
 export type CaptureInfluencerReferralParams = {
 ref: string;
 };
-

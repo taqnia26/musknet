@@ -851,6 +851,63 @@ paths:
               schema: { type: string, format: binary }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /admin/shipping:
+    get:
+      operationId: getAdminShippingDashboard
+      summary: Get online or B2B shipping operations and analytics
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - name: channel
+          in: query
+          required: true
+          schema: { type: string, enum: [online, b2b] }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: status
+          in: query
+          schema: { type: string, enum: [all, pending, ready, in_transit, delivered, returned, cancelled] }
+        - name: city
+          in: query
+          schema: { type: string }
+        - $ref: "#/components/parameters/AdminSearch"
+        - name: page
+          in: query
+          schema: { type: number }
+        - name: pageSize
+          in: query
+          schema: { type: number }
+      responses:
+        "200": { description: Shipping dashboard, content: { application/json: { schema: { $ref: "#/components/schemas/ShippingDashboard" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: adminCreateShipment
+      summary: Register a shipment for an eligible order or B2B invoice
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ShipmentInput" } } } }
+      responses:
+        "201": { description: Shipment, content: { application/json: { schema: { $ref: "#/components/schemas/Shipment" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Shipment already exists, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/shipping/{id}:
+    patch:
+      operationId: adminUpdateShipment
+      summary: Update carrier, tracking, status, dates, and actual carrier cost
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/AdminId"
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ShipmentUpdate" } } } }
+      responses:
+        "200": { description: Shipment, content: { application/json: { schema: { $ref: "#/components/schemas/Shipment" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /admin/coupons:
     get:
       operationId: adminListCoupons
@@ -2721,6 +2778,95 @@ components:
             orderAddress: { $ref: "#/components/schemas/AdminOrderAddress" }
             items: { type: array, items: { $ref: "#/components/schemas/AdminOrderItem" } }
             coupon: { oneOf: [{ $ref: "#/components/schemas/AdminOrderCoupon" }, { type: "null" }] }
+    Shipment:
+      type: object
+      required: [id, channel, orderId, invoiceId, referenceNumber, partyName, destinationCity, destinationAddress, carrier, serviceMethod, trackingNumber, status, actualCost, collectedCost, shippedAt, deliveredAt, createdAt, updatedAt]
+      properties:
+        id: { type: number }
+        channel: { type: string, enum: [online, b2b] }
+        orderId: { type: [number, "null"] }
+        invoiceId: { type: [number, "null"] }
+        referenceNumber: { type: string }
+        partyName: { type: string }
+        destinationCity: { type: string }
+        destinationAddress: { type: [string, "null"] }
+        carrier: { type: [string, "null"] }
+        serviceMethod: { type: [string, "null"] }
+        trackingNumber: { type: [string, "null"] }
+        status: { type: string, enum: [pending, ready, in_transit, delivered, returned, cancelled] }
+        actualCost: { type: [number, "null"] }
+        collectedCost: { type: [number, "null"] }
+        shippedAt: { type: [string, "null"], format: date-time }
+        deliveredAt: { type: [string, "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ShipmentInput:
+      type: object
+      required: [channel, sourceId, destinationCity]
+      properties:
+        channel: { type: string, enum: [online, b2b] }
+        sourceId: { type: number }
+        destinationCity: { type: string, minLength: 1 }
+        destinationAddress: { type: [string, "null"] }
+        carrier: { type: [string, "null"] }
+        serviceMethod: { type: [string, "null"] }
+        trackingNumber: { type: [string, "null"] }
+        status: { type: string, enum: [pending, ready, in_transit, delivered, returned, cancelled] }
+        actualCost: { type: [number, "null"] }
+        collectedCost: { type: [number, "null"] }
+        shippedAt: { type: [string, "null"], format: date-time }
+        deliveredAt: { type: [string, "null"], format: date-time }
+    ShipmentUpdate:
+      type: object
+      properties:
+        destinationCity: { type: string, minLength: 1 }
+        destinationAddress: { type: [string, "null"] }
+        carrier: { type: [string, "null"] }
+        serviceMethod: { type: [string, "null"] }
+        trackingNumber: { type: [string, "null"] }
+        status: { type: string, enum: [pending, ready, in_transit, delivered, returned, cancelled] }
+        actualCost: { type: [number, "null"] }
+        collectedCost: { type: [number, "null"] }
+        shippedAt: { type: [string, "null"], format: date-time }
+        deliveredAt: { type: [string, "null"], format: date-time }
+    ShippingMetric:
+      type: object
+      required: [key, labelAr, labelEn, count]
+      properties:
+        key: { type: string }
+        labelAr: { type: string }
+        labelEn: { type: string }
+        count: { type: number }
+    ShippingTrendPoint:
+      type: object
+      required: [date, shipments, actualCost]
+      properties:
+        date: { type: string, format: date }
+        shipments: { type: number }
+        actualCost: { type: number }
+    ShippingSummary:
+      type: object
+      required: [shipmentCount, uniqueParties, totalActualCost, averageActualCost, totalCollectedCost]
+      properties:
+        shipmentCount: { type: number }
+        uniqueParties: { type: number }
+        totalActualCost: { type: number }
+        averageActualCost: { type: number }
+        totalCollectedCost: { type: number }
+    ShippingDashboard:
+      type: object
+      required: [channel, summary, trend, statuses, destinations, cities, items, total, page, pageSize]
+      properties:
+        channel: { type: string, enum: [online, b2b] }
+        summary: { $ref: "#/components/schemas/ShippingSummary" }
+        trend: { type: array, items: { $ref: "#/components/schemas/ShippingTrendPoint" } }
+        statuses: { type: array, items: { $ref: "#/components/schemas/ShippingMetric" } }
+        destinations: { type: array, items: { $ref: "#/components/schemas/ShippingMetric" } }
+        cities: { type: array, items: { type: string } }
+        items: { type: array, items: { $ref: "#/components/schemas/Shipment" } }
+        total: { type: number }
+        page: { type: number }
+        pageSize: { type: number }
     AdminCoupon:
       type: object
       required: [id, code, discountType, discountValue, timesUsed, isActive, createdAt]

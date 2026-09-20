@@ -18,6 +18,7 @@ import {
   influencersTable,
   influencerCouponsTable,
   orderAttributionsTable,
+  shipmentsTable,
 } from "@workspace/db";
 import { ensureAdminSeeded } from "./admin-auth";
 import { postFulfillmentCogs, updateOrderAndIssueInvoice } from "./invoices";
@@ -895,6 +896,15 @@ export async function createOrderForUser(
       buildingNo: details.address.buildingNo,
       additionalInfo: details.address.additionalInfo,
       isDefault: details.address.isDefault,
+    });
+    await tx.insert(shipmentsTable).values({
+      channel: "online",
+      orderId: created.id,
+      destinationCity: details.address.city,
+      destinationAddress: [details.address.district, details.address.street, details.address.buildingNo].filter(Boolean).join(", "),
+      serviceMethod: details.shippingMethod,
+      status: "pending",
+      collectedCost: shippingCost,
     });
     const createdItems = await tx.insert(orderItemsTable).values(items.map(({ record, product }) => ({
       orderId: created.id,

@@ -2278,6 +2278,161 @@ export const AdminGetInvoiceQrParams = zod.object({
 export const AdminGetInvoiceQrResponse = zod.unknown()
 
 
+/**
+ * @summary Get online or B2B shipping operations and analytics
+ */
+export const GetAdminShippingDashboardQueryParams = zod.object({
+  "channel": zod.enum(['online', 'b2b']),
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "status": zod.enum(['all', 'pending', 'ready', 'in_transit', 'delivered', 'returned', 'cancelled']).optional(),
+  "city": zod.coerce.string().optional(),
+  "search": zod.coerce.string().optional(),
+  "page": zod.coerce.number().optional(),
+  "pageSize": zod.coerce.number().optional()
+})
+
+export const GetAdminShippingDashboardResponse = zod.object({
+  "channel": zod.enum(['online', 'b2b']),
+  "summary": zod.object({
+  "shipmentCount": zod.number(),
+  "uniqueParties": zod.number(),
+  "totalActualCost": zod.number(),
+  "averageActualCost": zod.number(),
+  "totalCollectedCost": zod.number()
+}),
+  "trend": zod.array(zod.object({
+  "date": zod.coerce.date(),
+  "shipments": zod.number(),
+  "actualCost": zod.number()
+})),
+  "statuses": zod.array(zod.object({
+  "key": zod.string(),
+  "labelAr": zod.string(),
+  "labelEn": zod.string(),
+  "count": zod.number()
+})),
+  "destinations": zod.array(zod.object({
+  "key": zod.string(),
+  "labelAr": zod.string(),
+  "labelEn": zod.string(),
+  "count": zod.number()
+})),
+  "cities": zod.array(zod.string()),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "channel": zod.enum(['online', 'b2b']),
+  "orderId": zod.number().nullable(),
+  "invoiceId": zod.number().nullable(),
+  "referenceNumber": zod.string(),
+  "partyName": zod.string(),
+  "destinationCity": zod.string(),
+  "destinationAddress": zod.string().nullable(),
+  "carrier": zod.string().nullable(),
+  "serviceMethod": zod.string().nullable(),
+  "trackingNumber": zod.string().nullable(),
+  "status": zod.enum(['pending', 'ready', 'in_transit', 'delivered', 'returned', 'cancelled']),
+  "actualCost": zod.number().nullable(),
+  "collectedCost": zod.number().nullable(),
+  "shippedAt": zod.coerce.date().nullable(),
+  "deliveredAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "total": zod.number(),
+  "page": zod.number(),
+  "pageSize": zod.number()
+})
+
+
+/**
+ * @summary Register a shipment for an eligible order or B2B invoice
+ */
+
+
+
+export const AdminCreateShipmentBody = zod.object({
+  "channel": zod.enum(['online', 'b2b']),
+  "sourceId": zod.number(),
+  "destinationCity": zod.string().min(1),
+  "destinationAddress": zod.string().nullish(),
+  "carrier": zod.string().nullish(),
+  "serviceMethod": zod.string().nullish(),
+  "trackingNumber": zod.string().nullish(),
+  "status": zod.enum(['pending', 'ready', 'in_transit', 'delivered', 'returned', 'cancelled']).optional(),
+  "actualCost": zod.number().nullish(),
+  "collectedCost": zod.number().nullish(),
+  "shippedAt": zod.coerce.date().nullish(),
+  "deliveredAt": zod.coerce.date().nullish()
+})
+
+export const AdminCreateShipmentResponse = zod.object({
+  "id": zod.number(),
+  "channel": zod.enum(['online', 'b2b']),
+  "orderId": zod.number().nullable(),
+  "invoiceId": zod.number().nullable(),
+  "referenceNumber": zod.string(),
+  "partyName": zod.string(),
+  "destinationCity": zod.string(),
+  "destinationAddress": zod.string().nullable(),
+  "carrier": zod.string().nullable(),
+  "serviceMethod": zod.string().nullable(),
+  "trackingNumber": zod.string().nullable(),
+  "status": zod.enum(['pending', 'ready', 'in_transit', 'delivered', 'returned', 'cancelled']),
+  "actualCost": zod.number().nullable(),
+  "collectedCost": zod.number().nullable(),
+  "shippedAt": zod.coerce.date().nullable(),
+  "deliveredAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update carrier, tracking, status, dates, and actual carrier cost
+ */
+export const AdminUpdateShipmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const AdminUpdateShipmentBody = zod.object({
+  "destinationCity": zod.string().min(1).optional(),
+  "destinationAddress": zod.string().nullish(),
+  "carrier": zod.string().nullish(),
+  "serviceMethod": zod.string().nullish(),
+  "trackingNumber": zod.string().nullish(),
+  "status": zod.enum(['pending', 'ready', 'in_transit', 'delivered', 'returned', 'cancelled']).optional(),
+  "actualCost": zod.number().nullish(),
+  "collectedCost": zod.number().nullish(),
+  "shippedAt": zod.coerce.date().nullish(),
+  "deliveredAt": zod.coerce.date().nullish()
+})
+
+export const AdminUpdateShipmentResponse = zod.object({
+  "id": zod.number(),
+  "channel": zod.enum(['online', 'b2b']),
+  "orderId": zod.number().nullable(),
+  "invoiceId": zod.number().nullable(),
+  "referenceNumber": zod.string(),
+  "partyName": zod.string(),
+  "destinationCity": zod.string(),
+  "destinationAddress": zod.string().nullable(),
+  "carrier": zod.string().nullable(),
+  "serviceMethod": zod.string().nullable(),
+  "trackingNumber": zod.string().nullable(),
+  "status": zod.enum(['pending', 'ready', 'in_transit', 'delivered', 'returned', 'cancelled']),
+  "actualCost": zod.number().nullable(),
+  "collectedCost": zod.number().nullable(),
+  "shippedAt": zod.coerce.date().nullable(),
+  "deliveredAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
 export const adminListCouponsQueryStatusDefault = `all`;
 
 export const AdminListCouponsQueryParams = zod.object({
@@ -4985,5 +5140,3 @@ export const GetOwnerOpeningBalanceReconciliationResponse = zod.object({
 })
 })).optional()
 }))
-
-
