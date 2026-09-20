@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, count, desc, eq, gte, ilike, inArray, lt, lte, or, sql, sum } from "drizzle-orm";
 import QRCode from "qrcode";
 import * as Api from "@workspace/api-zod";
@@ -44,6 +44,7 @@ import {
   openingBalanceLinesTable,
   operationEventsTable,
   purchaseReceiptsTable,
+  shipmentEventsTable,
   shipmentsTable,
   receivablePaymentsTable,
 } from "@workspace/db";
@@ -73,6 +74,7 @@ import {
 import { ObjectStorageService } from "../lib/object-storage";
 import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
 import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch } from "../lib/operations";
+import { createSmsaShippingLabel } from "../lib/shipping-carriers";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -173,31 +175,61 @@ async function canUseShipping(res: Response, channel: "online" | "b2b", action: 
 }
 
 async function shippingRows(channel: "online" | "b2b") {
-  if (channel === "online") {
-    return db.select({
+  const rows = channel === "online"
+    ? await db.select({
       shipment: shipmentsTable,
       referenceNumber: ordersTable.orderNumber,
       partyName: customersTable.name,
+      partyPhone: customersTable.phone,
     }).from(shipmentsTable)
       .innerJoin(ordersTable, eq(shipmentsTable.orderId, ordersTable.id))
       .innerJoin(customersTable, eq(ordersTable.userId, customersTable.id))
-      .where(eq(shipmentsTable.channel, "online"));
-  }
-  return db.select({
+      .where(eq(shipmentsTable.channel, "online"))
+    : await db.select({
     shipment: shipmentsTable,
     referenceNumber: invoicesTable.invoiceNumber,
     partyName: wholesaleDistributorsTable.companyName,
+    partyPhone: wholesaleDistributorsTable.phone,
   }).from(shipmentsTable)
     .innerJoin(invoicesTable, eq(shipmentsTable.invoiceId, invoicesTable.id))
     .innerJoin(wholesaleDistributorsTable, eq(invoicesTable.distributorId, wholesaleDistributorsTable.id))
     .where(eq(shipmentsTable.channel, "b2b"));
+  const events = rows.length
+    ? await db.select().from(shipmentEventsTable)
+      .where(inArray(shipmentEventsTable.shipmentId, rows.map((row) => row.shipment.id)))
+      .orderBy(desc(shipmentEventsTable.createdAt))
+    : [];
+  return rows.map((row) => ({
+    ...row,
+    events: events.filter((event) => event.shipmentId === row.shipment.id),
+  }));
 }
 
 const publicShipment = (row: Awaited<ReturnType<typeof shippingRows>>[number]) => ({
   ...row.shipment,
   referenceNumber: row.referenceNumber,
   partyName: row.partyName,
+  events: row.events.map(({ id, carrier, eventType, status, outcome, errorMessage, createdAt }) => ({
+    id, carrier, eventType, status, outcome, errorMessage, createdAt,
+  })),
 });
+
+const carrierStatusToShipmentStatus = {
+  created: "ready",
+  picked_up: "in_transit",
+  in_transit: "in_transit",
+  delivered: "delivered",
+  returned: "returned",
+  cancelled: "cancelled",
+} as const;
+
+function secretsMatch(received: string | undefined, expected: string | undefined) {
+  if (!received || !expected) return false;
+  const receivedBuffer = Buffer.from(received);
+  const expectedBuffer = Buffer.from(expected);
+  return receivedBuffer.length === expectedBuffer.length
+    && timingSafeEqual(receivedBuffer, expectedBuffer);
+}
 
 router.get("/admin/operations/opening-balances", permit("inventory", "view"), route(async (req, res) => {
   const raw = req.query.importId;
@@ -1202,6 +1234,146 @@ router.patch("/admin/shipping/:id", route(async (req, res) => {
   });
   const row = (await shippingRows(channel)).find((item) => item.shipment.id === params.id)!;
   res.json(Api.AdminUpdateShipmentResponse.parse(publicShipment(row)));
+}));
+
+router.post("/admin/shipping/:id/label", route(async (req, res) => {
+  const params = parse(Api.AdminCreateShippingLabelParams, req.params, res);
+  const body = parse(Api.AdminCreateShippingLabelBody, req.body, res);
+  if (!params || !body) return;
+  const row = (await shippingRows("online")).find((item) => item.shipment.id === params.id)
+    ?? (await shippingRows("b2b")).find((item) => item.shipment.id === params.id);
+  if (!row) { res.status(404).json({ error: "Shipment not found" }); return; }
+  const channel = row.shipment.channel as "online" | "b2b";
+  if (!(await canUseShipping(res, channel, "edit"))) {
+    res.status(403).json({ error: "Insufficient permission" }); return;
+  }
+  if (row.shipment.trackingNumber && row.shipment.labelUrl && row.shipment.integrationStatus === "active") {
+    res.json(Api.AdminCreateShippingLabelResponse.parse(publicShipment(row))); return;
+  }
+
+  const [integration] = await db.select().from(adminIntegrationsTable)
+    .where(eq(adminIntegrationsTable.providerId, body.carrier)).limit(1);
+  const attemptAt = new Date();
+  await db.update(shipmentsTable).set({
+    carrier: body.carrier,
+    serviceMethod: body.serviceMethod,
+    integrationStatus: "processing",
+    integrationError: null,
+    integrationAttempts: row.shipment.integrationAttempts + 1,
+    lastIntegrationAttemptAt: attemptAt,
+  }).where(eq(shipmentsTable.id, params.id));
+
+  try {
+    const label = await createSmsaShippingLabel(integration?.apiBaseUrl ?? null, {
+      referenceNumber: row.referenceNumber,
+      recipientName: row.partyName,
+      recipientPhone: row.partyPhone,
+      destinationCity: row.shipment.destinationCity,
+      destinationAddress: row.shipment.destinationAddress,
+      serviceMethod: body.serviceMethod,
+    });
+    await db.transaction(async (tx) => {
+      await tx.update(shipmentsTable).set({
+        carrier: body.carrier,
+        serviceMethod: body.serviceMethod,
+        carrierShipmentId: label.carrierShipmentId,
+        trackingNumber: label.trackingNumber,
+        labelUrl: label.labelUrl,
+        actualCost: label.actualCost,
+        status: "ready",
+        integrationStatus: "active",
+        integrationError: null,
+      }).where(eq(shipmentsTable.id, params.id));
+      if (row.shipment.orderId) {
+        await tx.update(ordersTable).set({ trackingNumber: label.trackingNumber })
+          .where(eq(ordersTable.id, row.shipment.orderId));
+      }
+      await tx.insert(shipmentEventsTable).values({
+        shipmentId: params.id,
+        carrier: body.carrier,
+        eventType: "label_created",
+        status: "ready",
+        outcome: "success",
+      });
+    });
+    const updated = (await shippingRows(channel)).find((item) => item.shipment.id === params.id)!;
+    res.status(201).json(Api.AdminCreateShippingLabelResponse.parse(publicShipment(updated)));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Carrier request failed";
+    req.log.warn({ shipmentId: params.id, carrier: body.carrier, error: message }, "Shipping label request failed");
+    await db.transaction(async (tx) => {
+      await tx.update(shipmentsTable).set({
+        integrationStatus: "failed",
+        integrationError: message,
+      }).where(eq(shipmentsTable.id, params.id));
+      await tx.insert(shipmentEventsTable).values({
+        shipmentId: params.id,
+        carrier: body.carrier,
+        eventType: "label_request",
+        outcome: "failed",
+        errorMessage: message,
+      });
+    });
+    res.status(502).json({ error: message });
+  }
+}));
+
+router.post("/shipping/webhooks/:carrier", route(async (req, res) => {
+  const params = parse(Api.ReceiveShippingWebhookParams, req.params, res);
+  const headers = parse(Api.ReceiveShippingWebhookHeader, req.headers, res);
+  const body = parse(Api.ReceiveShippingWebhookBody, req.body, res);
+  if (!params || !headers || !body) return;
+  if (!secretsMatch(headers["x-webhook-secret"], process.env.SMSA_WEBHOOK_SECRET)) {
+    res.status(401).json({ error: "Invalid webhook secret" }); return;
+  }
+  const [shipment] = await db.select().from(shipmentsTable)
+    .where(and(
+      eq(shipmentsTable.carrier, params.carrier),
+      eq(shipmentsTable.trackingNumber, body.trackingNumber),
+    )).limit(1);
+  if (!shipment) { res.status(404).json({ error: "Shipment not found" }); return; }
+
+  const [duplicate] = await db.select({ id: shipmentEventsTable.id }).from(shipmentEventsTable)
+    .where(and(
+      eq(shipmentEventsTable.carrier, params.carrier),
+      eq(shipmentEventsTable.carrierEventId, body.eventId),
+    )).limit(1);
+  if (duplicate) {
+    res.json(Api.ReceiveShippingWebhookResponse.parse({ accepted: true, duplicate: true })); return;
+  }
+
+  const status = carrierStatusToShipmentStatus[body.status];
+  const occurredAt = body.occurredAt ? new Date(body.occurredAt) : new Date();
+  await db.transaction(async (tx) => {
+    await tx.update(shipmentsTable).set({
+      status,
+      integrationStatus: "active",
+      integrationError: null,
+      ...(body.actualCost != null ? { actualCost: body.actualCost } : {}),
+      ...(status === "in_transit" && !shipment.shippedAt ? { shippedAt: occurredAt } : {}),
+      ...(status === "delivered" ? { deliveredAt: occurredAt } : {}),
+    }).where(eq(shipmentsTable.id, shipment.id));
+    if (shipment.orderId) {
+      const orderStatus = status === "delivered" ? "delivered"
+        : status === "in_transit" ? "shipped"
+        : status === "cancelled" ? "cancelled"
+        : undefined;
+      if (orderStatus) {
+        await tx.update(ordersTable).set({ status: orderStatus })
+          .where(eq(ordersTable.id, shipment.orderId));
+      }
+    }
+    await tx.insert(shipmentEventsTable).values({
+      shipmentId: shipment.id,
+      carrier: params.carrier,
+      carrierEventId: body.eventId,
+      eventType: "tracking_update",
+      status,
+      outcome: "success",
+      payload: body,
+    });
+  });
+  res.json(Api.ReceiveShippingWebhookResponse.parse({ accepted: true, duplicate: false }));
 }));
 
 router.get("/admin/coupons", permit("coupons", "view"), route(async (req, res) => {

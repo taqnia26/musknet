@@ -4,6 +4,7 @@ import {
   useGetAdminShippingDashboard, 
   getGetAdminShippingDashboardQueryKey,
   useAdminCreateShipment,
+  useAdminCreateShippingLabel,
   useAdminUpdateShipment,
   useGetAdminMe,
   ShipmentChannel,
@@ -247,6 +248,27 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
         });
       }
     }
+  });
+
+  const createLabel = useAdminCreateShippingLabel({
+    mutation: {
+      onSuccess: () => {
+        toast({
+          title: t('تم إصدار البوليصة', 'Shipping label created'),
+          description: t('تم حفظ رقم التتبع وتكلفة الناقل تلقائياً', 'Tracking and carrier cost were saved automatically'),
+        });
+        queryClient.invalidateQueries({ queryKey: getGetAdminShippingDashboardQueryKey() });
+      },
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : t('تعذر الاتصال بالناقل', 'Could not reach the carrier');
+        toast({
+          variant: 'destructive',
+          title: t('فشل إصدار البوليصة', 'Label creation failed'),
+          description: message,
+        });
+        queryClient.invalidateQueries({ queryKey: getGetAdminShippingDashboardQueryKey() });
+      },
+    },
   });
 
   // Edit Dialog State
@@ -857,6 +879,16 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                               {shipment.trackingNumber}
                             </div>
                           )}
+                          {shipment.integrationStatus === 'failed' && (
+                            <div className="mt-1 max-w-[180px] truncate text-xs text-destructive" title={shipment.integrationError || undefined}>
+                              {shipment.integrationError || t('فشل الربط', 'Integration failed')}
+                            </div>
+                          )}
+                          {shipment.integrationStatus === 'processing' && (
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {t('جارٍ الاتصال بالناقل…', 'Contacting carrier…')}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className={cn("gap-1 whitespace-nowrap", getStatusColor(shipment.status))}>
@@ -899,10 +931,33 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                                   {t('تحديث الشحنة', 'Update Shipment')}
                                 </DropdownMenuItem>
                               )}
-                              {shipment.trackingNumber && shipment.carrier && (
-                                <DropdownMenuItem>
-                                  {t('تتبع الشحنة', 'Track Shipment')}
+                              {canEdit && shipment.integrationStatus !== 'active' && (
+                                <DropdownMenuItem
+                                  disabled={createLabel.isPending}
+                                  onClick={() => createLabel.mutate({
+                                    id: shipment.id,
+                                    data: {
+                                      carrier: 'smsa',
+                                      serviceMethod: shipment.serviceMethod || 'standard',
+                                    },
+                                  })}
+                                >
+                                  {shipment.integrationStatus === 'failed'
+                                    ? t('إعادة محاولة إصدار البوليصة', 'Retry label creation')
+                                    : t('إصدار بوليصة SMSA', 'Create SMSA label')}
                                 </DropdownMenuItem>
+                              )}
+                              {shipment.labelUrl && (
+                                <DropdownMenuItem asChild>
+                                  <a href={shipment.labelUrl} target="_blank" rel="noreferrer">
+                                    {t('فتح البوليصة', 'Open label')}
+                                  </a>
+                                </DropdownMenuItem>
+                              )}
+                              {shipment.events.length > 0 && (
+                                <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
+                                  {t('آخر تحديث:', 'Last event:')} {shipment.events[0].eventType}
+                                </DropdownMenuLabel>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>

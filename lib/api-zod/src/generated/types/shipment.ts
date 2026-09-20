@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ShipmentChannel } from './shipmentChannel';
+import type { ShipmentEvent } from './shipmentEvent';
+import type { ShipmentIntegrationStatus } from './shipmentIntegrationStatus';
 import type { ShipmentStatus } from './shipmentStatus';
 
 export interface Shipment {
@@ -26,7 +28,17 @@ export interface Shipment {
   serviceMethod: string | null;
   /** @nullable */
   trackingNumber: string | null;
+  /** @nullable */
+  carrierShipmentId: string | null;
+  /** @nullable */
+  labelUrl: string | null;
   status: ShipmentStatus;
+  integrationStatus: ShipmentIntegrationStatus;
+  /** @nullable */
+  integrationError: string | null;
+  integrationAttempts: number;
+  /** @nullable */
+  lastIntegrationAttemptAt: Date | null;
   /** @nullable */
   actualCost: number | null;
   /** @nullable */
@@ -35,6 +47,7 @@ export interface Shipment {
   shippedAt: Date | null;
   /** @nullable */
   deliveredAt: Date | null;
+  events: ShipmentEvent[];
   createdAt: Date;
   updatedAt: Date;
 }

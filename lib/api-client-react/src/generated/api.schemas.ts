@@ -1226,6 +1226,37 @@ export const ShipmentStatus = {
   cancelled: 'cancelled',
 } as const;
 
+export type ShipmentIntegrationStatus = typeof ShipmentIntegrationStatus[keyof typeof ShipmentIntegrationStatus];
+
+
+export const ShipmentIntegrationStatus = {
+  not_requested: 'not_requested',
+  processing: 'processing',
+  active: 'active',
+  failed: 'failed',
+} as const;
+
+export type ShipmentEventOutcome = typeof ShipmentEventOutcome[keyof typeof ShipmentEventOutcome];
+
+
+export const ShipmentEventOutcome = {
+  success: 'success',
+  failed: 'failed',
+  ignored: 'ignored',
+} as const;
+
+export interface ShipmentEvent {
+  id: number;
+  carrier: string;
+  eventType: string;
+  /** @nullable */
+  status: string | null;
+  outcome: ShipmentEventOutcome;
+  /** @nullable */
+  errorMessage: string | null;
+  createdAt: string;
+}
+
 export interface Shipment {
   id: number;
   channel: ShipmentChannel;
@@ -1244,7 +1275,17 @@ export interface Shipment {
   serviceMethod: string | null;
   /** @nullable */
   trackingNumber: string | null;
+  /** @nullable */
+  carrierShipmentId: string | null;
+  /** @nullable */
+  labelUrl: string | null;
   status: ShipmentStatus;
+  integrationStatus: ShipmentIntegrationStatus;
+  /** @nullable */
+  integrationError: string | null;
+  integrationAttempts: number;
+  /** @nullable */
+  lastIntegrationAttemptAt: string | null;
   /** @nullable */
   actualCost: number | null;
   /** @nullable */
@@ -1253,6 +1294,7 @@ export interface Shipment {
   shippedAt: string | null;
   /** @nullable */
   deliveredAt: string | null;
+  events: ShipmentEvent[];
   createdAt: string;
   updatedAt: string;
 }
@@ -1333,6 +1375,60 @@ export interface ShipmentUpdate {
   shippedAt?: string | null;
   /** @nullable */
   deliveredAt?: string | null;
+}
+
+export type ShippingLabelInputCarrier = typeof ShippingLabelInputCarrier[keyof typeof ShippingLabelInputCarrier];
+
+
+export const ShippingLabelInputCarrier = {
+  smsa: 'smsa',
+} as const;
+
+export interface ShippingLabelInput {
+  carrier: ShippingLabelInputCarrier;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  serviceMethod: string;
+}
+
+export type ShippingWebhookInputStatus = typeof ShippingWebhookInputStatus[keyof typeof ShippingWebhookInputStatus];
+
+
+export const ShippingWebhookInputStatus = {
+  created: 'created',
+  picked_up: 'picked_up',
+  in_transit: 'in_transit',
+  delivered: 'delivered',
+  returned: 'returned',
+  cancelled: 'cancelled',
+} as const;
+
+export interface ShippingWebhookInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  eventId: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  trackingNumber: string;
+  status: ShippingWebhookInputStatus;
+  /** @nullable */
+  occurredAt?: string | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  actualCost?: number | null;
+}
+
+export interface ShippingWebhookResult {
+  accepted: boolean;
+  duplicate: boolean;
 }
 
 export interface ShippingMetric {
@@ -1429,6 +1525,7 @@ export interface AdminCouponDisableInput {
   /** Explicitly confirm disabling a coupon used by active campaigns */
   confirm: boolean;
 }
+
 export interface AdminCampaignCoupon {
   id: number;
   code: string;
@@ -1438,6 +1535,13 @@ export interface CouponAffectedCampaign {
   id: number;
   name: string;
 }
+
+export interface CouponDisableConflict {
+  error: string;
+  /** @minItems 1 */
+  affectedCampaigns: CouponAffectedCampaign[];
+}
+
 export type AdminCampaignStatus = typeof AdminCampaignStatus[keyof typeof AdminCampaignStatus];
 
 
@@ -3118,8 +3222,3 @@ export type CaptureInfluencerReferralParams = {
 ref: string;
 };
 
-export interface CouponDisableConflict {
-  error: string;
-  /** @minItems 1 */
-  affectedCampaigns: CouponAffectedCampaign[];
-}

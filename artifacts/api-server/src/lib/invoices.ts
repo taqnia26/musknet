@@ -1,8 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, wholesaleDistributorsTable, shipmentsTable } from "@workspace/db";
+import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
-import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable } from "@workspace/db";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
 

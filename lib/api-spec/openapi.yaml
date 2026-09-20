@@ -926,6 +926,42 @@ paths:
         "200": { description: Shipment, content: { application/json: { schema: { $ref: "#/components/schemas/Shipment" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /admin/shipping/{id}/label:
+    post:
+      operationId: adminCreateShippingLabel
+      summary: Create or retry a carrier shipping label
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/AdminId"
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ShippingLabelInput" } } } }
+      responses:
+        "200": { description: Existing label, content: { application/json: { schema: { $ref: "#/components/schemas/Shipment" } } } }
+        "201": { description: Label created, content: { application/json: { schema: { $ref: "#/components/schemas/Shipment" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "502": { description: Carrier request failed, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /shipping/webhooks/{carrier}:
+    post:
+      operationId: receiveShippingWebhook
+      summary: Receive a verified carrier tracking update
+      tags: [shipping]
+      parameters:
+        - name: carrier
+          in: path
+          required: true
+          schema: { type: string, enum: [smsa] }
+        - name: x-webhook-secret
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ShippingWebhookInput" } } } }
+      responses:
+        "200": { description: Update accepted, content: { application/json: { schema: { $ref: "#/components/schemas/ShippingWebhookResult" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /admin/coupons:
     get:
       operationId: adminListCoupons
@@ -2837,7 +2873,7 @@ components:
             coupon: { oneOf: [{ $ref: "#/components/schemas/AdminOrderCoupon" }, { type: "null" }] }
     Shipment:
       type: object
-      required: [id, channel, orderId, invoiceId, referenceNumber, partyName, destinationCity, destinationAddress, carrier, serviceMethod, trackingNumber, status, actualCost, collectedCost, shippedAt, deliveredAt, createdAt, updatedAt]
+      required: [id, channel, orderId, invoiceId, referenceNumber, partyName, destinationCity, destinationAddress, carrier, serviceMethod, trackingNumber, carrierShipmentId, labelUrl, status, integrationStatus, integrationError, integrationAttempts, lastIntegrationAttemptAt, actualCost, collectedCost, shippedAt, deliveredAt, events, createdAt, updatedAt]
       properties:
         id: { type: number }
         channel: { type: string, enum: [online, b2b] }
@@ -2850,11 +2886,18 @@ components:
         carrier: { type: [string, "null"] }
         serviceMethod: { type: [string, "null"] }
         trackingNumber: { type: [string, "null"] }
+        carrierShipmentId: { type: [string, "null"] }
+        labelUrl: { type: [string, "null"] }
         status: { type: string, enum: [pending, ready, in_transit, delivered, returned, cancelled] }
+        integrationStatus: { type: string, enum: [not_requested, processing, active, failed] }
+        integrationError: { type: [string, "null"] }
+        integrationAttempts: { type: number }
+        lastIntegrationAttemptAt: { type: [string, "null"], format: date-time }
         actualCost: { type: [number, "null"] }
         collectedCost: { type: [number, "null"] }
         shippedAt: { type: [string, "null"], format: date-time }
         deliveredAt: { type: [string, "null"], format: date-time }
+        events: { type: array, items: { $ref: "#/components/schemas/ShipmentEvent" } }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     ShipmentInput:
@@ -2886,6 +2929,38 @@ components:
         collectedCost: { type: [number, "null"] }
         shippedAt: { type: [string, "null"], format: date-time }
         deliveredAt: { type: [string, "null"], format: date-time }
+    ShipmentEvent:
+      type: object
+      required: [id, carrier, eventType, status, outcome, errorMessage, createdAt]
+      properties:
+        id: { type: number }
+        carrier: { type: string }
+        eventType: { type: string }
+        status: { type: [string, "null"] }
+        outcome: { type: string, enum: [success, failed, ignored] }
+        errorMessage: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+    ShippingLabelInput:
+      type: object
+      required: [carrier, serviceMethod]
+      properties:
+        carrier: { type: string, enum: [smsa] }
+        serviceMethod: { type: string, minLength: 1, maxLength: 100 }
+    ShippingWebhookInput:
+      type: object
+      required: [eventId, trackingNumber, status]
+      properties:
+        eventId: { type: string, minLength: 1, maxLength: 200 }
+        trackingNumber: { type: string, minLength: 1, maxLength: 200 }
+        status: { type: string, enum: [created, picked_up, in_transit, delivered, returned, cancelled] }
+        occurredAt: { type: [string, "null"], format: date-time }
+        actualCost: { type: [number, "null"], minimum: 0 }
+    ShippingWebhookResult:
+      type: object
+      required: [accepted, duplicate]
+      properties:
+        accepted: { type: boolean }
+        duplicate: { type: boolean }
     ShippingMetric:
       type: object
       required: [key, labelAr, labelEn, count]

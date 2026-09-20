@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   adminPermissionsTable,
+  adminIntegrationsTable,
   adminSessionsTable,
   adminUserPermissionsTable,
   adminUsersTable,
@@ -15,6 +16,8 @@ import {
   orderItemsTable,
   ordersTable,
   productsTable,
+  shipmentEventsTable,
+  shipmentsTable,
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
@@ -31,6 +34,8 @@ let customerId: number;
 let orderId: number;
 let createdAdminOrderId: number;
 let inventoryCreatedProductId: number;
+let shippingShipmentId: number;
+let previousSmsaIntegration: typeof adminIntegrationsTable.$inferSelect | undefined;
 
 beforeAll(async () => {
   process.env.ADMIN_EMAIL = seedEmail;
@@ -117,6 +122,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  delete process.env.SMSA_API_KEY;
+  delete process.env.SMSA_WEBHOOK_SECRET;
+  if (previousSmsaIntegration) {
+    await db.insert(adminIntegrationsTable).values(previousSmsaIntegration).onConflictDoUpdate({
+      target: adminIntegrationsTable.providerId,
+      set: previousSmsaIntegration,
+    });
+  } else {
+    await db.delete(adminIntegrationsTable).where(eq(adminIntegrationsTable.providerId, "smsa"));
+  }
   if (createdAdminOrderId) await db.delete(ordersTable).where(eq(ordersTable.id, createdAdminOrderId));
   if (inventoryCreatedProductId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, inventoryCreatedProductId));
   if (inventoryCreatedProductId) await db.delete(productsTable).where(eq(productsTable.id, inventoryCreatedProductId));
@@ -244,6 +259,79 @@ describe.sequential("admin route authorization", () => {
     });
     // Keep this test isolated from the inventory-adjustment cases below.
     await db.update(productsTable).set({ stockQuantity: 5 }).where(eq(productsTable.id, productId));
+  });
+
+  it("creates a carrier label and persists tracking without changing collected shipping", async () => {
+    [previousSmsaIntegration] = await db.select().from(adminIntegrationsTable)
+      .where(eq(adminIntegrationsTable.providerId, "smsa")).limit(1);
+    await db.insert(adminIntegrationsTable).values({
+      providerId: "smsa",
+      status: "configured",
+      apiBaseUrl: "https://smsa.test",
+      configuredBy: superId,
+    }).onConflictDoUpdate({
+      target: adminIntegrationsTable.providerId,
+      set: { apiBaseUrl: "https://smsa.test", configuredBy: superId },
+    });
+    process.env.SMSA_API_KEY = "test-key";
+    const [shipmentBefore] = await db.select().from(shipmentsTable)
+      .where(eq(shipmentsTable.orderId, createdAdminOrderId)).limit(1);
+    shippingShipmentId = shipmentBefore.id;
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      shipmentId: "smsa-shipment-1",
+      trackingNumber: "SMSA-TRACK-1",
+      labelUrl: "https://smsa.test/labels/1",
+      actualCost: 17.5,
+    }), { status: 201, headers: { "content-type": "application/json" } }));
+
+    try {
+      const response = await request(app)
+        .post(`/api/admin/shipping/${shippingShipmentId}/label`)
+        .set("Authorization", `Bearer ${superToken}`)
+        .send({ carrier: "smsa", serviceMethod: "standard" })
+        .expect(201);
+      expect(response.body).toMatchObject({
+        trackingNumber: "SMSA-TRACK-1",
+        actualCost: 17.5,
+        collectedCost: 20,
+        integrationStatus: "active",
+      });
+      expect(response.body.events[0]).toMatchObject({ eventType: "label_created", outcome: "success" });
+    } finally {
+      fetchMock.mockRestore();
+    }
+  });
+
+  it("authenticates and deduplicates carrier tracking webhooks", async () => {
+    process.env.SMSA_WEBHOOK_SECRET = "webhook-test-secret";
+    const payload = {
+      eventId: "smsa-event-1",
+      trackingNumber: "SMSA-TRACK-1",
+      status: "delivered",
+      occurredAt: new Date().toISOString(),
+      actualCost: 19,
+    };
+    await request(app).post("/api/shipping/webhooks/smsa")
+      .set("x-webhook-secret", "wrong-secret").send(payload).expect(401);
+    const first = await request(app).post("/api/shipping/webhooks/smsa")
+      .set("x-webhook-secret", "webhook-test-secret").send(payload).expect(200);
+    expect(first.body).toEqual({ accepted: true, duplicate: false });
+    const duplicate = await request(app).post("/api/shipping/webhooks/smsa")
+      .set("x-webhook-secret", "webhook-test-secret").send(payload).expect(200);
+    expect(duplicate.body).toEqual({ accepted: true, duplicate: true });
+
+    const [shipment] = await db.select().from(shipmentsTable)
+      .where(eq(shipmentsTable.id, shippingShipmentId)).limit(1);
+    const events = await db.select().from(shipmentEventsTable)
+      .where(and(
+        eq(shipmentEventsTable.shipmentId, shippingShipmentId),
+        eq(shipmentEventsTable.carrierEventId, payload.eventId),
+      ));
+    const [order] = await db.select().from(ordersTable)
+      .where(eq(ordersTable.id, createdAdminOrderId)).limit(1);
+    expect(shipment).toMatchObject({ status: "delivered", actualCost: 19, collectedCost: 20 });
+    expect(order.status).toBe("delivered");
+    expect(events).toHaveLength(1);
   });
 
   it("returns a clear error without contacting storage when image storage is not configured", async () => {
