@@ -41,7 +41,6 @@ export const listProductsQueryLimitDefault = 24;
 export const listProductsQueryLimitMax = 48;
 
 
-
 export const ListProductsQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
   "sort": zod.enum(['featured', 'bestseller', 'price_asc', 'price_desc', 'newest']).default(listProductsQuerySortDefault),
@@ -167,7 +166,6 @@ export const GetHomeContentResponse = zod.object({
 export const requestOtpBodyPhoneMin = 8;
 
 
-
 export const RequestOtpBody = zod.object({
   "phone": zod.string().min(requestOtpBodyPhoneMin)
 })
@@ -184,7 +182,6 @@ export const RequestOtpResponse = zod.object({
  */
 export const verifyOtpBodyCodeMin = 4;
 export const verifyOtpBodyCodeMax = 6;
-
 
 
 export const VerifyOtpBody = zod.object({
@@ -252,7 +249,6 @@ export const GetCartResponse = zod.object({
 export const addCartItemBodyQuantityMax = 20;
 
 
-
 export const AddCartItemBody = zod.object({
   "productId": zod.number(),
   "quantity": zod.number().min(1).max(addCartItemBodyQuantityMax)
@@ -293,7 +289,6 @@ export const UpdateCartItemParams = zod.object({
 })
 
 export const updateCartItemBodyQuantityMax = 20;
-
 
 
 export const UpdateCartItemBody = zod.object({
@@ -365,7 +360,6 @@ export const RemoveCartItemResponse = zod.object({
  * @summary Validate a discount code
  */
 export const validateCouponBodySubtotalMin = 0;
-
 
 
 export const ValidateCouponBody = zod.object({
@@ -577,7 +571,6 @@ export const DeleteAddressResponse = zod.void()
 export const adminLoginBodyPasswordMin = 8;
 
 
-
 export const AdminLoginBody = zod.object({
   "email": zod.string(),
   "password": zod.string().min(adminLoginBodyPasswordMin)
@@ -600,7 +593,6 @@ export const AdminLoginResponse = zod.object({
 
 export const ownerLoginBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
 export const ownerLoginBodyPasswordMin = 8;
-
 
 
 export const OwnerLoginBody = zod.object({
@@ -640,7 +632,6 @@ export const GetOwnerCredentialsSettingsResponse = zod.object({
 export const updateOwnerCredentialsSettingsBodyPasswordMin = 8;
 
 export const updateOwnerCredentialsSettingsBodyPasswordConfirmationMin = 8;
-
 
 
 export const UpdateOwnerCredentialsSettingsBody = zod.object({
@@ -684,7 +675,6 @@ export const ListOwnerSessionsResponse = zod.array(ListOwnerSessionsResponseItem
 export const revokeOwnerSessionPathIdMultipleOf = 1;
 
 
-
 export const RevokeOwnerSessionParams = zod.object({
   "id": zod.coerce.number().min(1).multipleOf(revokeOwnerSessionPathIdMultipleOf)
 })
@@ -708,7 +698,6 @@ export const ListOwnerSessionNotificationsResponse = zod.array(ListOwnerSessionN
 
 
 export const readOwnerSessionNotificationPathIdMultipleOf = 1;
-
 
 
 export const ReadOwnerSessionNotificationParams = zod.object({
@@ -804,17 +793,6 @@ export const AdminListContractsResponseItem = zod.object({
   "updatedAt": zod.coerce.date()
 })
 export const AdminListContractsResponse = zod.array(AdminListContractsResponseItem)
-
-
-
-
-
-
-
-
-
-
-
 
 
 export const AdminCreateContractBody = zod.object({
@@ -983,16 +961,6 @@ export const AdminUpdateContractParams = zod.object({
 })
 
 
-
-
-
-
-
-
-
-
-
-
 export const AdminUpdateContractBody = zod.object({
   "contractNumber": zod.string().nullish(),
   "distributorId": zod.number().nullish(),
@@ -1106,8 +1074,6 @@ export const AdminSignContractParams = zod.object({
 })
 
 
-
-
 export const AdminSignContractBody = zod.object({
   "signaturePath": zod.string().min(1)
 })
@@ -1171,7 +1137,6 @@ export const AdminSignContractResponse = zod.object({
 export const adminRequestContractSignatureUploadBodyNameMax = 255;
 
 export const adminRequestContractSignatureUploadBodySizeMax = 2097152;
-
 
 
 export const AdminRequestContractSignatureUploadBody = zod.object({
@@ -1327,9 +1292,6 @@ export const AdminListSiteContentResponseItem = zod.object({
 export const AdminListSiteContentResponse = zod.array(AdminListSiteContentResponseItem)
 
 
-
-
-
 export const AdminUpsertSiteContentBody = zod.object({
   "items": zod.array(zod.object({
   "key": zod.string().min(1),
@@ -1376,7 +1338,6 @@ export const AdminUpdateDistributorCatalogResponse = zod.object({
 
 
 export const getPublicContractByTokenPathTokenMin = 32;
-
 
 
 export const GetPublicContractByTokenParams = zod.object({
@@ -1442,13 +1403,9 @@ export const GetPublicContractByTokenResponse = zod.object({
 export const signPublicContractPathTokenMin = 32;
 
 
-
 export const SignPublicContractParams = zod.object({
   "token": zod.coerce.string().min(signPublicContractPathTokenMin)
 })
-
-
-
 
 
 export const SignPublicContractBody = zod.object({
@@ -1515,7 +1472,6 @@ export const SignPublicContractResponse = zod.object({
 export const getPublicContractPdfPathTokenMin = 32;
 
 
-
 export const GetPublicContractPdfParams = zod.object({
   "token": zod.coerce.string().min(getPublicContractPdfPathTokenMin)
 })
@@ -1524,7 +1480,6 @@ export const GetPublicContractPdfResponse = zod.unknown()
 
 
 export const downloadPublicContractPdfPathTokenMin = 32;
-
 
 
 export const DownloadPublicContractPdfParams = zod.object({
@@ -1581,7 +1536,6 @@ export const trackPageViewBodyPathMax = 500;
 export const trackPageViewBodyReferrerMax = 500;
 
 
-
 export const TrackPageViewBody = zod.object({
   "sessionId": zod.string().min(trackPageViewBodySessionIdMin).max(trackPageViewBodySessionIdMax),
   "path": zod.string().min(1).max(trackPageViewBodyPathMax),
@@ -1612,7 +1566,6 @@ export const AdminConfigureIntegrationParams = zod.object({
 export const adminConfigureIntegrationBodyAccountLabelMax = 120;
 
 export const adminConfigureIntegrationBodyApiBaseUrlMax = 500;
-
 
 
 export const AdminConfigureIntegrationBody = zod.object({
@@ -1682,8 +1635,6 @@ export const AdminListProductsResponseItem = zod.object({
 export const AdminListProductsResponse = zod.array(AdminListProductsResponseItem)
 
 
-
-
 export const adminCreateProductBodyDescriptionArDefault = ``;
 export const adminCreateProductBodyDescriptionEnDefault = ``;
 export const adminCreateProductBodyPriceMin = 0;
@@ -1697,7 +1648,6 @@ export const adminCreateProductBodyReorderPointMultipleOf = 1;
 export const adminCreateProductBodyTargetStockQuantityDefault = 20;
 export const adminCreateProductBodyTargetStockQuantityMin = 0;
 export const adminCreateProductBodyTargetStockQuantityMultipleOf = 1;
-
 
 
 export const AdminCreateProductBody = zod.object({
@@ -1769,7 +1719,6 @@ export const adminRequestProductImageUploadBodyNameMax = 255;
 export const adminRequestProductImageUploadBodySizeMax = 8388608;
 
 
-
 export const AdminRequestProductImageUploadBody = zod.object({
   "name": zod.string().min(1).max(adminRequestProductImageUploadBodyNameMax),
   "size": zod.number().min(1).max(adminRequestProductImageUploadBodySizeMax),
@@ -1826,8 +1775,6 @@ export const AdminUpdateProductParams = zod.object({
 })
 
 
-
-
 export const adminUpdateProductBodyPriceMin = 0;
 
 export const adminUpdateProductBodyCompareAtPriceMin = 0;
@@ -1837,7 +1784,6 @@ export const adminUpdateProductBodyReorderPointMultipleOf = 1;
 
 export const adminUpdateProductBodyTargetStockQuantityMin = 0;
 export const adminUpdateProductBodyTargetStockQuantityMultipleOf = 1;
-
 
 
 export const AdminUpdateProductBody = zod.object({
@@ -1930,11 +1876,6 @@ export const AdminListCategoriesResponseItem = zod.object({
 export const AdminListCategoriesResponse = zod.array(AdminListCategoriesResponseItem)
 
 
-
-
-
-
-
 export const AdminCreateCategoryBody = zod.object({
   "nameAr": zod.string().min(1),
   "nameEn": zod.string().min(1),
@@ -1959,10 +1900,6 @@ export const AdminCreateCategoryResponse = zod.object({
 export const AdminUpdateCategoryParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
-
-
 
 
 export const AdminUpdateCategoryBody = zod.object({
@@ -2029,9 +1966,7 @@ export const adminCreateOrderBodyItemsItemProductIdMultipleOf = 1;
 export const adminCreateOrderBodyItemsItemQuantityMultipleOf = 1;
 
 
-
 export const adminCreateOrderBodyShippingCostMin = 0;
-
 
 
 export const AdminCreateOrderBody = zod.object({
@@ -2239,7 +2174,6 @@ export const adminCreateDistributorInvoiceBodyItemsItemUnitPriceExclusiveMin = 0
 export const adminCreateDistributorInvoiceBodyItemsMax = 100;
 
 
-
 export const AdminCreateDistributorInvoiceBody = zod.object({
   "creationKey": zod.string().min(adminCreateDistributorInvoiceBodyCreationKeyMin).max(adminCreateDistributorInvoiceBodyCreationKeyMax),
   "distributorId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyDistributorIdMultipleOf),
@@ -2312,7 +2246,6 @@ export const adminCreateReceivablePaymentBodyPaymentKeyMax = 100;
 export const adminCreateReceivablePaymentBodyAmountExclusiveMin = 0;
 
 export const adminCreateReceivablePaymentBodyReferenceMax = 200;
-
 
 
 export const AdminCreateReceivablePaymentBody = zod.object({
@@ -2417,7 +2350,6 @@ export const GetAdminShippingDashboardResponse = zod.object({
  */
 
 
-
 export const AdminCreateShipmentBody = zod.object({
   "channel": zod.enum(['online', 'b2b']),
   "sourceId": zod.number(),
@@ -2461,8 +2393,6 @@ export const AdminCreateShipmentResponse = zod.object({
 export const AdminUpdateShipmentParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
 
 
 export const AdminUpdateShipmentBody = zod.object({
@@ -2521,10 +2451,7 @@ export const AdminListCouponsResponseItem = zod.object({
 export const AdminListCouponsResponse = zod.array(AdminListCouponsResponseItem)
 
 
-
 export const adminCreateCouponBodyDiscountValueMin = 0;
-
-
 
 
 export const AdminCreateCouponBody = zod.object({
@@ -2557,8 +2484,6 @@ export const AdminUpdateCouponParams = zod.object({
 export const adminUpdateCouponBodyOneDiscountValueMin = 0;
 
 
-
-
 export const AdminUpdateCouponBody = zod.object({
   "code": zod.string().min(1),
   "discountType": zod.enum(['percentage', 'fixed']),
@@ -2585,6 +2510,9 @@ export const AdminDisableCouponParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const AdminDisableCouponBody = zod.object({
+  "confirm": zod.boolean().describe('Explicitly confirm disabling a coupon used by active campaigns')
+})
 export const AdminDisableCouponResponse = zod.void()
 
 
@@ -2605,10 +2533,7 @@ export const AdminListCampaignsResponseItem = zod.object({
 export const AdminListCampaignsResponse = zod.array(AdminListCampaignsResponseItem)
 
 
-
-
 export const adminCreateCampaignBodyCouponIdsItemMultipleOf = 1;
-
 
 
 export const AdminCreateCampaignBody = zod.object({
@@ -2641,9 +2566,6 @@ export const AdminListCampaignCouponOptionsResponseItem = zod.object({
   "code": zod.string()
 })
 export const AdminListCampaignCouponOptionsResponse = zod.array(AdminListCampaignCouponOptionsResponseItem)
-
-
-
 
 
 export const AdminGetCampaignResultsQueryParams = zod.object({
@@ -2689,9 +2611,7 @@ export const AdminUpdateCampaignParams = zod.object({
 })
 
 
-
 export const adminUpdateCampaignBodyCouponIdsItemMultipleOf = 1;
-
 
 
 export const AdminUpdateCampaignBody = zod.object({
@@ -2836,9 +2756,6 @@ export const AdminListInventoryResponse = zod.object({
 })
 
 
-
-
-
 export const adminCreateInventoryProductBodyCategoryIdMultipleOf = 1;
 
 export const adminCreateInventoryProductBodyPriceMin = 0;
@@ -2851,7 +2768,6 @@ export const adminCreateInventoryProductBodyReorderPointMultipleOf = 1;
 
 export const adminCreateInventoryProductBodyTargetStockQuantityMin = 0;
 export const adminCreateInventoryProductBodyTargetStockQuantityMultipleOf = 1;
-
 
 
 export const AdminCreateInventoryProductBody = zod.object({
@@ -2920,7 +2836,6 @@ export const adminUpdateInventoryBodyIdempotencyKeyMin = 8;
 export const adminUpdateInventoryBodyIdempotencyKeyMax = 120;
 
 
-
 export const AdminUpdateInventoryBody = zod.object({
   "operation": zod.enum(['increase', 'decrease', 'adjustment']),
   "quantity": zod.number().min(adminUpdateInventoryBodyQuantityMin).multipleOf(adminUpdateInventoryBodyQuantityMultipleOf),
@@ -2973,7 +2888,6 @@ export const adminAdjustInventoryBodyQuantityMultipleOf = 1;
 
 export const adminAdjustInventoryBodyIdempotencyKeyMin = 8;
 export const adminAdjustInventoryBodyIdempotencyKeyMax = 120;
-
 
 
 export const AdminAdjustInventoryBody = zod.object({
@@ -3043,11 +2957,6 @@ export const AdminListDistributorsResponseItem = zod.object({
 export const AdminListDistributorsResponse = zod.array(AdminListDistributorsResponseItem)
 
 
-
-
-
-
-
 export const AdminCreateDistributorBody = zod.object({
   "companyName": zod.string().min(1),
   "contactName": zod.string().min(1),
@@ -3081,10 +2990,6 @@ export const AdminCreateDistributorResponse = zod.object({
 export const AdminUpdateDistributorParams = zod.object({
   "id": zod.coerce.number()
 })
-
-
-
-
 
 
 export const AdminUpdateDistributorBody = zod.object({
@@ -3137,9 +3042,7 @@ export const AdminListStaffResponseItem = zod.object({
 export const AdminListStaffResponse = zod.array(AdminListStaffResponseItem)
 
 
-
 export const adminCreateStaffBodyPasswordMin = 8;
-
 
 
 export const AdminCreateStaffBody = zod.object({
@@ -3169,7 +3072,6 @@ export const AdminUpdateStaffParams = zod.object({
 
 
 export const adminUpdateStaffBodyPasswordMin = 8;
-
 
 
 export const AdminUpdateStaffBody = zod.object({
@@ -3238,7 +3140,6 @@ export const AdminListEmployeesQueryParams = zod.object({
 export const adminListEmployeesResponseSalaryMin = 0;
 
 
-
 export const AdminListEmployeesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -3255,13 +3156,7 @@ export const AdminListEmployeesResponseItem = zod.object({
 export const AdminListEmployeesResponse = zod.array(AdminListEmployeesResponseItem)
 
 
-
-
-
-
-
 export const adminCreateEmployeeBodySalaryMin = 0;
-
 
 
 export const AdminCreateEmployeeBody = zod.object({
@@ -3278,7 +3173,6 @@ export const AdminCreateEmployeeBody = zod.object({
 })
 
 export const adminCreateEmployeeResponseSalaryMin = 0;
-
 
 
 export const AdminCreateEmployeeResponse = zod.object({
@@ -3301,12 +3195,7 @@ export const AdminUpdateEmployeeParams = zod.object({
 })
 
 
-
-
-
-
 export const adminUpdateEmployeeBodyOneSalaryMin = 0;
-
 
 
 export const AdminUpdateEmployeeBody = zod.object({
@@ -3323,7 +3212,6 @@ export const AdminUpdateEmployeeBody = zod.object({
 })
 
 export const adminUpdateEmployeeResponseSalaryMin = 0;
-
 
 
 export const AdminUpdateEmployeeResponse = zod.object({
@@ -3426,8 +3314,6 @@ export const AdminUpdateLeaveRequestParams = zod.object({
 })
 
 
-
-
 export const AdminUpdateLeaveRequestBody = zod.object({
   "employeeId": zod.number().optional(),
   "leaveType": zod.enum(['annual', 'sick', 'emergency', 'unpaid']).optional(),
@@ -3463,7 +3349,6 @@ export const adminListPayrollResponseDeductionsMin = 0;
 export const adminListPayrollResponseBonusesMin = 0;
 
 export const adminListPayrollResponseNetSalaryMin = 0;
-
 
 
 export const AdminListPayrollResponseItem = zod.object({
@@ -3527,7 +3412,6 @@ export const adminCreatePayrollResponseBonusesMin = 0;
 export const adminCreatePayrollResponseNetSalaryMin = 0;
 
 
-
 export const AdminCreatePayrollResponse = zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
@@ -3548,10 +3432,7 @@ export const AdminCreatePayrollResponse = zod.object({
 export const adminListAccountingAccountsResponseIdMultipleOf = 1;
 
 
-
-
 export const adminListAccountingAccountsResponseParentIdMultipleOf = 1;
-
 
 
 export const AdminListAccountingAccountsResponseItem = zod.object({
@@ -3581,7 +3462,6 @@ export const AdminListJournalEntriesQueryParams = zod.object({
 export const adminListJournalEntriesResponseOneIdMultipleOf = 1;
 
 
-
 export const adminListJournalEntriesResponseOneReversalOfEntryIdMultipleOf = 1;
 
 export const adminListJournalEntriesResponseOneCreatedByMultipleOf = 1;
@@ -3603,7 +3483,6 @@ export const adminListJournalEntriesResponseOneLinesMin = 2;
 export const adminListJournalEntriesResponseTwoCreatorIdMultipleOf = 1;
 
 export const adminListJournalEntriesResponseTwoPosterIdMultipleOf = 1;
-
 
 
 export const AdminListJournalEntriesResponseItem = zod.object({
@@ -3657,7 +3536,6 @@ export const adminCreateJournalEntryBodyLinesItemCreditRegExp = new RegExp('^\\d
 export const adminCreateJournalEntryBodyLinesMin = 2;
 
 
-
 export const AdminCreateJournalEntryBody = zod.object({
   "entryDate": zod.coerce.date(),
   "description": zod.string().min(1),
@@ -3670,7 +3548,6 @@ export const AdminCreateJournalEntryBody = zod.object({
 })
 
 export const adminCreateJournalEntryResponseIdMultipleOf = 1;
-
 
 
 export const adminCreateJournalEntryResponseReversalOfEntryIdMultipleOf = 1;
@@ -3690,7 +3567,6 @@ export const adminCreateJournalEntryResponseLinesItemAccountIdMultipleOf = 1;
 export const adminCreateJournalEntryResponseLinesItemDebitRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
 export const adminCreateJournalEntryResponseLinesItemCreditRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
 export const adminCreateJournalEntryResponseLinesMin = 2;
-
 
 
 export const AdminCreateJournalEntryResponse = zod.object({
@@ -3729,15 +3605,12 @@ export const AdminReverseJournalEntryParams = zod.object({
 })
 
 
-
-
 export const AdminReverseJournalEntryBody = zod.object({
   "entryDate": zod.coerce.date(),
   "description": zod.string().min(1)
 })
 
 export const adminReverseJournalEntryResponseIdMultipleOf = 1;
-
 
 
 export const adminReverseJournalEntryResponseReversalOfEntryIdMultipleOf = 1;
@@ -3757,7 +3630,6 @@ export const adminReverseJournalEntryResponseLinesItemAccountIdMultipleOf = 1;
 export const adminReverseJournalEntryResponseLinesItemDebitRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
 export const adminReverseJournalEntryResponseLinesItemCreditRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
 export const adminReverseJournalEntryResponseLinesMin = 2;
-
 
 
 export const AdminReverseJournalEntryResponse = zod.object({
@@ -3827,7 +3699,6 @@ export const AdminGetTrialBalanceResponse = zod.object({
 export const adminListExpensesResponseAmountExclusiveMin = 0;
 
 
-
 export const AdminListExpensesResponseItem = zod.object({
   "id": zod.number(),
   "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
@@ -3844,8 +3715,6 @@ export const AdminListExpensesResponse = zod.array(AdminListExpensesResponseItem
 export const adminCreateExpenseBodyAmountExclusiveMin = 0;
 
 
-
-
 export const AdminCreateExpenseBody = zod.object({
   "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
   "amount": zod.number().gt(adminCreateExpenseBodyAmountExclusiveMin),
@@ -3855,7 +3724,6 @@ export const AdminCreateExpenseBody = zod.object({
 })
 
 export const adminCreateExpenseResponseAmountExclusiveMin = 0;
-
 
 
 export const AdminCreateExpenseResponse = zod.object({
@@ -3891,8 +3759,6 @@ export const AdminListPurchasesResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 })
 export const AdminListPurchasesResponse = zod.array(AdminListPurchasesResponseItem)
-
-
 
 
 export const adminCreatePurchaseBodyAmountRegExp = new RegExp('^\\d{1,15}(?:\\.\\d{1,4})?$');
@@ -4010,7 +3876,6 @@ export const AdminGetExpenseParams = zod.object({
 export const adminGetExpenseResponseAmountExclusiveMin = 0;
 
 
-
 export const AdminGetExpenseResponse = zod.object({
   "id": zod.number(),
   "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
@@ -4030,8 +3895,6 @@ export const AdminUpdateExpenseParams = zod.object({
 export const adminUpdateExpenseBodyOneAmountExclusiveMin = 0;
 
 
-
-
 export const AdminUpdateExpenseBody = zod.object({
   "category": zod.enum(['rent', 'salaries', 'utilities', 'marketing', 'shipping', 'other']),
   "amount": zod.number().gt(adminUpdateExpenseBodyOneAmountExclusiveMin),
@@ -4041,7 +3904,6 @@ export const AdminUpdateExpenseBody = zod.object({
 })
 
 export const adminUpdateExpenseResponseAmountExclusiveMin = 0;
-
 
 
 export const AdminUpdateExpenseResponse = zod.object({
@@ -4104,7 +3966,6 @@ export const adminListManufacturingBatchesResponseQuantityProducedMultipleOf = 1
 export const adminListManufacturingBatchesResponseCostPerUnitMin = 0;
 
 
-
 export const AdminListManufacturingBatchesResponseItem = zod.object({
   "id": zod.number(),
   "batchNumber": zod.string(),
@@ -4118,11 +3979,9 @@ export const AdminListManufacturingBatchesResponseItem = zod.object({
 export const AdminListManufacturingBatchesResponse = zod.array(AdminListManufacturingBatchesResponseItem)
 
 
-
 export const adminCreateManufacturingBatchBodyQuantityProducedMultipleOf = 1;
 
 export const adminCreateManufacturingBatchBodyCostPerUnitMin = 0;
-
 
 
 export const AdminCreateManufacturingBatchBody = zod.object({
@@ -4138,7 +3997,6 @@ export const AdminCreateManufacturingBatchBody = zod.object({
 export const adminCreateManufacturingBatchResponseQuantityProducedMultipleOf = 1;
 
 export const adminCreateManufacturingBatchResponseCostPerUnitMin = 0;
-
 
 
 export const AdminCreateManufacturingBatchResponse = zod.object({
@@ -4160,7 +4018,6 @@ export const AdminGetManufacturingBatchParams = zod.object({
 export const adminGetManufacturingBatchResponseQuantityProducedMultipleOf = 1;
 
 export const adminGetManufacturingBatchResponseCostPerUnitMin = 0;
-
 
 
 export const AdminGetManufacturingBatchResponse = zod.object({
@@ -4185,7 +4042,6 @@ export const adminUpdateManufacturingBatchBodyOneQuantityProducedMultipleOf = 1;
 export const adminUpdateManufacturingBatchBodyOneCostPerUnitMin = 0;
 
 
-
 export const AdminUpdateManufacturingBatchBody = zod.object({
   "batchNumber": zod.string().min(1),
   "productId": zod.number(),
@@ -4199,7 +4055,6 @@ export const AdminUpdateManufacturingBatchBody = zod.object({
 export const adminUpdateManufacturingBatchResponseQuantityProducedMultipleOf = 1;
 
 export const adminUpdateManufacturingBatchResponseCostPerUnitMin = 0;
-
 
 
 export const AdminUpdateManufacturingBatchResponse = zod.object({
@@ -4224,7 +4079,6 @@ export const AdminDeleteManufacturingBatchResponse = zod.void()
 export const adminListExhibitionsResponseBudgetMin = 0;
 
 
-
 export const AdminListExhibitionsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -4238,10 +4092,7 @@ export const AdminListExhibitionsResponseItem = zod.object({
 export const AdminListExhibitionsResponse = zod.array(AdminListExhibitionsResponseItem)
 
 
-
-
 export const adminCreateExhibitionBodyBudgetMin = 0;
-
 
 
 export const AdminCreateExhibitionBody = zod.object({
@@ -4255,7 +4106,6 @@ export const AdminCreateExhibitionBody = zod.object({
 })
 
 export const adminCreateExhibitionResponseBudgetMin = 0;
-
 
 
 export const AdminCreateExhibitionResponse = zod.object({
@@ -4277,7 +4127,6 @@ export const AdminGetExhibitionParams = zod.object({
 export const adminGetExhibitionResponseBudgetMin = 0;
 
 
-
 export const AdminGetExhibitionResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -4295,9 +4144,7 @@ export const AdminUpdateExhibitionParams = zod.object({
 })
 
 
-
 export const adminUpdateExhibitionBodyOneBudgetMin = 0;
-
 
 
 export const AdminUpdateExhibitionBody = zod.object({
@@ -4311,7 +4158,6 @@ export const AdminUpdateExhibitionBody = zod.object({
 })
 
 export const adminUpdateExhibitionResponseBudgetMin = 0;
-
 
 
 export const AdminUpdateExhibitionResponse = zod.object({
@@ -4344,7 +4190,6 @@ export const adminListExhibitionProductsResponseQuantitySoldMin = 0;
 export const adminListExhibitionProductsResponseQuantitySoldMultipleOf = 1;
 
 
-
 export const AdminListExhibitionProductsResponseItem = zod.object({
   "id": zod.number(),
   "exhibitionId": zod.number(),
@@ -4370,7 +4215,6 @@ export const adminCreateExhibitionProductBodyQuantitySoldMin = 0;
 export const adminCreateExhibitionProductBodyQuantitySoldMultipleOf = 1;
 
 
-
 export const AdminCreateExhibitionProductBody = zod.object({
   "productId": zod.number(),
   "quantityAllocated": zod.number().min(adminCreateExhibitionProductBodyQuantityAllocatedMin).multipleOf(adminCreateExhibitionProductBodyQuantityAllocatedMultipleOf),
@@ -4382,7 +4226,6 @@ export const adminCreateExhibitionProductResponseQuantityAllocatedMultipleOf = 1
 
 export const adminCreateExhibitionProductResponseQuantitySoldMin = 0;
 export const adminCreateExhibitionProductResponseQuantitySoldMultipleOf = 1;
-
 
 
 export const AdminCreateExhibitionProductResponse = zod.object({
@@ -4418,7 +4261,6 @@ export const getAdminGiftingIssuesResponseSummaryRowsMultipleOf = 1;
 export const getAdminGiftingIssuesResponseSummaryUnitsMultipleOf = 1;
 
 
-
 export const GetAdminGiftingIssuesResponse = zod.object({
   "rows": zod.array(zod.object({
   "id": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemIdMultipleOf),
@@ -4452,7 +4294,6 @@ export const GetAdminGiftingIssuesResponse = zod.object({
 export const getAdminGiftingIssuesIdPathIdMultipleOf = 1;
 
 
-
 export const GetAdminGiftingIssuesIdParams = zod.object({
   "id": zod.coerce.number().multipleOf(getAdminGiftingIssuesIdPathIdMultipleOf)
 })
@@ -4464,7 +4305,6 @@ export const getAdminGiftingIssuesIdResponseProductIdMultipleOf = 1;
 export const getAdminGiftingIssuesIdResponseQuantityMultipleOf = 1;
 
 export const getAdminGiftingIssuesIdResponseSourceRowMultipleOf = 1;
-
 
 
 export const GetAdminGiftingIssuesIdResponse = zod.object({
@@ -4490,14 +4330,12 @@ export const GetAdminGiftingIssuesIdResponse = zod.object({
 export const influencerLoginBodyPasswordMin = 8;
 
 
-
 export const InfluencerLoginBody = zod.object({
   "email": zod.string(),
   "password": zod.string().min(influencerLoginBodyPasswordMin)
 })
 
 export const influencerLoginResponseInfluencerCouponIdsItemMultipleOf = 1;
-
 
 
 export const InfluencerLoginResponse = zod.object({
@@ -4516,7 +4354,6 @@ export const InfluencerLoginResponse = zod.object({
 
 
 export const influencerMeResponseCouponIdsItemMultipleOf = 1;
-
 
 
 export const InfluencerMeResponse = zod.object({
@@ -4548,7 +4385,6 @@ export const influencerDashboardResponsePreviousSummaryAttributedPaidOrdersMulti
 export const influencerDashboardResponseSeriesItemOrdersMultipleOf = 1;
 
 export const influencerDashboardResponsePreviousSeriesItemOrdersMultipleOf = 1;
-
 
 
 export const InfluencerDashboardResponse = zod.object({
@@ -4630,7 +4466,6 @@ export const CaptureInfluencerReferralResponse = zod.unknown()
 export const listInfluencersResponseCouponIdsItemMultipleOf = 1;
 
 
-
 export const ListInfluencersResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
@@ -4650,7 +4485,6 @@ export const createInfluencerBodyTwoCommissionRateMin = 0;
 export const createInfluencerBodyTwoCommissionRateMax = 100;
 
 
-
 export const CreateInfluencerBody = zod.object({
   "email": zod.string(),
   "password": zod.string().min(createInfluencerBodyOnePasswordMin)
@@ -4661,7 +4495,6 @@ export const CreateInfluencerBody = zod.object({
 }))
 
 export const createInfluencerResponseCouponIdsItemMultipleOf = 1;
-
 
 
 export const CreateInfluencerResponse = zod.object({
@@ -4679,13 +4512,11 @@ export const CreateInfluencerResponse = zod.object({
 export const getInfluencerPathIdMultipleOf = 1;
 
 
-
 export const GetInfluencerParams = zod.object({
   "id": zod.coerce.number().multipleOf(getInfluencerPathIdMultipleOf)
 })
 
 export const getInfluencerResponseCouponIdsItemMultipleOf = 1;
-
 
 
 export const GetInfluencerResponse = zod.object({
@@ -4703,7 +4534,6 @@ export const GetInfluencerResponse = zod.object({
 export const updateInfluencerPathIdMultipleOf = 1;
 
 
-
 export const UpdateInfluencerParams = zod.object({
   "id": zod.coerce.number().multipleOf(updateInfluencerPathIdMultipleOf)
 })
@@ -4712,7 +4542,6 @@ export const updateInfluencerBodyPasswordMin = 8;
 
 export const updateInfluencerBodyCommissionRateMin = 0;
 export const updateInfluencerBodyCommissionRateMax = 100;
-
 
 
 export const UpdateInfluencerBody = zod.object({
@@ -4726,7 +4555,6 @@ export const UpdateInfluencerBody = zod.object({
 })
 
 export const updateInfluencerResponseCouponIdsItemMultipleOf = 1;
-
 
 
 export const UpdateInfluencerResponse = zod.object({
@@ -4744,13 +4572,11 @@ export const UpdateInfluencerResponse = zod.object({
 export const linkInfluencerCouponPathIdMultipleOf = 1;
 
 
-
 export const LinkInfluencerCouponParams = zod.object({
   "id": zod.coerce.number().multipleOf(linkInfluencerCouponPathIdMultipleOf)
 })
 
 export const linkInfluencerCouponBodyCouponIdMultipleOf = 1;
-
 
 
 export const LinkInfluencerCouponBody = zod.object({
@@ -4763,7 +4589,6 @@ export const LinkInfluencerCouponResponse = zod.void()
 export const unlinkInfluencerCouponPathIdMultipleOf = 1;
 
 export const unlinkInfluencerCouponPathCouponIdMultipleOf = 1;
-
 
 
 export const UnlinkInfluencerCouponParams = zod.object({
@@ -4796,7 +4621,6 @@ export const adminListOpeningBalanceImportsResponseTwoLinesItemProductIdMultiple
 export const adminListOpeningBalanceImportsResponseTwoLinesItemProvenanceRowMultipleOf = 1;
 
 
-
 export const AdminListOpeningBalanceImportsResponseItem = zod.object({
   "id": zod.number().multipleOf(adminListOpeningBalanceImportsResponseOneIdMultipleOf),
   "importKey": zod.string(),
@@ -4826,9 +4650,6 @@ export const AdminListOpeningBalanceImportsResponseItem = zod.object({
 export const AdminListOpeningBalanceImportsResponse = zod.array(AdminListOpeningBalanceImportsResponseItem)
 
 
-
-
-
 export const adminCreateOpeningBalanceImportBodyLinesItemSourceRowMultipleOf = 1;
 
 export const adminCreateOpeningBalanceImportBodyLinesItemOpeningQuantityMin = 0;
@@ -4841,8 +4662,6 @@ export const adminCreateOpeningBalanceImportBodyLinesItemFullBatchUnitCostMinTwo
 export const adminCreateOpeningBalanceImportBodyLinesItemProductIdMultipleOf = 1;
 
 export const adminCreateOpeningBalanceImportBodyLinesItemProvenanceRowMultipleOf = 1;
-
-
 
 
 export const AdminCreateOpeningBalanceImportBody = zod.object({
@@ -4866,7 +4685,6 @@ export const AdminCreateOpeningBalanceImportBody = zod.object({
 })
 
 export const adminCreateOpeningBalanceImportResponseIdMultipleOf = 1;
-
 
 
 export const AdminCreateOpeningBalanceImportResponse = zod.object({
@@ -4894,8 +4712,6 @@ export const adminCreatePurchaseReceiptBodyLinesItemUnitCostMinOne = 0;
 export const adminCreatePurchaseReceiptBodyLinesItemUnitCostMinTwo = 0;
 
 
-
-
 export const AdminCreatePurchaseReceiptBody = zod.object({
   "receiptNumber": zod.string(),
   "vendorName": zod.string(),
@@ -4916,7 +4732,6 @@ export const AdminCreatePurchaseReceiptBody = zod.object({
 export const adminCreatePurchaseReceiptResponseIdMultipleOf = 1;
 
 
-
 export const AdminCreatePurchaseReceiptResponse = zod.object({
   "id": zod.number().multipleOf(adminCreatePurchaseReceiptResponseIdMultipleOf),
   "receiptNumber": zod.string(),
@@ -4931,7 +4746,6 @@ export const AdminCreatePurchaseReceiptResponse = zod.object({
 
 
 export const adminListPurchaseReceiptsResponseIdMultipleOf = 1;
-
 
 
 export const AdminListPurchaseReceiptsResponseItem = zod.object({
@@ -4958,7 +4772,6 @@ export const adminCreatePurchaseReceiptPaymentBodyAmountMinOne = 0;
 export const adminCreatePurchaseReceiptPaymentBodyAmountMinTwo = 0;
 
 
-
 export const AdminCreatePurchaseReceiptPaymentBody = zod.object({
   "paymentKey": zod.string().min(1),
   "paymentDate": zod.coerce.date(),
@@ -4970,7 +4783,6 @@ export const AdminCreatePurchaseReceiptPaymentBody = zod.object({
 export const adminCreatePurchaseReceiptPaymentResponseIdMultipleOf = 1;
 
 export const adminCreatePurchaseReceiptPaymentResponseReceiptIdMultipleOf = 1;
-
 
 
 export const AdminCreatePurchaseReceiptPaymentResponse = zod.object({
@@ -4989,7 +4801,6 @@ export const AdminPostPurchaseReceiptParams = zod.object({
 })
 
 export const adminPostPurchaseReceiptResponseIdMultipleOf = 1;
-
 
 
 export const AdminPostPurchaseReceiptResponse = zod.object({
@@ -5014,8 +4825,6 @@ export const adminAddManufacturingInputsBodyLinesItemMaterialProductIdMultipleOf
 export const adminAddManufacturingInputsBodyLinesItemQuantityMultipleOf = 1;
 
 
-
-
 export const AdminAddManufacturingInputsBody = zod.object({
   "lines": zod.array(zod.object({
   "materialProductId": zod.number().min(1).multipleOf(adminAddManufacturingInputsBodyLinesItemMaterialProductIdMultipleOf),
@@ -5026,7 +4835,6 @@ export const AdminAddManufacturingInputsBody = zod.object({
 export const adminAddManufacturingInputsResponseMaterialProductIdMultipleOf = 1;
 
 export const adminAddManufacturingInputsResponseQuantityMultipleOf = 1;
-
 
 
 export const AdminAddManufacturingInputsResponseItem = zod.object({
@@ -5043,7 +4851,6 @@ export const AdminReviewOpeningBalanceImportParams = zod.object({
 export const adminReviewOpeningBalanceImportResponseIdMultipleOf = 1;
 
 
-
 export const AdminReviewOpeningBalanceImportResponse = zod.object({
   "id": zod.number().multipleOf(adminReviewOpeningBalanceImportResponseIdMultipleOf),
   "importKey": zod.string(),
@@ -5057,14 +4864,12 @@ export const AdminReviewOpeningBalanceImportResponse = zod.object({
 export const adminMapOpeningBalanceLinePathLineIdMultipleOf = 1;
 
 
-
 export const AdminMapOpeningBalanceLineParams = zod.object({
   "id": zod.coerce.number(),
   "lineId": zod.coerce.number().multipleOf(adminMapOpeningBalanceLinePathLineIdMultipleOf)
 })
 
 export const adminMapOpeningBalanceLineBodyProductIdMultipleOf = 1;
-
 
 
 export const AdminMapOpeningBalanceLineBody = zod.object({
@@ -5084,7 +4889,6 @@ export const adminMapOpeningBalanceLineResponseFullBatchUnitCostMinTwo = 0;
 export const adminMapOpeningBalanceLineResponseProductIdMultipleOf = 1;
 
 export const adminMapOpeningBalanceLineResponseProvenanceRowMultipleOf = 1;
-
 
 
 export const AdminMapOpeningBalanceLineResponse = zod.object({
@@ -5114,7 +4918,6 @@ export const AdminApproveOpeningBalanceImportBody = zod.object({
 export const adminApproveOpeningBalanceImportResponseIdMultipleOf = 1;
 
 
-
 export const AdminApproveOpeningBalanceImportResponse = zod.object({
   "id": zod.number().multipleOf(adminApproveOpeningBalanceImportResponseIdMultipleOf),
   "importKey": zod.string(),
@@ -5126,7 +4929,6 @@ export const AdminApproveOpeningBalanceImportResponse = zod.object({
 
 
 export const getOwnerOperationsSummaryResponseOpeningBalanceOneIdMultipleOf = 1;
-
 
 
 export const GetOwnerOperationsSummaryResponse = zod.object({
@@ -5151,7 +4953,6 @@ export const GetOwnerOperationsSummaryResponse = zod.object({
 
 
 export const getOwnerOpeningBalanceReconciliationPathIdMultipleOf = 1;
-
 
 
 export const GetOwnerOpeningBalanceReconciliationParams = zod.object({
@@ -5180,7 +4981,6 @@ export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemProductIdMu
 export const getOwnerOpeningBalanceReconciliationResponseTwoLinesItemProvenanceRowMultipleOf = 1;
 
 
-
 export const GetOwnerOpeningBalanceReconciliationResponse = zod.object({
   "id": zod.number().multipleOf(getOwnerOpeningBalanceReconciliationResponseOneIdMultipleOf),
   "importKey": zod.string(),
@@ -5207,5 +5007,4 @@ export const GetOwnerOpeningBalanceReconciliationResponse = zod.object({
 })
 })).optional()
 }))
-
 

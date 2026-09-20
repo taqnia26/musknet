@@ -1224,7 +1224,53 @@ router.patch("/admin/coupons/:id", permit("coupons", "edit"), route(async (req, 
 }));
 router.delete("/admin/coupons/:id", permit("coupons", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDisableCouponParams, req.params, res); if (!params) return;
-  await db.update(couponsTable).set({ isActive: false }).where(eq(couponsTable.id, params.id)); res.sendStatus(204);
+  let confirmed = false;
+  if (req.body != null && Object.keys(req.body).length > 0) {
+    const body = parse(Api.AdminDisableCouponBody, req.body, res); if (!body) return;
+    confirmed = body.confirm;
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const [coupon] = await tx.select({ id: couponsTable.id })
+      .from(couponsTable)
+      .where(eq(couponsTable.id, params.id))
+      .for("update")
+      .limit(1);
+    if (!coupon) return { kind: "not-found" as const };
+
+    const affectedCampaigns = await tx.select({
+      id: campaignsTable.id,
+      name: campaignsTable.name,
+    })
+      .from(campaignCouponsTable)
+      .innerJoin(campaignsTable, eq(campaignCouponsTable.campaignId, campaignsTable.id))
+      .where(and(
+        eq(campaignCouponsTable.couponId, params.id),
+        eq(campaignsTable.status, "active"),
+      ))
+      .orderBy(campaignsTable.name, campaignsTable.id);
+
+    if (affectedCampaigns.length > 0 && !confirmed) {
+      return { kind: "confirmation-required" as const, affectedCampaigns };
+    }
+
+    await tx.update(couponsTable)
+      .set({ isActive: false })
+      .where(eq(couponsTable.id, params.id));
+    return { kind: "disabled" as const };
+  });
+
+  if (result.kind === "not-found") {
+    res.status(404).json({ error: "Coupon not found" }); return;
+  }
+  if (result.kind === "confirmation-required") {
+    res.status(409).json({
+      error: "Coupon is used by active campaigns. Explicit confirmation is required.",
+      affectedCampaigns: result.affectedCampaigns,
+    });
+    return;
+  }
+  res.sendStatus(204);
 }));
 
 async function campaignWithCoupons(campaign: typeof campaignsTable.$inferSelect) {

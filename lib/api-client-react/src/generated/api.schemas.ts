@@ -1425,11 +1425,19 @@ export interface AdminCouponInput {
 
 export type AdminCouponUpdate = AdminCouponInput;
 
+export interface AdminCouponDisableInput {
+  /** Explicitly confirm disabling a coupon used by active campaigns */
+  confirm: boolean;
+}
 export interface AdminCampaignCoupon {
   id: number;
   code: string;
 }
 
+export interface CouponAffectedCampaign {
+  id: number;
+  name: string;
+}
 export type AdminCampaignStatus = typeof AdminCampaignStatus[keyof typeof AdminCampaignStatus];
 
 
@@ -3110,3 +3118,8 @@ export type CaptureInfluencerReferralParams = {
 ref: string;
 };
 
+export interface CouponDisableConflict {
+  error: string;
+  /** @minItems 1 */
+  affectedCampaigns: CouponAffectedCampaign[];
+}

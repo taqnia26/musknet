@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAdminListCoupons, useAdminCreateCoupon, useAdminUpdateCoupon, useAdminDisableCoupon, AdminCouponInputDiscountType, useGetAdminMe } from '@workspace/api-client-react';
+import { useAdminListCoupons, useAdminCreateCoupon, useAdminUpdateCoupon, useAdminDisableCoupon, AdminCouponInputDiscountType, useGetAdminMe, type CouponAffectedCampaign } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListCouponsQueryKey } from '@workspace/api-client-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const couponSchema = z.object({
   code: z.string().min(1),
@@ -29,6 +30,7 @@ export default function AdminCoupons() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [disableConflict, setDisableConflict] = useState<{ couponId: number; campaigns: CouponAffectedCampaign[] } | null>(null);
 
   const queryClient = useQueryClient();
   const { data: currentUser } = useGetAdminMe();
@@ -38,14 +40,24 @@ export default function AdminCoupons() {
   const updateMutation = useAdminUpdateCoupon();
   const disableMutation = useAdminDisableCoupon();
 
-  const handleDisable = (id: number) => {
-    if (confirm(t('هل أنت متأكد من تعطيل هذا الكوبون؟', 'Are you sure you want to disable this coupon?'))) {
-      disableMutation.mutate({ id }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getAdminListCouponsQueryKey() });
+  const disableCoupon = (id: number, confirmImpact = false) => {
+    disableMutation.mutate({ id, data: confirmImpact ? { confirm: true } : undefined }, {
+      onSuccess: () => {
+        setDisableConflict(null);
+        queryClient.invalidateQueries({ queryKey: getAdminListCouponsQueryKey() });
+      },
+      onError: (error) => {
+        const apiError = error as { status?: number; data?: { affectedCampaigns?: CouponAffectedCampaign[] } | null };
+        if (apiError.status === 409 && apiError.data?.affectedCampaigns?.length) {
+          setDisableConflict({ couponId: id, campaigns: apiError.data.affectedCampaigns });
         }
-      });
-    }
+      },
+    });
+  };
+
+  const handleDisable = (id: number) => {
+    if (!confirm(t('هل أنت متأكد من تعطيل هذا الكوبون؟', 'Are you sure you want to disable this coupon?'))) return;
+    disableCoupon(id);
   };
 
   const form = useForm<z.infer<typeof couponSchema>>({
@@ -210,6 +222,41 @@ export default function AdminCoupons() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={Boolean(disableConflict)} onOpenChange={(open) => { if (!open) setDisableConflict(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('هذا الكوبون مستخدم في حملات نشطة', 'This coupon is used by active campaigns')}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>{t(
+                  'سيؤثر تعطيل الكوبون في الحملات التالية. راجعها قبل تأكيد التعطيل:',
+                  'Disabling this coupon will affect the following campaigns. Review them before confirming:',
+                )}</p>
+                <ul className="list-disc space-y-1 ps-5 text-foreground">
+                  {disableConflict?.campaigns.map((campaign) => (
+                    <li key={campaign.id}>{campaign.name}</li>
+                  ))}
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={disableMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (disableConflict) disableCoupon(disableConflict.couponId, true);
+              }}
+              data-testid="button-confirm-coupon-impact"
+            >
+              {t('تعطيل رغم ذلك', 'Disable anyway')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

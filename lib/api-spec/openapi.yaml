@@ -952,7 +952,19 @@ paths:
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
-      responses: { "204": { description: Disabled } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminCouponDisableInput" }
+      responses:
+        "204": { description: Disabled }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Explicit confirmation is required because active campaigns use this coupon
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CouponDisableConflict" }
   /admin/campaigns:
     get:
       operationId: adminListCampaigns
@@ -2937,12 +2949,29 @@ components:
         isActive: { type: boolean }
     AdminCouponUpdate:
       allOf: [{ $ref: "#/components/schemas/AdminCouponInput" }]
+    AdminCouponDisableInput:
+      type: object
+      required: [confirm]
+      properties:
+        confirm: { type: boolean, description: Explicitly confirm disabling a coupon used by active campaigns }
     AdminCampaignCoupon:
       type: object
       required: [id, code]
       properties:
         id: { type: number }
         code: { type: string }
+    CouponAffectedCampaign:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: number }
+        name: { type: string }
+    CouponDisableConflict:
+      type: object
+      required: [error, affectedCampaigns]
+      properties:
+        error: { type: string }
+        affectedCampaigns: { type: array, minItems: 1, items: { $ref: "#/components/schemas/CouponAffectedCampaign" } }
     AdminCampaign:
       type: object
       required: [id, name, channel, status, startsAt, endsAt, coupons, createdAt, updatedAt]
