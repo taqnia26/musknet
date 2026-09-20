@@ -2764,6 +2764,7 @@ components:
         couponIds: { type: array, items: { type: number, minimum: 1, multipleOf: 1 }, uniqueItems: true }
     AdminCampaignUpdate:
       type: object
+      minProperties: 1
       properties:
         name: { type: string, minLength: 1 }
         channel: { type: string, minLength: 1 }

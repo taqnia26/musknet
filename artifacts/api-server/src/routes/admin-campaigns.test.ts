@@ -132,6 +132,19 @@ describe.sequential("admin campaign lifecycle and authorization", () => {
     expect(stored.endsAt.toISOString()).toBe("2027-01-31T23:59:59.000Z");
   });
 
+  it("rejects an empty update without changing the campaign", async () => {
+    const [before] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, campaignId));
+
+    await request(app)
+      .patch(`/api/admin/campaigns/${campaignId}`)
+      .set(auth(editorToken))
+      .send({})
+      .expect(400);
+
+    const [after] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, campaignId));
+    expect(after).toEqual(before);
+  });
+
   it("allows viewing without editing and hides campaign data without view permission", async () => {
     const listed = await request(app).get("/api/admin/campaigns").set(auth(viewerToken)).expect(200);
     expect(listed.body.some((campaign: { id: number }) => campaign.id === campaignId)).toBe(true);

@@ -1059,6 +1059,9 @@ router.post("/admin/campaigns", permit("campaigns", "edit"), route(async (req, r
 router.patch("/admin/campaigns/:id", permit("campaigns", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateCampaignParams, req.params, res);
   const body = parse(Api.AdminUpdateCampaignBody, req.body, res); if (!params || !body) return;
+  if (Object.keys(body).length === 0) {
+    res.status(400).json({ error: "At least one campaign field is required" }); return;
+  }
   const [current] = await db.select().from(campaignsTable).where(eq(campaignsTable.id, params.id)).limit(1);
   if (!current) { res.status(404).json({ error: "Campaign not found" }); return; }
   const startsAt = body.startsAt ?? current.startsAt;
