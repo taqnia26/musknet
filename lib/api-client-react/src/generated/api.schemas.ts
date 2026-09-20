@@ -1219,6 +1219,52 @@ export interface AdminCampaign {
   updatedAt: string;
 }
 
+export interface AdminCampaignCouponResult {
+  id: number;
+  code: string;
+  uses: number;
+  orders: number;
+  revenue: number;
+}
+
+export type AdminCampaignResultStatus = typeof AdminCampaignResultStatus[keyof typeof AdminCampaignResultStatus];
+
+
+export const AdminCampaignResultStatus = {
+  draft: 'draft',
+  active: 'active',
+  paused: 'paused',
+} as const;
+
+export interface AdminCampaignResult {
+  id: number;
+  name: string;
+  channel: string;
+  status: AdminCampaignResultStatus;
+  startsAt: string;
+  endsAt: string;
+  couponUses: number;
+  orders: number;
+  revenue: number;
+  coupons: AdminCampaignCouponResult[];
+}
+
+export interface AdminCampaignChannelResult {
+  channel: string;
+  campaigns: number;
+  couponUses: number;
+  orders: number;
+  revenue: number;
+}
+
+export interface AdminCampaignResults {
+  couponUses: number;
+  orders: number;
+  revenue: number;
+  byChannel: AdminCampaignChannelResult[];
+  campaigns: AdminCampaignResult[];
+}
+
 export type AdminCampaignInputStatus = typeof AdminCampaignInputStatus[keyof typeof AdminCampaignInputStatus];
 
 
@@ -2672,6 +2718,15 @@ export const AdminListInvoicesChannel = {
 export type AdminListCouponsParams = {
 search?: AdminSearchParameter;
 status?: AdminStatusParameter;
+};
+
+export type AdminGetCampaignResultsParams = {
+from?: string;
+to?: string;
+/**
+ * @minLength 1
+ */
+channel?: string;
 };
 
 export type AdminListCustomersParams = {

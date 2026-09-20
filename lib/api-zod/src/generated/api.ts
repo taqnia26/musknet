@@ -2421,6 +2421,47 @@ export const AdminListCampaignCouponOptionsResponseItem = zod.object({
 export const AdminListCampaignCouponOptionsResponse = zod.array(AdminListCampaignCouponOptionsResponseItem)
 
 
+
+
+
+export const AdminGetCampaignResultsQueryParams = zod.object({
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "channel": zod.coerce.string().min(1).optional()
+})
+
+export const AdminGetCampaignResultsResponse = zod.object({
+  "couponUses": zod.number(),
+  "orders": zod.number(),
+  "revenue": zod.number(),
+  "byChannel": zod.array(zod.object({
+  "channel": zod.string(),
+  "campaigns": zod.number(),
+  "couponUses": zod.number(),
+  "orders": zod.number(),
+  "revenue": zod.number()
+})),
+  "campaigns": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "channel": zod.string(),
+  "status": zod.enum(['draft', 'active', 'paused']),
+  "startsAt": zod.coerce.date(),
+  "endsAt": zod.coerce.date(),
+  "couponUses": zod.number(),
+  "orders": zod.number(),
+  "revenue": zod.number(),
+  "coupons": zod.array(zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "uses": zod.number(),
+  "orders": zod.number(),
+  "revenue": zod.number()
+}))
+}))
+})
+
+
 export const AdminUpdateCampaignParams = zod.object({
   "id": zod.coerce.number()
 })

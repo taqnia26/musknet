@@ -28,6 +28,7 @@ import type {
   AdminCampaign,
   AdminCampaignCoupon,
   AdminCampaignInput,
+  AdminCampaignResults,
   AdminCampaignUpdate,
   AdminCategory,
   AdminCategoryInput,
@@ -41,6 +42,7 @@ import type {
   AdminDistributor,
   AdminDistributorInput,
   AdminDistributorUpdate,
+  AdminGetCampaignResultsParams,
   AdminGetFinanceSummaryParams,
   AdminGetTrialBalanceParams,
   AdminIntegration,
@@ -6034,6 +6036,84 @@ export function useAdminListCampaignCouponOptions<TData = Awaited<ReturnType<typ
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getAdminListCampaignCouponOptionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminGetCampaignResultsUrl = (params?: AdminGetCampaignResultsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/campaigns/results?${stringifiedParams}` : `/api/admin/campaigns/results`
+}
+
+export const adminGetCampaignResults = async (params?: AdminGetCampaignResultsParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminCampaignResults> => {
+
+  return customFetch<AdminCampaignResults>(getAdminGetCampaignResultsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetCampaignResultsQueryKey = (params?: AdminGetCampaignResultsParams,) => {
+    return [
+    `/api/admin/campaigns/results`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminGetCampaignResultsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetCampaignResults>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse>>(params?: AdminGetCampaignResultsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCampaignResults>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetCampaignResultsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetCampaignResults>>> = ({ signal }) => adminGetCampaignResults(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetCampaignResults>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetCampaignResultsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetCampaignResults>>>
+export type AdminGetCampaignResultsQueryError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+
+
+export function useAdminGetCampaignResults<TData = Awaited<ReturnType<typeof adminGetCampaignResults>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse>>(
+ params?: AdminGetCampaignResultsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCampaignResults>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetCampaignResultsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

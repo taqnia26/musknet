@@ -903,6 +903,19 @@ paths:
       responses:
         "200": { description: Coupon options available to campaigns, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminCampaignCoupon" } } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/campaigns/results:
+    get:
+      operationId: adminGetCampaignResults
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: channel, in: query, schema: { type: string, minLength: 1 } }
+      responses:
+        "200": { description: Campaign performance grouped by campaign and channel, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaignResults" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /admin/campaigns/{id}:
     patch:
       operationId: adminUpdateCampaign
@@ -2752,6 +2765,47 @@ components:
         coupons: { type: array, items: { $ref: "#/components/schemas/AdminCampaignCoupon" } }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    AdminCampaignCouponResult:
+      type: object
+      required: [id, code, uses, orders, revenue]
+      properties:
+        id: { type: number }
+        code: { type: string }
+        uses: { type: number }
+        orders: { type: number }
+        revenue: { type: number }
+    AdminCampaignResult:
+      type: object
+      required: [id, name, channel, status, startsAt, endsAt, couponUses, orders, revenue, coupons]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        channel: { type: string }
+        status: { type: string, enum: [draft, active, paused] }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        couponUses: { type: number }
+        orders: { type: number }
+        revenue: { type: number }
+        coupons: { type: array, items: { $ref: "#/components/schemas/AdminCampaignCouponResult" } }
+    AdminCampaignChannelResult:
+      type: object
+      required: [channel, campaigns, couponUses, orders, revenue]
+      properties:
+        channel: { type: string }
+        campaigns: { type: number }
+        couponUses: { type: number }
+        orders: { type: number }
+        revenue: { type: number }
+    AdminCampaignResults:
+      type: object
+      required: [couponUses, orders, revenue, byChannel, campaigns]
+      properties:
+        couponUses: { type: number }
+        orders: { type: number }
+        revenue: { type: number }
+        byChannel: { type: array, items: { $ref: "#/components/schemas/AdminCampaignChannelResult" } }
+        campaigns: { type: array, items: { $ref: "#/components/schemas/AdminCampaignResult" } }
     AdminCampaignInput:
       type: object
       required: [name, channel, status, startsAt, endsAt, couponIds]

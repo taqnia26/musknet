@@ -5,15 +5,17 @@ import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   type AdminCampaign,
+  getAdminGetCampaignResultsQueryKey,
   getAdminListCampaignsQueryKey,
   useAdminCreateCampaign,
+  useAdminGetCampaignResults,
   useAdminListCampaignCouponOptions,
   useAdminListCampaigns,
   useAdminPauseCampaign,
   useAdminUpdateCampaign,
   useGetAdminMe,
 } from '@workspace/api-client-react';
-import { CalendarDays, Edit2, Megaphone, PauseCircle, Plus } from 'lucide-react';
+import { CalendarDays, DollarSign, Edit2, Megaphone, PauseCircle, Plus, ShoppingCart, TicketCheck } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { hasPermission } from '@/lib/permissions';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +77,15 @@ export default function AdminCampaigns() {
   const pauseMutation = useAdminPauseCampaign();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AdminCampaign | null>(null);
+  const [reportFrom, setReportFrom] = useState('');
+  const [reportTo, setReportTo] = useState('');
+  const [reportChannel, setReportChannel] = useState('all');
+  const reportParams = {
+    ...(reportFrom ? { from: new Date(`${reportFrom}T00:00:00`).toISOString() } : {}),
+    ...(reportTo ? { to: new Date(`${reportTo}T23:59:59.999`).toISOString() } : {}),
+    ...(reportChannel !== 'all' ? { channel: reportChannel } : {}),
+  };
+  const { data: results, isLoading: resultsLoading, isError: resultsError } = useAdminGetCampaignResults(reportParams);
   const canEdit = hasPermission(currentUser, 'campaigns', 'edit');
 
   const form = useForm<CampaignForm>({
@@ -82,7 +93,10 @@ export default function AdminCampaigns() {
     defaultValues: initialValues,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: getAdminListCampaignsQueryKey() });
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: getAdminListCampaignsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getAdminGetCampaignResultsQueryKey() });
+  };
   const closeDialog = () => {
     setOpen(false);
     setEditing(null);
@@ -131,6 +145,14 @@ export default function AdminCampaigns() {
     storefront: t('المتجر', 'Storefront'),
     other: t('أخرى', 'Other'),
   };
+  const locale = lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US';
+  const formatNumber = (value: number) => new Intl.NumberFormat(locale).format(value);
+  const formatCurrency = (value: number) => new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: 'SAR',
+    maximumFractionDigits: 0,
+  }).format(value);
+  const resultByCampaign = new Map(results?.campaigns.map((campaign) => [campaign.id, campaign]));
 
   return (
     <div className="space-y-6">
@@ -209,22 +231,65 @@ export default function AdminCampaigns() {
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{t('منتهية', 'Ended')}</CardTitle></CardHeader><CardContent className="text-3xl font-bold text-muted-foreground">{endedCount}</CardContent></Card>
       </div>
 
+      <Card>
+        <CardHeader className="space-y-4">
+          <div>
+            <CardTitle>{t('نتائج الحملات', 'Campaign results')}</CardTitle>
+            <p className="mt-1 text-sm text-muted-foreground">{t('الطلبات المدفوعة غير الملغاة والمنسوبة إلى كوبونات الحملة خلال فترة تشغيلها', 'Paid, non-cancelled orders attributed to campaign coupons during the campaign period')}</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div><label className="mb-1 block text-sm font-medium">{t('من تاريخ', 'From')}</label><Input type="date" value={reportFrom} onChange={(event) => setReportFrom(event.target.value)} /></div>
+            <div><label className="mb-1 block text-sm font-medium">{t('إلى تاريخ', 'To')}</label><Input type="date" value={reportTo} min={reportFrom || undefined} onChange={(event) => setReportTo(event.target.value)} /></div>
+            <div><label className="mb-1 block text-sm font-medium">{t('القناة', 'Channel')}</label>
+              <Select value={reportChannel} onValueChange={setReportChannel}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>
+                <SelectItem value="all">{t('كل القنوات', 'All channels')}</SelectItem>
+                {Object.entries(channelLabels).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+              </SelectContent></Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {resultsError && <div role="alert" className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{t('تعذر تحميل نتائج الحملات. تحقق من الفترة وحاول مرة أخرى.', 'Campaign results could not be loaded. Check the period and try again.')}</div>}
+          <div className={`grid gap-3 sm:grid-cols-3 ${resultsError ? 'opacity-50' : ''}`}>
+            <div className="rounded-lg border p-4"><div className="flex items-center gap-2 text-sm text-muted-foreground"><TicketCheck className="h-4 w-4" />{t('استخدامات الكوبونات', 'Coupon uses')}</div><div className="mt-2 text-2xl font-bold">{resultsLoading || resultsError ? '—' : formatNumber(results?.couponUses ?? 0)}</div></div>
+            <div className="rounded-lg border p-4"><div className="flex items-center gap-2 text-sm text-muted-foreground"><ShoppingCart className="h-4 w-4" />{t('الطلبات', 'Orders')}</div><div className="mt-2 text-2xl font-bold">{resultsLoading || resultsError ? '—' : formatNumber(results?.orders ?? 0)}</div></div>
+            <div className="rounded-lg border p-4"><div className="flex items-center gap-2 text-sm text-muted-foreground"><DollarSign className="h-4 w-4" />{t('الإيراد', 'Revenue')}</div><div className="mt-2 text-2xl font-bold text-emerald-600">{resultsLoading || resultsError ? '—' : formatCurrency(results?.revenue ?? 0)}</div></div>
+          </div>
+          {!!results?.byChannel.length && reportChannel === 'all' && (
+            <div>
+              <h3 className="mb-2 font-semibold">{t('مقارنة القنوات', 'Channel comparison')}</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {results.byChannel.map((channel) => <div key={channel.channel} className="rounded-lg bg-muted/50 p-3">
+                  <div className="font-medium">{channelLabels[channel.channel] ?? channel.channel}</div>
+                  <div className="mt-2 flex justify-between text-sm"><span className="text-muted-foreground">{t('الطلبات', 'Orders')}</span><span>{formatNumber(channel.orders)}</span></div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">{t('الإيراد', 'Revenue')}</span><span className="font-medium">{formatCurrency(channel.revenue)}</span></div>
+                </div>)}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader><TableRow>
             <TableHead>{t('الحملة', 'Campaign')}</TableHead><TableHead>{t('الفترة', 'Period')}</TableHead><TableHead>{t('القناة', 'Channel')}</TableHead>
-            <TableHead>{t('الكوبونات', 'Coupons')}</TableHead><TableHead>{t('الحالة', 'Status')}</TableHead><TableHead className="w-[100px]" />
+            <TableHead>{t('الكوبونات', 'Coupons')}</TableHead><TableHead>{t('الاستخدامات', 'Uses')}</TableHead><TableHead>{t('الطلبات', 'Orders')}</TableHead><TableHead>{t('الإيراد', 'Revenue')}</TableHead><TableHead>{t('الحالة', 'Status')}</TableHead><TableHead className="w-[100px]" />
           </TableRow></TableHeader>
           <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
-              : !campaigns?.length ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground"><Megaphone className="mx-auto mb-2 h-8 w-8 opacity-40" />{t('لا توجد حملات بعد', 'No campaigns yet')}</TableCell></TableRow>
+            {isLoading ? <TableRow><TableCell colSpan={9} className="py-12 text-center text-muted-foreground">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              : !campaigns?.length ? <TableRow><TableCell colSpan={9} className="py-12 text-center text-muted-foreground"><Megaphone className="mx-auto mb-2 h-8 w-8 opacity-40" />{t('لا توجد حملات بعد', 'No campaigns yet')}</TableCell></TableRow>
               : campaigns.map((campaign) => {
                 const state = lifecycle(campaign);
+                const result = resultByCampaign.get(campaign.id);
                 return <TableRow key={campaign.id} className={state === 'ended' ? 'opacity-60' : ''} data-testid={`row-campaign-${campaign.id}`}>
                   <TableCell className="font-semibold">{campaign.name}</TableCell>
                   <TableCell><div className="flex items-start gap-2 text-sm"><CalendarDays className="mt-0.5 h-4 w-4 text-muted-foreground" /><span>{new Date(campaign.startsAt).toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US')}<br />{new Date(campaign.endsAt).toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US')}</span></div></TableCell>
                   <TableCell>{channelLabels[campaign.channel] ?? campaign.channel}</TableCell>
                   <TableCell><div className="flex max-w-[220px] flex-wrap gap-1">{campaign.coupons.length ? campaign.coupons.map((coupon) => <Badge key={coupon.id} variant="outline" dir="ltr">{coupon.code}</Badge>) : <span className="text-sm text-muted-foreground">—</span>}</div></TableCell>
+                  <TableCell>{result ? formatNumber(result.couponUses) : '—'}</TableCell>
+                  <TableCell>{result ? formatNumber(result.orders) : '—'}</TableCell>
+                  <TableCell className="font-medium">{result ? formatCurrency(result.revenue) : '—'}</TableCell>
                   <TableCell><Badge variant={state === 'active' ? 'default' : state === 'ended' ? 'secondary' : 'outline'} className={state === 'active' ? 'bg-emerald-600' : ''}>{statusLabels[state]}</Badge></TableCell>
                   <TableCell><div className="flex justify-end gap-1">
                     {canEdit && <Button variant="ghost" size="icon" onClick={() => editCampaign(campaign)} aria-label={t('تعديل', 'Edit')}><Edit2 className="h-4 w-4" /></Button>}

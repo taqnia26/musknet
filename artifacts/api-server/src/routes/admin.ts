@@ -1052,6 +1052,96 @@ router.get("/admin/campaigns/coupon-options", permit("campaigns", "view"), route
   res.json(Api.AdminListCampaignCouponOptionsResponse.parse(rows));
 }));
 
+router.get("/admin/campaigns/results", permit("campaigns", "view"), route(async (req, res) => {
+  const query = parse(Api.AdminGetCampaignResultsQueryParams, {
+    ...req.query,
+    ...(typeof req.query.from === "string" ? { from: new Date(req.query.from) } : {}),
+    ...(typeof req.query.to === "string" ? { to: new Date(req.query.to) } : {}),
+  }, res); if (!query) return;
+  if (query.from && query.to && query.to < query.from) {
+    res.status(400).json({ error: "Report end must be after its start" }); return;
+  }
+
+  const campaignConditions = query.channel ? eq(campaignsTable.channel, query.channel) : undefined;
+  const campaigns = await db.select().from(campaignsTable)
+    .where(campaignConditions)
+    .orderBy(desc(campaignsTable.startsAt), desc(campaignsTable.id));
+  const campaignIds = campaigns.map((campaign) => campaign.id);
+  const linkedCoupons = campaignIds.length
+    ? await db.select({
+        campaignId: campaignCouponsTable.campaignId,
+        id: couponsTable.id,
+        code: couponsTable.code,
+      }).from(campaignCouponsTable)
+        .innerJoin(couponsTable, eq(campaignCouponsTable.couponId, couponsTable.id))
+        .where(inArray(campaignCouponsTable.campaignId, campaignIds))
+        .orderBy(couponsTable.code)
+    : [];
+  const codes = [...new Set(linkedCoupons.map((coupon) => coupon.code))];
+  const orderConditions = [
+    eq(ordersTable.paymentStatus, "paid"),
+    sql`${ordersTable.status} <> 'cancelled'`,
+    ...(query.from ? [gte(ordersTable.createdAt, query.from)] : []),
+    ...(query.to ? [lte(ordersTable.createdAt, query.to)] : []),
+  ];
+  const attributedOrders = codes.length
+    ? await db.select({
+        id: ordersTable.id,
+        couponCode: ordersTable.couponCode,
+        total: ordersTable.total,
+        createdAt: ordersTable.createdAt,
+      }).from(ordersTable)
+        .where(and(inArray(ordersTable.couponCode, codes), ...orderConditions))
+    : [];
+
+  const results = campaigns.map((campaign) => {
+    const coupons = linkedCoupons.filter((coupon) => coupon.campaignId === campaign.id);
+    const campaignOrders = attributedOrders.filter((order) =>
+      order.createdAt >= campaign.startsAt
+      && order.createdAt <= campaign.endsAt
+      && coupons.some((coupon) => coupon.code === order.couponCode));
+    const couponResults = coupons.map((coupon) => {
+      const orders = campaignOrders.filter((order) => order.couponCode === coupon.code);
+      return {
+        id: coupon.id,
+        code: coupon.code,
+        uses: orders.length,
+        orders: orders.length,
+        revenue: orders.reduce((total, order) => total + order.total, 0),
+      };
+    });
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      channel: campaign.channel,
+      status: campaign.status,
+      startsAt: campaign.startsAt,
+      endsAt: campaign.endsAt,
+      couponUses: campaignOrders.length,
+      orders: campaignOrders.length,
+      revenue: campaignOrders.reduce((total, order) => total + order.total, 0),
+      coupons: couponResults,
+    };
+  });
+  const byChannel = [...new Set(results.map((campaign) => campaign.channel))].map((channel) => {
+    const channelCampaigns = results.filter((campaign) => campaign.channel === channel);
+    return {
+      channel,
+      campaigns: channelCampaigns.length,
+      couponUses: channelCampaigns.reduce((total, campaign) => total + campaign.couponUses, 0),
+      orders: channelCampaigns.reduce((total, campaign) => total + campaign.orders, 0),
+      revenue: channelCampaigns.reduce((total, campaign) => total + campaign.revenue, 0),
+    };
+  }).sort((left, right) => right.revenue - left.revenue);
+  res.json(Api.AdminGetCampaignResultsResponse.parse({
+    couponUses: results.reduce((total, campaign) => total + campaign.couponUses, 0),
+    orders: results.reduce((total, campaign) => total + campaign.orders, 0),
+    revenue: results.reduce((total, campaign) => total + campaign.revenue, 0),
+    byChannel,
+    campaigns: results,
+  }));
+}));
+
 router.post("/admin/campaigns", permit("campaigns", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateCampaignBody, req.body, res); if (!body) return;
   if (body.endsAt <= body.startsAt) {

@@ -9,7 +9,9 @@ import {
   campaignCouponsTable,
   campaignsTable,
   couponsTable,
+  customersTable,
   db,
+  ordersTable,
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
@@ -18,7 +20,11 @@ const suffix = Date.now();
 const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 const userIds: number[] = [];
 const couponIds: number[] = [];
+
+const orderIds: number[] = [];
 let campaignId: number;
+
+let customerId: number;
 
 let inactiveCouponId: number;
 let editorToken: string;
@@ -61,6 +67,12 @@ beforeAll(async () => {
     { code: `CAMPAIGN-B-${suffix}`, discountType: "fixed", discountValue: 25 },
     { code: `CAMPAIGN-C-${suffix}`, discountType: "percentage", discountValue: 15 },
   ]).returning();
+
+  const [customer] = await db.insert(customersTable).values({
+    phone: `+9665${String(suffix).slice(-8)}`,
+    name: "Campaign Report Customer",
+    phoneVerified: true,
+  }).returning();
 
   const [inactiveCoupon] = await db.insert(couponsTable).values({
     code: `CAMPAIGN-INACTIVE-${suffix}`,
@@ -142,6 +154,18 @@ beforeAll(async () => {
 
   it("allows viewing without editing and hides campaign data without view permission", async () => {
     const listed = await request(app).get("/api/admin/campaigns").set(auth(viewerToken)).expect(200);
+
+    const common = {
+      userId: customerId,
+      subtotal: 100,
+      shippingCost: 0,
+      discount: 0,
+      tax: 0,
+      address: "{}",
+      shippingMethod: "standard",
+      paymentMethod: "card",
+      couponCode: `CAMPAIGN-B-${suffix}`,
+    };
     expect(listed.body.some((campaign: { id: number }) => campaign.id === campaignId)).toBe(true);
 
     await request(app).patch(`/api/admin/campaigns/${campaignId}`)
@@ -164,3 +188,19 @@ beforeAll(async () => {
       .set(auth(editorToken))
       .send({ name: "Should Not Be Saved", couponIds: [couponIds[0], inactiveCouponId] })
       .expect(400);
+
+    const orders = await db.insert(ordersTable).values([
+      { ...common, orderNumber: `CAMPAIGN-PAID-${suffix}`, total: 120, paymentStatus: "paid", status: "new", createdAt: new Date("2027-01-15T12:00:00.000Z") },
+      { ...common, orderNumber: `CAMPAIGN-CANCELLED-${suffix}`, total: 80, paymentStatus: "paid", status: "cancelled", createdAt: new Date("2027-01-16T12:00:00.000Z") },
+      { ...common, orderNumber: `CAMPAIGN-PENDING-${suffix}`, total: 40, paymentStatus: "pending", status: "new", createdAt: new Date("2027-01-17T12:00:00.000Z") },
+      { ...common, orderNumber: `CAMPAIGN-LATE-${suffix}`, total: 200, paymentStatus: "paid", status: "new", createdAt: new Date("2027-02-01T12:00:00.000Z") },
+    ]).returning();
+
+    const result = await request(app)
+      .get("/api/admin/campaigns/results")
+      .query({ from: "2027-01-10T00:00:00.000Z", to: "2027-01-20T23:59:59.000Z", channel: "instagram" })
+      .set(auth(viewerToken))
+      .expect(200);
+
+    const otherChannel = await request(app).get("/api/admin/campaigns/results")
+      .query({ channel: "email" }).set(auth(viewerToken)).expect(200);
