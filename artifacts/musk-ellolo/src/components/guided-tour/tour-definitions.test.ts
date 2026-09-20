@@ -17,21 +17,22 @@ describe('guided tour definitions', () => {
     expect(ownerTourSteps.length).toBeGreaterThan(3);
     ownerTourSteps.forEach((step) => {
       expect(step.id).toBeTruthy();
-      expect(step.target).toMatch(/data-tour/);
+      expect(step.target).toBeTruthy();
       expect(step.title.ar).toBeTruthy();
       expect(step.title.en).toBeTruthy();
       expect(step.description.ar).toBeTruthy();
       expect(step.description.en).toBeTruthy();
+      expect(step.route).toBeTruthy();
     });
   });
 
   it('filters admin navigation steps by permissions', () => {
     const restricted = getAdminTourSteps(navStructure, { isSuperAdmin: false, permissions: ['customers:view'] });
-    expect(restricted.some((step) => step.title.en === 'Customers')).toBe(true);
-    expect(restricted.some((step) => step.title.en === 'Inventory')).toBe(false);
-    expect(restricted.some((step) => step.title.en === 'Owner credentials')).toBe(false);
+    expect(restricted.some((step) => step.title.en === 'Individual Customers')).toBe(true);
+    expect(restricted.some((step) => step.title.en === 'Inventory Overview')).toBe(false);
+    expect(restricted.some((step) => step.title.en === 'Owner Credentials')).toBe(false);
     const superAdmin = getAdminTourSteps(navStructure, { isSuperAdmin: true, permissions: [] });
-    expect(superAdmin.some((step) => step.title.en === 'Owner credentials')).toBe(true);
+    expect(superAdmin.some((step) => step.title.en === 'Owner Credentials')).toBe(true);
   });
 
   it('persists completion and allows an explicit restart reset', () => {

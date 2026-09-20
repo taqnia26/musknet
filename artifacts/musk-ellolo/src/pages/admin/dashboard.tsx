@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { formatCurrency, formatInteger, formatPercent } from '@/lib/formatters';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer
@@ -57,10 +58,9 @@ export default function AdminDashboard() {
   };
 
   const locale = lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US';
-  const formatCurrency = (val: number) => new Intl.NumberFormat(locale, { style: 'currency', currency: 'SAR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val);
+  const money = (val: number) => `${formatCurrency(val, lang)} SAR`;
   const formatCompact = (val: number) => new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(val);
-  const formatNumber = (val: number) => new Intl.NumberFormat(locale).format(val);
-  const formatPercent = (val: number) => new Intl.NumberFormat(locale, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(val / 100);
+  const formatNumber = (val: number) => formatInteger(val, lang);
 
   if (isLoadingDashboard || isLoadingAnalytics) {
     return (
@@ -84,7 +84,7 @@ export default function AdminDashboard() {
   }
 
   const kpis = [
-    { label: t('الإيرادات', 'Revenue'), value: formatCurrency(analyticsData?.summary.revenue || 0), icon: DollarSign, color: "hsl(42, 45%, 55%)" },
+    { label: t('الإيرادات', 'Revenue'), value: money(analyticsData?.summary.revenue || 0), icon: DollarSign, color: "hsl(42, 45%, 55%)" },
     { label: t('الطلبات', 'Orders'), value: formatNumber(analyticsData?.summary.orders || 0), icon: ShoppingCart, color: "hsl(210, 80%, 65%)" },
     { label: t('العملاء', 'Customers'), value: formatNumber(dashboardData?.customers || 0), icon: Users, color: "hsl(270, 60%, 65%)" },
     { label: t('المنتجات النشطة', 'Active Products'), value: formatNumber(dashboardData?.products || 0), icon: Package, color: "hsl(150, 50%, 55%)" },
@@ -99,8 +99,8 @@ export default function AdminDashboard() {
   const activitySummary = [
     { label: t('الزيارات', 'Visits'), value: formatNumber(analyticsData?.summary.visits || 0), icon: Eye, color: "hsl(270, 60%, 65%)" },
     { label: t('مشاهدات الصفحات', 'Page Views'), value: formatNumber(analyticsData?.summary.pageViews || 0), icon: Activity, color: "hsl(150, 50%, 55%)" },
-    { label: t('معدل التحويل', 'Conversion'), value: formatPercent(analyticsData?.summary.conversionRate || 0), icon: MousePointerClick, color: "hsl(30, 90%, 60%)" },
-    { label: t('متوسط قيمة الطلب', 'Average Order Value'), value: formatCurrency(analyticsData?.summary.averageOrderValue || 0), icon: TrendingUp, color: "hsl(330, 70%, 65%)" },
+    { label: t('معدل التحويل', 'Conversion'), value: formatPercent(analyticsData?.summary.conversionRate || 0, lang), icon: MousePointerClick, color: "hsl(30, 90%, 60%)" },
+    { label: t('متوسط قيمة الطلب', 'Average Order Value'), value: money(analyticsData?.summary.averageOrderValue || 0), icon: TrendingUp, color: "hsl(330, 70%, 65%)" },
   ];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
                 <span className="text-muted-foreground">{entry.name}</span>
               </div>
               <span className="font-semibold text-foreground">
-                {isRevenue ? formatCurrency(entry.value) : formatNumber(entry.value)}
+                {isRevenue ? money(entry.value) : formatNumber(entry.value)}
               </span>
             </div>
           );
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
                     <span className="truncate font-medium text-[13.5px] text-foreground">{product.name}</span>
                   </div>
                   <div className="text-left shrink-0 ps-3" dir="ltr">
-                    <div className="font-bold text-[13.5px] text-foreground">{formatCurrency(product.revenue)}</div>
+                    <div className="font-bold text-[13.5px] text-foreground">{money(product.revenue)}</div>
                     <div className="text-[11px] text-muted-foreground mt-0.5">{formatNumber(product.quantity)} {t('وحدة', 'units')}</div>
                   </div>
                 </div>

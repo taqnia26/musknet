@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { giftingIssueLabels as labels, issueUses } from './gifting-issues-config';
+import { formatCurrency, formatInteger } from '@/lib/formatters';
 
 type Line = { productId: string; quantity: string };
 
@@ -254,7 +255,7 @@ export default function AdminGiftingIssues() {
                           <SelectContent>
                             {inventory?.items.map((item) => (
                               <SelectItem key={item.id} value={String(item.id)}>
-                                {lang === 'ar' ? item.nameAr : item.nameEn} — {t('المتاح', 'Available')}: {item.stockQuantity}
+                                 {lang === 'ar' ? item.nameAr : item.nameEn} — {t('المتاح', 'Available')}: {formatInteger(item.stockQuantity, lang)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -262,7 +263,7 @@ export default function AdminGiftingIssues() {
                         {isDuplicate && <p className="mt-1 text-[11px] font-medium text-destructive">{t('هذا المنتج مكرر', 'This product is duplicated')}</p>}
                         {product && !isDuplicate && (
                           <p className={`mt-1.5 text-[11.5px] ${productNeedsCost ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>
-                            {productNeedsCost ? t('لا توجد تكلفة للوحدة. أدخلها من المخزون.', 'No unit cost. Enter it from Inventory.') : <>{t('المتاح', 'Available')}: <span className="font-mono">{product.stockQuantity}</span> · {t('متوسط التكلفة', 'Avg Cost')}: <span className="font-mono">{product.averageCost}</span> SAR</>}
+                             {productNeedsCost ? t('لا توجد تكلفة للوحدة. أدخلها من المخزون.', 'No unit cost. Enter it from Inventory.') : <>{t('المتاح', 'Available')}: <span className="font-mono">{formatInteger(product.stockQuantity, lang)}</span> · {t('متوسط التكلفة', 'Avg Cost')}: <span className="font-mono">{formatCurrency(product.averageCost, lang)}</span> SAR</>}
                           </p>
                         )}
                       </div>
@@ -312,9 +313,9 @@ export default function AdminGiftingIssues() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <SummaryCard icon={FileStack} label={t('عدد العمليات', 'Total Records')} value={summary?.rows ?? 0} />
-        <SummaryCard icon={Package} label={t('إجمالي الوحدات', 'Total Units')} value={summary?.units ?? 0} />
-        <SummaryCard icon={Coins} label={t('إجمالي التكلفة', 'Total Cost')} value={`${summary?.totalCost ?? '0'} SAR`} />
+         <SummaryCard icon={FileStack} label={t('عدد العمليات', 'Total Records')} value={formatInteger(summary?.rows, lang)} />
+         <SummaryCard icon={Package} label={t('إجمالي الوحدات', 'Total Units')} value={formatInteger(summary?.units, lang)} />
+         <SummaryCard icon={Coins} label={t('إجمالي التكلفة', 'Total Cost')} value={`${formatCurrency(summary?.totalCost, lang)} SAR`} />
       </div>
 
       <Card className="border-border/60 shadow-sm">
@@ -397,10 +398,10 @@ export default function AdminGiftingIssues() {
                         )}
                       </TableCell>
                       <TableCell className="text-center font-mono">
-                        {row.quantity}
+                         {formatInteger(row.quantity, lang)}
                       </TableCell>
                       <TableCell className="text-right rtl:text-left font-mono font-medium">
-                        {row.totalCost}
+                         {formatCurrency(row.totalCost, lang)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -474,11 +475,11 @@ function Detail({ row, lang }: { row: GiftingIssue; lang: 'ar' | 'en' }) {
       <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-border/40">
         <div className="bg-muted/20 rounded-lg p-3 text-center border border-border/50">
           <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">{lang === 'ar' ? 'الكمية' : 'Quantity'}</div>
-          <div className="text-xl font-bold font-mono">{row.quantity}</div>
+           <div className="text-xl font-bold font-mono">{formatInteger(row.quantity, lang)}</div>
         </div>
         <div className="bg-muted/20 rounded-lg p-3 text-center border border-border/50">
           <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">{lang === 'ar' ? 'التكلفة' : 'Cost'}</div>
-          <div className="text-xl font-bold font-mono">{row.totalCost} <span className="text-xs text-muted-foreground ml-1">SAR</span></div>
+           <div className="text-xl font-bold font-mono">{formatCurrency(row.totalCost, lang)} <span className="text-xs text-muted-foreground ml-1">SAR</span></div>
         </div>
       </div>
 

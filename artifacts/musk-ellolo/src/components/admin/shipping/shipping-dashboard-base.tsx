@@ -28,6 +28,7 @@ import { Separator } from '@/components/ui/separator';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { formatCurrency } from '@/lib/formatters';
 import {
   Package,
   Truck,
@@ -111,11 +112,7 @@ export function getStatusIcon(status: ShipmentStatus) {
 
 // Format Currency
 const formatMoney = (amount: number, lang: string) => {
-  return new Intl.NumberFormat(lang === 'ar' ? 'ar-SA' : 'en-US', {
-    style: 'currency',
-    currency: 'SAR',
-    minimumFractionDigits: 2,
-  }).format(amount);
+  return `${formatCurrency(amount, lang === 'ar' ? 'ar' : 'en')} SAR`;
 };
 
 // Form Schemas

@@ -479,7 +479,14 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         storageKey={ADMIN_TOUR_STORAGE_KEY}
         restartSignal={tourRestart}
         onStepChange={(step) => {
-          if (step.sidebar && window.innerWidth < 1024) setIsOpen(true);
+          if (step.route && step.route !== location) {
+            setLocation(step.route);
+          }
+          if (step.sidebar && window.innerWidth < 1024) {
+            setIsOpen(true);
+          } else if (!step.sidebar && window.innerWidth < 1024) {
+            setIsOpen(false);
+          }
         }}
         onActiveChange={(active) => {
           if (!active) setIsOpen(false);

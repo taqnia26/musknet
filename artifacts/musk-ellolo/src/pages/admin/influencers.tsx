@@ -31,6 +31,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency, formatInteger, formatPercent } from '@/lib/formatters';
 
 type Performance = {
   orders?: number;
@@ -68,11 +69,7 @@ const blank = {
 const numberValue = (value: unknown) => Number(value ?? 0) || 0;
 
 function formatSar(value: number, lang: string) {
-  return new Intl.NumberFormat(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-SA', {
-    style: 'currency',
-    currency: 'SAR',
-    maximumFractionDigits: 2,
-  }).format(value);
+  return `${formatCurrency(value, lang === 'ar' ? 'ar' : 'en')} SAR`;
 }
 
 function formatDate(value: string | null | undefined, lang: string) {
@@ -283,10 +280,10 @@ export default function AdminInfluencers() {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard icon={CircleDollarSign} label={t('المبيعات المنسوبة', 'Attributed sales')} value={formatSar(totals.sales, lang)} hint={t('طلبات مدفوعة فقط', 'Paid orders only')} tone="emerald" testId="metric-influencer-sales" />
-        <MetricCard icon={WalletCards} label={t('إجمالي العمولات', 'Total commissions')} value={formatSar(totals.commission, lang)} hint={totals.sales ? `${((totals.commission / totals.sales) * 100).toFixed(1)}% ${t('من المبيعات', 'of sales')}` : '—'} tone="amber" testId="metric-influencer-commission" />
+         <MetricCard icon={WalletCards} label={t('إجمالي العمولات', 'Total commissions')} value={formatSar(totals.commission, lang)} hint={totals.sales ? `${formatPercent((totals.commission / totals.sales) * 100, lang)} ${t('من المبيعات', 'of sales')}` : '—'} tone="amber" testId="metric-influencer-commission" />
         <MetricCard icon={TrendingUp} label={t('الصافي بعد العمولة', 'Net after commission')} value={formatSar(totalNet, lang)} hint={t('قبل تكلفة المنتج والمصاريف', 'Before product cost and expenses')} tone="blue" testId="metric-influencer-net" />
-        <MetricCard icon={PackageCheck} label={t('الطلبات المدفوعة', 'Paid orders')} value={totals.orders.toLocaleString()} hint={`${t('متوسط الطلب', 'Average order')} ${formatSar(averageOrder, lang)}`} tone="violet" testId="metric-influencer-orders" />
-        <MetricCard icon={Users} label={t('زيارات الإحالة', 'Referral visits')} value={totals.visits.toLocaleString()} hint={totals.visits ? `${((totals.orders / totals.visits) * 100).toFixed(1)}% ${t('تحويل إلى طلب مدفوع', 'converted to paid orders')}` : t('لم تسجل زيارات بعد', 'No visits recorded yet')} tone="slate" testId="metric-influencer-visits" />
+         <MetricCard icon={PackageCheck} label={t('الطلبات المدفوعة', 'Paid orders')} value={formatInteger(totals.orders, lang)} hint={`${t('متوسط الطلب', 'Average order')} ${formatSar(averageOrder, lang)}`} tone="violet" testId="metric-influencer-orders" />
+         <MetricCard icon={Users} label={t('زيارات الإحالة', 'Referral visits')} value={formatInteger(totals.visits, lang)} hint={totals.visits ? `${formatPercent((totals.orders / totals.visits) * 100, lang)} ${t('تحويل إلى طلب مدفوع', 'converted to paid orders')}` : t('لم تسجل زيارات بعد', 'No visits recorded yet')} tone="slate" testId="metric-influencer-visits" />
       </section>
 
       {!!influencers.length && (
@@ -322,7 +319,7 @@ export default function AdminInfluencers() {
             <div className="mt-4 space-y-3">
               <InsightRow icon={Crown} label={t('أعلى صافي مساهمة', 'Highest net contribution')} value={bestNet?.name ?? '—'} detail={bestNet ? formatSar(bestNet.net, lang) : '—'} />
               <InsightRow icon={Medal} label={t('أعلى متوسط طلب', 'Highest average order')} value={bestAverage?.name ?? '—'} detail={bestAverage ? formatSar(bestAverage.average, lang) : '—'} />
-              <InsightRow icon={Percent} label={t('معدل العمولة الكلي', 'Blended commission rate')} value={totals.sales ? `${((totals.commission / totals.sales) * 100).toFixed(1)}%` : '—'} detail={t('من المبيعات المنسوبة', 'of attributed sales')} />
+               <InsightRow icon={Percent} label={t('معدل العمولة الكلي', 'Blended commission rate')} value={totals.sales ? formatPercent((totals.commission / totals.sales) * 100, lang) : '—'} detail={t('من المبيعات المنسوبة', 'of attributed sales')} />
               <InsightRow icon={UserRound} label={t('بحاجة للمراجعة', 'Needs review')} value={`${zeroSalesCount}`} detail={t('مشاهير بدون مبيعات', 'influencers without sales')} />
             </div>
           </div>
@@ -400,11 +397,11 @@ export default function AdminInfluencers() {
 
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                       <PerformanceCell label={t('المبيعات', 'Sales')} value={formatSar(item.sales, lang)} />
-                      <PerformanceCell label={t('الطلبات', 'Orders')} value={item.orders.toLocaleString()} />
+                       <PerformanceCell label={t('الطلبات', 'Orders')} value={formatInteger(item.orders, lang)} />
                       <PerformanceCell label={t('العمولة', 'Commission')} value={formatSar(item.commission, lang)} negative />
                       <PerformanceCell label={t('الصافي لك', 'Net to you')} value={formatSar(item.net, lang)} emphasized />
-                      <PerformanceCell label={t('الزيارات', 'Visits')} value={item.visits.toLocaleString()} />
-                      <PerformanceCell label={t('نسبة التحويل', 'Conversion')} value={`${(item.conversion * 100).toFixed(1)}%`} />
+                       <PerformanceCell label={t('الزيارات', 'Visits')} value={formatInteger(item.visits, lang)} />
+                       <PerformanceCell label={t('نسبة التحويل', 'Conversion')} value={formatPercent(item.conversion * 100, lang)} />
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 xl:max-w-[190px] xl:justify-end">
@@ -462,7 +459,7 @@ export default function AdminInfluencers() {
                       {t('متوسط الطلب', 'Avg. order')}: {formatSar(item.average, lang)}
                     </span>
                     <span className="rounded-full bg-muted/60 px-2.5 py-1 text-xs text-muted-foreground">
-                      {t('حصة المبيعات', 'Sales share')}: {item.share.toFixed(1)}%
+                       {t('حصة المبيعات', 'Sales share')}: {formatPercent(item.share, lang)}
                     </span>
                     <span className="rounded-full bg-muted/60 px-2.5 py-1 text-xs text-muted-foreground">
                       {t('آخر بيع', 'Last sale')}: {formatDate(item.lastOrderAt, lang)}

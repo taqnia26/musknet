@@ -13,6 +13,7 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListInventoryCycleCountsQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency, formatInteger } from '@/lib/formatters';
 
 export default function AdminInventoryCounts() {
   const { t } = useLanguage();
@@ -121,11 +122,11 @@ export default function AdminInventoryCounts() {
                       {count.lines.map((line) => {
                         const difference = line.countedQuantity - line.expectedQuantity;
                         return <div key={line.id} className={difference === 0 ? 'text-muted-foreground text-xs' : difference < 0 ? 'text-destructive text-xs' : 'text-success text-xs'}>
-                          #{line.productId}: {difference > 0 ? '+' : ''}{difference}
+                          #{line.productId}: {difference > 0 ? '+' : ''}{formatInteger(difference)}
                         </div>;
                       })}
                     </TableCell>
-                    <TableCell>{count.lines.reduce((sum, line) => sum + (line.countedQuantity - line.expectedQuantity) * Number(line.unitCost), 0).toFixed(2)} SAR</TableCell>
+                    <TableCell>{formatCurrency(count.lines.reduce((sum, line) => sum + (line.countedQuantity - line.expectedQuantity) * Number(line.unitCost), 0))} SAR</TableCell>
                     <TableCell>
                       <Badge variant={count.status === 'draft' ? 'secondary' : count.status === 'approved' ? 'default' : 'outline'}>
                         {count.status}

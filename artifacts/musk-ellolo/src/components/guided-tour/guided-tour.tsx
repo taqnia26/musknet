@@ -56,8 +56,6 @@ export function GuidedTour({
 
   useEffect(() => {
     if (restartSignal > 0) start();
-    // restartSignal is the explicit restart trigger; callback identity changes
-    // must not reset a tour that is already in progress.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restartSignal]);
 
@@ -71,23 +69,49 @@ export function GuidedTour({
     if (!active || !step) return;
     let frame = 0;
     const timers: number[] = [];
-    const update = () => {
+    let observer: MutationObserver | null = null;
+    let updateTimeout: number | undefined;
+
+    const attemptUpdate = () => {
       const target = findVisibleTarget(step.target);
       if (!target) {
         setRect(null);
-        return;
+        return false;
       }
       target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
       window.setTimeout(() => setRect(target.getBoundingClientRect()), 80);
+      return true;
     };
+
+    const update = () => attemptUpdate();
+
     setRect(null);
     frame = window.requestAnimationFrame(update);
-    timers.push(window.setTimeout(update, 150), window.setTimeout(update, 350));
+    timers.push(
+      window.setTimeout(update, 150),
+      window.setTimeout(update, 350),
+      window.setTimeout(update, 800),
+      window.setTimeout(update, 1500)
+    );
     window.addEventListener('resize', update);
+
+    observer = new MutationObserver(() => {
+      window.clearTimeout(updateTimeout);
+      updateTimeout = window.setTimeout(() => {
+        const target = findVisibleTarget(step.target);
+        if (target) {
+          setRect(target.getBoundingClientRect());
+        }
+      }, 100);
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+
     return () => {
       window.cancelAnimationFrame(frame);
       timers.forEach((timer) => window.clearTimeout(timer));
       window.removeEventListener('resize', update);
+      window.clearTimeout(updateTimeout);
+      observer?.disconnect();
     };
   }, [active, step]);
 
@@ -117,7 +141,7 @@ export function GuidedTour({
       <div className="absolute inset-0 bg-black/55" aria-hidden="true" />
       {rect && (
         <div
-          className="guided-tour-highlight absolute rounded-xl border-2 border-[#e4ba2a] shadow-[0_0_0_5px_rgba(228,186,42,0.25)]"
+          className="guided-tour-highlight absolute rounded-xl border-2 border-[#e4ba2a] shadow-[0_0_0_5px_rgba(228,186,42,0.25)] transition-all duration-300 ease-out"
           style={{ top: rect.top - 5, left: rect.left - 5, width: rect.width + 10, height: rect.height + 10 }}
         />
       )}
@@ -127,7 +151,7 @@ export function GuidedTour({
         aria-modal="false"
         aria-labelledby="guided-tour-title"
         tabIndex={-1}
-        className="pointer-events-auto absolute bottom-3 left-3 right-3 rounded-2xl border border-[#e2b92f]/50 bg-white p-5 text-[#1c1c1c] shadow-2xl outline-none dark:bg-[#151619] dark:text-[#f4f4f2] sm:bottom-auto sm:right-auto sm:w-[360px]"
+        className="pointer-events-auto absolute bottom-3 left-3 right-3 rounded-2xl border border-[#e2b92f]/50 bg-white p-5 text-[#1c1c1c] shadow-2xl outline-none dark:bg-[#151619] dark:text-[#f4f4f2] sm:bottom-auto sm:right-auto sm:w-[360px] transition-all duration-300 ease-out"
         style={compact ? undefined : { top, left }}
       >
         <button type="button" onClick={() => close()} className="absolute end-3 top-3 rounded-full p-1.5 text-current/60 hover:bg-black/5 dark:hover:bg-white/10" aria-label={lang === 'ar' ? 'إغلاق الجولة' : 'Close tour'}>
@@ -136,7 +160,7 @@ export function GuidedTour({
         <p className="mb-2 text-xs font-semibold text-[#a77d00]">{lang === 'ar' ? `الخطوة ${index + 1} من ${steps.length}` : `Step ${index + 1} of ${steps.length}`}</p>
         <h2 id="guided-tour-title" className="pe-7 text-lg font-bold">{step.title[lang]}</h2>
         <p className="mt-2 text-sm leading-6 text-current/70">{step.description[lang]}</p>
-        {!rect && <p className="mt-2 text-xs text-amber-700">{lang === 'ar' ? 'هذا العنصر غير ظاهر حالياً؛ يمكنك متابعة الجولة.' : 'This item is not currently visible; you can continue the tour.'}</p>}
+        {!rect && <p className="mt-2 text-xs text-amber-700">{lang === 'ar' ? 'جاري تحميل العنصر؛ أو قد يكون غير ظاهر حالياً.' : 'Loading item; or it may not be currently visible.'}</p>}
         <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
           <div className="h-full bg-[#d9ad19] transition-[width]" style={{ width: `${((index + 1) / steps.length) * 100}%` }} />
         </div>

@@ -429,7 +429,14 @@ export default function OwnerPortal() {
         storageKey={OWNER_TOUR_STORAGE_KEY}
         restartSignal={tourRestart}
         onStepChange={(step) => {
-          if (step.sidebar && window.innerWidth < 1024) setMobileMenuOpen(true);
+          if (step.route && step.route !== location) {
+            setLocation(step.route);
+          }
+          if (step.sidebar && window.innerWidth < 1024) {
+            setMobileMenuOpen(true);
+          } else if (!step.sidebar && window.innerWidth < 1024) {
+            setMobileMenuOpen(false);
+          }
           if (step.id === 'owner-navigation') setManagementOpen(true);
         }}
         onActiveChange={(active) => {

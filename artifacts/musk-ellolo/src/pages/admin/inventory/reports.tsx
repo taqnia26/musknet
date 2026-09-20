@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BarChart3, AlertCircle, Clock, CheckSquare, Scale, Search, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency, formatInteger } from '@/lib/formatters';
 
 export default function AdminInventoryReports() {
   const { t } = useLanguage();
@@ -27,7 +28,7 @@ export default function AdminInventoryReports() {
   const reconciliationQuery = useGetInventoryReconciliationReport({ query: { enabled: activeTab === 'reconciliation', queryKey: getGetInventoryReconciliationReportQueryKey() } });
 
   // Format helpers
-  const formatCurrency = (val: number) => `${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAR`;
+  const money = (val: number) => `${formatCurrency(val)} SAR`;
 
   // Safe data extraction
   const valuationData = typeof valuationQuery.data === 'string' ? null : valuationQuery.data;
@@ -99,15 +100,15 @@ export default function AdminInventoryReports() {
                           <TableCell className="font-mono">{row.locationId}</TableCell>
                           <TableCell className="font-medium">{row.location}</TableCell>
                           <TableCell>{row.operationalType}</TableCell>
-                          <TableCell className="text-end font-bold">{row.quantity}</TableCell>
-                          <TableCell className="text-end font-bold text-primary">{formatCurrency(row.value)}</TableCell>
+                          <TableCell className="text-end font-bold">{formatInteger(row.quantity)}</TableCell>
+                          <TableCell className="text-end font-bold text-primary">{money(row.value)}</TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="bg-muted/20 font-bold">
                         <TableCell colSpan={3}>{t('الإجمالي الكلي', 'Grand Total')}</TableCell>
-                        <TableCell className="text-end">{valuationData.reduce((sum, r) => sum + r.quantity, 0)}</TableCell>
+                        <TableCell className="text-end">{formatInteger(valuationData.reduce((sum, r) => sum + r.quantity, 0))}</TableCell>
                         <TableCell className="text-end text-primary">
-                          {formatCurrency(valuationData.reduce((sum, r) => sum + r.value, 0))}
+                           {money(valuationData.reduce((sum, r) => sum + r.value, 0))}
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -246,11 +247,11 @@ export default function AdminInventoryReports() {
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-lg border bg-card p-4">
                       <div className="text-sm font-medium text-muted-foreground mb-1">{t('القيمة التشغيلية (أرصدة)', 'Operational Value')}</div>
-                      <div className="text-2xl font-bold font-mono">{formatCurrency(reconciliationData.operationalValue)}</div>
+                      <div className="text-2xl font-bold font-mono">{money(reconciliationData.operationalValue)}</div>
                     </div>
                     <div className="rounded-lg border bg-card p-4">
                       <div className="text-sm font-medium text-muted-foreground mb-1">{t('القيمة المحاسبية (دفاتر)', 'Accounting Value')}</div>
-                      <div className="text-2xl font-bold font-mono">{formatCurrency(reconciliationData.accountingInventoryValue)}</div>
+                      <div className="text-2xl font-bold font-mono">{money(reconciliationData.accountingInventoryValue)}</div>
                     </div>
                     <div className={`rounded-lg border p-4 ${reconciliationData.difference !== 0 ? 'bg-destructive/10 border-destructive/20' : 'bg-success/10 border-success/20'}`}>
                       <div className="text-sm font-medium mb-1 flex items-center gap-2">
@@ -261,7 +262,7 @@ export default function AdminInventoryReports() {
                         )}
                       </div>
                       <div className={`text-2xl font-bold font-mono ${reconciliationData.difference !== 0 ? 'text-destructive' : 'text-success'}`}>
-                        {formatCurrency(Math.abs(reconciliationData.difference))}
+                         {money(Math.abs(reconciliationData.difference))}
                       </div>
                     </div>
                   </div>
