@@ -153,6 +153,19 @@ export default function AdminInventory() {
     if (!payload.nameAr || !payload.nameEn || !payload.sku || !Number.isSafeInteger(payload.categoryId) || [payload.price, payload.openingQuantity, payload.reorderPoint, payload.targetStockQuantity].some((value) => !Number.isFinite(value) || value < 0)) {
       toast({ title: t('أكمل الحقول المطلوبة', 'Complete required fields'), variant: 'destructive' }); return;
     }
+    const existingProduct = items.find((item) => item.sku?.trim().toLowerCase() === payload.sku.toLowerCase());
+    if (existingProduct) {
+      setCreateOpen(false);
+      setSelected(existingProduct);
+      toast({
+        title: t('المنتج موجود مسبقًا', 'Product already exists'),
+        description: t(
+          'فُتحت تفاصيل المنتج الموجود. استخدم «تسجيل حركة» ثم «تسوية إلى رصيد» لإدخال الكمية الحالية.',
+          'The existing product was opened. Use “Record movement” then “Set balance” to enter the current quantity.',
+        ),
+      });
+      return;
+    }
     createMutation.mutate({ data: payload }, {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() }); setCreateOpen(false); setCreate(emptyCreate); toast({ title: t('تم إنشاء المنتج', 'Product created') }); },
       onError: (error) => toast({ title: t('تعذر إنشاء المنتج', 'Could not create product'), description: error.message, variant: 'destructive' }),

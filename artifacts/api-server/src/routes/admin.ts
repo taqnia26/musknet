@@ -1931,6 +1931,17 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
   const body = parse(Api.AdminCreateInventoryProductBody, req.body, res); if (!body) return;
   const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, body.categoryId)).limit(1);
   if (!category) { res.status(400).json({ error: "Category not found" }); return; }
+  const [existingProduct] = await db.select({ id: productsTable.id })
+    .from(productsTable)
+    .where(eq(productsTable.sku, body.sku.trim()))
+    .limit(1);
+  if (existingProduct) {
+    res.status(409).json({
+      error: "A product with this SKU already exists. Open the existing product and record an inventory adjustment.",
+      productId: existingProduct.id,
+    });
+    return;
+  }
   const item = await db.transaction(async (tx) => {
     const slugBase = body.sku.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `product-${Date.now()}`;
     const [created] = await tx.insert(productsTable).values({
