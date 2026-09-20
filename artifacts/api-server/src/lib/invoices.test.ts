@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
-  accountingAccountsTable, adminUsersTable, categoriesTable, customersTable, db, inventoryMovementsTable,
+  accountingAccountsTable, adminUsersTable, categoriesTable, customersTable, db, inventoryBalancesTable, inventoryMovementsTable,
   invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryAuditTable,
   journalEntryLinesTable, operationEventsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
 } from "@workspace/db";
@@ -99,6 +99,8 @@ afterAll(async () => {
     await db.delete(invoicesTable).where(inArray(invoicesTable.id, invoiceIds));
   }
   await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, [distributorId, inactiveDistributorId]));
+  await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
+  await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
   await db.delete(productsTable).where(eq(productsTable.id, productId));
   await db.delete(invoicesTable).where(inArray(invoicesTable.orderId, orderIds));
   await db.delete(ordersTable).where(inArray(ordersTable.id, orderIds));

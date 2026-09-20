@@ -1613,7 +1613,7 @@ paths:
       operationId: influencerDashboard
       tags: [influencer]
       parameters:
-        - { name: rangeDays, in: query, schema: { type: integer, enum: [7, 30, 90] } }
+        - { name: rangeDays, in: query, schema: { type: number, multipleOf: 1, enum: [7, 30, 90] } }
         - { name: from, in: query, schema: { type: string, format: date-time } }
         - { name: to, in: query, schema: { type: string, format: date-time } }
       responses:
@@ -1696,7 +1696,7 @@ paths:
       operationId: adminCreatePurchaseReceiptPayment
       tags: [Admin Finance]
       parameters:
-        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseReceiptPaymentInput" } } }
@@ -1764,6 +1764,153 @@ paths:
       parameters: [{ $ref: "#/components/parameters/OwnerSessionId" }]
       responses: { "200": { description: Opening balance reconciliation, content: { application/json: { schema: { $ref: "#/components/schemas/OpeningBalanceReconciliation" } } } } }
 
+  /admin/inventory/locations:
+    get:
+      operationId: listInventoryLocations
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      responses: { "200": { description: Inventory locations } }
+    post:
+      operationId: createInventoryLocation
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryLocationInput" } } } }
+      responses: { "201": { description: Location created, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryLocation" } } } } }
+  /admin/inventory/balances:
+    get:
+      operationId: listInventoryBalances
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: locationId, in: query, schema: { type: number, multipleOf: 1 } }]
+      responses: { "200": { description: Per-location balances } }
+  /admin/inventory/barcode/{barcode}:
+    get:
+      operationId: lookupInventoryBarcode
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: barcode, in: path, required: true, schema: { type: string } }]
+      responses: { "200": { description: Product barcode lookup } }
+  /admin/inventory/transfers:
+    get:
+      operationId: listInventoryTransfers
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Transfers, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryTransfer" } } } } } }
+    post:
+      operationId: createInventoryTransfer
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryTransferInput" } } } }
+      responses: { "201": { description: Transfer created, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryTransfer" } } } } }
+  /admin/inventory/transfers/{id}/send:
+    post:
+      operationId: sendInventoryTransfer
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      responses: { "200": { description: Transfer sent, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryTransfer" } } } } }
+  /admin/inventory/transfers/{id}/receive:
+    post:
+      operationId: receiveInventoryTransfer
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      responses: { "200": { description: Transfer received, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryTransfer" } } } } }
+  /admin/inventory/purchase-orders:
+    get:
+      operationId: listInventoryPurchaseOrders
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Purchase orders, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryPurchaseOrder" } } } } } }
+    post:
+      operationId: createInventoryPurchaseOrder
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryPurchaseOrderInput" } } } }
+      responses: { "201": { description: Purchase order created, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryPurchaseOrder" } } } } }
+  /admin/inventory/purchase-orders/{id}/receive:
+    post:
+      operationId: receiveInventoryPurchaseOrder
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryReceiptInput" } } } }
+      responses: { "200": { description: Receipt posted atomically, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryPurchaseOrder" } } } } }
+  /admin/inventory/cycle-counts:
+    get:
+      operationId: listInventoryCycleCounts
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Cycle counts, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryCycleCount" } } } } } }
+    post:
+      operationId: createInventoryCycleCount
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCountInput" } } } }
+      responses: { "201": { description: Cycle count draft, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCount" } } } } }
+  /admin/inventory/cycle-counts/{id}/review:
+    post:
+      operationId: reviewInventoryCycleCount
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      responses: { "200": { description: Count reviewed, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCount" } } } } }
+  /admin/inventory/cycle-counts/{id}/approve:
+    post:
+      operationId: approveInventoryCycleCount
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      responses: { "200": { description: Count approved once, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCount" } } } } }
+  /admin/inventory/reports/value:
+    get:
+      operationId: getInventoryValueReport
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: format, in: query, schema: { type: string, enum: [json, csv] } }]
+      responses: { "200": { description: Inventory value report or CSV, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryBalance" } } }, text/csv: { schema: { type: string } } } } }
+  /admin/inventory/reports/movements:
+    get:
+      operationId: getInventoryMovementReport
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - { name: productId, in: query, schema: { type: number, multipleOf: 1 } }
+        - { name: sourceType, in: query, schema: { type: string } }
+        - { name: format, in: query, schema: { type: string, enum: [json, csv] } }
+      responses: { "200": { description: Inventory movements, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminInventoryMovement" } } }, text/csv: { schema: { type: string } } } } }
+  /admin/inventory/reports/aging:
+    get:
+      operationId: getInventoryAgingReport
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Inventory aging, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryBalance" } } } } } }
+  /admin/inventory/reports/valuation:
+    get:
+      operationId: getInventoryValuationReport
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: format, in: query, schema: { type: string, enum: [json, csv] } }]
+      responses: { "200": { description: Grouped inventory valuation, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryValuationRow" } } }, text/csv: { schema: { type: string } } } } }
+  /admin/inventory/reports/audit:
+    get:
+      operationId: getInventoryAuditReport
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: format, in: query, schema: { type: string, enum: [json, csv] } }]
+      responses: { "200": { description: Movement audit report, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryAuditRow" } } }, text/csv: { schema: { type: string } } } } }
+  /admin/inventory/reports/reconciliation:
+    get:
+      operationId: getInventoryReconciliationReport
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Inventory to accounting reconciliation, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryReconciliation" } } } } }
+  /admin/inventory/alerts:
+    get:
+      operationId: listInventoryAlerts
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Reorder suggestions and low stock alerts, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryAlert" } } } } } }
 components:
   securitySchemes:
     bearerAuth:
@@ -1868,6 +2015,153 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    InventoryLocation:
+      type: object
+      required: [id, name, code, type, isDefault, active]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        name: { type: string }
+        code: { type: string }
+        type: { type: string, enum: [warehouse, store, virtual] }
+        isDefault: { type: boolean }
+        active: { type: boolean }
+    InventoryLocationInput:
+      type: object
+      required: [name, code]
+      properties:
+        name: { type: string }
+        code: { type: string }
+        type: { type: string, enum: [warehouse, store, virtual] }
+        isDefault: { type: boolean }
+    InventoryBalance:
+      type: object
+      required: [id, productId, locationId, available, reserved, incoming, averageCost]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        productId: { type: number, multipleOf: 1 }
+        locationId: { type: number, multipleOf: 1 }
+        available: { type: number, multipleOf: 1, minimum: 0 }
+        reserved: { type: number, multipleOf: 1, minimum: 0 }
+        incoming: { type: number, multipleOf: 1, minimum: 0 }
+        averageCost: { type: string }
+    InventoryTransferInput:
+      type: object
+      required: [transferNumber, idempotencyKey, fromLocationId, toLocationId, lines]
+      properties:
+        transferNumber: { type: string }
+        idempotencyKey: { type: string }
+        fromLocationId: { type: number, multipleOf: 1 }
+        toLocationId: { type: number, multipleOf: 1 }
+        lines: { type: array, minItems: 1, items: { type: object, required: [productId, quantity], properties: { productId: { type: number, multipleOf: 1 }, quantity: { type: number, multipleOf: 1, minimum: 1 } } } }
+    InventoryTransfer:
+      type: object
+      required: [id, transferNumber, fromLocationId, toLocationId, status]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        transferNumber: { type: string }
+        fromLocationId: { type: number, multipleOf: 1 }
+        toLocationId: { type: number, multipleOf: 1 }
+        status: { type: string, enum: [draft, sent, received, cancelled] }
+    InventoryPurchaseOrderInput:
+      type: object
+      required: [orderNumber, vendorName, locationId, idempotencyKey, lines]
+      properties:
+        orderNumber: { type: string }
+        vendorName: { type: string }
+        locationId: { type: number, multipleOf: 1 }
+        idempotencyKey: { type: string }
+        lines: { type: array, minItems: 1, items: { type: object, required: [productId, quantity, unitCost], properties: { productId: { type: number, multipleOf: 1 }, quantity: { type: number, multipleOf: 1, minimum: 1 }, unitCost: { type: [string, number], minimum: 0 } } } }
+    InventoryReceiptInput:
+      type: object
+      required: [idempotencyKey, receipts]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        receipts: { type: array, minItems: 1, items: { type: object, required: [productId, quantity], properties: { productId: { type: number, multipleOf: 1 }, quantity: { type: number, multipleOf: 1, minimum: 1 } } } }
+    InventoryPurchaseOrder:
+      type: object
+      required: [id, orderNumber, vendorName, locationId, status, lines]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        orderNumber: { type: string }
+        vendorName: { type: string }
+        locationId: { type: number, multipleOf: 1 }
+        status: { type: string, enum: [draft, ordered, partially_received, received, cancelled] }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [productId, quantity, receivedQuantity, unitCost]
+            properties:
+              productId: { type: number, multipleOf: 1 }
+              quantity: { type: number, multipleOf: 1 }
+              receivedQuantity: { type: number, multipleOf: 1 }
+              unitCost: { type: [string, number], minimum: 0 }
+    InventoryCycleCountInput:
+      type: object
+      required: [locationId, lines]
+      properties:
+        locationId: { type: number, multipleOf: 1 }
+        lines: { type: array, minItems: 1, items: { type: object, required: [productId, countedQuantity], properties: { productId: { type: number, multipleOf: 1 }, countedQuantity: { type: number, multipleOf: 1, minimum: 0 } } } }
+    InventoryCycleCount:
+      type: object
+      required: [id, locationId, status, lines]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        locationId: { type: number, multipleOf: 1 }
+        status: { type: string, enum: [draft, review, approved, cancelled] }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [id, productId, expectedQuantity, countedQuantity, unitCost]
+            properties:
+              id: { type: number, multipleOf: 1 }
+              productId: { type: number, multipleOf: 1 }
+              expectedQuantity: { type: number, multipleOf: 1 }
+              countedQuantity: { type: number, multipleOf: 1 }
+              unitCost: { type: [string, number], minimum: 0 }
+              note: { type: [string, "null"] }
+    InventoryAlert:
+      type: object
+      required: [productId, available, incoming, reorderPoint, reorderQuantity, status]
+      properties:
+        productId: { type: number, multipleOf: 1 }
+        sku: { type: [string, "null"] }
+        available: { type: number, multipleOf: 1 }
+        incoming: { type: number, multipleOf: 1 }
+        reorderPoint: { type: number, multipleOf: 1 }
+        reorderQuantity: { type: number, multipleOf: 1 }
+        status: { type: string, enum: [out, low, ok] }
+    InventoryValuationRow:
+      type: object
+      required: [locationId, location, operationalType, quantity, value]
+      properties:
+        locationId: { type: number, multipleOf: 1 }
+        location: { type: string }
+        operationalType: { type: string }
+        quantity: { type: number }
+        value: { type: number }
+    InventoryAuditRow:
+      type: object
+      required: [id, productId, quantityChange, createdAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        productId: { type: number, multipleOf: 1 }
+        sourceType: { type: [string, "null"] }
+        sourceId: { type: [string, "null"] }
+        quantityChange: { type: number }
+        performedBy: { type: [number, "null"] }
+        performerName: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+    InventoryReconciliation:
+      type: object
+      required: [operationalValue, accountingInventoryValue, difference, unlinkedMovements, unlinkedInventoryJournals]
+      properties:
+        operationalValue: { type: number }
+        accountingInventoryValue: { type: number }
+        difference: { type: number }
+        unlinkedMovements: { type: array, items: { type: object, properties: { sourceType: { type: [string, "null"] }, sourceId: { type: [string, "null"] } } } }
+        unlinkedInventoryJournals: { type: array, items: { type: object, properties: { sourceType: { type: [string, "null"] }, sourceId: { type: [string, "null"] } } } }
     HealthStatus:
       type: object
       required: [status]
@@ -3164,12 +3458,17 @@ components:
         isActive: { type: boolean }
     AdminInventoryItem:
       type: object
-      required: [id, nameAr, nameEn, sku, price, averageCost, categoryId, categoryNameAr, categoryNameEn, stockQuantity, reorderPoint, targetStockQuantity, stockStatus, inventoryValue, isActive]
+      required: [id, nameAr, nameEn, sku, barcode, operationalType, unitOfMeasure, preferredSupplier, sellable, price, averageCost, categoryId, categoryNameAr, categoryNameEn, stockQuantity, reorderPoint, targetStockQuantity, stockStatus, inventoryValue, isActive]
       properties:
         id: { type: number }
         nameAr: { type: string }
         nameEn: { type: string }
         sku: { type: [string, "null"] }
+        barcode: { type: [string, "null"] }
+        operationalType: { type: string, enum: [finished_good, raw_material, packaging] }
+        unitOfMeasure: { type: string }
+        preferredSupplier: { type: [string, "null"] }
+        sellable: { type: boolean }
         price: { type: number }
         averageCost: { type: number }
         categoryId: { type: number }
@@ -3202,6 +3501,11 @@ components:
         nameAr: { type: string, minLength: 1 }
         nameEn: { type: string, minLength: 1 }
         sku: { type: string, minLength: 1 }
+        barcode: { type: [string, "null"] }
+        operationalType: { type: string, enum: [finished_good, raw_material, packaging], default: finished_good }
+        unitOfMeasure: { type: string, default: unit }
+        preferredSupplier: { type: [string, "null"] }
+        sellable: { type: boolean, default: true }
         categoryId: { type: number, minimum: 1, multipleOf: 1 }
         price: { type: number, minimum: 0 }
         openingQuantity: { type: number, minimum: 0, multipleOf: 1 }

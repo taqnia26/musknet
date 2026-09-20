@@ -10,6 +10,7 @@ import {
   categoriesTable,
   customersTable,
   db,
+  inventoryBalancesTable,
   inventoryMovementsTable,
   invoicesTable,
   orderAddressesTable,
@@ -134,10 +135,12 @@ afterAll(async () => {
   }
   if (createdAdminOrderId) await db.delete(ordersTable).where(eq(ordersTable.id, createdAdminOrderId));
   if (inventoryCreatedProductId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, inventoryCreatedProductId));
+  if (inventoryCreatedProductId) await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, inventoryCreatedProductId));
   if (inventoryCreatedProductId) await db.delete(productsTable).where(eq(productsTable.id, inventoryCreatedProductId));
   if (orderId) await db.delete(invoicesTable).where(eq(invoicesTable.orderId, orderId));
   if (orderId) await db.delete(ordersTable).where(eq(ordersTable.id, orderId));
   if (productId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
+  if (productId) await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
   if (productId) await db.delete(productsTable).where(eq(productsTable.id, productId));
   if (categoryId) await db.delete(categoriesTable).where(eq(categoriesTable.id, categoryId));
   if (customerId) await db.delete(customersTable).where(eq(customersTable.id, customerId));
@@ -245,6 +248,9 @@ describe.sequential("admin route authorization", () => {
     const [product] = await db.select({ stockQuantity: productsTable.stockQuantity })
       .from(productsTable).where(eq(productsTable.id, productId)).limit(1);
     expect(product.stockQuantity).toBe(3);
+    const locationBalances = await db.select().from(inventoryBalancesTable)
+      .where(eq(inventoryBalancesTable.productId, productId));
+    expect(locationBalances.reduce((sum, balance) => sum + balance.available, 0)).toBe(3);
     const [movement] = await db.select().from(inventoryMovementsTable)
       .where(and(
         eq(inventoryMovementsTable.productId, productId),
@@ -259,6 +265,8 @@ describe.sequential("admin route authorization", () => {
     });
     // Keep this test isolated from the inventory-adjustment cases below.
     await db.update(productsTable).set({ stockQuantity: 5 }).where(eq(productsTable.id, productId));
+    await db.update(inventoryBalancesTable).set({ available: 5 })
+      .where(eq(inventoryBalancesTable.productId, productId));
   });
 
   it("creates a carrier label and persists tracking without changing collected shipping", async () => {

@@ -3,6 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
   customersTable,
   db,
+  inventoryBalancesTable,
   inventoryMovementsTable,
   invoicesTable,
   journalEntriesTable,
@@ -28,6 +29,7 @@ import {
 const phones: string[] = [];
 const movementReasons: string[] = [];
 const productSnapshots = new Map<number, { stockQuantity: number; price: number }>();
+const balanceSnapshots = new Map<number, Array<typeof inventoryBalancesTable.$inferSelect>>();
 
 beforeAll(async () => {
   process.env.ADMIN_EMAIL = `storefront-accounting-${Date.now()}@example.com`;
@@ -62,10 +64,14 @@ afterEach(async () => {
   }
   for (const [productId, snapshot] of productSnapshots) {
     await db.update(productsTable).set(snapshot).where(eq(productsTable.id, productId));
+    await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
+    const balances = balanceSnapshots.get(productId) ?? [];
+    if (balances.length) await db.insert(inventoryBalancesTable).values(balances);
   }
   phones.length = 0;
   movementReasons.length = 0;
   productSnapshots.clear();
+  balanceSnapshots.clear();
 });
 
 describe.sequential("persistent storefront carts and orders", () => {
@@ -93,6 +99,7 @@ describe.sequential("persistent storefront carts and orders", () => {
     })
       .from(productsTable).where(eq(productsTable.id, 2)).limit(1);
     productSnapshots.set(2, orderedProduct);
+    balanceSnapshots.set(2, await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, 2)));
     await addToCart(owner.id, 2, 1);
     await addToCart(other.id, 3, 1);
 
@@ -139,6 +146,7 @@ describe.sequential("persistent storefront carts and orders", () => {
     })
       .from(productsTable).where(eq(productsTable.id, 4)).limit(1);
     productSnapshots.set(4, orderedProduct);
+    balanceSnapshots.set(4, await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, 4)));
     await db.update(productsTable).set({ price: 4.99 }).where(eq(productsTable.id, 4));
     await addToCart(owner.id, 4, 7);
 

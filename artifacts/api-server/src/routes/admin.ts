@@ -48,6 +48,10 @@ import {
   shipmentEventsTable,
   shipmentsTable,
   receivablePaymentsTable,
+  inventoryBalancesTable,
+  inventoryCycleCountsTable, inventoryCycleCountLinesTable,
+  inventoryLocationsTable,
+  inventoryTransfersTable, inventoryPurchaseOrdersTable, inventoryPurchaseOrderLinesTable,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -74,7 +78,7 @@ import {
 } from "../lib/accounting";
 import { ObjectStorageService } from "../lib/object-storage";
 import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
-import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch } from "../lib/operations";
+import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch, ensureDefaultInventoryLocation, listInventoryLocations, lookupInventoryBarcode, listInventoryBalances, transferInventory, sendInventoryTransfer, receiveInventoryTransfer, inventoryValueReport, inventoryCsv, createInventoryPurchaseOrder, receiveInventoryPurchaseOrder, createCycleCount, approveCycleCount, inventoryReorderSuggestions, inventoryMovementReport, inventoryAgingReport, inventoryValuationReport, inventoryAuditReport, inventoryReconciliationReport, adjustOperationalBalances } from "../lib/operations";
 import { createSmsaShippingLabel } from "../lib/shipping-carriers";
 
 const router: IRouter = Router();
@@ -900,6 +904,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
 
       for (const { product, quantity } of selectedProducts) {
         const quantityAfter = product.stockQuantity - quantity;
+        await adjustOperationalBalances(tx, product.id, -quantity, product.averageCost, product.stockQuantity);
         const [updated] = await tx.update(productsTable)
           .set({ stockQuantity: quantityAfter })
           .where(and(eq(productsTable.id, product.id), eq(productsTable.stockQuantity, product.stockQuantity)))
@@ -1793,7 +1798,7 @@ router.get("/admin/inventory", permit("inventory", "view"), route(async (req, re
   const query = parse(Api.AdminListInventoryQueryParams, req.query, res); if (!query) return;
   let rows = (await db.select({
     id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
-    sku: productsTable.sku, price: productsTable.price, averageCost: productsTable.averageCost,
+    sku: productsTable.sku, barcode: productsTable.barcode, operationalType: productsTable.operationalType, unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier, sellable: productsTable.sellable, price: productsTable.price, averageCost: productsTable.averageCost,
     categoryId: productsTable.categoryId, categoryNameAr: categoriesTable.nameAr, categoryNameEn: categoriesTable.nameEn,
     stockQuantity: productsTable.stockQuantity, reorderPoint: productsTable.reorderPoint,
     targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
@@ -1822,6 +1827,106 @@ router.get("/admin/inventory", permit("inventory", "view"), route(async (req, re
   });
   res.json(Api.AdminListInventoryResponse.parse({ items, summary }));
 }));
+
+// Operational inventory endpoints intentionally use the existing inventory permission gate.
+router.get("/admin/inventory/locations", permit("inventory", "view"), route(async (_req, res) => {
+  res.json(await listInventoryLocations());
+}));
+router.post("/admin/inventory/locations", permit("inventory", "edit"), route(async (req, res) => {
+  const [location] = await db.insert(inventoryLocationsTable).values({ name: req.body.name, code: req.body.code, type: req.body.type ?? "warehouse", isDefault: Boolean(req.body.isDefault) }).returning();
+  res.status(201).json(location);
+}));
+router.get("/admin/inventory/balances", permit("inventory", "view"), route(async (req, res) => {
+  const locationId = req.query.locationId ? Number(req.query.locationId) : undefined;
+  res.json(await listInventoryBalances(Number.isFinite(locationId) ? locationId : undefined));
+}));
+router.get("/admin/inventory/barcode/:barcode", permit("inventory", "view"), route(async (req, res) => {
+  const product = await lookupInventoryBarcode(String(req.params.barcode));
+  if (!product) { res.status(404).json({ error: "Product barcode not found" }); return; }
+  res.json(product);
+}));
+router.post("/admin/inventory/transfers", permit("inventory", "edit"), route(async (req, res) => {
+  try { res.status(201).json(await transferInventory({ ...req.body, createdBy: res.locals.admin.id })); }
+  catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Transfer failed" }); }
+}));
+router.get("/admin/inventory/transfers", permit("inventory", "view"), route(async (_req, res) => { res.json(await db.select().from(inventoryTransfersTable)); }));
+router.get("/admin/inventory/transfers/:id", permit("inventory", "view"), route(async (req, res) => { const [row] = await db.select().from(inventoryTransfersTable).where(eq(inventoryTransfersTable.id, Number(req.params.id))); if (!row) { res.status(404).json({ error: "Transfer not found" }); return; } res.json(row); }));
+router.post("/admin/inventory/transfers/:id/send", permit("inventory", "edit"), route(async (req, res) => {
+  res.json(await sendInventoryTransfer(Number(req.params.id), res.locals.admin.id));
+}));
+router.post("/admin/inventory/transfers/:id/receive", permit("inventory", "edit"), route(async (req, res) => {
+  res.json(await receiveInventoryTransfer(Number(req.params.id), res.locals.admin.id));
+}));
+router.get("/admin/inventory/reports/value", permit("inventory", "view"), route(async (req, res) => {
+  const rows = await inventoryValueReport();
+  if (String(req.query.format).toLowerCase() === "csv") { res.type("text/csv").send(inventoryCsv(rows as Array<Record<string, unknown>>)); return; }
+  res.json(rows);
+}));
+router.get("/admin/inventory/alerts", permit("inventory", "view"), route(async (_req, res) => {
+  res.json(await inventoryReorderSuggestions());
+}));
+router.get("/admin/inventory/reports/movements", permit("inventory", "view"), route(async (req, res) => {
+  const rows = await inventoryMovementReport(req.query.productId ? Number(req.query.productId) : undefined, typeof req.query.sourceType === "string" ? req.query.sourceType : undefined);
+  if (req.query.format === "csv") { res.type("text/csv").send(inventoryCsv(rows as Array<Record<string, unknown>>)); return; } res.json(rows);
+}));
+router.get("/admin/inventory/reports/aging", permit("inventory", "view"), route(async (_req, res) => { res.json(await inventoryAgingReport()); }));
+router.get("/admin/inventory/reports/valuation", permit("inventory", "view"), route(async (req, res) => { const rows = await inventoryValuationReport(); if (req.query.format === "csv") { res.type("text/csv").send(inventoryCsv(rows as Array<Record<string, unknown>>)); return; } res.json(rows); }));
+router.get("/admin/inventory/reports/audit", permit("inventory", "view"), route(async (req, res) => { const rows = await inventoryAuditReport(); if (req.query.format === "csv") { res.type("text/csv").send(inventoryCsv(rows as Array<Record<string, unknown>>)); return; } res.json(rows); }));
+router.get("/admin/inventory/reports/reconciliation", permit("inventory", "view"), route(async (_req, res) => { res.json(await inventoryReconciliationReport()); }));
+router.post("/admin/inventory/purchase-orders", permit("inventory", "edit"), route(async (req, res) => {
+  try { res.status(201).json(await createInventoryPurchaseOrder({ ...req.body, createdBy: res.locals.admin.id })); }
+  catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Purchase order failed" }); }
+}));
+router.get("/admin/inventory/purchase-orders", permit("inventory", "view"), route(async (_req, res) => {
+  const orders = await db.select().from(inventoryPurchaseOrdersTable).orderBy(desc(inventoryPurchaseOrdersTable.createdAt));
+  const lines = await db.select().from(inventoryPurchaseOrderLinesTable);
+  res.json(orders.map((order) => ({
+    ...order,
+    lines: lines.filter((line) => line.purchaseOrderId === order.id).map((line) => ({
+      productId: line.productId,
+      quantity: line.orderedQuantity,
+      receivedQuantity: line.receivedQuantity,
+      unitCost: line.unitCost,
+    })),
+  })));
+}));
+router.get("/admin/inventory/purchase-orders/:id", permit("inventory", "view"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  const [row] = await db.select().from(inventoryPurchaseOrdersTable).where(eq(inventoryPurchaseOrdersTable.id, id));
+  if (!row) { res.status(404).json({ error: "Purchase order not found" }); return; }
+  const lines = await db.select().from(inventoryPurchaseOrderLinesTable).where(eq(inventoryPurchaseOrderLinesTable.purchaseOrderId, id));
+  res.json({ ...row, lines: lines.map((line) => ({ productId: line.productId, quantity: line.orderedQuantity, receivedQuantity: line.receivedQuantity, unitCost: line.unitCost })) });
+}));
+router.post("/admin/inventory/purchase-orders/:id/receive", permit("inventory", "edit"), route(async (req, res) => {
+  try { res.json(await receiveInventoryPurchaseOrder(Number(req.params.id), res.locals.admin.id, req.body.receipts ?? [], req.body.idempotencyKey)); }
+  catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Receipt failed" }); }
+}));
+router.post("/admin/inventory/cycle-counts", permit("inventory", "edit"), route(async (req, res) => {
+  try { res.status(201).json(await createCycleCount({ ...req.body, createdBy: res.locals.admin.id })); }
+  catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Cycle count failed" }); }
+}));
+router.get("/admin/inventory/cycle-counts", permit("inventory", "view"), route(async (_req, res) => {
+  const counts = await db.select().from(inventoryCycleCountsTable).orderBy(desc(inventoryCycleCountsTable.createdAt));
+  const lines = await db.select().from(inventoryCycleCountLinesTable);
+  res.json(counts.map((count) => ({ ...count, lines: lines.filter((line) => line.cycleCountId === count.id) })));
+}));
+router.get("/admin/inventory/cycle-counts/:id", permit("inventory", "view"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  const [row] = await db.select().from(inventoryCycleCountsTable).where(eq(inventoryCycleCountsTable.id, id));
+  if (!row) { res.status(404).json({ error: "Cycle count not found" }); return; }
+  const lines = await db.select().from(inventoryCycleCountLinesTable).where(eq(inventoryCycleCountLinesTable.cycleCountId, id));
+  res.json({ ...row, lines });
+}));
+router.post("/admin/inventory/cycle-counts/:id/review", permit("inventory", "edit"), route(async (_req, res) => {
+  const [row] = await db.update(inventoryCycleCountsTable).set({ status: "review" }).where(and(eq(inventoryCycleCountsTable.id, Number(_req.params.id)), eq(inventoryCycleCountsTable.status, "draft"))).returning();
+  if (!row) { res.status(404).json({ error: "Draft cycle count not found" }); return; }
+  const lines = await db.select().from(inventoryCycleCountLinesTable).where(eq(inventoryCycleCountLinesTable.cycleCountId, row.id));
+  res.json({ ...row, lines });
+}));
+router.post("/admin/inventory/cycle-counts/:id/approve", permit("inventory", "edit"), route(async (req, res) => {
+  try { res.json(await approveCycleCount(Number(req.params.id), res.locals.admin.id)); }
+  catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Cycle count approval failed" }); }
+}));
 router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateInventoryProductBody, req.body, res); if (!body) return;
   const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, body.categoryId)).limit(1);
@@ -1830,10 +1935,21 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
     const slugBase = body.sku.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `product-${Date.now()}`;
     const [created] = await tx.insert(productsTable).values({
       nameAr: body.nameAr.trim(), nameEn: body.nameEn.trim(), sku: body.sku.trim(),
+      barcode: body.barcode ?? null, operationalType: body.operationalType ?? "finished_good", unitOfMeasure: body.unitOfMeasure ?? "unit", preferredSupplier: body.preferredSupplier ?? null, sellable: body.sellable ?? true,
       slug: `${slugBase}-${randomBytes(3).toString("hex")}`, categoryId: body.categoryId, price: body.price,
       stockQuantity: body.openingQuantity, reorderPoint: body.reorderPoint, targetStockQuantity: body.targetStockQuantity,
     }).returning();
     if (created.stockQuantity > 0) {
+      let [defaultLocation] = await tx.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.isDefault, true)).limit(1);
+      if (!defaultLocation) {
+        [defaultLocation] = await tx.insert(inventoryLocationsTable).values({ name: "Default warehouse", code: "DEFAULT", type: "warehouse", isDefault: true }).returning();
+      }
+      await tx.insert(inventoryBalancesTable).values({
+        productId: created.id,
+        locationId: defaultLocation.id,
+        available: created.stockQuantity,
+        averageCost: created.averageCost,
+      });
       await tx.insert(inventoryMovementsTable).values({
         productId: created.id, movementType: "increase", quantityChange: created.stockQuantity,
         quantityBefore: 0, quantityAfter: created.stockQuantity, reason: "Initial stock",
@@ -1843,6 +1959,7 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
     }
     return {
       id: created.id, nameAr: created.nameAr, nameEn: created.nameEn, sku: created.sku,
+      barcode: created.barcode, operationalType: created.operationalType, unitOfMeasure: created.unitOfMeasure, preferredSupplier: created.preferredSupplier, sellable: created.sellable,
       price: created.price, averageCost: Number(created.averageCost), categoryId: created.categoryId,
       categoryNameAr: category.nameAr, categoryNameEn: category.nameEn, stockQuantity: created.stockQuantity,
       reorderPoint: created.reorderPoint, targetStockQuantity: created.targetStockQuantity,
@@ -1880,6 +1997,9 @@ async function adjustInventory(productId: number, input: {
     if (existing) {
       const [item] = await tx.select({
         id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn, sku: productsTable.sku,
+        barcode: productsTable.barcode, operationalType: productsTable.operationalType,
+        unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier,
+        sellable: productsTable.sellable,
         price: productsTable.price, averageCost: productsTable.averageCost, categoryId: productsTable.categoryId,
         categoryNameAr: categoriesTable.nameAr, categoryNameEn: categoriesTable.nameEn, stockQuantity: productsTable.stockQuantity,
         reorderPoint: productsTable.reorderPoint, targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
@@ -1897,10 +2017,25 @@ async function adjustInventory(productId: number, input: {
       : input.operation === "decrease" ? quantityBefore - input.quantity : input.quantity;
     if (stockQuantity < 0) throw new Error("Inventory operation cannot produce negative stock");
     const quantityChange = stockQuantity - quantityBefore;
+    let [defaultLocation] = await tx.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.isDefault, true)).limit(1);
+    if (!defaultLocation) {
+      [defaultLocation] = await tx.insert(inventoryLocationsTable).values({ name: "Default warehouse", code: "DEFAULT", type: "warehouse", isDefault: true }).returning();
+    }
+    const [defaultBalance] = await tx.select().from(inventoryBalancesTable)
+      .where(and(eq(inventoryBalancesTable.productId, productId), eq(inventoryBalancesTable.locationId, defaultLocation.id))).for("update");
+    const locationQuantity = (defaultBalance?.available ?? 0) + quantityChange;
+    if (locationQuantity < 0) throw new Error("Default location cannot produce negative stock");
+    if (defaultBalance) {
+      await tx.update(inventoryBalancesTable).set({ available: locationQuantity, updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, defaultBalance.id));
+    } else {
+      await tx.insert(inventoryBalancesTable).values({ productId, locationId: defaultLocation.id, available: locationQuantity, averageCost: product.averageCost });
+    }
     const movementType = input.operation;
     const [updated] = await tx.update(productsTable).set({ stockQuantity }).where(eq(productsTable.id, productId)).returning({
       id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
-      sku: productsTable.sku, price: productsTable.price, averageCost: productsTable.averageCost,
+      sku: productsTable.sku, barcode: productsTable.barcode, operationalType: productsTable.operationalType,
+      unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier,
+      sellable: productsTable.sellable, price: productsTable.price, averageCost: productsTable.averageCost,
       categoryId: productsTable.categoryId, stockQuantity: productsTable.stockQuantity,
       reorderPoint: productsTable.reorderPoint, targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
     });

@@ -5,6 +5,249 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+export type InventoryLocationType = typeof InventoryLocationType[keyof typeof InventoryLocationType];
+
+
+export const InventoryLocationType = {
+  warehouse: 'warehouse',
+  store: 'store',
+  virtual: 'virtual',
+} as const;
+
+export interface InventoryLocation {
+  id: number;
+  name: string;
+  code: string;
+  type: InventoryLocationType;
+  isDefault: boolean;
+  active: boolean;
+}
+
+export type InventoryLocationInputType = typeof InventoryLocationInputType[keyof typeof InventoryLocationInputType];
+
+
+export const InventoryLocationInputType = {
+  warehouse: 'warehouse',
+  store: 'store',
+  virtual: 'virtual',
+} as const;
+
+export interface InventoryLocationInput {
+  name: string;
+  code: string;
+  type?: InventoryLocationInputType;
+  isDefault?: boolean;
+}
+
+export interface InventoryBalance {
+  id: number;
+  productId: number;
+  locationId: number;
+  /** @minimum 0 */
+  available: number;
+  /** @minimum 0 */
+  reserved: number;
+  /** @minimum 0 */
+  incoming: number;
+  averageCost: string;
+}
+
+export type InventoryTransferInputLinesItem = {
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+};
+
+export interface InventoryTransferInput {
+  transferNumber: string;
+  idempotencyKey: string;
+  fromLocationId: number;
+  toLocationId: number;
+  /** @minItems 1 */
+  lines: InventoryTransferInputLinesItem[];
+}
+
+export type InventoryTransferStatus = typeof InventoryTransferStatus[keyof typeof InventoryTransferStatus];
+
+
+export const InventoryTransferStatus = {
+  draft: 'draft',
+  sent: 'sent',
+  received: 'received',
+  cancelled: 'cancelled',
+} as const;
+
+export interface InventoryTransfer {
+  id: number;
+  transferNumber: string;
+  fromLocationId: number;
+  toLocationId: number;
+  status: InventoryTransferStatus;
+}
+
+export type InventoryPurchaseOrderInputLinesItem = {
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+  /** @minimum 0 */
+  unitCost: string | number;
+};
+
+export interface InventoryPurchaseOrderInput {
+  orderNumber: string;
+  vendorName: string;
+  locationId: number;
+  idempotencyKey: string;
+  /** @minItems 1 */
+  lines: InventoryPurchaseOrderInputLinesItem[];
+}
+
+export type InventoryReceiptInputReceiptsItem = {
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+};
+
+export interface InventoryReceiptInput {
+  /** @minLength 1 */
+  idempotencyKey: string;
+  /** @minItems 1 */
+  receipts: InventoryReceiptInputReceiptsItem[];
+}
+
+export type InventoryPurchaseOrderStatus = typeof InventoryPurchaseOrderStatus[keyof typeof InventoryPurchaseOrderStatus];
+
+
+export const InventoryPurchaseOrderStatus = {
+  draft: 'draft',
+  ordered: 'ordered',
+  partially_received: 'partially_received',
+  received: 'received',
+  cancelled: 'cancelled',
+} as const;
+
+export type InventoryPurchaseOrderLinesItem = {
+  productId: number;
+  quantity: number;
+  receivedQuantity: number;
+  /** @minimum 0 */
+  unitCost: string | number;
+};
+
+export interface InventoryPurchaseOrder {
+  id: number;
+  orderNumber: string;
+  vendorName: string;
+  locationId: number;
+  status: InventoryPurchaseOrderStatus;
+  lines: InventoryPurchaseOrderLinesItem[];
+}
+
+export type InventoryCycleCountInputLinesItem = {
+  productId: number;
+  /** @minimum 0 */
+  countedQuantity: number;
+};
+
+export interface InventoryCycleCountInput {
+  locationId: number;
+  /** @minItems 1 */
+  lines: InventoryCycleCountInputLinesItem[];
+}
+
+export type InventoryCycleCountStatus = typeof InventoryCycleCountStatus[keyof typeof InventoryCycleCountStatus];
+
+
+export const InventoryCycleCountStatus = {
+  draft: 'draft',
+  review: 'review',
+  approved: 'approved',
+  cancelled: 'cancelled',
+} as const;
+
+export type InventoryCycleCountLinesItem = {
+  id: number;
+  productId: number;
+  expectedQuantity: number;
+  countedQuantity: number;
+  /** @minimum 0 */
+  unitCost: string | number;
+  /** @nullable */
+  note?: string | null;
+};
+
+export interface InventoryCycleCount {
+  id: number;
+  locationId: number;
+  status: InventoryCycleCountStatus;
+  lines: InventoryCycleCountLinesItem[];
+}
+
+export type InventoryAlertStatus = typeof InventoryAlertStatus[keyof typeof InventoryAlertStatus];
+
+
+export const InventoryAlertStatus = {
+  out: 'out',
+  low: 'low',
+  ok: 'ok',
+} as const;
+
+export interface InventoryAlert {
+  productId: number;
+  /** @nullable */
+  sku?: string | null;
+  available: number;
+  incoming: number;
+  reorderPoint: number;
+  reorderQuantity: number;
+  status: InventoryAlertStatus;
+}
+
+export interface InventoryValuationRow {
+  locationId: number;
+  location: string;
+  operationalType: string;
+  quantity: number;
+  value: number;
+}
+
+export interface InventoryAuditRow {
+  id: number;
+  productId: number;
+  /** @nullable */
+  sourceType?: string | null;
+  /** @nullable */
+  sourceId?: string | null;
+  quantityChange: number;
+  /** @nullable */
+  performedBy?: number | null;
+  /** @nullable */
+  performerName?: string | null;
+  createdAt: string;
+}
+
+export type InventoryReconciliationUnlinkedMovementsItem = {
+  /** @nullable */
+  sourceType?: string | null;
+  /** @nullable */
+  sourceId?: string | null;
+};
+
+export type InventoryReconciliationUnlinkedInventoryJournalsItem = {
+  /** @nullable */
+  sourceType?: string | null;
+  /** @nullable */
+  sourceId?: string | null;
+};
+
+export interface InventoryReconciliation {
+  operationalValue: number;
+  accountingInventoryValue: number;
+  difference: number;
+  unlinkedMovements: InventoryReconciliationUnlinkedMovementsItem[];
+  unlinkedInventoryJournals: InventoryReconciliationUnlinkedInventoryJournalsItem[];
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -1670,6 +1913,15 @@ export interface AdminCustomerUpdate {
   isActive?: boolean;
 }
 
+export type AdminInventoryItemOperationalType = typeof AdminInventoryItemOperationalType[keyof typeof AdminInventoryItemOperationalType];
+
+
+export const AdminInventoryItemOperationalType = {
+  finished_good: 'finished_good',
+  raw_material: 'raw_material',
+  packaging: 'packaging',
+} as const;
+
 export type AdminInventoryItemStockStatus = typeof AdminInventoryItemStockStatus[keyof typeof AdminInventoryItemStockStatus];
 
 
@@ -1685,6 +1937,13 @@ export interface AdminInventoryItem {
   nameEn: string;
   /** @nullable */
   sku: string | null;
+  /** @nullable */
+  barcode: string | null;
+  operationalType: AdminInventoryItemOperationalType;
+  unitOfMeasure: string;
+  /** @nullable */
+  preferredSupplier: string | null;
+  sellable: boolean;
   price: number;
   averageCost: number;
   categoryId: number;
@@ -1710,6 +1969,15 @@ export interface AdminInventoryOverview {
   summary: AdminInventorySummary;
 }
 
+export type AdminInventoryProductInputOperationalType = typeof AdminInventoryProductInputOperationalType[keyof typeof AdminInventoryProductInputOperationalType];
+
+
+export const AdminInventoryProductInputOperationalType = {
+  finished_good: 'finished_good',
+  raw_material: 'raw_material',
+  packaging: 'packaging',
+} as const;
+
 export interface AdminInventoryProductInput {
   /** @minLength 1 */
   nameAr: string;
@@ -1717,6 +1985,13 @@ export interface AdminInventoryProductInput {
   nameEn: string;
   /** @minLength 1 */
   sku: string;
+  /** @nullable */
+  barcode?: string | null;
+  operationalType?: AdminInventoryProductInputOperationalType;
+  unitOfMeasure?: string;
+  /** @nullable */
+  preferredSupplier?: string | null;
+  sellable?: boolean;
   /** @minimum 1 */
   categoryId: number;
   /** @minimum 0 */
@@ -3125,6 +3400,15 @@ to?: string;
 channel?: string;
 format: AdminExportCampaignResultsFormat;
 };
+
+export type AdminExportCampaignResultsFormat = typeof AdminExportCampaignResultsFormat[keyof typeof AdminExportCampaignResultsFormat];
+
+
+export const AdminExportCampaignResultsFormat = {
+  csv: 'csv',
+  xlsx: 'xlsx',
+} as const;
+
 export type AdminListCustomersParams = {
 search?: AdminSearchParameter;
 status?: AdminStatusParameter;
@@ -3231,9 +3515,56 @@ export type CaptureInfluencerReferralParams = {
 ref: string;
 };
 
-export const AdminExportCampaignResultsFormat = {
+export type ListInventoryBalancesParams = {
+locationId?: number;
+};
+
+export type GetInventoryValueReportParams = {
+format?: GetInventoryValueReportFormat;
+};
+
+export type GetInventoryValueReportFormat = typeof GetInventoryValueReportFormat[keyof typeof GetInventoryValueReportFormat];
+
+
+export const GetInventoryValueReportFormat = {
+  json: 'json',
   csv: 'csv',
-  xlsx: 'xlsx',
 } as const;
 
-export type AdminExportCampaignResultsFormat = typeof AdminExportCampaignResultsFormat[keyof typeof AdminExportCampaignResultsFormat];
+export type GetInventoryMovementReportParams = {
+productId?: number;
+sourceType?: string;
+format?: GetInventoryMovementReportFormat;
+};
+
+export type GetInventoryMovementReportFormat = typeof GetInventoryMovementReportFormat[keyof typeof GetInventoryMovementReportFormat];
+
+
+export const GetInventoryMovementReportFormat = {
+  json: 'json',
+  csv: 'csv',
+} as const;
+
+export type GetInventoryValuationReportParams = {
+format?: GetInventoryValuationReportFormat;
+};
+
+export type GetInventoryValuationReportFormat = typeof GetInventoryValuationReportFormat[keyof typeof GetInventoryValuationReportFormat];
+
+
+export const GetInventoryValuationReportFormat = {
+  json: 'json',
+  csv: 'csv',
+} as const;
+
+export type GetInventoryAuditReportParams = {
+format?: GetInventoryAuditReportFormat;
+};
+
+export type GetInventoryAuditReportFormat = typeof GetInventoryAuditReportFormat[keyof typeof GetInventoryAuditReportFormat];
+
+
+export const GetInventoryAuditReportFormat = {
+  json: 'json',
+  csv: 'csv',
+} as const;

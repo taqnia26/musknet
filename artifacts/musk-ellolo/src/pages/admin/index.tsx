@@ -65,6 +65,8 @@ export default function AdminRoutes() {
         <Route path="/admin/coupons" component={AdminCoupons} />
         <Route path="/admin/influencers" component={AdminInfluencers} />
         <Route path="/admin/customers" component={AdminCustomers} />
+        {/* Keep the inventory center mounted for every operational child path. */}
+        <Route path="/admin/inventory/:rest*" component={AdminInventory} />
         <Route path="/admin/inventory" component={AdminInventory} />
         <Route path="/admin/gifting-issues" component={AdminGiftingIssues} />
         <Route path="/admin/distributors" component={AdminDistributors} />

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import {
-  adminUsersTable, categoriesTable, db, inventoryMovementsTable, journalEntriesTable, journalEntryLinesTable, journalEntryAuditTable,
+  adminUsersTable, categoriesTable, db, inventoryBalancesTable, inventoryMovementsTable, journalEntriesTable, journalEntryLinesTable, journalEntryAuditTable,
   manufacturingBatchesTable, operationEventsTable, openingBalanceImportsTable, productsTable,
   purchaseReceiptLinesTable, purchaseReceiptPaymentsTable, purchaseReceiptsTable,
 } from "@workspace/db";
@@ -88,6 +88,7 @@ describe.sequential("linked operations database integration", () => {
     }
     if (createdBatchIds.length) await db.delete(manufacturingBatchesTable).where(inArray(manufacturingBatchesTable.id, createdBatchIds));
     if (createdImportIds.length) await db.delete(openingBalanceImportsTable).where(inArray(openingBalanceImportsTable.id, createdImportIds));
+    await db.delete(inventoryBalancesTable).where(inArray(inventoryBalancesTable.productId, createdProductIds));
     await db.delete(productsTable).where(inArray(productsTable.id, createdProductIds));
     await db.delete(categoriesTable).where(eq(categoriesTable.id, categoryId));
     await db.delete(adminUsersTable).where(eq(adminUsersTable.id, actorId));

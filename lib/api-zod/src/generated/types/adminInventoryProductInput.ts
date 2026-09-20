@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminInventoryProductInputOperationalType } from './adminInventoryProductInputOperationalType';
 
 export interface AdminInventoryProductInput {
   /** @minLength 1 */
@@ -13,6 +14,13 @@ export interface AdminInventoryProductInput {
   nameEn: string;
   /** @minLength 1 */
   sku: string;
+  /** @nullable */
+  barcode?: string | null;
+  operationalType?: AdminInventoryProductInputOperationalType;
+  unitOfMeasure?: string;
+  /** @nullable */
+  preferredSupplier?: string | null;
+  sellable?: boolean;
   /** @minimum 1 */
   categoryId: number;
   /** @minimum 0 */

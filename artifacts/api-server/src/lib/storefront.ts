@@ -22,6 +22,7 @@ import {
 } from "@workspace/db";
 import { ensureAdminSeeded } from "./admin-auth";
 import { postFulfillmentCogs, updateOrderAndIssueInvoice } from "./invoices";
+import { adjustOperationalBalances } from "./operations";
 import { ensureStandardAccountingChart } from "./accounting";
 
 type ProductSeed = {
@@ -411,7 +412,7 @@ export async function listCatalogProducts() {
     .select({ product: productsTable, category: categoriesTable })
     .from(productsTable)
     .innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
-    .where(and(eq(productsTable.isActive, true), eq(categoriesTable.isActive, true)))
+    .where(and(eq(productsTable.isActive, true), eq(productsTable.sellable, true), eq(categoriesTable.isActive, true)))
     .orderBy(productsTable.id);
   return rows.map(({ product, category }) => mapDatabaseProduct(product, category));
 }
@@ -420,7 +421,7 @@ export async function listCatalogCategories() {
   await ensureCatalogSeeded();
   const [categoryRows, productRows] = await Promise.all([
     db.select().from(categoriesTable).where(eq(categoriesTable.isActive, true)).orderBy(categoriesTable.id),
-    db.select().from(productsTable).where(eq(productsTable.isActive, true)).orderBy(productsTable.id),
+    db.select().from(productsTable).where(and(eq(productsTable.isActive, true), eq(productsTable.sellable, true))).orderBy(productsTable.id),
   ]);
   return categoryRows.map((category) => {
     const firstProduct = productRows.find((product) => product.categoryId === category.id);
@@ -553,7 +554,7 @@ export async function verifyDevelopmentOtp(phone: string, code: string, guestTok
           const [product] = await tx
             .select({ stock: productsTable.stockQuantity })
             .from(productsTable)
-            .where(and(eq(productsTable.id, item.productId), eq(productsTable.isActive, true)))
+            .where(and(eq(productsTable.id, item.productId), eq(productsTable.isActive, true), eq(productsTable.sellable, true)))
             .limit(1);
           const stock = product?.stock;
           if (!stock) continue;
@@ -675,7 +676,7 @@ export async function claimGuestCart(userId: number, guestToken: string) {
       const [product] = await tx
         .select({ stock: productsTable.stockQuantity })
         .from(productsTable)
-        .where(and(eq(productsTable.id, item.productId), eq(productsTable.isActive, true)))
+        .where(and(eq(productsTable.id, item.productId), eq(productsTable.isActive, true), eq(productsTable.sellable, true)))
         .limit(1);
       const stock = product?.stock;
       if (!stock) continue;
@@ -919,6 +920,7 @@ export async function createOrderForUser(
     for (const { record, product } of items) {
       const quantityBefore = product.stockQuantity;
       const quantityAfter = quantityBefore - record.quantity;
+      await adjustOperationalBalances(tx, product.id, -record.quantity, product.averageCost, quantityBefore);
       const [updatedProduct] = await tx.update(productsTable)
         .set({ stockQuantity: quantityAfter })
         .where(and(eq(productsTable.id, product.id), eq(productsTable.stockQuantity, quantityBefore)))

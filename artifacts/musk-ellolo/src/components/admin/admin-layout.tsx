@@ -49,7 +49,6 @@ export const navStructure = [
     children: [
       { href: '/admin/products', labelEn: 'Manage Products', labelAr: 'إدارة المنتجات' },
       { href: '/admin/categories', labelEn: 'Categories', labelAr: 'الفئات', module: 'categories' },
-      { href: '/admin/inventory', labelEn: 'Inventory', labelAr: 'المخزون', module: 'inventory' },
       { href: '/admin/gifting-issues', labelEn: 'Gifts & Testers', labelAr: 'الهدايا والتيستر', module: 'inventory' },
     ]
   },
@@ -103,6 +102,19 @@ export const navStructure = [
     labelEn: 'Procurement', labelAr: 'المشتريات', icon: Truck, module: 'inventory',
     children: [
       { href: '/admin/manufacturing', labelEn: 'Manufacturing', labelAr: 'التصنيع', module: 'manufacturing' },
+    ]
+  },
+  {
+    labelEn: 'Inventory', labelAr: 'المخزون', icon: Warehouse, module: 'inventory',
+    children: [
+      { href: '/admin/inventory', labelEn: 'Overview', labelAr: 'نظرة عامة' },
+      { href: '/admin/inventory/balances', labelEn: 'Items & balances', labelAr: 'الأصناف والأرصدة' },
+      { href: '/admin/inventory/locations', labelEn: 'Locations', labelAr: 'المواقع' },
+      { href: '/admin/inventory/purchases', labelEn: 'Receiving', labelAr: 'الاستلام' },
+      { href: '/admin/inventory/transfers', labelEn: 'Transfers', labelAr: 'التحويلات' },
+      { href: '/admin/inventory/counts', labelEn: 'Cycle counts', labelAr: 'الجرد الدوري' },
+      { href: '/admin/inventory/movements', labelEn: 'Movement ledger', labelAr: 'سجل الحركات' },
+      { href: '/admin/inventory/reports', labelEn: 'Reports', labelAr: 'التقارير' },
     ]
   },
   {

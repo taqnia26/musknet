@@ -1,8 +1,13 @@
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql, desc, ilike } from "drizzle-orm";
 import {
   db, inventoryMovementsTable, operationEventsTable, openingBalanceImportsTable,
   openingBalanceLinesTable, productsTable,
   purchaseReceiptsTable, purchaseReceiptLinesTable, purchaseReceiptPaymentsTable, manufacturingBatchesTable, manufacturingInputLinesTable,
+  inventoryLocationsTable, inventoryBalancesTable,
+  inventoryTransfersTable, inventoryTransferLinesTable, inventoryCycleCountsTable, inventoryCycleCountLinesTable,
+  inventoryAlertsTable,
+  inventoryPurchaseOrdersTable, inventoryPurchaseOrderLinesTable,
+  accountingAccountsTable, journalEntriesTable, journalEntryLinesTable, adminUsersTable,
 } from "@workspace/db";
 import { postJournalEntry, ensureStandardAccountingChart } from "./accounting";
 
@@ -22,6 +27,66 @@ export function weightedAverageCost(existingQuantity: number, existingUnitCost: 
   const totalQuantity = existingQuantity + incomingQuantity;
   if (totalQuantity <= 0) return 0;
   return ((existingQuantity * existingUnitCost) + (incomingQuantity * incomingUnitCost)) / totalQuantity;
+}
+
+export async function adjustOperationalBalances(
+  tx: any,
+  productId: number,
+  quantityChange: number,
+  unitCost: string | number,
+  globalQuantityBefore: number,
+) {
+  if (!Number.isInteger(quantityChange) || quantityChange === 0) return;
+  let balances = await tx.select({
+    id: inventoryBalancesTable.id,
+    available: inventoryBalancesTable.available,
+    isDefault: inventoryLocationsTable.isDefault,
+  }).from(inventoryBalancesTable)
+    .innerJoin(inventoryLocationsTable, eq(inventoryLocationsTable.id, inventoryBalancesTable.locationId))
+    .where(eq(inventoryBalancesTable.productId, productId))
+    .orderBy(sql`${inventoryLocationsTable.isDefault} desc`, inventoryBalancesTable.id)
+    .for("update");
+
+  if (!balances.length) {
+    let [location] = await tx.select().from(inventoryLocationsTable)
+      .where(eq(inventoryLocationsTable.isDefault, true)).limit(1);
+    if (!location) {
+      [location] = await tx.insert(inventoryLocationsTable)
+        .values({ name: "Default warehouse", code: "DEFAULT", isDefault: true })
+        .returning();
+    }
+    const [created] = await tx.insert(inventoryBalancesTable).values({
+      productId,
+      locationId: location.id,
+      available: globalQuantityBefore,
+      averageCost: money(unitCost),
+    }).returning();
+    balances = [{ id: created.id, available: created.available, isDefault: true }];
+  }
+
+  if (quantityChange > 0) {
+    const target = balances.find((balance: { isDefault: boolean }) => balance.isDefault) ?? balances[0];
+    await tx.update(inventoryBalancesTable).set({
+      available: target.available + quantityChange,
+      averageCost: money(unitCost),
+      updatedAt: new Date(),
+    }).where(eq(inventoryBalancesTable.id, target.id));
+    return;
+  }
+
+  let remaining = -quantityChange;
+  const available = balances.reduce((sum: number, balance: { available: number }) => sum + balance.available, 0);
+  if (available < remaining) throw new Error(`Insufficient operational balance for product ${productId}`);
+  for (const balance of balances) {
+    if (!remaining) break;
+    const deducted = Math.min(balance.available, remaining);
+    if (!deducted) continue;
+    await tx.update(inventoryBalancesTable).set({
+      available: balance.available - deducted,
+      updatedAt: new Date(),
+    }).where(eq(inventoryBalancesTable.id, balance.id));
+    remaining -= deducted;
+  }
 }
 
 export function manufacturingOutputUnitCost(totalInputCost: number, quantityProduced: number) {
@@ -130,6 +195,11 @@ export async function approveOpeningBalanceImport(importId: number, actorId: num
       const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, line.productId!)).limit(1);
       if (!product) throw new Error(`Mapped product ${line.productId} no longer exists`);
       const before = product.stockQuantity;
+      await adjustOperationalBalances(tx, product.id, line.openingQuantity - before, line.fullBatchUnitCost, before);
+      await tx.update(inventoryBalancesTable).set({
+        averageCost: money(line.fullBatchUnitCost),
+        updatedAt: new Date(),
+      }).where(eq(inventoryBalancesTable.productId, product.id));
       await tx.update(productsTable).set({
         stockQuantity: line.openingQuantity,
         averageCost: line.fullBatchUnitCost,
@@ -225,6 +295,7 @@ export async function postPurchaseReceipt(receiptId: number, actorId: number) {
       const addedValue = Number(line.totalCost);
       const after = before + line.quantity;
       const averageCost = weightedAverageCost(before, Number(product.averageCost), line.quantity, Number(line.unitCost));
+      await adjustOperationalBalances(tx, product.id, line.quantity, averageCost, before);
       await tx.update(productsTable).set({ stockQuantity: after, averageCost: money(averageCost) }).where(eq(productsTable.id, product.id));
       await tx.insert(inventoryMovementsTable).values({
         productId: product.id, movementType: "increase", quantityChange: line.quantity, quantityBefore: before, quantityAfter: after,
@@ -362,6 +433,7 @@ export async function approveManufacturingBatch(batchId: number, actorId: number
       if (!material || material.stockQuantity < line.quantity) throw new Error(`Insufficient material stock for product ${line.materialProductId}`);
       const cost = line.quantity * Number(material.averageCost);
       total += cost;
+      await adjustOperationalBalances(tx, material.id, -line.quantity, material.averageCost, material.stockQuantity);
       await tx.update(productsTable).set({ stockQuantity: material.stockQuantity - line.quantity }).where(eq(productsTable.id, material.id));
       await tx.insert(inventoryMovementsTable).values({
         productId: material.id, movementType: "decrease", quantityChange: -line.quantity,
@@ -375,6 +447,7 @@ export async function approveManufacturingBatch(batchId: number, actorId: number
     const outputUnitCost = manufacturingOutputUnitCost(total, batch.quantityProduced);
     const outputAfter = output.stockQuantity + batch.quantityProduced;
     const outputAverage = outputAfter ? ((output.stockQuantity * Number(output.averageCost)) + total) / outputAfter : 0;
+    await adjustOperationalBalances(tx, output.id, batch.quantityProduced, outputAverage, output.stockQuantity);
     await tx.update(productsTable).set({ stockQuantity: outputAfter, averageCost: money(outputAverage) }).where(eq(productsTable.id, output.id));
     await tx.insert(inventoryMovementsTable).values({
       productId: output.id, movementType: "increase", quantityChange: batch.quantityProduced,
@@ -392,5 +465,282 @@ export async function approveManufacturingBatch(batchId: number, actorId: number
     }
     const [approved] = await tx.update(manufacturingBatchesTable).set({ status: "approved", costPerUnit: outputUnitCost }).where(eq(manufacturingBatchesTable.id, batch.id)).returning();
     return approved;
+  });
+}
+
+/** Returns (and, on first use, creates) the migration-safe default location. */
+export async function ensureDefaultInventoryLocation() {
+  return db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.isDefault, true)).limit(1);
+    if (existing) return existing;
+    const [created] = await tx.insert(inventoryLocationsTable).values({ name: "Default warehouse", code: "DEFAULT", type: "warehouse", isDefault: true }).returning();
+    if (!created) throw new Error("Could not create default inventory location");
+    return created;
+  });
+}
+
+export async function listInventoryLocations() {
+  await ensureDefaultInventoryLocation();
+  return db.select().from(inventoryLocationsTable).orderBy(inventoryLocationsTable.id);
+}
+
+export async function lookupInventoryBarcode(barcode: string) {
+  const value = barcode.trim();
+  if (!value) throw new Error("Barcode is required");
+  const [product] = await db.select().from(productsTable).where(eq(productsTable.barcode, value)).limit(1);
+  return product ?? null;
+}
+
+export async function listInventoryBalances(locationId?: number) {
+  return db.select().from(inventoryBalancesTable).where(locationId ? eq(inventoryBalancesTable.locationId, locationId) : undefined)
+    .orderBy(desc(inventoryBalancesTable.updatedAt));
+}
+
+export async function transferInventory(input: {
+  transferNumber: string; idempotencyKey: string; fromLocationId: number; toLocationId: number; createdBy: number;
+  lines: Array<{ productId: number; quantity: number }>;
+}) {
+  if (input.fromLocationId === input.toLocationId) throw new Error("Transfer locations must differ");
+  if (!input.lines.length || input.lines.some((l) => !Number.isSafeInteger(l.quantity) || l.quantity <= 0)) throw new Error("Transfer quantities must be positive integers");
+  return db.transaction(async (tx) => {
+    const [prior] = await tx.select().from(inventoryTransfersTable).where(eq(inventoryTransfersTable.idempotencyKey, input.idempotencyKey)).limit(1);
+    if (prior) return prior;
+    const [transfer] = await tx.insert(inventoryTransfersTable).values(input).returning();
+    if (!transfer) throw new Error("Transfer could not be created");
+    for (const line of [...input.lines].sort((a, b) => a.productId - b.productId)) {
+      const [balance] = await tx.select().from(inventoryBalancesTable)
+        .where(and(eq(inventoryBalancesTable.productId, line.productId), eq(inventoryBalancesTable.locationId, input.fromLocationId))).for("update");
+      if (!balance || balance.available < line.quantity) throw new Error(`Insufficient inventory for product ${line.productId}`);
+      const [destination] = await tx.select().from(inventoryBalancesTable).where(and(eq(inventoryBalancesTable.productId, line.productId), eq(inventoryBalancesTable.locationId, input.toLocationId))).for("update");
+      if (destination) await tx.update(inventoryBalancesTable).set({ incoming: destination.incoming + line.quantity, updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, destination.id));
+      else await tx.insert(inventoryBalancesTable).values({ productId: line.productId, locationId: input.toLocationId, incoming: line.quantity, averageCost: balance.averageCost });
+      await tx.insert(inventoryTransferLinesTable).values({ transferId: transfer.id, productId: line.productId, quantity: line.quantity, unitCost: balance.averageCost });
+    }
+    return transfer;
+  });
+}
+
+export async function sendInventoryTransfer(transferId: number, actorId: number) {
+  return db.transaction(async (tx) => {
+    const [transfer] = await tx.select().from(inventoryTransfersTable).where(eq(inventoryTransfersTable.id, transferId)).for("update");
+    if (!transfer) throw new Error("Transfer not found");
+    if (transfer.status === "sent" || transfer.status === "received") return transfer;
+    if (transfer.status !== "draft") throw new Error("Only draft transfers can be sent");
+    const lines = await tx.select().from(inventoryTransferLinesTable).where(eq(inventoryTransferLinesTable.transferId, transferId));
+    for (const line of lines) {
+      const [balance] = await tx.select().from(inventoryBalancesTable).where(and(eq(inventoryBalancesTable.productId, line.productId), eq(inventoryBalancesTable.locationId, transfer.fromLocationId))).for("update");
+      if (!balance || balance.available < line.quantity) throw new Error(`Insufficient inventory for product ${line.productId}`);
+      await tx.update(inventoryBalancesTable).set({ available: balance.available - line.quantity, updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, balance.id));
+      await tx.insert(inventoryMovementsTable).values({ productId: line.productId, movementType: "decrease", quantityChange: -line.quantity, quantityBefore: balance.available, quantityAfter: balance.available - line.quantity, unitCost: balance.averageCost, totalCost: money(line.quantity * Number(balance.averageCost)), reason: `Transfer ${transfer.transferNumber} sent`, sourceType: "inventory_transfer", sourceId: String(transfer.id), eventKey: `transfer-send:${transfer.id}:${line.id}`, performedBy: actorId });
+    }
+    const [row] = await tx.update(inventoryTransfersTable).set({ status: "sent", sentAt: new Date() }).where(eq(inventoryTransfersTable.id, transferId)).returning();
+    return row;
+  });
+}
+
+export async function receiveInventoryTransfer(transferId: number, actorId: number) {
+  return db.transaction(async (tx) => {
+    const [transfer] = await tx.select().from(inventoryTransfersTable).where(eq(inventoryTransfersTable.id, transferId)).for("update");
+    if (!transfer) throw new Error("Transfer not found");
+    if (transfer.status === "received") return transfer;
+    if (transfer.status !== "sent") throw new Error("Only sent transfers can be received");
+    const lines = await tx.select().from(inventoryTransferLinesTable).where(eq(inventoryTransferLinesTable.transferId, transferId));
+    for (const line of lines) {
+      const [destination] = await tx.select().from(inventoryBalancesTable).where(and(eq(inventoryBalancesTable.productId, line.productId), eq(inventoryBalancesTable.locationId, transfer.toLocationId))).for("update");
+      if (!destination) throw new Error("Transfer destination balance missing");
+      if (destination.incoming < line.quantity) throw new Error("Incoming quantity is inconsistent");
+      await tx.update(inventoryBalancesTable).set({ incoming: destination.incoming - line.quantity, available: destination.available + line.quantity, updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, destination.id));
+    }
+    const [row] = await tx.update(inventoryTransfersTable).set({ status: "received", receivedAt: new Date() }).where(eq(inventoryTransfersTable.id, transferId)).returning();
+    return row;
+  });
+}
+
+export async function inventoryValueReport() {
+  const rows = await db.select().from(inventoryBalancesTable);
+  return rows.map((row) => ({ ...row, value: (row.available + row.reserved) * Number(row.averageCost) }));
+}
+
+export async function inventoryReorderSuggestions() {
+  const products = await db.select().from(productsTable).where(eq(productsTable.isActive, true));
+  const balances = await db.select().from(inventoryBalancesTable);
+  const suggestions = products.map((product) => {
+    const rows = balances.filter((b) => b.productId === product.id);
+    const available = rows.reduce((n, b) => n + b.available, 0);
+    const incoming = rows.reduce((n, b) => n + b.incoming, 0);
+    const reorderQuantity = Math.max(0, product.targetStockQuantity - available - incoming);
+    return { productId: product.id, sku: product.sku, available, incoming, reorderPoint: product.reorderPoint, reorderQuantity, status: available <= 0 ? "out" : available <= product.reorderPoint ? "low" : "ok" };
+  }).filter((x) => x.reorderQuantity > 0);
+  await db.transaction(async (tx) => {
+    for (const item of suggestions) {
+      await tx.insert(inventoryAlertsTable).values({ productId: item.productId, kind: item.status, reorderQuantity: item.reorderQuantity })
+        .onConflictDoNothing();
+    }
+  });
+  return suggestions;
+}
+
+export async function inventoryMovementReport(productId?: number, sourceType?: string) {
+  return db.select().from(inventoryMovementsTable).where(and(productId ? eq(inventoryMovementsTable.productId, productId) : undefined, sourceType ? eq(inventoryMovementsTable.sourceType, sourceType) : undefined)).orderBy(desc(inventoryMovementsTable.createdAt));
+}
+export async function inventoryAgingReport() {
+  const rows = await db.select().from(inventoryBalancesTable);
+  const movements = await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.movementType, "increase"));
+  return rows.map((b) => ({ ...b, ageDays: Math.max(0, Math.floor((Date.now() - new Date(movements.find((m) => m.productId === b.productId)?.createdAt ?? Date.now()).getTime()) / 86400000)) }));
+}
+
+export async function inventoryValuationReport() {
+  const rows = await db.select({ balance: inventoryBalancesTable, location: inventoryLocationsTable, product: productsTable })
+    .from(inventoryBalancesTable).innerJoin(inventoryLocationsTable, eq(inventoryBalancesTable.locationId, inventoryLocationsTable.id))
+    .innerJoin(productsTable, eq(inventoryBalancesTable.productId, productsTable.id));
+  const grouped = new Map<string, { locationId: number; location: string; operationalType: string; quantity: number; value: number }>();
+  for (const row of rows) {
+    const key = `${row.location.id}:${row.product.operationalType}`;
+    const current = grouped.get(key) ?? { locationId: row.location.id, location: row.location.name, operationalType: row.product.operationalType, quantity: 0, value: 0 };
+    current.quantity += row.balance.available + row.balance.reserved;
+    current.value += (row.balance.available + row.balance.reserved) * Number(row.balance.averageCost);
+    grouped.set(key, current);
+  }
+  return [...grouped.values()];
+}
+
+export async function inventoryAuditReport() {
+  return db.select({ id: inventoryMovementsTable.id, productId: inventoryMovementsTable.productId, sourceType: inventoryMovementsTable.sourceType, sourceId: inventoryMovementsTable.sourceId, quantityChange: inventoryMovementsTable.quantityChange, performedBy: inventoryMovementsTable.performedBy, performerName: adminUsersTable.name, createdAt: inventoryMovementsTable.createdAt })
+    .from(inventoryMovementsTable).leftJoin(adminUsersTable, eq(inventoryMovementsTable.performedBy, adminUsersTable.id)).orderBy(desc(inventoryMovementsTable.createdAt));
+}
+
+export async function inventoryReconciliationReport() {
+  const [account] = await db.select({ value: sql<string>`coalesce(sum(${journalEntryLinesTable.debit} - ${journalEntryLinesTable.credit}), 0)` })
+    .from(journalEntryLinesTable).innerJoin(journalEntriesTable, eq(journalEntryLinesTable.journalEntryId, journalEntriesTable.id))
+    .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+    .where(and(eq(accountingAccountsTable.code, "1140"), eq(journalEntriesTable.status, "posted")));
+  const values = await inventoryValueReport();
+  const operationalValue = values.reduce((n, row) => n + Number(row.value), 0);
+  const movements = await db.select({ sourceType: inventoryMovementsTable.sourceType, sourceId: inventoryMovementsTable.sourceId }).from(inventoryMovementsTable);
+  const journals = await db.select({ sourceType: journalEntriesTable.sourceType, sourceId: journalEntriesTable.sourceId }).from(journalEntriesTable).where(eq(journalEntriesTable.status, "posted"));
+  const journalKeys = new Set(journals.map((j) => `${j.sourceType}:${j.sourceId}`));
+  const movementKeys = new Set(movements.map((m) => `${m.sourceType}:${m.sourceId}`));
+  return { operationalValue, accountingInventoryValue: Number(account?.value ?? 0), difference: operationalValue - Number(account?.value ?? 0), unlinkedMovements: movements.filter((m) => !journalKeys.has(`${m.sourceType}:${m.sourceId}`)), unlinkedInventoryJournals: journals.filter((j) => j.sourceType?.includes("inventory") && !movementKeys.has(`${j.sourceType}:${j.sourceId}`)) };
+}
+
+export function inventoryCsv(rows: Array<Record<string, unknown>>) {
+  if (!rows.length) return "";
+  const columns = Object.keys(rows[0]);
+  const quote = (v: unknown) => `"${String(v ?? "").replaceAll('"', '""')}"`;
+  return [columns.map(quote).join(","), ...rows.map((r) => columns.map((c) => quote(r[c])).join(","))].join("\n");
+}
+
+export async function createInventoryPurchaseOrder(input: { orderNumber: string; vendorName: string; locationId: number; idempotencyKey: string; createdBy: number; lines: Array<{ productId: number; quantity: number; unitCost: string | number }> }) {
+  if (!input.lines.length || input.lines.some((l) => l.quantity <= 0 || Number(l.unitCost) < 0)) throw new Error("Purchase order lines must be positive");
+  return db.transaction(async (tx) => {
+    const [prior] = await tx.select().from(inventoryPurchaseOrdersTable).where(eq(inventoryPurchaseOrdersTable.idempotencyKey, input.idempotencyKey)).limit(1);
+    if (prior) {
+      const priorLines = await tx.select().from(inventoryPurchaseOrderLinesTable).where(eq(inventoryPurchaseOrderLinesTable.purchaseOrderId, prior.id));
+      return {
+        ...prior,
+        lines: priorLines.map((line) => ({ productId: line.productId, quantity: line.orderedQuantity, receivedQuantity: line.receivedQuantity, unitCost: line.unitCost })),
+      };
+    }
+    const [order] = await tx.insert(inventoryPurchaseOrdersTable).values({ orderNumber: input.orderNumber, vendorName: input.vendorName, locationId: input.locationId, idempotencyKey: input.idempotencyKey, createdBy: input.createdBy, status: "ordered" }).returning();
+    if (!order) throw new Error("Purchase order could not be created");
+    const createdLines = await tx.insert(inventoryPurchaseOrderLinesTable).values(input.lines.map((l) => ({ purchaseOrderId: order.id, productId: l.productId, orderedQuantity: l.quantity, unitCost: money(l.unitCost) }))).returning();
+    for (const l of input.lines) {
+      const [b] = await tx.select().from(inventoryBalancesTable).where(and(eq(inventoryBalancesTable.productId, l.productId), eq(inventoryBalancesTable.locationId, input.locationId))).for("update");
+      if (b) await tx.update(inventoryBalancesTable).set({ incoming: b.incoming + l.quantity, updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, b.id));
+      else await tx.insert(inventoryBalancesTable).values({ productId: l.productId, locationId: input.locationId, incoming: l.quantity, averageCost: money(l.unitCost) });
+    }
+    return {
+      ...order,
+      lines: createdLines.map((line) => ({ productId: line.productId, quantity: line.orderedQuantity, receivedQuantity: line.receivedQuantity, unitCost: line.unitCost })),
+    };
+  });
+}
+
+export async function receiveInventoryPurchaseOrder(orderId: number, actorId: number, receipts: Array<{ productId: number; quantity: number }>, idempotencyKey = `legacy-${Date.now()}`) {
+  await ensureStandardAccountingChart();
+  return db.transaction(async (tx) => {
+    const [order] = await tx.select().from(inventoryPurchaseOrdersTable).where(eq(inventoryPurchaseOrdersTable.id, orderId)).for("update");
+    if (!order || order.status === "cancelled") throw new Error("Purchase order is not receivable");
+    const eventKey = `inventory-po-receipt:${orderId}:${idempotencyKey}`;
+    const receiptSourceId = `${orderId}:${idempotencyKey}`;
+    const [event] = await tx.insert(operationEventsTable).values({ eventKey, kind: "purchase_receipt", status: "pending", sourceType: "inventory_purchase_order_receipt", sourceId: receiptSourceId, actorId, payload: { receipts } }).onConflictDoNothing({ target: operationEventsTable.eventKey }).returning();
+    if (!event) {
+      const replayLines = await tx.select().from(inventoryPurchaseOrderLinesTable).where(eq(inventoryPurchaseOrderLinesTable.purchaseOrderId, orderId));
+      return {
+        ...order,
+        lines: replayLines.map((line) => ({ productId: line.productId, quantity: line.orderedQuantity, receivedQuantity: line.receivedQuantity, unitCost: line.unitCost })),
+      };
+    }
+    const lines = await tx.select().from(inventoryPurchaseOrderLinesTable).where(eq(inventoryPurchaseOrderLinesTable.purchaseOrderId, orderId));
+    let total = 0;
+    for (const receipt of receipts.sort((a, b) => a.productId - b.productId)) {
+      const line = lines.find((l) => l.productId === receipt.productId);
+      if (!line || receipt.quantity <= 0 || line.receivedQuantity + receipt.quantity > line.orderedQuantity) throw new Error("Receipt exceeds ordered quantity");
+      const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, line.productId)).for("update");
+      if (!product) throw new Error("Product not found");
+      const [balance] = await tx.select().from(inventoryBalancesTable).where(and(eq(inventoryBalancesTable.productId, line.productId), eq(inventoryBalancesTable.locationId, order.locationId))).for("update");
+      if (!balance) throw new Error("Purchase order balance missing");
+      const oldQty = balance.available, incoming = balance.incoming - receipt.quantity;
+      if (incoming < 0) throw new Error("Incoming inventory cannot be negative");
+      const avg = weightedAverageCost(oldQty, Number(balance.averageCost), receipt.quantity, Number(line.unitCost));
+      await tx.update(inventoryBalancesTable).set({ available: oldQty + receipt.quantity, incoming, averageCost: money(avg), updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, balance.id));
+      const globalAvg = weightedAverageCost(product.stockQuantity, Number(product.averageCost), receipt.quantity, Number(line.unitCost));
+      await tx.update(productsTable).set({ stockQuantity: product.stockQuantity + receipt.quantity, averageCost: money(globalAvg) }).where(eq(productsTable.id, product.id));
+      total += receipt.quantity * Number(line.unitCost);
+      await tx.update(inventoryPurchaseOrderLinesTable).set({ receivedQuantity: line.receivedQuantity + receipt.quantity, receivedAt: new Date() }).where(eq(inventoryPurchaseOrderLinesTable.id, line.id));
+      await tx.insert(inventoryMovementsTable).values({ productId: line.productId, movementType: "increase", quantityChange: receipt.quantity, quantityBefore: product.stockQuantity, quantityAfter: product.stockQuantity + receipt.quantity, unitCost: line.unitCost, totalCost: money(receipt.quantity * Number(line.unitCost)), reason: `Purchase order ${order.orderNumber}`, sourceType: "inventory_purchase_order_receipt", sourceId: receiptSourceId, eventKey: `inventory-po:${order.id}:${line.id}:${line.receivedQuantity + receipt.quantity}`, performedBy: actorId });
+    }
+    const refreshed = await tx.select().from(inventoryPurchaseOrderLinesTable).where(eq(inventoryPurchaseOrderLinesTable.purchaseOrderId, orderId));
+    const status = refreshed.every((l) => l.receivedQuantity === l.orderedQuantity) ? "received" : "partially_received";
+    if (total > 0) await postJournalEntry({ entryDate: new Date().toISOString().slice(0, 10), description: `Inventory purchase ${order.orderNumber}`, createdBy: actorId, sourceType: "inventory_purchase_order_receipt", sourceId: receiptSourceId, lines: [{ accountCode: "1140", debit: total }, { accountCode: "2110", credit: total }] }, tx);
+    await tx.update(operationEventsTable).set({ status: "posted" }).where(eq(operationEventsTable.id, event.id));
+    const [updated] = await tx.update(inventoryPurchaseOrdersTable).set({ status }).where(eq(inventoryPurchaseOrdersTable.id, orderId)).returning();
+    return {
+      ...updated,
+      lines: refreshed.map((line) => ({ productId: line.productId, quantity: line.orderedQuantity, receivedQuantity: line.receivedQuantity, unitCost: line.unitCost })),
+    };
+  });
+}
+
+export async function createCycleCount(input: { locationId: number; createdBy: number; lines: Array<{ productId: number; countedQuantity: number }> }) {
+  return db.transaction(async (tx) => {
+    const [count] = await tx.insert(inventoryCycleCountsTable).values({ locationId: input.locationId, createdBy: input.createdBy }).returning();
+    if (!count) throw new Error("Cycle count could not be created");
+    const createdLines: Array<typeof inventoryCycleCountLinesTable.$inferSelect> = [];
+    for (const l of input.lines) {
+      const [b] = await tx.select().from(inventoryBalancesTable).where(and(eq(inventoryBalancesTable.productId, l.productId), eq(inventoryBalancesTable.locationId, input.locationId)));
+      if (l.countedQuantity < 0) throw new Error("Count cannot be negative");
+      const [createdLine] = await tx.insert(inventoryCycleCountLinesTable).values({ cycleCountId: count.id, productId: l.productId, expectedQuantity: b?.available ?? 0, countedQuantity: l.countedQuantity, unitCost: b?.averageCost ?? "0" }).returning();
+      createdLines.push(createdLine);
+    }
+    return { ...count, lines: createdLines };
+  });
+}
+
+export async function approveCycleCount(countId: number, actorId: number) {
+  await ensureStandardAccountingChart();
+  return db.transaction(async (tx) => {
+    const [count] = await tx.select().from(inventoryCycleCountsTable).where(eq(inventoryCycleCountsTable.id, countId)).for("update");
+    if (!count) throw new Error("Cycle count not found");
+    if (count.status === "approved") {
+      const lines = await tx.select().from(inventoryCycleCountLinesTable).where(eq(inventoryCycleCountLinesTable.cycleCountId, countId));
+      return { ...count, lines };
+    }
+    if (count.status !== "review") throw new Error("Cycle count must be reviewed before approval");
+    const lines = await tx.select().from(inventoryCycleCountLinesTable).where(eq(inventoryCycleCountLinesTable.cycleCountId, countId));
+    for (const l of lines) {
+      const [b] = await tx.select().from(inventoryBalancesTable).where(and(eq(inventoryBalancesTable.productId, l.productId), eq(inventoryBalancesTable.locationId, count.locationId))).for("update");
+      const before = b?.available ?? 0, delta = l.countedQuantity - before;
+      if (!b) await tx.insert(inventoryBalancesTable).values({ productId: l.productId, locationId: count.locationId, available: l.countedQuantity, averageCost: l.unitCost });
+      else await tx.update(inventoryBalancesTable).set({ available: l.countedQuantity, updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, b.id));
+      const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, l.productId)).for("update");
+      if (!product || product.stockQuantity + delta < 0) throw new Error("Cycle count would create negative global stock");
+      await tx.update(productsTable).set({ stockQuantity: product.stockQuantity + delta }).where(eq(productsTable.id, product.id));
+      if (delta) await tx.insert(inventoryMovementsTable).values({ productId: l.productId, movementType: "adjustment", quantityChange: delta, quantityBefore: before, quantityAfter: l.countedQuantity, unitCost: l.unitCost, totalCost: money(Math.abs(delta) * Number(l.unitCost)), reason: `Cycle count ${count.id}`, sourceType: "cycle_count", sourceId: String(count.id), eventKey: `cycle-count:${count.id}:${l.id}`, performedBy: actorId });
+    }
+    const variance = lines.reduce((n, l) => n + (l.countedQuantity - l.expectedQuantity) * Number(l.unitCost), 0);
+    if (variance !== 0) await postJournalEntry({ entryDate: new Date().toISOString().slice(0, 10), description: `Cycle count ${count.id} variance`, createdBy: actorId, sourceType: "cycle_count", sourceId: String(count.id), lines: variance > 0 ? [{ accountCode: "1140", debit: variance }, { accountCode: "4900", credit: variance }] : [{ accountCode: "5100", debit: -variance }, { accountCode: "1140", credit: -variance }] }, tx);
+    const [updated] = await tx.update(inventoryCycleCountsTable).set({ status: "approved", approvedBy: actorId, approvedAt: new Date() }).where(eq(inventoryCycleCountsTable.id, countId)).returning();
+    return { ...updated, lines };
   });
 }

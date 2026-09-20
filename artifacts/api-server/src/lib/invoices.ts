@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
+import { adjustOperationalBalances } from "./operations";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
 
@@ -134,6 +135,7 @@ export async function createDistributorInvoice(
       const item = input.items[index];
       const product = products[index];
       const quantityAfter = product.stockQuantity - item.quantity;
+      await adjustOperationalBalances(tx, product.id, -item.quantity, product.averageCost, product.stockQuantity);
       await tx.update(productsTable).set({ stockQuantity: quantityAfter }).where(eq(productsTable.id, product.id));
       const lineCost = Number(product.averageCost) * item.quantity;
       totalCost += lineCost;
@@ -348,6 +350,7 @@ export async function updateOrderAndIssueInvoice(
           const averageCost = quantityAfter > 0
             ? ((product.stockQuantity * Number(product.averageCost)) + totalCost) / quantityAfter
             : 0;
+          await adjustOperationalBalances(tx, product.id, item.quantity, averageCost, product.stockQuantity);
           await tx.update(productsTable).set({ stockQuantity: quantityAfter, averageCost: averageCost.toFixed(4) }).where(eq(productsTable.id, product.id));
           await tx.insert(inventoryMovementsTable).values({
             productId: product.id, movementType: "increase", quantityChange: item.quantity,
