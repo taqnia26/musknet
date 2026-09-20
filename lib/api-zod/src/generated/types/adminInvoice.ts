@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminInvoiceItem } from './adminInvoiceItem';
 
 export interface AdminInvoice {
   id: number;
@@ -12,14 +13,27 @@ export interface AdminInvoice {
   orderId: number | null;
   /** @nullable */
   orderNumber: string | null;
+  /** @nullable */
+  distributorId: number | null;
+  /** @nullable */
+  distributorName: string | null;
   sequenceNumber: number;
   invoiceNumber: string;
   sellerName: string;
   issueDatetime: Date;
   sellerVatNumber: string;
+  /** @nullable */
+  buyerName: string | null;
+  /** @nullable */
+  buyerTaxNumber: string | null;
+  /** @nullable */
+  buyerCommercialRegistrationNumber: string | null;
+  /** @nullable */
+  buyerAddress: string | null;
   subtotal: number;
   vatAmount: number;
   totalAmount: number;
   qrCodeData: string;
+  items: AdminInvoiceItem[];
   createdAt: Date;
 }

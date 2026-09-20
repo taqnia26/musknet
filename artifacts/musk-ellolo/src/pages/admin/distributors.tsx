@@ -23,6 +23,7 @@ const distributorSchema = z.object({
   city: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   taxNumber: z.string().nullable().optional(),
+  commercialRegistrationNumber: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
 });
@@ -53,7 +54,7 @@ export default function AdminDistributors() {
 
   const form = useForm<z.infer<typeof distributorSchema>>({
     resolver: zodResolver(distributorSchema),
-    defaultValues: { companyName: '', contactName: '', phone: '', email: null, city: null, address: null, taxNumber: null, notes: null, isActive: true }
+    defaultValues: { companyName: '', contactName: '', phone: '', email: null, city: null, address: null, taxNumber: null, commercialRegistrationNumber: null, notes: null, isActive: true }
   });
 
   const onSubmit = (data: z.infer<typeof distributorSchema>) => {
@@ -87,6 +88,7 @@ export default function AdminDistributors() {
       city: distributor.city,
       address: distributor.address,
       taxNumber: distributor.taxNumber,
+      commercialRegistrationNumber: distributor.commercialRegistrationNumber,
       notes: distributor.notes,
       isActive: distributor.isActive
     });
@@ -122,6 +124,9 @@ export default function AdminDistributors() {
                     <FormItem><FormLabel>{t('اسم المسؤول', 'Contact Name')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
+                <FormField control={form.control} name="commercialRegistrationNumber" render={({ field }) => (
+                  <FormItem><FormLabel>{t('رقم السجل التجاري', 'Commercial Registration Number')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                )} />
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="phone" render={({ field }) => (
                     <FormItem><FormLabel>{t('رقم الهاتف', 'Phone')}</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>

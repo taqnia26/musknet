@@ -820,6 +820,17 @@ paths:
             application/json:
               schema: { type: array, items: { $ref: "#/components/schemas/AdminInvoice" } }
         "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: adminCreateDistributorInvoice
+      summary: Create a distributor sales invoice
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorInvoiceInput" } } } }
+      responses:
+        "201": { description: Distributor invoice created, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInvoice" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Distributor or product is unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/invoices/{id}/qr:
     get:
       operationId: adminGetInvoiceQr
@@ -2547,21 +2558,59 @@ components:
         adminNotes: { type: [string, "null"] }
     AdminInvoice:
       type: object
-      required: [id, orderId, orderNumber, sequenceNumber, invoiceNumber, issueDatetime, sellerName, sellerVatNumber, subtotal, vatAmount, totalAmount, qrCodeData, createdAt]
+      required: [id, orderId, orderNumber, distributorId, distributorName, sequenceNumber, invoiceNumber, issueDatetime, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, vatAmount, totalAmount, qrCodeData, items, createdAt]
       properties:
         id: { type: number }
         orderId: { type: [number, "null"] }
         orderNumber: { type: [string, "null"] }
+        distributorId: { type: [number, "null"] }
+        distributorName: { type: [string, "null"] }
         sequenceNumber: { type: number }
         invoiceNumber: { type: string }
         sellerName: { type: string }
         issueDatetime: { type: string, format: date-time }
         sellerVatNumber: { type: string }
+        buyerName: { type: [string, "null"] }
+        buyerTaxNumber: { type: [string, "null"] }
+        buyerCommercialRegistrationNumber: { type: [string, "null"] }
+        buyerAddress: { type: [string, "null"] }
         subtotal: { type: number }
         vatAmount: { type: number }
         totalAmount: { type: number }
         qrCodeData: { type: string }
+        items: { type: array, items: { $ref: "#/components/schemas/AdminInvoiceItem" } }
         createdAt: { type: string, format: date-time }
+    AdminInvoiceItem:
+      type: object
+      required: [id, productId, productName, sku, quantity, unitPrice, subtotal, vatAmount, totalAmount]
+      properties:
+        id: { type: number }
+        productId: { type: number }
+        productName: { type: string }
+        sku: { type: [string, "null"] }
+        quantity: { type: number }
+        unitPrice: { type: number }
+        subtotal: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+    DistributorInvoiceLineInput:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId: { type: number, minimum: 1, multipleOf: 1 }
+        quantity: { type: number, minimum: 1, multipleOf: 1 }
+        unitPrice: { type: number, exclusiveMinimum: 0 }
+    DistributorInvoiceInput:
+      type: object
+      required: [creationKey, distributorId, items]
+      properties:
+        creationKey: { type: string, minLength: 16, maxLength: 100 }
+        distributorId: { type: number, minimum: 1, multipleOf: 1 }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/DistributorInvoiceLineInput" }
     AdminOrderAddress:
       type: object
       required: [label, city, district, street, buildingNo, additionalInfo, isDefault]
@@ -2737,6 +2786,7 @@ components:
         city: { type: [string, "null"] }
         address: { type: [string, "null"] }
         taxNumber: { type: [string, "null"] }
+        commercialRegistrationNumber: { type: [string, "null"] }
         notes: { type: [string, "null"] }
         isActive: { type: boolean }
         createdAt: { type: string, format: date-time }
@@ -2752,6 +2802,7 @@ components:
         city: { type: [string, "null"] }
         address: { type: [string, "null"] }
         taxNumber: { type: [string, "null"] }
+        commercialRegistrationNumber: { type: [string, "null"] }
         notes: { type: [string, "null"] }
         isActive: { type: boolean }
     AdminDistributorUpdate:

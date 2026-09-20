@@ -1,11 +1,171 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db, adminUsersTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable } from "@workspace/db";
+import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, wholesaleDistributorsTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
 
 const money = (value: number) => value.toFixed(2);
+const cents = (value: number) => Math.round((value + Number.EPSILON) * 100);
+const fromCents = (value: number) => value / 100;
+
+export class DistributorInvoiceValidationError extends Error {}
+export class DistributorInvoiceConflictError extends Error {}
+
+export async function createDistributorInvoice(
+  input: { creationKey: string; distributorId: number; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  actorId: number,
+  environment: NodeJS.ProcessEnv = process.env,
+) {
+  if (!input.items.length) throw new DistributorInvoiceValidationError("At least one invoice item is required");
+  if (input.creationKey.trim().length < 16) throw new DistributorInvoiceValidationError("A valid creation key is required");
+  const productIds = input.items.map((item) => item.productId);
+  if (new Set(productIds).size !== productIds.length) {
+    throw new DistributorInvoiceValidationError("Each product may only appear once");
+  }
+  if (input.items.some((item) => !Number.isSafeInteger(item.quantity) || item.quantity < 1 || !Number.isFinite(item.unitPrice) || item.unitPrice <= 0)) {
+    throw new DistributorInvoiceValidationError("Each item requires a valid quantity and price");
+  }
+
+  await ensureStandardAccountingChart();
+  return db.transaction(async (tx) => {
+    const [previous] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
+    if (previous) {
+      const previousItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, previous.id)).orderBy(invoiceItemsTable.id);
+      return { ...previous, orderNumber: null, distributorName: previous.buyerName, items: previousItems };
+    }
+    const [distributor] = await tx.select().from(wholesaleDistributorsTable)
+      .where(eq(wholesaleDistributorsTable.id, input.distributorId)).limit(1);
+    if (!distributor) throw new DistributorInvoiceValidationError("Distributor not found");
+    if (!distributor.isActive) throw new DistributorInvoiceConflictError("Distributor is inactive");
+
+    const sortedProductIds = [...productIds].sort((a, b) => a - b);
+    for (const productId of sortedProductIds) {
+      await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${productId} for update`);
+    }
+    const products: Array<{ id: number; nameAr: string; nameEn: string; sku: string | null; isActive: boolean; stockQuantity: number; averageCost: string }> = [];
+    for (const item of input.items) {
+      const [product] = await tx.select({
+        id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
+        sku: productsTable.sku, isActive: productsTable.isActive,
+        stockQuantity: productsTable.stockQuantity, averageCost: productsTable.averageCost,
+      }).from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
+      if (!product) throw new DistributorInvoiceValidationError(`Product ${item.productId} not found`);
+      if (!product.isActive) throw new DistributorInvoiceConflictError(`Product ${item.productId} is inactive`);
+      if (product.stockQuantity < item.quantity) {
+        throw new DistributorInvoiceConflictError(`Insufficient stock for ${product.nameAr}. Available: ${product.stockQuantity}`);
+      }
+      products.push(product);
+    }
+
+    const lines = input.items.map((item, index) => {
+      const subtotalCents = cents(item.unitPrice) * item.quantity;
+      const vatCents = Math.round(subtotalCents * 0.15);
+      return {
+        productId: item.productId,
+        productName: products[index].nameAr || products[index].nameEn,
+        sku: products[index].sku,
+        quantity: item.quantity,
+        unitPrice: fromCents(cents(item.unitPrice)),
+        subtotal: fromCents(subtotalCents),
+        vatAmount: fromCents(vatCents),
+        totalAmount: fromCents(subtotalCents + vatCents),
+      };
+    });
+    const subtotal = fromCents(lines.reduce((sum, line) => sum + cents(line.subtotal), 0));
+    const vatAmount = fromCents(lines.reduce((sum, line) => sum + cents(line.vatAmount), 0));
+    const totalAmount = fromCents(cents(subtotal) + cents(vatAmount));
+
+    await tx.execute(sql`select pg_advisory_xact_lock(${INVOICE_NUMBER_LOCK})`);
+    const [afterLock] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
+    if (afterLock) {
+      const afterLockItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, afterLock.id)).orderBy(invoiceItemsTable.id);
+      return { ...afterLock, orderNumber: null, distributorName: afterLock.buyerName, items: afterLockItems };
+    }
+    const configuration = zatcaSellerConfiguration(environment);
+    const issueDatetime = new Date();
+    const [{ next }] = await tx.select({
+      next: sql<number>`coalesce(max(${invoicesTable.sequenceNumber}), 0) + 1`,
+    }).from(invoicesTable);
+    const sequenceNumber = Number(next);
+    const invoiceNumber = `INV-${String(sequenceNumber).padStart(6, "0")}`;
+    const qrCodeData = zatcaPhaseOneBase64({
+      ...configuration,
+      timestamp: issueDatetime.toISOString(),
+      invoiceTotal: money(totalAmount),
+      vatTotal: money(vatAmount),
+    });
+    const [invoice] = await tx.insert(invoicesTable).values({
+      distributorId: distributor.id,
+      creationKey: input.creationKey,
+      sequenceNumber,
+      invoiceNumber,
+      sellerName: configuration.sellerName,
+      issueDatetime,
+      sellerVatNumber: configuration.vatRegistrationNumber,
+      buyerName: distributor.companyName,
+      buyerTaxNumber: distributor.taxNumber,
+      buyerCommercialRegistrationNumber: distributor.commercialRegistrationNumber,
+      buyerAddress: [distributor.address, distributor.city].filter(Boolean).join(", ") || null,
+      subtotal,
+      vatAmount,
+      totalAmount,
+      qrCodeData,
+    }).returning();
+    const createdItems = await tx.insert(invoiceItemsTable).values(
+      lines.map((line) => ({ ...line, invoiceId: invoice.id })),
+    ).returning();
+    let totalCost = 0;
+    for (let index = 0; index < input.items.length; index += 1) {
+      const item = input.items[index];
+      const product = products[index];
+      const quantityAfter = product.stockQuantity - item.quantity;
+      await tx.update(productsTable).set({ stockQuantity: quantityAfter }).where(eq(productsTable.id, product.id));
+      const lineCost = Number(product.averageCost) * item.quantity;
+      totalCost += lineCost;
+      await tx.insert(inventoryMovementsTable).values({
+        productId: product.id,
+        movementType: "decrease",
+        quantityChange: -item.quantity,
+        quantityBefore: product.stockQuantity,
+        quantityAfter,
+        reason: `Distributor invoice ${invoiceNumber}`,
+        unitCost: product.averageCost,
+        totalCost: lineCost.toFixed(4),
+        sourceType: "distributor_invoice",
+        sourceId: String(invoice.id),
+        eventKey: `distributor-invoice:${invoice.id}:${product.id}`,
+        performedBy: actorId,
+      });
+    }
+    await postJournalEntry({
+      entryDate: issueDatetime.toISOString().slice(0, 10),
+      description: `Distributor sale ${invoiceNumber}`,
+      createdBy: actorId,
+      sourceType: "distributor_invoice",
+      sourceId: String(invoice.id),
+      lines: [
+        { accountCode: "1120", debit: totalAmount },
+        { accountCode: "4100", credit: subtotal },
+        { accountCode: "2120", credit: vatAmount },
+      ],
+    }, tx);
+    if (totalCost > 0) {
+      await postJournalEntry({
+        entryDate: issueDatetime.toISOString().slice(0, 10),
+        description: `Cost of distributor sale ${invoiceNumber}`,
+        createdBy: actorId,
+        sourceType: "distributor_invoice_cogs",
+        sourceId: String(invoice.id),
+        lines: [
+          { accountCode: "5100", debit: totalCost },
+          { accountCode: "1140", credit: totalCost },
+        ],
+      }, tx);
+    }
+    return { ...invoice, orderNumber: null, distributorName: distributor.companyName, items: createdItems };
+  });
+}
 
 export async function postFulfillmentCogs(tx: any, orderId: number, actorId: number | null, orderNumber: string, entryDate: string) {
   if (actorId === null) {

@@ -23,6 +23,7 @@ import {
   exhibitionsTable,
   exhibitionProductsTable,
   inventoryMovementsTable,
+  invoiceItemsTable,
   invoicesTable,
   orderAddressesTable,
   orderItemsTable,
@@ -52,7 +53,7 @@ import {
   verifyAdminPassword,
 } from "../lib/admin-auth";
 import { hashOwnerPassword } from "../lib/owner-auth";
-import { postFulfillmentCogs, updateOrderAndIssueInvoice } from "../lib/invoices";
+import { createDistributorInvoice, DistributorInvoiceConflictError, DistributorInvoiceValidationError, postFulfillmentCogs, updateOrderAndIssueInvoice } from "../lib/invoices";
 import {
   AccountingConflictError,
   AccountingNotFoundError,
@@ -915,11 +916,17 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     id: invoicesTable.id,
     orderId: invoicesTable.orderId,
     orderNumber: ordersTable.orderNumber,
+    distributorId: invoicesTable.distributorId,
+    distributorName: invoicesTable.buyerName,
     sequenceNumber: invoicesTable.sequenceNumber,
     invoiceNumber: invoicesTable.invoiceNumber,
     sellerName: invoicesTable.sellerName,
     issueDatetime: invoicesTable.issueDatetime,
     sellerVatNumber: invoicesTable.sellerVatNumber,
+    buyerName: invoicesTable.buyerName,
+    buyerTaxNumber: invoicesTable.buyerTaxNumber,
+    buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
+    buyerAddress: invoicesTable.buyerAddress,
     subtotal: invoicesTable.subtotal,
     vatAmount: invoicesTable.vatAmount,
     totalAmount: invoicesTable.totalAmount,
@@ -931,10 +938,35 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
       ilike(invoicesTable.invoiceNumber, `%${search}%`),
       ilike(invoicesTable.sellerName, `%${search}%`),
       ilike(invoicesTable.sellerVatNumber, `%${search}%`),
+      ilike(invoicesTable.buyerName, `%${search}%`),
+      ilike(invoicesTable.buyerTaxNumber, `%${search}%`),
+      ilike(invoicesTable.buyerCommercialRegistrationNumber, `%${search}%`),
       ilike(ordersTable.orderNumber, `%${search}%`),
     ) : undefined)
     .orderBy(desc(invoicesTable.sequenceNumber));
-  res.json(Api.AdminListInvoicesResponse.parse(rows));
+  const itemRows = rows.length
+    ? await db.select().from(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, rows.map((row) => row.id))).orderBy(invoiceItemsTable.id)
+    : [];
+  res.json(Api.AdminListInvoicesResponse.parse(rows.map((row) => ({
+    ...row,
+    items: itemRows.filter((item) => item.invoiceId === row.id),
+  }))));
+}));
+
+router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateDistributorInvoiceBody, req.body, res); if (!body) return;
+  try {
+    const invoice = await createDistributorInvoice(body, res.locals.admin.id);
+    res.status(201).json(Api.AdminCreateDistributorInvoiceResponse.parse(invoice));
+  } catch (error) {
+    if (error instanceof DistributorInvoiceValidationError) {
+      res.status(400).json({ error: error.message }); return;
+    }
+    if (error instanceof DistributorInvoiceConflictError) {
+      res.status(409).json({ error: error.message }); return;
+    }
+    throw error;
+  }
 }));
 
 router.get("/admin/invoices/:id/qr", permit("invoices", "view"), route(async (req, res) => {
@@ -1155,7 +1187,7 @@ router.patch("/admin/inventory/:id", permit("inventory", "edit"), route(async (r
 router.get("/admin/distributors", permit("distributors", "view"), route(async (req, res) => {
   const query = parse(Api.AdminListDistributorsQueryParams, req.query, res); if (!query) return;
   let rows = await db.select().from(wholesaleDistributorsTable).orderBy(wholesaleDistributorsTable.id);
-  rows = statusFilter(searchFilter(rows, query.search, ["companyName", "contactName", "email", "phone", "city"]), query.status);
+  rows = statusFilter(searchFilter(rows, query.search, ["companyName", "contactName", "email", "phone", "city", "taxNumber", "commercialRegistrationNumber"]), query.status);
   res.json(Api.AdminListDistributorsResponse.parse(rows));
 }));
 router.post("/admin/distributors", permit("distributors", "edit"), route(async (req, res) => {

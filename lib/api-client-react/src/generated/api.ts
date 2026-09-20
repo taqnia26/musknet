@@ -99,6 +99,7 @@ import type {
   DistributorContract,
   DistributorContractInput,
   DistributorContractUpdate,
+  DistributorInvoiceInput,
   Employee,
   EmployeeInput,
   EmployeeUpdate,
@@ -5411,6 +5412,77 @@ export function useAdminListInvoices<TData = Awaited<ReturnType<typeof adminList
 
 
 
+
+export const getAdminCreateDistributorInvoiceUrl = () => {
+
+
+
+
+  return `/api/admin/invoices`
+}
+
+/**
+ * @summary Create a distributor sales invoice
+ */
+export const adminCreateDistributorInvoice = async (distributorInvoiceInput: DistributorInvoiceInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoice> => {
+
+  return customFetch<AdminInvoice>(getAdminCreateDistributorInvoiceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(distributorInvoiceInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateDistributorInvoiceMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateDistributorInvoice>>, TError,{data: BodyType<DistributorInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateDistributorInvoice>>, TError,{data: BodyType<DistributorInvoiceInput>}, TContext> => {
+
+const mutationKey = ['adminCreateDistributorInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateDistributorInvoice>>, {data: BodyType<DistributorInvoiceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateDistributorInvoice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateDistributorInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateDistributorInvoice>>>
+    export type AdminCreateDistributorInvoiceMutationBody = BodyType<DistributorInvoiceInput>
+    export type AdminCreateDistributorInvoiceMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>
+
+    /**
+ * @summary Create a distributor sales invoice
+ */
+export const useAdminCreateDistributorInvoice = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateDistributorInvoice>>, TError,{data: BodyType<DistributorInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateDistributorInvoice>>,
+        TError,
+        {data: BodyType<DistributorInvoiceInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateDistributorInvoiceMutationOptions(options));
+    }
 
 export const getAdminGetInvoiceQrUrl = (id: number,) => {
 

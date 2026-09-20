@@ -11,6 +11,7 @@ export const wholesaleDistributorsTable = pgTable("wholesale_distributors", {
   city: text("city"),
   address: text("address"),
   taxNumber: text("tax_number"),
+  commercialRegistrationNumber: text("commercial_registration_number"),
   notes: text("notes"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

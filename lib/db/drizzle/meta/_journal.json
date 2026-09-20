@@ -162,6 +162,20 @@
       "when": 1789893294496,
       "tag": "0022_curly_omega_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789894799984,
+      "tag": "0023_hesitant_killmonger",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789895024479,
+      "tag": "0024_amused_turbo",
+      "breakpoints": true
     }
   ]
 }

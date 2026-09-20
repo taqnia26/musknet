@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   useAdminListInvoices, 
   useAdminGetInvoiceQr,
+  useGetAdminMe,
   getAdminGetInvoiceQrQueryKey,
   type AdminInvoice 
 } from '@workspace/api-client-react';
@@ -12,6 +13,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, QrCode, Printer, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
+import { hasPermission } from '@/lib/permissions';
+import { CreateDistributorInvoiceDialog } from '@/components/admin/create-distributor-invoice-dialog';
+
+const escapeHtml = (value: unknown) => String(value ?? '')
+  .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 
 function InvoiceQrDialog({ 
   invoice, 
@@ -58,7 +64,10 @@ function InvoiceQrDialog({
                 h1 { font-size: 1.2rem; margin-bottom: 5px; }
                 p { margin: 5px 0; font-size: 0.9rem; }
                 .divider { border-top: 1px dashed #ccc; margin: 15px 0; }
-                .row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; }
+                .row { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 5px; font-size: 0.9rem; }
+                table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .8rem; }
+                th, td { border-bottom: 1px solid #ddd; padding: 6px 3px; text-align: start; }
+                .buyer { text-align: start; background: #f7f7f7; padding: 10px; border-radius: 6px; }
                 img { max-width: 200px; height: auto; margin-top: 15px; }
                 @media print {
                   body { max-width: 100%; padding: 0; }
@@ -67,17 +76,33 @@ function InvoiceQrDialog({
             </head>
             <body>
               <h1>${t('فاتورة ضريبية مبسطة', 'Simplified Tax Invoice')}</h1>
-              <p>${invoice.sellerName}</p>
-              <p>${t('الرقم الضريبي', 'VAT Number')}: ${invoice.sellerVatNumber}</p>
+              <p>${escapeHtml(invoice.sellerName)}</p>
+              <p>${t('الرقم الضريبي', 'VAT Number')}: ${escapeHtml(invoice.sellerVatNumber)}</p>
               <div class="divider"></div>
               <div class="row">
                 <span>${t('رقم الفاتورة', 'Invoice #')}</span>
-                <span>${invoice.invoiceNumber}</span>
+                <span>${escapeHtml(invoice.invoiceNumber)}</span>
               </div>
               <div class="row">
                 <span>${t('التاريخ', 'Date')}</span>
                 <span>${format(new Date(invoice.issueDatetime), 'yyyy-MM-dd HH:mm')}</span>
               </div>
+              ${invoice.buyerName ? `
+                <div class="divider"></div>
+                <div class="buyer">
+                  <strong>${t('بيانات المشتري', 'Buyer Details')}</strong>
+                  <p>${escapeHtml(invoice.buyerName)}</p>
+                  ${invoice.buyerTaxNumber ? `<p>${t('الرقم الضريبي', 'VAT Number')}: ${escapeHtml(invoice.buyerTaxNumber)}</p>` : ''}
+                  ${invoice.buyerCommercialRegistrationNumber ? `<p>${t('السجل التجاري', 'Commercial Registration')}: ${escapeHtml(invoice.buyerCommercialRegistrationNumber)}</p>` : ''}
+                  ${invoice.buyerAddress ? `<p>${t('العنوان', 'Address')}: ${escapeHtml(invoice.buyerAddress)}</p>` : ''}
+                </div>
+              ` : ''}
+              ${invoice.items.length ? `
+                <table>
+                  <thead><tr><th>${t('المنتج', 'Product')}</th><th>${t('الكمية', 'Qty')}</th><th>${t('السعر', 'Price')}</th><th>${t('الإجمالي', 'Total')}</th></tr></thead>
+                  <tbody>${invoice.items.map((item) => `<tr><td>${escapeHtml(item.productName)}</td><td>${item.quantity}</td><td>${item.unitPrice.toFixed(2)}</td><td>${item.totalAmount.toFixed(2)}</td></tr>`).join('')}</tbody>
+                </table>
+              ` : ''}
               <div class="divider"></div>
               <div class="row">
                 <span>${t('المجموع الفرعي', 'Subtotal')}</span>
@@ -142,6 +167,7 @@ export default function AdminInvoices() {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
+  const { data: currentUser } = useGetAdminMe();
 
   const { data: invoices, isLoading, isError } = useAdminListInvoices({ search: search || undefined });
 
@@ -152,13 +178,14 @@ export default function AdminInvoices() {
           <h1 className="text-3xl font-bold tracking-tight">{t('الفواتير الضريبية', 'Tax Invoices')}</h1>
           <p className="text-muted-foreground mt-1">{t('سجل الفواتير الضريبية المبسطة ZATCA', 'ZATCA Simplified Tax Invoices log')}</p>
         </div>
+        {hasPermission(currentUser, 'invoices', 'edit') && <CreateDistributorInvoiceDialog />}
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground rtl:right-2.5 rtl:left-auto" />
           <Input 
-            placeholder={t('بحث برقم الفاتورة أو الطلب...', 'Search by invoice or order number...')} 
+            placeholder={t('بحث برقم الفاتورة أو الطلب أو الموزع...', 'Search by invoice, order, or distributor...')}
             className="pl-9 rtl:pr-9 rtl:pl-3" 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -172,6 +199,7 @@ export default function AdminInvoices() {
             <TableRow>
               <TableHead>{t('رقم الفاتورة', 'Invoice #')}</TableHead>
               <TableHead>{t('رقم الطلب', 'Order ID')}</TableHead>
+              <TableHead>{t('الموزع', 'Distributor')}</TableHead>
               <TableHead>{t('التاريخ', 'Date')}</TableHead>
               <TableHead className="text-end">{t('المبلغ غير شامل الضريبة', 'Subtotal')}</TableHead>
               <TableHead className="text-end">{t('الضريبة', 'VAT')}</TableHead>
@@ -181,16 +209,17 @@ export default function AdminInvoices() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : isError ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-12 text-destructive">{t('حدث خطأ أثناء تحميل الفواتير', 'Error loading invoices')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-12 text-destructive">{t('حدث خطأ أثناء تحميل الفواتير', 'Error loading invoices')}</TableCell></TableRow>
             ) : invoices?.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t('لا توجد فواتير مطابقة', 'No invoices found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center py-12 text-muted-foreground">{t('لا توجد فواتير مطابقة', 'No invoices found')}</TableCell></TableRow>
             ) : (
               invoices?.map((invoice) => (
                 <TableRow key={invoice.id} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                   <TableCell>{invoice.orderNumber ?? <span className="text-muted-foreground">-</span>}</TableCell>
+                  <TableCell>{invoice.distributorName ?? <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell>{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd HH:mm')}</TableCell>
                   <TableCell className="text-end">{invoice.subtotal.toFixed(2)}</TableCell>
                   <TableCell className="text-end">{invoice.vatAmount.toFixed(2)}</TableCell>

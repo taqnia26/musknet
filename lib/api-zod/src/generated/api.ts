@@ -2172,18 +2172,97 @@ export const AdminListInvoicesResponseItem = zod.object({
   "id": zod.number(),
   "orderId": zod.number().nullable(),
   "orderNumber": zod.string().nullable(),
+  "distributorId": zod.number().nullable(),
+  "distributorName": zod.string().nullable(),
   "sequenceNumber": zod.number(),
   "invoiceNumber": zod.string(),
   "sellerName": zod.string(),
   "issueDatetime": zod.coerce.date(),
   "sellerVatNumber": zod.string(),
+  "buyerName": zod.string().nullable(),
+  "buyerTaxNumber": zod.string().nullable(),
+  "buyerCommercialRegistrationNumber": zod.string().nullable(),
+  "buyerAddress": zod.string().nullable(),
   "subtotal": zod.number(),
   "vatAmount": zod.number(),
   "totalAmount": zod.number(),
   "qrCodeData": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "productId": zod.number(),
+  "productName": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "subtotal": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number()
+})),
   "createdAt": zod.coerce.date()
 })
 export const AdminListInvoicesResponse = zod.array(AdminListInvoicesResponseItem)
+
+
+/**
+ * @summary Create a distributor sales invoice
+ */
+export const adminCreateDistributorInvoiceBodyCreationKeyMin = 16;
+export const adminCreateDistributorInvoiceBodyCreationKeyMax = 100;
+
+export const adminCreateDistributorInvoiceBodyDistributorIdMultipleOf = 1;
+
+export const adminCreateDistributorInvoiceBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminCreateDistributorInvoiceBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminCreateDistributorInvoiceBodyItemsItemUnitPriceExclusiveMin = 0;
+
+export const adminCreateDistributorInvoiceBodyItemsMax = 100;
+
+
+
+export const AdminCreateDistributorInvoiceBody = zod.object({
+  "creationKey": zod.string().min(adminCreateDistributorInvoiceBodyCreationKeyMin).max(adminCreateDistributorInvoiceBodyCreationKeyMax),
+  "distributorId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyDistributorIdMultipleOf),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyItemsItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().gt(adminCreateDistributorInvoiceBodyItemsItemUnitPriceExclusiveMin)
+})).min(1).max(adminCreateDistributorInvoiceBodyItemsMax)
+})
+
+export const AdminCreateDistributorInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "orderId": zod.number().nullable(),
+  "orderNumber": zod.string().nullable(),
+  "distributorId": zod.number().nullable(),
+  "distributorName": zod.string().nullable(),
+  "sequenceNumber": zod.number(),
+  "invoiceNumber": zod.string(),
+  "sellerName": zod.string(),
+  "issueDatetime": zod.coerce.date(),
+  "sellerVatNumber": zod.string(),
+  "buyerName": zod.string().nullable(),
+  "buyerTaxNumber": zod.string().nullable(),
+  "buyerCommercialRegistrationNumber": zod.string().nullable(),
+  "buyerAddress": zod.string().nullable(),
+  "subtotal": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "qrCodeData": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "productId": zod.number(),
+  "productName": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "subtotal": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number()
+})),
+  "createdAt": zod.coerce.date()
+})
 
 
 /**
@@ -2579,6 +2658,7 @@ export const AdminListDistributorsResponseItem = zod.object({
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
+  "commercialRegistrationNumber": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.coerce.date(),
@@ -2600,6 +2680,7 @@ export const AdminCreateDistributorBody = zod.object({
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
+  "commercialRegistrationNumber": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "isActive": zod.boolean().optional()
 })
@@ -2613,6 +2694,7 @@ export const AdminCreateDistributorResponse = zod.object({
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
+  "commercialRegistrationNumber": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.coerce.date(),
@@ -2637,6 +2719,7 @@ export const AdminUpdateDistributorBody = zod.object({
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
+  "commercialRegistrationNumber": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "isActive": zod.boolean().optional()
 })
@@ -2650,6 +2733,7 @@ export const AdminUpdateDistributorResponse = zod.object({
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
+  "commercialRegistrationNumber": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "isActive": zod.boolean(),
   "createdAt": zod.coerce.date(),

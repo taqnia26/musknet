@@ -22,6 +22,8 @@ export interface AdminDistributorInput {
   /** @nullable */
   taxNumber?: string | null;
   /** @nullable */
+  commercialRegistrationNumber?: string | null;
+  /** @nullable */
   notes?: string | null;
   isActive?: boolean;
 }

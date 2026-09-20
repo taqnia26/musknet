@@ -20,6 +20,8 @@ export interface AdminDistributor {
   /** @nullable */
   taxNumber?: string | null;
   /** @nullable */
+  commercialRegistrationNumber?: string | null;
+  /** @nullable */
   notes?: string | null;
   isActive: boolean;
   createdAt: Date;

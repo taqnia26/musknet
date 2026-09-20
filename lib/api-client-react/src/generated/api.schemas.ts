@@ -1039,22 +1039,72 @@ export interface AdminOrderInput {
   adminNotes?: string | null;
 }
 
+export interface AdminInvoiceItem {
+  id: number;
+  productId: number;
+  productName: string;
+  /** @nullable */
+  sku: string | null;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  vatAmount: number;
+  totalAmount: number;
+}
+
 export interface AdminInvoice {
   id: number;
   /** @nullable */
   orderId: number | null;
   /** @nullable */
   orderNumber: string | null;
+  /** @nullable */
+  distributorId: number | null;
+  /** @nullable */
+  distributorName: string | null;
   sequenceNumber: number;
   invoiceNumber: string;
   sellerName: string;
   issueDatetime: string;
   sellerVatNumber: string;
+  /** @nullable */
+  buyerName: string | null;
+  /** @nullable */
+  buyerTaxNumber: string | null;
+  /** @nullable */
+  buyerCommercialRegistrationNumber: string | null;
+  /** @nullable */
+  buyerAddress: string | null;
   subtotal: number;
   vatAmount: number;
   totalAmount: number;
   qrCodeData: string;
+  items: AdminInvoiceItem[];
   createdAt: string;
+}
+
+export interface DistributorInvoiceLineInput {
+  /** @minimum 1 */
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+  /** @exclusiveMinimum 0 */
+  unitPrice: number;
+}
+
+export interface DistributorInvoiceInput {
+  /**
+     * @minLength 16
+     * @maxLength 100
+     */
+  creationKey: string;
+  /** @minimum 1 */
+  distributorId: number;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  items: DistributorInvoiceLineInput[];
 }
 
 export interface AdminOrderCustomer {
@@ -1291,6 +1341,8 @@ export interface AdminDistributor {
   /** @nullable */
   taxNumber?: string | null;
   /** @nullable */
+  commercialRegistrationNumber?: string | null;
+  /** @nullable */
   notes?: string | null;
   isActive: boolean;
   createdAt: string;
@@ -1312,6 +1364,8 @@ export interface AdminDistributorInput {
   address?: string | null;
   /** @nullable */
   taxNumber?: string | null;
+  /** @nullable */
+  commercialRegistrationNumber?: string | null;
   /** @nullable */
   notes?: string | null;
   isActive?: boolean;
