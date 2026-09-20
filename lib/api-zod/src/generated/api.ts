@@ -2165,10 +2165,12 @@ export const AdminUpdateOrderResponse = zod.object({
  * @summary List and search issued ZATCA invoices
  */
 export const adminListInvoicesQueryChannelDefault = `all`;
+export const adminListInvoicesQueryReceivableStatusDefault = `all`;
 
 export const AdminListInvoicesQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "channel": zod.enum(['all', 'companies']).default(adminListInvoicesQueryChannelDefault)
+  "channel": zod.enum(['all', 'companies']).default(adminListInvoicesQueryChannelDefault),
+  "receivableStatus": zod.enum(['all', 'open', 'overdue', 'paid']).default(adminListInvoicesQueryReceivableStatusDefault)
 })
 
 export const AdminListInvoicesResponseItem = zod.object({
@@ -2181,6 +2183,7 @@ export const AdminListInvoicesResponseItem = zod.object({
   "invoiceNumber": zod.string(),
   "sellerName": zod.string(),
   "issueDatetime": zod.coerce.date(),
+  "dueDate": zod.coerce.date().nullable(),
   "sellerVatNumber": zod.string(),
   "buyerName": zod.string().nullable(),
   "buyerTaxNumber": zod.string().nullable(),
@@ -2189,6 +2192,19 @@ export const AdminListInvoicesResponseItem = zod.object({
   "subtotal": zod.number(),
   "vatAmount": zod.number(),
   "totalAmount": zod.number(),
+  "paidAmount": zod.number(),
+  "outstandingAmount": zod.number(),
+  "paymentStatus": zod.enum(['unpaid', 'partial', 'paid']),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "invoiceId": zod.number(),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number(),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
   "qrCodeData": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.number(),
@@ -2227,6 +2243,7 @@ export const adminCreateDistributorInvoiceBodyItemsMax = 100;
 export const AdminCreateDistributorInvoiceBody = zod.object({
   "creationKey": zod.string().min(adminCreateDistributorInvoiceBodyCreationKeyMin).max(adminCreateDistributorInvoiceBodyCreationKeyMax),
   "distributorId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyDistributorIdMultipleOf),
+  "dueDate": zod.coerce.date(),
   "items": zod.array(zod.object({
   "productId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyItemsItemProductIdMultipleOf),
   "quantity": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyItemsItemQuantityMultipleOf),
@@ -2244,6 +2261,7 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "invoiceNumber": zod.string(),
   "sellerName": zod.string(),
   "issueDatetime": zod.coerce.date(),
+  "dueDate": zod.coerce.date().nullable(),
   "sellerVatNumber": zod.string(),
   "buyerName": zod.string().nullable(),
   "buyerTaxNumber": zod.string().nullable(),
@@ -2252,6 +2270,19 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "subtotal": zod.number(),
   "vatAmount": zod.number(),
   "totalAmount": zod.number(),
+  "paidAmount": zod.number(),
+  "outstandingAmount": zod.number(),
+  "paymentStatus": zod.enum(['unpaid', 'partial', 'paid']),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "invoiceId": zod.number(),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number(),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
   "qrCodeData": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.number(),
@@ -2264,6 +2295,42 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "vatAmount": zod.number(),
   "totalAmount": zod.number()
 })),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Record a partial or full company invoice payment
+ */
+export const AdminCreateReceivablePaymentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminCreateReceivablePaymentBodyPaymentKeyMin = 16;
+export const adminCreateReceivablePaymentBodyPaymentKeyMax = 100;
+
+export const adminCreateReceivablePaymentBodyAmountExclusiveMin = 0;
+
+export const adminCreateReceivablePaymentBodyReferenceMax = 200;
+
+
+
+export const AdminCreateReceivablePaymentBody = zod.object({
+  "paymentKey": zod.string().min(adminCreateReceivablePaymentBodyPaymentKeyMin).max(adminCreateReceivablePaymentBodyPaymentKeyMax),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number().gt(adminCreateReceivablePaymentBodyAmountExclusiveMin),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().max(adminCreateReceivablePaymentBodyReferenceMax).nullish()
+})
+
+export const AdminCreateReceivablePaymentResponse = zod.object({
+  "id": zod.number(),
+  "invoiceId": zod.number(),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number(),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().nullable(),
+  "createdBy": zod.number(),
   "createdAt": zod.coerce.date()
 })
 
@@ -5140,3 +5207,5 @@ export const GetOwnerOpeningBalanceReconciliationResponse = zod.object({
 })
 })).optional()
 }))
+
+

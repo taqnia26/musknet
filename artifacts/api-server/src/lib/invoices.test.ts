@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
-  adminUsersTable, categoriesTable, customersTable, db, inventoryMovementsTable,
+  accountingAccountsTable, adminUsersTable, categoriesTable, customersTable, db, inventoryMovementsTable,
   invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryAuditTable,
-  journalEntryLinesTable, ordersTable, productsTable, wholesaleDistributorsTable,
+  journalEntryLinesTable, operationEventsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
 } from "@workspace/db";
-import { createDistributorInvoice, DistributorInvoiceConflictError, updateOrderAndIssueInvoice } from "./invoices";
+import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, updateOrderAndIssueInvoice } from "./invoices";
 
 const base = 1_700_000_000 + (Date.now() % 100_000_000);
 const customerId = base;
@@ -14,6 +14,7 @@ let distributorId: number;
 let inactiveDistributorId: number;
 let productId: number;
 let actorId: number;
+let successfulInvoiceId: number;
 
 const order = (id: number) => ({
   id,
@@ -65,6 +66,8 @@ afterAll(async () => {
     .where(inArray(invoicesTable.distributorId, [distributorId, inactiveDistributorId]));
   if (distributorInvoices.length) {
     const invoiceIds = distributorInvoices.map((row) => row.id);
+    const payments = await db.select({ id: receivablePaymentsTable.id }).from(receivablePaymentsTable)
+      .where(inArray(receivablePaymentsTable.invoiceId, invoiceIds));
     await db.delete(inventoryMovementsTable).where(and(
       eq(inventoryMovementsTable.sourceType, "distributor_invoice"),
       inArray(inventoryMovementsTable.sourceId, invoiceIds.map(String)),
@@ -73,14 +76,23 @@ afterAll(async () => {
       await tx.execute(sql`set local session_replication_role = 'replica'`);
       const entries = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
         .where(and(
-          inArray(journalEntriesTable.sourceType, ["distributor_invoice", "distributor_invoice_cogs"]),
-          inArray(journalEntriesTable.sourceId, invoiceIds.map(String)),
+          or(
+            and(inArray(journalEntriesTable.sourceType, ["distributor_invoice", "distributor_invoice_cogs"]), inArray(journalEntriesTable.sourceId, invoiceIds.map(String))),
+            and(eq(journalEntriesTable.sourceType, "receivable_payment"), inArray(journalEntriesTable.sourceId, payments.map((payment) => String(payment.id)))),
+          ),
         ));
       if (entries.length) {
         const entryIds = entries.map((entry) => entry.id);
         await tx.delete(journalEntryAuditTable).where(inArray(journalEntryAuditTable.journalEntryId, entryIds));
         await tx.delete(journalEntryLinesTable).where(inArray(journalEntryLinesTable.journalEntryId, entryIds));
         await tx.delete(journalEntriesTable).where(inArray(journalEntriesTable.id, entryIds));
+      }
+      if (payments.length) {
+        await tx.delete(operationEventsTable).where(and(
+          eq(operationEventsTable.sourceType, "receivable_payment"),
+          inArray(operationEventsTable.sourceId, payments.map((payment) => String(payment.id))),
+        ));
+        await tx.delete(receivablePaymentsTable).where(inArray(receivablePaymentsTable.id, payments.map((payment) => payment.id)));
       }
     });
     await db.delete(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, invoiceIds));
@@ -168,6 +180,7 @@ describe.sequential("distributor invoice issuance", () => {
       }, actorId, env),
     ]);
     expect(retriedInvoice.id).toBe(invoice.id);
+    successfulInvoiceId = invoice.id;
     expect(invoice.subtotal).toBe(59.97);
     expect(invoice.vatAmount).toBe(9);
     expect(invoice.totalAmount).toBe(68.97);
@@ -190,5 +203,69 @@ describe.sequential("distributor invoice issuance", () => {
       eq(journalEntriesTable.sourceId, String(invoice.id)),
     ));
     expect(journals).toHaveLength(2);
+    const saleJournal = journals.find((journal) => journal.sourceType === "distributor_invoice")!;
+    const saleLines = await db.select({
+      accountCode: accountingAccountsTable.code,
+      debit: journalEntryLinesTable.debit,
+      credit: journalEntryLinesTable.credit,
+    }).from(journalEntryLinesTable)
+      .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+      .where(eq(journalEntryLinesTable.journalEntryId, saleJournal.id));
+    expect(saleLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ accountCode: "1130", debit: "68.9700", credit: "0.0000" }),
+      expect.objectContaining({ accountCode: "4100", debit: "0.0000", credit: "59.9700" }),
+      expect.objectContaining({ accountCode: "2120", debit: "0.0000", credit: "9.0000" }),
+    ]));
+  });
+
+  it("records partial and full collections without allowing overpayment", async () => {
+    const partial = await createReceivablePayment(successfulInvoiceId, {
+      paymentKey: `partial-${base}-payment`,
+      paymentDate: "2026-09-20",
+      amount: 20,
+      paymentMethod: "bank_transfer",
+      reference: "BANK-001",
+    }, actorId);
+    expect(partial).toMatchObject({ invoiceId: successfulInvoiceId, amount: 20, reference: "BANK-001" });
+    await expect(createReceivablePayment(successfulInvoiceId, {
+      paymentKey: `over-${base}-payment`,
+      paymentDate: "2026-09-20",
+      amount: 49,
+      paymentMethod: "bank_transfer",
+    }, actorId)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    const full = await createReceivablePayment(successfulInvoiceId, {
+      paymentKey: `full-${base}-payment`,
+      paymentDate: "2026-09-21",
+      amount: 48.97,
+      paymentMethod: "cash",
+    }, actorId);
+    expect(full.amount).toBe(48.97);
+    const rows = await db.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, successfulInvoiceId));
+    expect(rows.map((row) => row.amount).sort()).toEqual([20, 48.97]);
+    const events = await db.select().from(operationEventsTable).where(and(
+      eq(operationEventsTable.sourceType, "receivable_payment"),
+      inArray(operationEventsTable.sourceId, rows.map((row) => String(row.id))),
+    ));
+    expect(events).toHaveLength(2);
+    expect(events.every((event) => event.status === "posted" && event.actorId === actorId)).toBe(true);
+    const collectionJournals = await db.select({ id: journalEntriesTable.id, sourceId: journalEntriesTable.sourceId })
+      .from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "receivable_payment"), inArray(journalEntriesTable.sourceId, rows.map((row) => String(row.id)))));
+    const collectionLines = await db.select({
+      journalEntryId: journalEntryLinesTable.journalEntryId,
+      accountCode: accountingAccountsTable.code,
+      debit: journalEntryLinesTable.debit,
+      credit: journalEntryLinesTable.credit,
+    }).from(journalEntryLinesTable)
+      .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+      .where(inArray(journalEntryLinesTable.journalEntryId, collectionJournals.map((journal) => journal.id)));
+    const partialJournalId = collectionJournals.find((journal) => journal.sourceId === String(partial.id))!.id;
+    const fullJournalId = collectionJournals.find((journal) => journal.sourceId === String(full.id))!.id;
+    expect(collectionLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ journalEntryId: partialJournalId, accountCode: "1120", debit: "20.0000", credit: "0.0000" }),
+      expect.objectContaining({ journalEntryId: partialJournalId, accountCode: "1130", debit: "0.0000", credit: "20.0000" }),
+      expect.objectContaining({ journalEntryId: fullJournalId, accountCode: "1110", debit: "48.9700", credit: "0.0000" }),
+      expect.objectContaining({ journalEntryId: fullJournalId, accountCode: "1130", debit: "0.0000", credit: "48.9700" }),
+    ]));
   });
 });

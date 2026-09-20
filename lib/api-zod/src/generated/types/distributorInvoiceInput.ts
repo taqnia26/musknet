@@ -15,6 +15,7 @@ export interface DistributorInvoiceInput {
   creationKey: string;
   /** @minimum 1 */
   distributorId: number;
+  dueDate: Date;
   /**
      * @minItems 1
      * @maxItems 100

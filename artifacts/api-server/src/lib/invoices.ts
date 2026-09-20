@@ -2,6 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, wholesaleDistributorsTable, shipmentsTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
+import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable } from "@workspace/db";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
 
@@ -9,11 +10,13 @@ const money = (value: number) => value.toFixed(2);
 const cents = (value: number) => Math.round((value + Number.EPSILON) * 100);
 const fromCents = (value: number) => value / 100;
 
+const dateOnly = (value: string | Date) => value instanceof Date ? value.toISOString().slice(0, 10) : value;
 export class DistributorInvoiceValidationError extends Error {}
 export class DistributorInvoiceConflictError extends Error {}
 
+export class ReceivablePaymentNotFoundError extends Error {}
 export async function createDistributorInvoice(
-  input: { creationKey: string; distributorId: number; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  input: { creationKey: string; distributorId: number; dueDate?: string | Date; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
   environment: NodeJS.ProcessEnv = process.env,
 ) {
@@ -32,7 +35,9 @@ export async function createDistributorInvoice(
     const [previous] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (previous) {
       const previousItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, previous.id)).orderBy(invoiceItemsTable.id);
-      return { ...previous, orderNumber: null, distributorName: previous.buyerName, items: previousItems };
+      const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, previous.id)).orderBy(receivablePaymentsTable.paymentDate);
+      const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
+      return { ...previous, orderNumber: null, distributorName: previous.buyerName, paidAmount, outstandingAmount: fromCents(cents(previous.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: previousItems };
     }
     const [distributor] = await tx.select().from(wholesaleDistributorsTable)
       .where(eq(wholesaleDistributorsTable.id, input.distributorId)).limit(1);
@@ -80,7 +85,9 @@ export async function createDistributorInvoice(
     const [afterLock] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (afterLock) {
       const afterLockItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, afterLock.id)).orderBy(invoiceItemsTable.id);
-      return { ...afterLock, orderNumber: null, distributorName: afterLock.buyerName, items: afterLockItems };
+      const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, afterLock.id)).orderBy(receivablePaymentsTable.paymentDate);
+      const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
+      return { ...afterLock, orderNumber: null, distributorName: afterLock.buyerName, paidAmount, outstandingAmount: fromCents(cents(afterLock.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: afterLockItems };
     }
     const configuration = zatcaSellerConfiguration(environment);
     const issueDatetime = new Date();
@@ -102,6 +109,7 @@ export async function createDistributorInvoice(
       invoiceNumber,
       sellerName: configuration.sellerName,
       issueDatetime,
+      dueDate: input.dueDate ? dateOnly(input.dueDate) : defaultDueDate(),
       sellerVatNumber: configuration.vatRegistrationNumber,
       buyerName: distributor.companyName,
       buyerTaxNumber: distributor.taxNumber,
@@ -152,7 +160,7 @@ export async function createDistributorInvoice(
       sourceType: "distributor_invoice",
       sourceId: String(invoice.id),
       lines: [
-        { accountCode: "1120", debit: totalAmount },
+        { accountCode: "1130", debit: totalAmount },
         { accountCode: "4100", credit: subtotal },
         { accountCode: "2120", credit: vatAmount },
       ],
@@ -170,10 +178,65 @@ export async function createDistributorInvoice(
         ],
       }, tx);
     }
-    return { ...invoice, orderNumber: null, distributorName: distributor.companyName, items: createdItems };
+    return { ...invoice, orderNumber: null, distributorName: distributor.companyName, paidAmount: 0, outstandingAmount: invoice.totalAmount, paymentStatus: "unpaid" as const, payments: [], items: createdItems };
   });
 }
 
+export async function createReceivablePayment(
+  invoiceId: number,
+  input: { paymentKey: string; paymentDate: string | Date; amount: number; paymentMethod: "cash" | "bank_transfer"; reference?: string | null },
+  actorId: number,
+) {
+  await ensureStandardAccountingChart();
+  return db.transaction(async (tx) => {
+    const [previous] = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.paymentKey, input.paymentKey)).limit(1);
+    if (previous) {
+      if (previous.invoiceId !== invoiceId) throw new DistributorInvoiceConflictError("Payment key is already used");
+      return previous;
+    }
+    await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${invoiceId} for update`);
+    const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
+    if (!invoice || invoice.distributorId === null) throw new ReceivablePaymentNotFoundError("Company invoice not found");
+    const payments = await tx.select({ amount: receivablePaymentsTable.amount })
+      .from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoiceId));
+    const outstandingCents = cents(invoice.totalAmount) - payments.reduce((sum, payment) => sum + cents(payment.amount), 0);
+    const amountCents = cents(input.amount);
+    if (amountCents <= 0) throw new DistributorInvoiceValidationError("Payment amount must be positive");
+    if (amountCents > outstandingCents) throw new DistributorInvoiceConflictError("Payment exceeds the outstanding balance");
+    const [payment] = await tx.insert(receivablePaymentsTable).values({
+      invoiceId,
+      paymentKey: input.paymentKey,
+      paymentDate: dateOnly(input.paymentDate),
+      amount: fromCents(amountCents),
+      paymentMethod: input.paymentMethod,
+      reference: input.reference?.trim() || null,
+      createdBy: actorId,
+    }).returning();
+    await postJournalEntry({
+      entryDate: dateOnly(input.paymentDate),
+      description: `Collection for ${invoice.invoiceNumber}${payment.reference ? ` (${payment.reference})` : ""}`,
+      createdBy: actorId,
+      sourceType: "receivable_payment",
+      sourceId: String(payment.id),
+      lines: [
+        { accountCode: payment.paymentMethod === "cash" ? "1110" : "1120", debit: payment.amount },
+        { accountCode: "1130", credit: payment.amount },
+      ],
+    }, tx);
+    const [event] = await tx.insert(operationEventsTable).values({
+      eventKey: `receivable-payment:${payment.id}`,
+      kind: "payment",
+      status: "pending",
+      sourceType: "receivable_payment",
+      sourceId: String(payment.id),
+      occurredAt: new Date(`${dateOnly(input.paymentDate)}T12:00:00.000Z`),
+      actorId,
+      payload: { invoiceId, invoiceNumber: invoice.invoiceNumber, amount: payment.amount, paymentMethod: payment.paymentMethod, reference: payment.reference },
+    }).returning();
+    await tx.update(operationEventsTable).set({ status: "posted" }).where(eq(operationEventsTable.id, event.id));
+    return payment;
+  });
+}
 export async function postFulfillmentCogs(tx: any, orderId: number, actorId: number | null, orderNumber: string, entryDate: string) {
   if (actorId === null) {
     const [systemActor] = await tx.select({ id: adminUsersTable.id }).from(adminUsersTable).limit(1);
@@ -325,3 +388,9 @@ export async function updateOrderAndIssueInvoice(
     return updated;
   });
 }
+
+const defaultDueDate = () => {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + 30);
+  return date.toISOString().slice(0, 10);
+};

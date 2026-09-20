@@ -1,4 +1,4 @@
-import { doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { date, doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { ordersTable } from "./orders";
@@ -14,6 +14,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   invoiceNumber: text("invoice_number").notNull(),
   sellerName: text("seller_name").notNull(),
   issueDatetime: timestamp("issue_datetime", { withTimezone: true }).notNull(),
+  dueDate: date("due_date", { mode: "string" }),
   sellerVatNumber: text("seller_vat_number").notNull(),
   buyerName: text("buyer_name"),
   buyerTaxNumber: text("buyer_tax_number"),

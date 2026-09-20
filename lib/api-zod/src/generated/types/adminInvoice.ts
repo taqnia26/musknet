@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminInvoiceItem } from './adminInvoiceItem';
+import type { AdminInvoicePaymentStatus } from './adminInvoicePaymentStatus';
+import type { ReceivablePayment } from './receivablePayment';
 
 export interface AdminInvoice {
   id: number;
@@ -21,6 +23,8 @@ export interface AdminInvoice {
   invoiceNumber: string;
   sellerName: string;
   issueDatetime: Date;
+  /** @nullable */
+  dueDate: Date | null;
   sellerVatNumber: string;
   /** @nullable */
   buyerName: string | null;
@@ -33,6 +37,10 @@ export interface AdminInvoice {
   subtotal: number;
   vatAmount: number;
   totalAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  paymentStatus: AdminInvoicePaymentStatus;
+  payments: ReceivablePayment[];
   qrCodeData: string;
   items: AdminInvoiceItem[];
   createdAt: Date;

@@ -45,6 +45,7 @@ import {
   operationEventsTable,
   purchaseReceiptsTable,
   shipmentsTable,
+  receivablePaymentsTable,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -56,7 +57,7 @@ import {
   verifyAdminPassword,
 } from "../lib/admin-auth";
 import { hashOwnerPassword } from "../lib/owner-auth";
-import { createDistributorInvoice, DistributorInvoiceConflictError, DistributorInvoiceValidationError, postFulfillmentCogs, updateOrderAndIssueInvoice } from "../lib/invoices";
+import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
 import {
   AccountingConflictError,
   AccountingNotFoundError,
@@ -976,6 +977,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     invoiceNumber: invoicesTable.invoiceNumber,
     sellerName: invoicesTable.sellerName,
     issueDatetime: invoicesTable.issueDatetime,
+    dueDate: invoicesTable.dueDate,
     sellerVatNumber: invoicesTable.sellerVatNumber,
     buyerName: invoicesTable.buyerName,
     buyerTaxNumber: invoicesTable.buyerTaxNumber,
@@ -1004,10 +1006,23 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
   const itemRows = rows.length
     ? await db.select().from(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, rows.map((row) => row.id))).orderBy(invoiceItemsTable.id)
     : [];
-  res.json(Api.AdminListInvoicesResponse.parse(rows.map((row) => ({
-    ...row,
-    items: itemRows.filter((item) => item.invoiceId === row.id),
-  }))));
+  const paymentRows = rows.length
+    ? await db.select().from(receivablePaymentsTable).where(inArray(receivablePaymentsTable.invoiceId, rows.map((row) => row.id))).orderBy(receivablePaymentsTable.paymentDate, receivablePaymentsTable.id)
+    : [];
+  const today = new Date().toISOString().slice(0, 10);
+  const enriched = rows.map((row) => {
+    const payments = paymentRows.filter((payment) => payment.invoiceId === row.id);
+    const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
+    const outstandingAmount = Math.max(0, Math.round((row.totalAmount - paidAmount) * 100) / 100);
+    const paymentStatus = outstandingAmount === 0 ? "paid" as const : paidAmount > 0 ? "partial" as const : "unpaid" as const;
+    return { ...row, paidAmount, outstandingAmount, paymentStatus, payments, items: itemRows.filter((item) => item.invoiceId === row.id) };
+  }).filter((invoice) => {
+    if (!query.receivableStatus || query.receivableStatus === "all") return true;
+    if (query.receivableStatus === "paid") return invoice.paymentStatus === "paid";
+    if (query.receivableStatus === "open") return invoice.outstandingAmount > 0;
+    return invoice.outstandingAmount > 0 && invoice.dueDate !== null && invoice.dueDate < today;
+  });
+  res.json(Api.AdminListInvoicesResponse.parse(enriched));
 }));
 
 router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res) => {
@@ -1016,6 +1031,26 @@ router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res
     const invoice = await createDistributorInvoice(body, res.locals.admin.id);
     res.status(201).json(Api.AdminCreateDistributorInvoiceResponse.parse(invoice));
   } catch (error) {
+    if (error instanceof DistributorInvoiceValidationError) {
+      res.status(400).json({ error: error.message }); return;
+    }
+    if (error instanceof DistributorInvoiceConflictError) {
+      res.status(409).json({ error: error.message }); return;
+    }
+    throw error;
+  }
+}));
+
+router.post("/admin/invoices/:id/payments", permit("invoices", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminCreateReceivablePaymentParams, req.params, res);
+  const body = parse(Api.AdminCreateReceivablePaymentBody, req.body, res); if (!params || !body) return;
+  try {
+    const payment = await createReceivablePayment(params.id, body, res.locals.admin.id);
+    res.status(201).json(Api.AdminCreateReceivablePaymentResponse.parse(payment));
+  } catch (error) {
+    if (error instanceof ReceivablePaymentNotFoundError) {
+      res.status(404).json({ error: error.message }); return;
+    }
     if (error instanceof DistributorInvoiceValidationError) {
       res.status(400).json({ error: error.message }); return;
     }

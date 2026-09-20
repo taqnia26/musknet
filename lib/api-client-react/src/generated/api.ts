@@ -182,6 +182,8 @@ import type {
   PurchaseReceiptPayment,
   PurchaseReceiptPaymentInput,
   RateLimitedResponse,
+  ReceivablePayment,
+  ReceivablePaymentInput,
   ServiceUnavailableResponse,
   Shipment,
   ShipmentInput,
@@ -291,6 +293,13 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getListCategoriesUrl = () => {
 
 
@@ -361,6 +370,13 @@ export function useListCategories<TData = Awaited<ReturnType<typeof listCategori
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getListProductsUrl = (params?: ListProductsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -438,6 +454,13 @@ export function useListProducts<TData = Awaited<ReturnType<typeof listProducts>>
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getGetProductUrl = (slug: string,) => {
 
 
@@ -5474,6 +5497,78 @@ export const useAdminCreateDistributorInvoice = <TError = ErrorType<BadRequestRe
       return useMutation(getAdminCreateDistributorInvoiceMutationOptions(options));
     }
 
+export const getAdminCreateReceivablePaymentUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/invoices/${id}/payments`
+}
+
+/**
+ * @summary Record a partial or full company invoice payment
+ */
+export const adminCreateReceivablePayment = async (id: number,
+    receivablePaymentInput: ReceivablePaymentInput, options?: Parameters<typeof customFetch>[1]): Promise<ReceivablePayment> => {
+
+  return customFetch<ReceivablePayment>(getAdminCreateReceivablePaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(receivablePaymentInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateReceivablePaymentMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateReceivablePayment>>, TError,{id: number;data: BodyType<ReceivablePaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateReceivablePayment>>, TError,{id: number;data: BodyType<ReceivablePaymentInput>}, TContext> => {
+
+const mutationKey = ['adminCreateReceivablePayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateReceivablePayment>>, {id: number;data: BodyType<ReceivablePaymentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminCreateReceivablePayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateReceivablePaymentMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateReceivablePayment>>>
+    export type AdminCreateReceivablePaymentMutationBody = BodyType<ReceivablePaymentInput>
+    export type AdminCreateReceivablePaymentMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | Error>
+
+    /**
+ * @summary Record a partial or full company invoice payment
+ */
+export const useAdminCreateReceivablePayment = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateReceivablePayment>>, TError,{id: number;data: BodyType<ReceivablePaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateReceivablePayment>>,
+        TError,
+        {id: number;data: BodyType<ReceivablePaymentInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateReceivablePaymentMutationOptions(options));
+    }
+
 export const getAdminGetInvoiceQrUrl = (id: number,) => {
 
 
@@ -6146,7 +6241,7 @@ export const adminCreateCampaign = async (adminCampaignInput: AdminCampaignInput
 
 
 
-export const getAdminCreateCampaignMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+export const getAdminCreateCampaignMutationOptions = <TError = ErrorType<Error | ForbiddenResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCampaign>>, TError,{data: BodyType<AdminCampaignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof adminCreateCampaign>>, TError,{data: BodyType<AdminCampaignInput>}, TContext> => {
 
@@ -6175,9 +6270,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AdminCreateCampaignMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateCampaign>>>
     export type AdminCreateCampaignMutationBody = BodyType<AdminCampaignInput>
-    export type AdminCreateCampaignMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+    export type AdminCreateCampaignMutationError = ErrorType<Error | ForbiddenResponse>
 
-    export const useAdminCreateCampaign = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    export const useAdminCreateCampaign = <TError = ErrorType<Error | ForbiddenResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCampaign>>, TError,{data: BodyType<AdminCampaignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof adminCreateCampaign>>,
@@ -6361,7 +6456,7 @@ export const adminUpdateCampaign = async (id: number,
 
 
 
-export const getAdminUpdateCampaignMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+export const getAdminUpdateCampaignMutationOptions = <TError = ErrorType<Error | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCampaign>>, TError,{id: number;data: BodyType<AdminCampaignUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCampaign>>, TError,{id: number;data: BodyType<AdminCampaignUpdate>}, TContext> => {
 
@@ -6390,9 +6485,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AdminUpdateCampaignMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateCampaign>>>
     export type AdminUpdateCampaignMutationBody = BodyType<AdminCampaignUpdate>
-    export type AdminUpdateCampaignMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>
+    export type AdminUpdateCampaignMutationError = ErrorType<Error | ForbiddenResponse | NotFoundResponse>
 
-    export const useAdminUpdateCampaign = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>,
+    export const useAdminUpdateCampaign = <TError = ErrorType<Error | ForbiddenResponse | NotFoundResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateCampaign>>, TError,{id: number;data: BodyType<AdminCampaignUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof adminUpdateCampaign>>,
@@ -12234,3 +12329,10 @@ export function useGetOwnerOpeningBalanceReconciliation<TData = Awaited<ReturnTy
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+

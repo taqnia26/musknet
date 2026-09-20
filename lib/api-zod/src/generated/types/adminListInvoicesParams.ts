@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminListInvoicesChannel } from './adminListInvoicesChannel';
+import type { AdminListInvoicesReceivableStatus } from './adminListInvoicesReceivableStatus';
 import type { AdminSearchParameter } from './adminSearchParameter';
 
 export type AdminListInvoicesParams = {
 search?: AdminSearchParameter;
 channel?: AdminListInvoicesChannel;
+receivableStatus?: AdminListInvoicesReceivableStatus;
 };

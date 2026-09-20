@@ -818,6 +818,10 @@ paths:
           in: query
           required: false
           schema: { type: string, enum: [all, companies], default: all }
+        - name: receivableStatus
+          in: query
+          required: false
+          schema: { type: string, enum: [all, open, overdue, paid], default: all }
       responses:
         "200":
           description: Issued invoices
@@ -836,6 +840,20 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Distributor or product is unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/{id}/payments:
+    post:
+      operationId: adminCreateReceivablePayment
+      summary: Record a partial or full company invoice payment
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ReceivablePaymentInput" } } } }
+      responses:
+        "201": { description: Payment recorded, content: { application/json: { schema: { $ref: "#/components/schemas/ReceivablePayment" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Payment exceeds outstanding balance, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/invoices/{id}/qr:
     get:
       operationId: adminGetInvoiceQr
@@ -2680,7 +2698,7 @@ components:
         adminNotes: { type: [string, "null"] }
     AdminInvoice:
       type: object
-      required: [id, orderId, orderNumber, distributorId, distributorName, sequenceNumber, invoiceNumber, issueDatetime, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, vatAmount, totalAmount, qrCodeData, items, createdAt]
+      required: [id, orderId, orderNumber, distributorId, distributorName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
       properties:
         id: { type: number }
         orderId: { type: [number, "null"] }
@@ -2691,6 +2709,7 @@ components:
         invoiceNumber: { type: string }
         sellerName: { type: string }
         issueDatetime: { type: string, format: date-time }
+        dueDate: { type: [string, "null"], format: date }
         sellerVatNumber: { type: string }
         buyerName: { type: [string, "null"] }
         buyerTaxNumber: { type: [string, "null"] }
@@ -2699,6 +2718,10 @@ components:
         subtotal: { type: number }
         vatAmount: { type: number }
         totalAmount: { type: number }
+        paidAmount: { type: number }
+        outstandingAmount: { type: number }
+        paymentStatus: { type: string, enum: [unpaid, partial, paid] }
+        payments: { type: array, items: { $ref: "#/components/schemas/ReceivablePayment" } }
         qrCodeData: { type: string }
         items: { type: array, items: { $ref: "#/components/schemas/AdminInvoiceItem" } }
         createdAt: { type: string, format: date-time }
@@ -2724,15 +2747,37 @@ components:
         unitPrice: { type: number, exclusiveMinimum: 0 }
     DistributorInvoiceInput:
       type: object
-      required: [creationKey, distributorId, items]
+      required: [creationKey, distributorId, dueDate, items]
       properties:
         creationKey: { type: string, minLength: 16, maxLength: 100 }
         distributorId: { type: number, minimum: 1, multipleOf: 1 }
+        dueDate: { type: string, format: date }
         items:
           type: array
           minItems: 1
           maxItems: 100
           items: { $ref: "#/components/schemas/DistributorInvoiceLineInput" }
+    ReceivablePaymentInput:
+      type: object
+      required: [paymentKey, paymentDate, amount, paymentMethod]
+      properties:
+        paymentKey: { type: string, minLength: 16, maxLength: 100 }
+        paymentDate: { type: string, format: date }
+        amount: { type: number, exclusiveMinimum: 0 }
+        paymentMethod: { type: string, enum: [cash, bank_transfer] }
+        reference: { type: [string, "null"], maxLength: 200 }
+    ReceivablePayment:
+      type: object
+      required: [id, invoiceId, paymentDate, amount, paymentMethod, reference, createdBy, createdAt]
+      properties:
+        id: { type: number }
+        invoiceId: { type: number }
+        paymentDate: { type: string, format: date }
+        amount: { type: number }
+        paymentMethod: { type: string, enum: [cash, bank_transfer] }
+        reference: { type: [string, "null"] }
+        createdBy: { type: number }
+        createdAt: { type: string, format: date-time }
     AdminOrderAddress:
       type: object
       required: [label, city, district, street, buildingNo, additionalInfo, isDefault]

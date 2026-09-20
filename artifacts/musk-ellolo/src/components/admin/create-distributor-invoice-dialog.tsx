@@ -18,6 +18,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 type Line = { productId: string; quantity: number; unitPrice: number };
 const emptyLine = (): Line => ({ productId: '', quantity: 1, unitPrice: 0 });
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
+const defaultDueDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 30);
+  return date.toISOString().slice(0, 10);
+};
 
 export function CreateDistributorInvoiceDialog() {
   const { t, lang } = useLanguage();
@@ -27,6 +32,7 @@ export function CreateDistributorInvoiceDialog() {
   const [distributorId, setDistributorId] = useState('');
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [creationKey, setCreationKey] = useState(() => crypto.randomUUID());
+  const [dueDate, setDueDate] = useState(defaultDueDate);
   const [error, setError] = useState<string | null>(null);
   const { data: distributors } = useAdminListDistributors({ status: 'active' });
   const { data: products } = useAdminListProducts({ status: 'active' });
@@ -42,6 +48,7 @@ export function CreateDistributorInvoiceDialog() {
     setDistributorId('');
     setLines([emptyLine()]);
     setCreationKey(crypto.randomUUID());
+    setDueDate(defaultDueDate());
     setError(null);
   };
   const updateLine = (index: number, update: Partial<Line>) => {
@@ -49,7 +56,7 @@ export function CreateDistributorInvoiceDialog() {
   };
   const submit = () => {
     setError(null);
-    if (!distributorId || lines.some((line) => !line.productId || !Number.isSafeInteger(line.quantity) || line.quantity < 1 || !Number.isFinite(line.unitPrice) || line.unitPrice <= 0)) {
+    if (!distributorId || !dueDate || lines.some((line) => !line.productId || !Number.isSafeInteger(line.quantity) || line.quantity < 1 || !Number.isFinite(line.unitPrice) || line.unitPrice <= 0)) {
       setError(t('اختر موزعاً وأدخل منتجاً وكمية وسعراً صالحاً لكل بند', 'Select a distributor and enter a valid product, quantity, and price for every line'));
       return;
     }
@@ -61,6 +68,7 @@ export function CreateDistributorInvoiceDialog() {
       data: {
         creationKey,
         distributorId: Number(distributorId),
+        dueDate,
         items: lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity, unitPrice: line.unitPrice })),
       },
     }, {
@@ -84,12 +92,18 @@ export function CreateDistributorInvoiceDialog() {
           <DialogTitle>{t('فاتورة مبيعات موزع', 'Distributor Sales Invoice')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
-          <div className="space-y-2">
-            <Label>{t('الموزع النشط', 'Active Distributor')}</Label>
-            <Select value={distributorId} onValueChange={setDistributorId}>
-              <SelectTrigger data-testid="select-invoice-distributor"><SelectValue placeholder={t('اختر الموزع', 'Select distributor')} /></SelectTrigger>
-              <SelectContent>{(distributors ?? []).map((distributor) => <SelectItem key={distributor.id} value={String(distributor.id)}>{distributor.companyName}</SelectItem>)}</SelectContent>
-            </Select>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label>{t('الموزع النشط', 'Active Distributor')}</Label>
+              <Select value={distributorId} onValueChange={setDistributorId}>
+                <SelectTrigger data-testid="select-invoice-distributor"><SelectValue placeholder={t('اختر الموزع', 'Select distributor')} /></SelectTrigger>
+                <SelectContent>{(distributors ?? []).map((distributor) => <SelectItem key={distributor.id} value={String(distributor.id)}>{distributor.companyName}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="invoice-due-date">{t('تاريخ الاستحقاق', 'Due date')}</Label>
+              <Input id="invoice-due-date" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
+            </div>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">

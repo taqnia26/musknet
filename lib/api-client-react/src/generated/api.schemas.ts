@@ -1039,6 +1039,35 @@ export interface AdminOrderInput {
   adminNotes?: string | null;
 }
 
+export type AdminInvoicePaymentStatus = typeof AdminInvoicePaymentStatus[keyof typeof AdminInvoicePaymentStatus];
+
+
+export const AdminInvoicePaymentStatus = {
+  unpaid: 'unpaid',
+  partial: 'partial',
+  paid: 'paid',
+} as const;
+
+export type ReceivablePaymentPaymentMethod = typeof ReceivablePaymentPaymentMethod[keyof typeof ReceivablePaymentPaymentMethod];
+
+
+export const ReceivablePaymentPaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+} as const;
+
+export interface ReceivablePayment {
+  id: number;
+  invoiceId: number;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: ReceivablePaymentPaymentMethod;
+  /** @nullable */
+  reference: string | null;
+  createdBy: number;
+  createdAt: string;
+}
+
 export interface AdminInvoiceItem {
   id: number;
   productId: number;
@@ -1066,6 +1095,8 @@ export interface AdminInvoice {
   invoiceNumber: string;
   sellerName: string;
   issueDatetime: string;
+  /** @nullable */
+  dueDate: string | null;
   sellerVatNumber: string;
   /** @nullable */
   buyerName: string | null;
@@ -1078,6 +1109,10 @@ export interface AdminInvoice {
   subtotal: number;
   vatAmount: number;
   totalAmount: number;
+  paidAmount: number;
+  outstandingAmount: number;
+  paymentStatus: AdminInvoicePaymentStatus;
+  payments: ReceivablePayment[];
   qrCodeData: string;
   items: AdminInvoiceItem[];
   createdAt: string;
@@ -1100,11 +1135,37 @@ export interface DistributorInvoiceInput {
   creationKey: string;
   /** @minimum 1 */
   distributorId: number;
+  dueDate: string;
   /**
      * @minItems 1
      * @maxItems 100
      */
   items: DistributorInvoiceLineInput[];
+}
+
+export type ReceivablePaymentInputPaymentMethod = typeof ReceivablePaymentInputPaymentMethod[keyof typeof ReceivablePaymentInputPaymentMethod];
+
+
+export const ReceivablePaymentInputPaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+} as const;
+
+export interface ReceivablePaymentInput {
+  /**
+     * @minLength 16
+     * @maxLength 100
+     */
+  paymentKey: string;
+  paymentDate: string;
+  /** @exclusiveMinimum 0 */
+  amount: number;
+  paymentMethod: ReceivablePaymentInputPaymentMethod;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  reference?: string | null;
 }
 
 export interface AdminOrderCustomer {
@@ -2876,6 +2937,7 @@ export const AdminListOrdersStatus = {
 export type AdminListInvoicesParams = {
 search?: AdminSearchParameter;
 channel?: AdminListInvoicesChannel;
+receivableStatus?: AdminListInvoicesReceivableStatus;
 };
 
 export type AdminListInvoicesChannel = typeof AdminListInvoicesChannel[keyof typeof AdminListInvoicesChannel];
@@ -2884,6 +2946,16 @@ export type AdminListInvoicesChannel = typeof AdminListInvoicesChannel[keyof typ
 export const AdminListInvoicesChannel = {
   all: 'all',
   companies: 'companies',
+} as const;
+
+export type AdminListInvoicesReceivableStatus = typeof AdminListInvoicesReceivableStatus[keyof typeof AdminListInvoicesReceivableStatus];
+
+
+export const AdminListInvoicesReceivableStatus = {
+  all: 'all',
+  open: 'open',
+  overdue: 'overdue',
+  paid: 'paid',
 } as const;
 
 export type GetAdminShippingDashboardParams = {
@@ -3037,3 +3109,4 @@ export const InfluencerDashboardRangeDays = {
 export type CaptureInfluencerReferralParams = {
 ref: string;
 };
+

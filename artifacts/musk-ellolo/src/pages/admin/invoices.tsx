@@ -2,19 +2,26 @@ import { useState, useEffect } from 'react';
 import { 
   useAdminListInvoices, 
   useAdminGetInvoiceQr,
+  useAdminCreateReceivablePayment,
   useGetAdminMe,
   getAdminGetInvoiceQrQueryKey,
+  getAdminListInvoicesQueryKey,
   type AdminInvoice 
 } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, QrCode, Printer, AlertCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, QrCode, Printer, AlertCircle, Banknote } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { hasPermission } from '@/lib/permissions';
 import { CreateDistributorInvoiceDialog } from '@/components/admin/create-distributor-invoice-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 const escapeHtml = (value: unknown) => String(value ?? '')
   .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -163,16 +170,118 @@ function InvoiceQrDialog({
   );
 }
 
+function RecordPaymentDialog({
+  invoice,
+  open,
+  onOpenChange,
+}: {
+  invoice: AdminInvoice | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t, lang } = useLanguage();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const mutation = useAdminCreateReceivablePayment();
+  const [amount, setAmount] = useState('');
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reference, setReference] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank_transfer'>('bank_transfer');
+  const [paymentKey, setPaymentKey] = useState(() => crypto.randomUUID());
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open && invoice) {
+      setAmount(invoice.outstandingAmount.toFixed(2));
+      setPaymentDate(new Date().toISOString().slice(0, 10));
+      setReference('');
+      setPaymentMethod('bank_transfer');
+      setPaymentKey(crypto.randomUUID());
+      setError(null);
+    }
+  }, [open, invoice]);
+
+  const submit = () => {
+    if (!invoice) return;
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0 || numericAmount > invoice.outstandingAmount) {
+      setError(t('أدخل مبلغاً موجباً لا يتجاوز الرصيد المستحق', 'Enter a positive amount that does not exceed the outstanding balance'));
+      return;
+    }
+    mutation.mutate({
+      id: invoice.id,
+      data: { paymentKey, paymentDate, amount: numericAmount, paymentMethod, reference: reference.trim() || null },
+    }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() });
+        toast({ title: t('تم تسجيل الدفعة', 'Payment recorded') });
+        onOpenChange(false);
+      },
+      onError: (mutationError) => setError(mutationError instanceof Error ? mutationError.message : t('تعذر تسجيل الدفعة', 'Unable to record payment')),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+        <DialogHeader className={lang === 'ar' ? 'text-right' : 'text-left'}>
+          <DialogTitle>{t('تسجيل دفعة', 'Record payment')} · {invoice?.invoiceNumber}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-md border bg-muted/20 p-3">
+            <p className="text-sm text-muted-foreground">{t('الرصيد المستحق', 'Outstanding balance')}</p>
+            <p className="text-2xl font-bold">{invoice?.outstandingAmount.toFixed(2)}</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="receivable-amount">{t('المبلغ', 'Amount')}</Label>
+            <Input id="receivable-amount" type="number" min="0.01" step="0.01" max={invoice?.outstandingAmount} value={amount} onChange={(event) => setAmount(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="receivable-date">{t('تاريخ الدفعة', 'Payment date')}</Label>
+            <Input id="receivable-date" type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="receivable-reference">{t('المرجع', 'Reference')}</Label>
+            <Input id="receivable-reference" maxLength={200} placeholder={t('رقم التحويل أو الإيصال', 'Transfer or receipt number')} value={reference} onChange={(event) => setReference(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>{t('طريقة التحصيل', 'Collection method')}</Label>
+            <Select value={paymentMethod} onValueChange={(value: 'cash' | 'bank_transfer') => setPaymentMethod(value)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bank_transfer">{t('تحويل بنكي', 'Bank transfer')}</SelectItem>
+                <SelectItem value="cash">{t('نقدي', 'Cash')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
+        </div>
+        <DialogFooter>
+          <Button onClick={submit} disabled={mutation.isPending || !paymentDate}>{mutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('تسجيل الدفعة', 'Record payment')}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminInvoices() {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
+  const [receivableStatus, setReceivableStatus] = useState<'all' | 'open' | 'overdue' | 'paid'>('all');
   const [selectedInvoice, setSelectedInvoice] = useState<AdminInvoice | null>(null);
+  const [paymentInvoice, setPaymentInvoice] = useState<AdminInvoice | null>(null);
   const { data: currentUser } = useGetAdminMe();
 
   const { data: invoices, isLoading, isError } = useAdminListInvoices({
     search: search || undefined,
     channel: 'companies',
+    receivableStatus,
   });
+  const totals = (invoices ?? []).reduce((summary, invoice) => ({
+    billed: summary.billed + invoice.totalAmount,
+    paid: summary.paid + invoice.paidAmount,
+    outstanding: summary.outstanding + invoice.outstandingAmount,
+  }), { billed: 0, paid: 0, outstanding: 0 });
 
   return (
     <div className="space-y-6">
@@ -182,6 +291,12 @@ export default function AdminInvoices() {
           <p className="text-muted-foreground mt-1">{t('فواتير البيع المرتبطة بالشركات والموزعين', 'Sales invoices linked to companies and distributors')}</p>
         </div>
         {hasPermission(currentUser, 'invoices', 'edit') && <CreateDistributorInvoiceDialog />}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">{t('إجمالي الفواتير', 'Total billed')}</p><p className="mt-1 text-2xl font-bold">{totals.billed.toFixed(2)}</p></div>
+        <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">{t('المحصل', 'Collected')}</p><p className="mt-1 text-2xl font-bold text-emerald-600">{totals.paid.toFixed(2)}</p></div>
+        <div className="rounded-lg border bg-card p-4"><p className="text-sm text-muted-foreground">{t('الرصيد المستحق', 'Outstanding')}</p><p className="mt-1 text-2xl font-bold text-amber-600">{totals.outstanding.toFixed(2)}</p></div>
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -194,6 +309,15 @@ export default function AdminInvoices() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <Select value={receivableStatus} onValueChange={(value: 'all' | 'open' | 'overdue' | 'paid') => setReceivableStatus(value)}>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">{t('كل الفواتير', 'All invoices')}</SelectItem>
+            <SelectItem value="open">{t('أرصدة مفتوحة', 'Open balances')}</SelectItem>
+            <SelectItem value="overdue">{t('متأخرة السداد', 'Overdue')}</SelectItem>
+            <SelectItem value="paid">{t('مسددة', 'Paid')}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="border rounded-md bg-card shadow-sm overflow-hidden">
@@ -203,11 +327,12 @@ export default function AdminInvoices() {
               <TableHead>{t('رقم الفاتورة', 'Invoice #')}</TableHead>
               <TableHead>{t('رقم الطلب', 'Order ID')}</TableHead>
               <TableHead>{t('الموزع', 'Distributor')}</TableHead>
-              <TableHead>{t('التاريخ', 'Date')}</TableHead>
-              <TableHead className="text-end">{t('المبلغ غير شامل الضريبة', 'Subtotal')}</TableHead>
-              <TableHead className="text-end">{t('الضريبة', 'VAT')}</TableHead>
+              <TableHead>{t('الاستحقاق', 'Due date')}</TableHead>
               <TableHead className="text-end font-bold">{t('الإجمالي', 'Total')}</TableHead>
-              <TableHead className="w-[100px] text-center">{t('إجراءات', 'Actions')}</TableHead>
+              <TableHead className="text-end">{t('المدفوع', 'Paid')}</TableHead>
+              <TableHead className="text-end">{t('المستحق', 'Outstanding')}</TableHead>
+              <TableHead>{t('الحالة', 'Status')}</TableHead>
+              <TableHead className="w-[120px] text-center">{t('إجراءات', 'Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -223,11 +348,15 @@ export default function AdminInvoices() {
                   <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                   <TableCell>{invoice.orderNumber ?? <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell>{invoice.distributorName ?? <span className="text-muted-foreground">-</span>}</TableCell>
-                  <TableCell>{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd HH:mm')}</TableCell>
-                  <TableCell className="text-end">{invoice.subtotal.toFixed(2)}</TableCell>
-                  <TableCell className="text-end">{invoice.vatAmount.toFixed(2)}</TableCell>
+                  <TableCell className={invoice.dueDate && invoice.outstandingAmount > 0 && invoice.dueDate < new Date().toISOString().slice(0, 10) ? 'font-semibold text-destructive' : ''}>{invoice.dueDate ?? '-'}</TableCell>
                   <TableCell className="text-end font-semibold text-primary">{invoice.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-end text-emerald-600">{invoice.paidAmount.toFixed(2)}</TableCell>
+                  <TableCell className="text-end font-semibold">{invoice.outstandingAmount.toFixed(2)}</TableCell>
+                  <TableCell><Badge variant={invoice.paymentStatus === 'paid' ? 'secondary' : invoice.paymentStatus === 'partial' ? 'default' : 'outline'}>{invoice.paymentStatus === 'paid' ? t('مسددة', 'Paid') : invoice.paymentStatus === 'partial' ? t('جزئية', 'Partial') : t('غير مسددة', 'Unpaid')}</Badge></TableCell>
+                  <TableCell className="text-center whitespace-nowrap">
+                    {hasPermission(currentUser, 'invoices', 'edit') && invoice.outstandingAmount > 0 && (
+                      <Button variant="ghost" size="icon" onClick={() => setPaymentInvoice(invoice)} title={t('تسجيل دفعة', 'Record payment')}><Banknote className="h-4 w-4" /></Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="icon" 
@@ -250,6 +379,7 @@ export default function AdminInvoices() {
         open={!!selectedInvoice} 
         onOpenChange={(open) => !open && setSelectedInvoice(null)} 
       />
+      <RecordPaymentDialog invoice={paymentInvoice} open={!!paymentInvoice} onOpenChange={(open) => !open && setPaymentInvoice(null)} />
     </div>
   );
 }
