@@ -9,9 +9,12 @@ import type { GiftingIssueCategory } from './giftingIssueCategory';
 
 export interface GiftingIssue {
   id: number;
-  recipientName: string;
+  /** @nullable */
+  recipientName?: string | null;
   category: GiftingIssueCategory;
   comment: string;
+  /** @nullable */
+  occasion?: string | null;
   /** @nullable */
   program?: string | null;
   productId: number;
@@ -20,11 +23,15 @@ export interface GiftingIssue {
   /** @minimum 1 */
   quantity: number;
   totalCost: string;
+  issueDate: Date;
   /** @nullable */
-  issueDate?: Date | null;
-  sourceFilename: string;
-  sourceSheet: string;
-  sourceRow: number;
+  sourceFilename?: string | null;
+  /** @nullable */
+  sourceSheet?: string | null;
+  /** @nullable */
+  sourceRow?: number | null;
   dedupeKey: string;
+  /** @nullable */
+  idempotencyKey?: string | null;
   importedAt: Date;
 }

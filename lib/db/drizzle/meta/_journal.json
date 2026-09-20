@@ -225,6 +225,13 @@
       "when": 1789904490539,
       "tag": "0031_oval_the_hand",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789907601341,
+      "tag": "0032_loose_jocasta",
+      "breakpoints": true
     }
   ]
 }

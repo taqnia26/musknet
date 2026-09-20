@@ -6,15 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type GiftingIssueCategory = typeof GiftingIssueCategory[keyof typeof GiftingIssueCategory];
+export type GiftingIssueInputCategory = typeof GiftingIssueInputCategory[keyof typeof GiftingIssueInputCategory];
 
 
-export const GiftingIssueCategory = {
-  VIP: 'VIP',
-  Sample: 'Sample',
-  Damage: 'Damage',
-  Marketing: 'Marketing',
-  Tester: 'Tester',
+export const GiftingIssueInputCategory = {
   B2B_EVALUATION: 'B2B_EVALUATION',
   TESTER: 'TESTER',
   VIP_GIFT: 'VIP_GIFT',

@@ -5,9 +5,9 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
-import type { GetAdminGiftingIssuesCategory } from './getAdminGiftingIssuesCategory';
+import type { GiftingIssueCategory } from './giftingIssueCategory';
 
 export type GetAdminGiftingIssuesParams = {
-category?: GetAdminGiftingIssuesCategory;
+category?: GiftingIssueCategory;
 search?: string;
 };

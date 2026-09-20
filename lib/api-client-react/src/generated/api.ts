@@ -132,6 +132,7 @@ import type {
   GetInventoryValuationReportParams,
   GetInventoryValueReportParams,
   GiftingIssue,
+  GiftingIssueInput,
   HealthStatus,
   HomeContent,
   Influencer,
@@ -11000,6 +11001,71 @@ export function useGetAdminGiftingIssues<TData = Awaited<ReturnType<typeof getAd
 
 
 
+
+export const getCreateAdminGiftingIssueUrl = () => {
+
+
+
+
+  return `/api/admin/gifting-issues`
+}
+
+export const createAdminGiftingIssue = async (giftingIssueInput: GiftingIssueInput, options?: Parameters<typeof customFetch>[1]): Promise<GiftingIssue> => {
+
+  return customFetch<GiftingIssue>(getCreateAdminGiftingIssueUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(giftingIssueInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminGiftingIssueMutationOptions = <TError = ErrorType<BadRequestResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminGiftingIssue>>, TError,{data: BodyType<GiftingIssueInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminGiftingIssue>>, TError,{data: BodyType<GiftingIssueInput>}, TContext> => {
+
+const mutationKey = ['createAdminGiftingIssue'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminGiftingIssue>>, {data: BodyType<GiftingIssueInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminGiftingIssue(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminGiftingIssueMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminGiftingIssue>>>
+    export type CreateAdminGiftingIssueMutationBody = BodyType<GiftingIssueInput>
+    export type CreateAdminGiftingIssueMutationError = ErrorType<BadRequestResponse | void>
+
+    export const useCreateAdminGiftingIssue = <TError = ErrorType<BadRequestResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminGiftingIssue>>, TError,{data: BodyType<GiftingIssueInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminGiftingIssue>>,
+        TError,
+        {data: BodyType<GiftingIssueInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAdminGiftingIssueMutationOptions(options));
+    }
 
 export const getGetAdminGiftingIssuesIdUrl = (id: number,) => {
 

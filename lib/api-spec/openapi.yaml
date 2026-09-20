@@ -1562,7 +1562,7 @@ paths:
       tags: [admin]
       summary: Gifts and testers archive
       parameters:
-        - { in: query, name: category, schema: { type: string, enum: [VIP, Sample, Damage, Marketing, Tester] } }
+        - { in: query, name: category, schema: { $ref: "#/components/schemas/GiftingIssueCategory" } }
         - { in: query, name: search, schema: { type: string } }
       responses:
         "200":
@@ -1580,6 +1580,15 @@ paths:
                       rows: { type: number, multipleOf: 1 }
                       units: { type: number, multipleOf: 1 }
                       totalCost: { type: string }
+    post:
+      operationId: createAdminGiftingIssue
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/GiftingIssueInput" } } } }
+      responses:
+        "201": { description: Gifting issue created, content: { application/json: { schema: { $ref: "#/components/schemas/GiftingIssue" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409": { description: Insufficient stock or idempotency conflict }
   /admin/gifting-issues/{id}:
     get:
       tags: [admin]
@@ -4033,24 +4042,40 @@ components:
         quantitySold: { type: number, multipleOf: 1, minimum: 0, default: 0 }
     GiftingIssue:
       type: object
-      required: [id, recipientName, category, comment, productId, barcode, descriptionSnapshot, quantity, totalCost, sourceFilename, sourceSheet, sourceRow, dedupeKey, importedAt]
+      required: [id, category, comment, productId, barcode, descriptionSnapshot, quantity, totalCost, issueDate, dedupeKey, importedAt]
       properties:
         id: { type: number, multipleOf: 1 }
-        recipientName: { type: string }
-        category: { type: string, enum: [VIP, Sample, Damage, Marketing, Tester] }
+        recipientName: { type: [string, "null"] }
+        category: { $ref: "#/components/schemas/GiftingIssueCategory" }
         comment: { type: string }
+        occasion: { type: [string, "null"] }
         program: { type: [string, "null"] }
         productId: { type: number, multipleOf: 1 }
         barcode: { type: string }
         descriptionSnapshot: { type: string }
         quantity: { type: number, multipleOf: 1, minimum: 1 }
         totalCost: { type: string }
-        issueDate: { type: [string, "null"], format: date-time }
-        sourceFilename: { type: string }
-        sourceSheet: { type: string }
-        sourceRow: { type: number, multipleOf: 1 }
+        issueDate: { type: string, format: date-time }
+        sourceFilename: { type: [string, "null"] }
+        sourceSheet: { type: [string, "null"] }
+        sourceRow: { type: [number, "null"], multipleOf: 1 }
         dedupeKey: { type: string }
+        idempotencyKey: { type: [string, "null"] }
         importedAt: { type: string, format: date-time }
+    GiftingIssueCategory:
+      type: string
+      enum: [VIP, Sample, Damage, Marketing, Tester, B2B_EVALUATION, TESTER, VIP_GIFT, INFLUENCERS]
+    GiftingIssueInput:
+      type: object
+      required: [productId, category, quantity, idempotencyKey]
+      properties:
+        productId: { type: number, multipleOf: 1, minimum: 1 }
+        category: { type: string, enum: [B2B_EVALUATION, TESTER, VIP_GIFT, INFLUENCERS] }
+        quantity: { type: number, multipleOf: 1, minimum: 1 }
+        issueDate: { type: string, format: date }
+        recipientName: { type: string, maxLength: 200 }
+        occasion: { type: string, maxLength: 500 }
+        idempotencyKey: { type: string, minLength: 1, maxLength: 200 }
     InfluencerLogin:
       type: object
       required: [email, password]

@@ -42,6 +42,7 @@ export const standardRetailChart: readonly AccountSeed[] = [
   { code: "6130", nameAr: "مصروف المرافق", nameEn: "Utilities Expense", accountType: "expense", normalBalance: "debit", isPosting: true, parentCode: "6000" },
   { code: "6140", nameAr: "مصروف التسويق", nameEn: "Marketing Expense", accountType: "expense", normalBalance: "debit", isPosting: true, parentCode: "6000" },
   { code: "6150", nameAr: "مصروف الشحن", nameEn: "Shipping Expense", accountType: "expense", normalBalance: "debit", isPosting: true, parentCode: "6000" },
+  { code: "6160", nameAr: "الهدايا والتيسترز", nameEn: "Gifts and Testers", accountType: "expense", normalBalance: "debit", isPosting: true, parentCode: "6000" },
   { code: "6190", nameAr: "مصروفات تشغيلية أخرى", nameEn: "Other Operating Expenses", accountType: "expense", normalBalance: "debit", isPosting: true, parentCode: "6000" },
 ];
 

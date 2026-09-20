@@ -4586,7 +4586,7 @@ export const AdminCreateExhibitionProductResponse = zod.object({
  * @summary Gifts and testers archive
  */
 export const GetAdminGiftingIssuesQueryParams = zod.object({
-  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester']).optional(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']).optional(),
   "search": zod.coerce.string().optional()
 })
 
@@ -4607,20 +4607,22 @@ export const getAdminGiftingIssuesResponseSummaryUnitsMultipleOf = 1;
 export const GetAdminGiftingIssuesResponse = zod.object({
   "rows": zod.array(zod.object({
   "id": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemIdMultipleOf),
-  "recipientName": zod.string(),
-  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester']),
+  "recipientName": zod.string().nullish(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']),
   "comment": zod.string(),
+  "occasion": zod.string().nullish(),
   "program": zod.string().nullish(),
   "productId": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemProductIdMultipleOf),
   "barcode": zod.string(),
   "descriptionSnapshot": zod.string(),
   "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssuesResponseRowsItemQuantityMultipleOf),
   "totalCost": zod.string(),
-  "issueDate": zod.coerce.date().nullish(),
-  "sourceFilename": zod.string(),
-  "sourceSheet": zod.string(),
-  "sourceRow": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemSourceRowMultipleOf),
+  "issueDate": zod.coerce.date(),
+  "sourceFilename": zod.string().nullish(),
+  "sourceSheet": zod.string().nullish(),
+  "sourceRow": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemSourceRowMultipleOf).nullish(),
   "dedupeKey": zod.string(),
+  "idempotencyKey": zod.string().nullish(),
   "importedAt": zod.coerce.date()
 })),
   "summary": zod.object({
@@ -4628,6 +4630,60 @@ export const GetAdminGiftingIssuesResponse = zod.object({
   "units": zod.number().multipleOf(getAdminGiftingIssuesResponseSummaryUnitsMultipleOf).optional(),
   "totalCost": zod.string().optional()
 })
+})
+
+
+export const createAdminGiftingIssueBodyProductIdMultipleOf = 1;
+
+export const createAdminGiftingIssueBodyQuantityMultipleOf = 1;
+
+export const createAdminGiftingIssueBodyRecipientNameMax = 200;
+
+export const createAdminGiftingIssueBodyOccasionMax = 500;
+
+export const createAdminGiftingIssueBodyIdempotencyKeyMax = 200;
+
+
+
+export const CreateAdminGiftingIssueBody = zod.object({
+  "productId": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyProductIdMultipleOf),
+  "category": zod.enum(['B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']),
+  "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyQuantityMultipleOf),
+  "issueDate": zod.coerce.date().optional(),
+  "recipientName": zod.string().max(createAdminGiftingIssueBodyRecipientNameMax).optional(),
+  "occasion": zod.string().max(createAdminGiftingIssueBodyOccasionMax).optional(),
+  "idempotencyKey": zod.string().min(1).max(createAdminGiftingIssueBodyIdempotencyKeyMax)
+})
+
+export const createAdminGiftingIssueResponseIdMultipleOf = 1;
+
+export const createAdminGiftingIssueResponseProductIdMultipleOf = 1;
+
+export const createAdminGiftingIssueResponseQuantityMultipleOf = 1;
+
+export const createAdminGiftingIssueResponseSourceRowMultipleOf = 1;
+
+
+
+export const CreateAdminGiftingIssueResponse = zod.object({
+  "id": zod.number().multipleOf(createAdminGiftingIssueResponseIdMultipleOf),
+  "recipientName": zod.string().nullish(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']),
+  "comment": zod.string(),
+  "occasion": zod.string().nullish(),
+  "program": zod.string().nullish(),
+  "productId": zod.number().multipleOf(createAdminGiftingIssueResponseProductIdMultipleOf),
+  "barcode": zod.string(),
+  "descriptionSnapshot": zod.string(),
+  "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueResponseQuantityMultipleOf),
+  "totalCost": zod.string(),
+  "issueDate": zod.coerce.date(),
+  "sourceFilename": zod.string().nullish(),
+  "sourceSheet": zod.string().nullish(),
+  "sourceRow": zod.number().multipleOf(createAdminGiftingIssueResponseSourceRowMultipleOf).nullish(),
+  "dedupeKey": zod.string(),
+  "idempotencyKey": zod.string().nullish(),
+  "importedAt": zod.coerce.date()
 })
 
 
@@ -4654,20 +4710,22 @@ export const getAdminGiftingIssuesIdResponseSourceRowMultipleOf = 1;
 
 export const GetAdminGiftingIssuesIdResponse = zod.object({
   "id": zod.number().multipleOf(getAdminGiftingIssuesIdResponseIdMultipleOf),
-  "recipientName": zod.string(),
-  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester']),
+  "recipientName": zod.string().nullish(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS']),
   "comment": zod.string(),
+  "occasion": zod.string().nullish(),
   "program": zod.string().nullish(),
   "productId": zod.number().multipleOf(getAdminGiftingIssuesIdResponseProductIdMultipleOf),
   "barcode": zod.string(),
   "descriptionSnapshot": zod.string(),
   "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssuesIdResponseQuantityMultipleOf),
   "totalCost": zod.string(),
-  "issueDate": zod.coerce.date().nullish(),
-  "sourceFilename": zod.string(),
-  "sourceSheet": zod.string(),
-  "sourceRow": zod.number().multipleOf(getAdminGiftingIssuesIdResponseSourceRowMultipleOf),
+  "issueDate": zod.coerce.date(),
+  "sourceFilename": zod.string().nullish(),
+  "sourceSheet": zod.string().nullish(),
+  "sourceRow": zod.number().multipleOf(getAdminGiftingIssuesIdResponseSourceRowMultipleOf).nullish(),
   "dedupeKey": zod.string(),
+  "idempotencyKey": zod.string().nullish(),
   "importedAt": zod.coerce.date()
 })
 

@@ -2878,13 +2878,20 @@ export const GiftingIssueCategory = {
   Damage: 'Damage',
   Marketing: 'Marketing',
   Tester: 'Tester',
+  B2B_EVALUATION: 'B2B_EVALUATION',
+  TESTER: 'TESTER',
+  VIP_GIFT: 'VIP_GIFT',
+  INFLUENCERS: 'INFLUENCERS',
 } as const;
 
 export interface GiftingIssue {
   id: number;
-  recipientName: string;
+  /** @nullable */
+  recipientName?: string | null;
   category: GiftingIssueCategory;
   comment: string;
+  /** @nullable */
+  occasion?: string | null;
   /** @nullable */
   program?: string | null;
   productId: number;
@@ -2893,13 +2900,45 @@ export interface GiftingIssue {
   /** @minimum 1 */
   quantity: number;
   totalCost: string;
+  issueDate: string;
   /** @nullable */
-  issueDate?: string | null;
-  sourceFilename: string;
-  sourceSheet: string;
-  sourceRow: number;
+  sourceFilename?: string | null;
+  /** @nullable */
+  sourceSheet?: string | null;
+  /** @nullable */
+  sourceRow?: number | null;
   dedupeKey: string;
+  /** @nullable */
+  idempotencyKey?: string | null;
   importedAt: string;
+}
+
+export type GiftingIssueInputCategory = typeof GiftingIssueInputCategory[keyof typeof GiftingIssueInputCategory];
+
+
+export const GiftingIssueInputCategory = {
+  B2B_EVALUATION: 'B2B_EVALUATION',
+  TESTER: 'TESTER',
+  VIP_GIFT: 'VIP_GIFT',
+  INFLUENCERS: 'INFLUENCERS',
+} as const;
+
+export interface GiftingIssueInput {
+  /** @minimum 1 */
+  productId: number;
+  category: GiftingIssueInputCategory;
+  /** @minimum 1 */
+  quantity: number;
+  issueDate?: string;
+  /** @maxLength 200 */
+  recipientName?: string;
+  /** @maxLength 500 */
+  occasion?: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  idempotencyKey: string;
 }
 
 export interface InfluencerLogin {
@@ -3494,20 +3533,9 @@ to: string;
 };
 
 export type GetAdminGiftingIssuesParams = {
-category?: GetAdminGiftingIssuesCategory;
+category?: GiftingIssueCategory;
 search?: string;
 };
-
-export type GetAdminGiftingIssuesCategory = typeof GetAdminGiftingIssuesCategory[keyof typeof GetAdminGiftingIssuesCategory];
-
-
-export const GetAdminGiftingIssuesCategory = {
-  VIP: 'VIP',
-  Sample: 'Sample',
-  Damage: 'Damage',
-  Marketing: 'Marketing',
-  Tester: 'Tester',
-} as const;
 
 export type GetAdminGiftingIssues200Summary = {
   rows?: number;
