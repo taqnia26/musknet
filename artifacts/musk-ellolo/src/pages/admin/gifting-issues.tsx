@@ -39,12 +39,24 @@ export default function AdminGiftingIssues() {
   const rows = data?.rows ?? [];
   const summary = data?.summary;
   const product = useMemo(() => inventory?.items.find((item) => item.id === Number(form.productId)), [inventory, form.productId]);
+  const productNeedsCost = Boolean(product && Number(product.averageCost) <= 0);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const quantity = Number(form.quantity);
     if (!product || !form.category || !Number.isSafeInteger(quantity) || quantity <= 0) {
       toast({ title: t('اختر المنتج والاستخدام وأدخل كمية موجبة', 'Select a product and use, then enter a positive quantity'), variant: 'destructive' });
+      return;
+    }
+    if (productNeedsCost) {
+      toast({
+        title: t('يجب إدخال تكلفة الوحدة أولاً', 'Enter the unit cost first'),
+        description: t(
+          'من المخزون افتح تفاصيل المنتج، واختر «تسوية إلى رصيد»، ثم أدخل الرصيد الحالي وتكلفة شراء أو تصنيع الوحدة.',
+          'In Inventory, open the product details, choose “Set balance”, then enter the current balance and the unit purchase or manufacturing cost.',
+        ),
+        variant: 'destructive',
+      });
       return;
     }
     mutation.mutate({ data: {
@@ -62,11 +74,20 @@ export default function AdminGiftingIssues() {
         ]);
         toast({ title: t('تم صرف المنتج وتحديث المخزون والقيد المالي', 'Product issued; inventory and accounting were updated') });
       },
-      onError: (mutationError: any) => toast({
-        title: t('تعذر تنفيذ الصرف', 'Issue failed'),
-        description: mutationError?.data?.error ?? mutationError?.message,
-        variant: 'destructive',
-      }),
+      onError: (mutationError: any) => {
+        const message = mutationError?.data?.error ?? mutationError?.message ?? '';
+        const missingCost = message.includes('positive average cost');
+        toast({
+          title: missingCost ? t('يجب إدخال تكلفة الوحدة أولاً', 'Enter the unit cost first') : t('تعذر تنفيذ الصرف', 'Issue failed'),
+          description: missingCost
+            ? t(
+              'من المخزون افتح تفاصيل المنتج، واختر «تسوية إلى رصيد»، ثم أدخل الرصيد الحالي وتكلفة شراء أو تصنيع الوحدة.',
+              'In Inventory, open the product details, choose “Set balance”, then enter the current balance and the unit purchase or manufacturing cost.',
+            )
+            : message,
+          variant: 'destructive',
+        });
+      },
     });
   };
 
@@ -81,13 +102,13 @@ export default function AdminGiftingIssues() {
         <CardHeader><CardTitle>{t('عملية صرف جديدة', 'New issue')}</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={submit} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div><Label>{t('المنتج', 'Product')} *</Label><Select value={form.productId} onValueChange={(value) => setForm((current) => ({ ...current, productId: value }))}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر المنتج', 'Select product')} /></SelectTrigger><SelectContent>{inventory?.items.map((item) => <SelectItem key={item.id} value={String(item.id)}>{lang === 'ar' ? item.nameAr : item.nameEn} — {item.stockQuantity}</SelectItem>)}</SelectContent></Select>{product && <p className="mt-1 text-xs text-muted-foreground">{t('المتاح', 'Available')}: {product.stockQuantity} · {t('متوسط التكلفة', 'Average cost')}: {product.averageCost} SAR</p>}</div>
+            <div><Label>{t('المنتج', 'Product')} *</Label><Select value={form.productId} onValueChange={(value) => setForm((current) => ({ ...current, productId: value }))}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر المنتج', 'Select product')} /></SelectTrigger><SelectContent>{inventory?.items.map((item) => <SelectItem key={item.id} value={String(item.id)}>{lang === 'ar' ? item.nameAr : item.nameEn} — {item.stockQuantity}</SelectItem>)}</SelectContent></Select>{product && <p className={`mt-1 text-xs ${productNeedsCost ? 'font-medium text-destructive' : 'text-muted-foreground'}`}>{productNeedsCost ? t('لا توجد تكلفة للوحدة. أدخلها من المخزون ← تفاصيل المنتج ← تسوية إلى رصيد.', 'No unit cost. Enter it from Inventory → Product details → Set balance.') : <>{t('المتاح', 'Available')}: {product.stockQuantity} · {t('متوسط التكلفة', 'Average cost')}: {product.averageCost} SAR</>}</p>}</div>
             <div><Label>{t('الاستخدام', 'Use')} *</Label><Select value={form.category} onValueChange={(value) => setForm((current) => ({ ...current, category: value as GiftingIssueInputCategory }))}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر الاستخدام', 'Select use')} /></SelectTrigger><SelectContent>{issueUses.map((item) => <SelectItem key={item.value} value={item.value}>{lang === 'ar' ? item.ar : item.en}</SelectItem>)}</SelectContent></Select></div>
             <div><Label>{t('الكمية', 'Quantity')} *</Label><Input className="mt-1" type="number" min="1" max={product?.stockQuantity} step="1" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: event.target.value }))} /></div>
             <div><Label>{t('التاريخ (اختياري)', 'Date (optional)')}</Label><Input className="mt-1" type="date" value={form.issueDate} onChange={(event) => setForm((current) => ({ ...current, issueDate: event.target.value }))} /></div>
             <div><Label>{t('اسم الشخص (اختياري)', 'Person name (optional)')}</Label><Input className="mt-1" value={form.recipientName} onChange={(event) => setForm((current) => ({ ...current, recipientName: event.target.value }))} /></div>
             <div className="md:col-span-2"><Label>{t('المناسبة (اختياري)', 'Occasion (optional)')}</Label><Input className="mt-1" value={form.occasion} onChange={(event) => setForm((current) => ({ ...current, occasion: event.target.value }))} /></div>
-            <div className="flex items-end"><Button className="w-full" type="submit" disabled={mutation.isPending || !product || product.stockQuantity <= 0}>{mutation.isPending ? t('جاري الصرف...', 'Issuing...') : t('صرف من المخزون', 'Issue from inventory')}</Button></div>
+            <div className="flex items-end"><Button className="w-full" type="submit" disabled={mutation.isPending || !product || product.stockQuantity <= 0 || productNeedsCost}>{mutation.isPending ? t('جاري الصرف...', 'Issuing...') : t('صرف من المخزون', 'Issue from inventory')}</Button></div>
           </form>
         </CardContent>
       </Card>
