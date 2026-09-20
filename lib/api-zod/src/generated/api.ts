@@ -3232,12 +3232,14 @@ export const AdminListDistributorsResponse = zod.array(AdminListDistributorsResp
 
 
 
+export const adminCreateDistributorBodyPhoneRegExp = new RegExp('^(?=(?:\\\\D*\\\\d){8,15}\\\\D*$)\\\\+?[\\\\d\\\\s().-]+$');
+
 
 export const AdminCreateDistributorBody = zod.object({
   "companyName": zod.string().min(1),
   "contactName": zod.string().min(1),
   "email": zod.string().nullish(),
-  "phone": zod.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, "رقم الهاتف غير صالح. استخدم 8-15 رقماً / Invalid phone. Use 8-15 digits"),
+  "phone": zod.string().min(1).regex(adminCreateDistributorBodyPhoneRegExp),
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
@@ -3271,12 +3273,14 @@ export const AdminUpdateDistributorParams = zod.object({
 
 
 
+export const adminUpdateDistributorBodyOnePhoneRegExp = new RegExp('^(?=(?:\\\\D*\\\\d){8,15}\\\\D*$)\\\\+?[\\\\d\\\\s().-]+$');
+
 
 export const AdminUpdateDistributorBody = zod.object({
   "companyName": zod.string().min(1),
   "contactName": zod.string().min(1),
   "email": zod.string().nullish(),
-  "phone": zod.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, "رقم الهاتف غير صالح. استخدم 8-15 رقماً / Invalid phone. Use 8-15 digits"),
+  "phone": zod.string().min(1).regex(adminUpdateDistributorBodyOnePhoneRegExp),
   "city": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
@@ -4917,7 +4921,7 @@ export const CreateInfluencerBody = zod.object({
 }).and(zod.object({
   "name": zod.string(),
   "referralCode": zod.string(),
-  "commissionRate": zod.number().min(createInfluencerBodyTwoCommissionRateMin, "نسبة العمولة لا يمكن أن تكون سالبة / Commission cannot be negative").max(createInfluencerBodyTwoCommissionRateMax, "نسبة العمولة لا يمكن أن تتجاوز 100٪ / Commission cannot exceed 100%").optional()
+  "commissionRate": zod.number().min(createInfluencerBodyTwoCommissionRateMin).max(createInfluencerBodyTwoCommissionRateMax).optional()
 }))
 
 export const createInfluencerResponseCouponIdsItemMultipleOf = 1;
@@ -4981,7 +4985,7 @@ export const UpdateInfluencerBody = zod.object({
   "password": zod.string().min(updateInfluencerBodyPasswordMin).optional(),
   "referralCode": zod.string().optional(),
   "imageUrl": zod.string().nullish(),
-  "commissionRate": zod.number().min(updateInfluencerBodyCommissionRateMin, "نسبة العمولة لا يمكن أن تكون سالبة / Commission cannot be negative").max(updateInfluencerBodyCommissionRateMax, "نسبة العمولة لا يمكن أن تتجاوز 100٪ / Commission cannot exceed 100%").optional(),
+  "commissionRate": zod.number().min(updateInfluencerBodyCommissionRateMin).max(updateInfluencerBodyCommissionRateMax).optional(),
   "isActive": zod.boolean().optional()
 })
 

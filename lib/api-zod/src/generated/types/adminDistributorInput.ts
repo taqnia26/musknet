@@ -13,7 +13,10 @@ export interface AdminDistributorInput {
   contactName: string;
   /** @nullable */
   email?: string | null;
-  /** @minLength 1 */
+  /**
+     * @minLength 1
+     * @pattern ^(?=(?:\\D*\\d){8,15}\\D*$)\\+?[\\d\\s().-]+$
+     */
   phone: string;
   /** @nullable */
   city?: string | null;

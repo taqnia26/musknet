@@ -124,6 +124,14 @@ html.dark.admin-route {
     opacity: 1;
     transform: none;
   }
+
+  .guided-tour-highlight,
+  .guided-tour-highlight + *,
+  [role="dialog"] * {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Keep the below-the-fold video from being rendered until it is near view. */

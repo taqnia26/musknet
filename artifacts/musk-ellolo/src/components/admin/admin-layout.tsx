@@ -27,8 +27,9 @@ import {
   MessageCircle,
   Network,
   Moon,
-  Sun
-  ,KeyRound
+  Sun,
+  KeyRound,
+  CircleHelp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -40,6 +41,9 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { GuidedTour } from '@/components/guided-tour/guided-tour';
+import { getAdminNavTourKey, getAdminTourSteps } from '@/components/guided-tour/tour-definitions';
+import { ADMIN_TOUR_STORAGE_KEY } from '@/components/guided-tour/tour-state';
 
 // Hierarchical Navigation matching requirements
 export const navStructure = [
@@ -173,6 +177,7 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
     return (
       <Link href={item.href}>
         <span
+          data-tour-nav={getAdminNavTourKey(item)}
           data-active={isActive}
           className={cn(
             "group flex items-center gap-3 px-3 py-2 rounded-lg transition-all cursor-pointer text-[13.5px]",
@@ -197,7 +202,7 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
   const hasActiveChild = validChildren.some((child: any) => isAdminNavActive(child.href, location));
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full" data-tour-nav={getAdminNavTourKey(item)}>
       <CollapsibleTrigger asChild>
         <div className={cn(
           "group flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer text-[13.5px]",
@@ -249,6 +254,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle('light', adminTheme === 'light');
   }, [setTheme]);
   const [isOpen, setIsOpen] = useState(false);
+  const [tourRestart, setTourRestart] = useState(0);
 
   const hasToken = !!getAdminToken();
 
@@ -294,6 +300,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   if (!user) return null;
 
   const date = new Date().toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const tourSteps = getAdminTourSteps(navStructure, user);
 
   return (
     <div
@@ -301,7 +308,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       className="admin-theme flex h-screen min-w-0 flex-col overflow-hidden bg-background font-sans text-foreground transition-colors duration-300"
     >
       {/* Top Header */}
-      <header className="z-20 flex h-[76px] min-w-0 shrink-0 items-center justify-between border-b border-sidebar-border bg-card px-3 lg:px-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] relative">
+      <header data-tour="admin-header" className="z-20 flex h-[76px] min-w-0 shrink-0 items-center justify-between border-b border-sidebar-border bg-card px-3 lg:px-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] relative">
         {/* Right side (RTL start): System name & Mobile menu trigger */}
         <div className="flex items-center gap-2">
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -378,7 +385,17 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             <span className="truncate">{date}</span>
             <div className="h-3 w-px bg-border/60"></div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center" data-tour="admin-tools">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted"
+              onClick={() => setTourRestart((value) => value + 1)}
+              title={t('جولة مساعدة', 'Help tour')}
+              aria-label={t('إعادة تشغيل الجولة التعليمية', 'Restart guided tour')}
+            >
+              <CircleHelp className="h-[16px] w-[16px]" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -456,6 +473,18 @@ export function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
+      <GuidedTour
+        steps={tourSteps}
+        lang={lang}
+        storageKey={ADMIN_TOUR_STORAGE_KEY}
+        restartSignal={tourRestart}
+        onStepChange={(step) => {
+          if (step.sidebar && window.innerWidth < 1024) setIsOpen(true);
+        }}
+        onActiveChange={(active) => {
+          if (!active) setIsOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
   FileText,
   Grid2X2,
   HandCoins,
+  CircleHelp,
   Laptop,
   LogOut,
   Menu,
@@ -51,6 +52,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import { OwnerObligations } from '@/components/owner/owner-obligations';
 import { OwnerWorkbookSection } from '@/components/owner/owner-workbook-section';
+import { GuidedTour } from '@/components/guided-tour/guided-tour';
+import { ownerTourSteps } from '@/components/guided-tour/tour-definitions';
+import { OWNER_TOUR_STORAGE_KEY } from '@/components/guided-tour/tour-state';
 
 type OwnerNavItem = {
   href: string;
@@ -92,6 +96,8 @@ export default function OwnerPortal() {
   const hasToken = Boolean(getOwnerToken());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [managementOpen, setManagementOpen] = useState(true);
+  const [tourRestart, setTourRestart] = useState(0);
+  const managementBeforeTour = useRef(true);
   const deliveredNotificationIds = useRef(new Set<number>());
 
   const { data: owner, isLoading, error } = useGetOwnerMe({
@@ -261,6 +267,7 @@ export default function OwnerPortal() {
           onClick={() => setManagementOpen((value) => !value)}
           className="flex w-full items-center justify-between rounded-xl px-4 py-3 font-medium text-[#202020] hover:bg-[#f3f1ec] dark:text-[#f1f1ef] dark:hover:bg-white/5"
           data-testid="button-toggle-owner-management"
+          data-tour="owner-management"
         >
           <span className="flex items-center gap-3"><Crown className="h-5 w-5" />{t('إدارة المالك', 'Owner management')}</span>
           <ChevronDown className={`h-4 w-4 transition-transform ${managementOpen ? 'rotate-180' : ''}`} />
@@ -295,6 +302,7 @@ export default function OwnerPortal() {
           href="/owner/security"
           onClick={() => setMobileMenuOpen(false)}
           data-testid="link-owner-security"
+          data-tour="owner-security"
           className={`mt-3 flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] transition-colors ${
             isSecurityPage
               ? 'bg-[#f5efd9] font-medium text-[#9b7400] dark:bg-[#282619] dark:text-[#e5bb2c]'
@@ -346,7 +354,7 @@ export default function OwnerPortal() {
       </aside>
 
       <main className="min-h-screen lg:ms-[286px]">
-        <header className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-[#e4e2dc] bg-[#fbfaf7]/95 px-4 backdrop-blur transition-colors duration-300 dark:border-[#24262a] dark:bg-[#0d0e10]/95 sm:px-7">
+        <header data-tour="owner-header" className="sticky top-0 z-30 flex h-[72px] items-center justify-between border-b border-[#e4e2dc] bg-[#fbfaf7]/95 px-4 backdrop-blur transition-colors duration-300 dark:border-[#24262a] dark:bg-[#0d0e10]/95 sm:px-7">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
@@ -363,7 +371,16 @@ export default function OwnerPortal() {
             <img src="/site-assets/musk-ellolo-wordmark-black.png" alt="Musk Ellolo" className="w-[150px] object-contain dark:hidden sm:w-[210px]" />
             <img src="/site-assets/musk-ellolo-wordmark-white.png" alt="Musk Ellolo" className="hidden w-[150px] object-contain dark:block sm:w-[210px]" />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" data-tour="owner-tools">
+            <button
+              type="button"
+              onClick={() => setTourRestart((value) => value + 1)}
+              className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[#e4dfd2] bg-white text-[#696762] transition-colors hover:text-[#b48700] dark:border-[#353022] dark:bg-[#17181b] dark:text-[#d7ad23]"
+              aria-label={t('إعادة تشغيل الجولة التعليمية', 'Restart guided tour')}
+              title={t('جولة مساعدة', 'Help tour')}
+            >
+              <CircleHelp className="h-5 w-5" />
+            </button>
             <button
               type="button"
               onClick={toggleTheme}
@@ -406,6 +423,24 @@ export default function OwnerPortal() {
           )}
         </div>
       </main>
+      <GuidedTour
+        steps={ownerTourSteps}
+        lang={lang}
+        storageKey={OWNER_TOUR_STORAGE_KEY}
+        restartSignal={tourRestart}
+        onStepChange={(step) => {
+          if (step.sidebar && window.innerWidth < 1024) setMobileMenuOpen(true);
+          if (step.id === 'owner-navigation') setManagementOpen(true);
+        }}
+        onActiveChange={(active) => {
+          if (active) {
+            managementBeforeTour.current = managementOpen;
+          } else {
+            setMobileMenuOpen(false);
+            setManagementOpen(managementBeforeTour.current);
+          }
+        }}
+      />
     </div>
   );
 }
