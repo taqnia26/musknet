@@ -218,6 +218,13 @@
       "when": 1789904052722,
       "tag": "0030_shiny_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1789904490539,
+      "tag": "0031_oval_the_hand",
+      "breakpoints": true
     }
   ]
 }

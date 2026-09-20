@@ -5883,15 +5883,35 @@ export const GetInventoryValueReportResponse = zod.array(GetInventoryValueReport
 
 export const getInventoryMovementReportQueryProductIdMultipleOf = 1;
 
+export const getInventoryMovementReportQueryPageDefault = 1;
+export const getInventoryMovementReportQueryPageMultipleOf = 1;
+
+export const getInventoryMovementReportQueryPageSizeDefault = 50;
+export const getInventoryMovementReportQueryPageSizeMax = 100;
+export const getInventoryMovementReportQueryPageSizeMultipleOf = 1;
+
 
 
 export const GetInventoryMovementReportQueryParams = zod.object({
   "productId": zod.coerce.number().multipleOf(getInventoryMovementReportQueryProductIdMultipleOf).optional(),
   "sourceType": zod.coerce.string().optional(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "page": zod.coerce.number().min(1).multipleOf(getInventoryMovementReportQueryPageMultipleOf).default(getInventoryMovementReportQueryPageDefault),
+  "pageSize": zod.coerce.number().min(1).max(getInventoryMovementReportQueryPageSizeMax).multipleOf(getInventoryMovementReportQueryPageSizeMultipleOf).default(getInventoryMovementReportQueryPageSizeDefault),
   "format": zod.enum(['json', 'csv']).optional()
 })
 
-export const GetInventoryMovementReportResponseItem = zod.object({
+export const getInventoryMovementReportResponsePageMultipleOf = 1;
+
+export const getInventoryMovementReportResponsePageSizeMultipleOf = 1;
+
+export const getInventoryMovementReportResponseTotalMultipleOf = 1;
+
+
+
+export const GetInventoryMovementReportResponse = zod.object({
+  "items": zod.array(zod.object({
   "id": zod.number(),
   "productId": zod.number(),
   "movementType": zod.enum(['increase', 'decrease', 'adjustment']),
@@ -5904,36 +5924,45 @@ export const GetInventoryMovementReportResponseItem = zod.object({
   "performedBy": zod.number().nullable(),
   "performerName": zod.string().nullable(),
   "createdAt": zod.coerce.date()
+})),
+  "page": zod.number().multipleOf(getInventoryMovementReportResponsePageMultipleOf),
+  "pageSize": zod.number().multipleOf(getInventoryMovementReportResponsePageSizeMultipleOf),
+  "total": zod.number().multipleOf(getInventoryMovementReportResponseTotalMultipleOf)
 })
-export const GetInventoryMovementReportResponse = zod.array(GetInventoryMovementReportResponseItem)
 
 
-export const getInventoryAgingReportResponseIdMultipleOf = 1;
+export const getInventoryAgingReportResponseOneIdMultipleOf = 1;
 
-export const getInventoryAgingReportResponseProductIdMultipleOf = 1;
+export const getInventoryAgingReportResponseOneProductIdMultipleOf = 1;
 
-export const getInventoryAgingReportResponseLocationIdMultipleOf = 1;
+export const getInventoryAgingReportResponseOneLocationIdMultipleOf = 1;
 
-export const getInventoryAgingReportResponseAvailableMin = 0;
-export const getInventoryAgingReportResponseAvailableMultipleOf = 1;
+export const getInventoryAgingReportResponseOneAvailableMin = 0;
+export const getInventoryAgingReportResponseOneAvailableMultipleOf = 1;
 
-export const getInventoryAgingReportResponseReservedMin = 0;
-export const getInventoryAgingReportResponseReservedMultipleOf = 1;
+export const getInventoryAgingReportResponseOneReservedMin = 0;
+export const getInventoryAgingReportResponseOneReservedMultipleOf = 1;
 
-export const getInventoryAgingReportResponseIncomingMin = 0;
-export const getInventoryAgingReportResponseIncomingMultipleOf = 1;
+export const getInventoryAgingReportResponseOneIncomingMin = 0;
+export const getInventoryAgingReportResponseOneIncomingMultipleOf = 1;
+
+export const getInventoryAgingReportResponseTwoAgeDaysMin = 0;
+export const getInventoryAgingReportResponseTwoAgeDaysMultipleOf = 1;
 
 
 
 export const GetInventoryAgingReportResponseItem = zod.object({
-  "id": zod.number().multipleOf(getInventoryAgingReportResponseIdMultipleOf),
-  "productId": zod.number().multipleOf(getInventoryAgingReportResponseProductIdMultipleOf),
-  "locationId": zod.number().multipleOf(getInventoryAgingReportResponseLocationIdMultipleOf),
-  "available": zod.number().min(getInventoryAgingReportResponseAvailableMin).multipleOf(getInventoryAgingReportResponseAvailableMultipleOf),
-  "reserved": zod.number().min(getInventoryAgingReportResponseReservedMin).multipleOf(getInventoryAgingReportResponseReservedMultipleOf),
-  "incoming": zod.number().min(getInventoryAgingReportResponseIncomingMin).multipleOf(getInventoryAgingReportResponseIncomingMultipleOf),
+  "id": zod.number().multipleOf(getInventoryAgingReportResponseOneIdMultipleOf),
+  "productId": zod.number().multipleOf(getInventoryAgingReportResponseOneProductIdMultipleOf),
+  "locationId": zod.number().multipleOf(getInventoryAgingReportResponseOneLocationIdMultipleOf),
+  "available": zod.number().min(getInventoryAgingReportResponseOneAvailableMin).multipleOf(getInventoryAgingReportResponseOneAvailableMultipleOf),
+  "reserved": zod.number().min(getInventoryAgingReportResponseOneReservedMin).multipleOf(getInventoryAgingReportResponseOneReservedMultipleOf),
+  "incoming": zod.number().min(getInventoryAgingReportResponseOneIncomingMin).multipleOf(getInventoryAgingReportResponseOneIncomingMultipleOf),
   "averageCost": zod.string()
-})
+}).and(zod.object({
+  "updatedAt": zod.coerce.date(),
+  "ageDays": zod.number().min(getInventoryAgingReportResponseTwoAgeDaysMin).multipleOf(getInventoryAgingReportResponseTwoAgeDaysMultipleOf)
+}))
 export const GetInventoryAgingReportResponse = zod.array(GetInventoryAgingReportResponseItem)
 
 
@@ -5955,27 +5984,54 @@ export const GetInventoryValuationReportResponseItem = zod.object({
 export const GetInventoryValuationReportResponse = zod.array(GetInventoryValuationReportResponseItem)
 
 
+export const getInventoryAuditReportQueryProductIdMultipleOf = 1;
+
+export const getInventoryAuditReportQueryPageDefault = 1;
+export const getInventoryAuditReportQueryPageMultipleOf = 1;
+
+export const getInventoryAuditReportQueryPageSizeDefault = 50;
+export const getInventoryAuditReportQueryPageSizeMax = 100;
+export const getInventoryAuditReportQueryPageSizeMultipleOf = 1;
+
+
+
 export const GetInventoryAuditReportQueryParams = zod.object({
+  "productId": zod.coerce.number().multipleOf(getInventoryAuditReportQueryProductIdMultipleOf).optional(),
+  "sourceType": zod.coerce.string().optional(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "page": zod.coerce.number().min(1).multipleOf(getInventoryAuditReportQueryPageMultipleOf).default(getInventoryAuditReportQueryPageDefault),
+  "pageSize": zod.coerce.number().min(1).max(getInventoryAuditReportQueryPageSizeMax).multipleOf(getInventoryAuditReportQueryPageSizeMultipleOf).default(getInventoryAuditReportQueryPageSizeDefault),
   "format": zod.enum(['json', 'csv']).optional()
 })
 
-export const getInventoryAuditReportResponseIdMultipleOf = 1;
+export const getInventoryAuditReportResponseItemsItemIdMultipleOf = 1;
 
-export const getInventoryAuditReportResponseProductIdMultipleOf = 1;
+export const getInventoryAuditReportResponseItemsItemProductIdMultipleOf = 1;
+
+export const getInventoryAuditReportResponsePageMultipleOf = 1;
+
+export const getInventoryAuditReportResponsePageSizeMultipleOf = 1;
+
+export const getInventoryAuditReportResponseTotalMultipleOf = 1;
 
 
 
-export const GetInventoryAuditReportResponseItem = zod.object({
-  "id": zod.number().multipleOf(getInventoryAuditReportResponseIdMultipleOf),
-  "productId": zod.number().multipleOf(getInventoryAuditReportResponseProductIdMultipleOf),
+export const GetInventoryAuditReportResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number().multipleOf(getInventoryAuditReportResponseItemsItemIdMultipleOf),
+  "productId": zod.number().multipleOf(getInventoryAuditReportResponseItemsItemProductIdMultipleOf),
   "sourceType": zod.string().nullish(),
   "sourceId": zod.string().nullish(),
   "quantityChange": zod.number(),
   "performedBy": zod.number().nullish(),
   "performerName": zod.string().nullish(),
   "createdAt": zod.coerce.date()
+})),
+  "page": zod.number().multipleOf(getInventoryAuditReportResponsePageMultipleOf),
+  "pageSize": zod.number().multipleOf(getInventoryAuditReportResponsePageSizeMultipleOf),
+  "total": zod.number().multipleOf(getInventoryAuditReportResponseTotalMultipleOf)
 })
-export const GetInventoryAuditReportResponse = zod.array(GetInventoryAuditReportResponseItem)
 
 
 export const GetInventoryReconciliationReportResponse = zod.object({

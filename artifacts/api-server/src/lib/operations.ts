@@ -580,13 +580,59 @@ export async function inventoryReorderSuggestions() {
   return suggestions;
 }
 
-export async function inventoryMovementReport(productId?: number, sourceType?: string) {
-  return db.select().from(inventoryMovementsTable).where(and(productId ? eq(inventoryMovementsTable.productId, productId) : undefined, sourceType ? eq(inventoryMovementsTable.sourceType, sourceType) : undefined)).orderBy(desc(inventoryMovementsTable.createdAt));
+export type InventoryReportQuery = {
+  productId?: number;
+  sourceType?: string;
+  from?: Date;
+  to?: Date;
+  page?: number;
+  pageSize?: number;
+};
+
+function normalizeReportQuery(query: InventoryReportQuery) {
+  const page = Number.isInteger(query.page) && Number(query.page) > 0 ? Number(query.page) : 1;
+  const requestedPageSize = Number.isInteger(query.pageSize) ? Number(query.pageSize) : 50;
+  const pageSize = Math.min(100, Math.max(1, requestedPageSize));
+  return { ...query, page, pageSize };
+}
+
+function movementReportWhere(query: InventoryReportQuery) {
+  return and(
+    query.productId ? eq(inventoryMovementsTable.productId, query.productId) : undefined,
+    query.sourceType ? eq(inventoryMovementsTable.sourceType, query.sourceType) : undefined,
+    query.from ? sql`${inventoryMovementsTable.createdAt} >= ${query.from}` : undefined,
+    query.to ? sql`${inventoryMovementsTable.createdAt} <= ${query.to}` : undefined,
+  );
+}
+
+export async function inventoryMovementReport(input: InventoryReportQuery = {}) {
+  const query = normalizeReportQuery(input);
+  const where = movementReportWhere(query);
+  const [items, [totalRow]] = await Promise.all([
+    db.select().from(inventoryMovementsTable).where(where)
+      .orderBy(desc(inventoryMovementsTable.createdAt), desc(inventoryMovementsTable.id))
+      .limit(query.pageSize).offset((query.page - 1) * query.pageSize),
+    db.select({ total: sql<number>`count(*)::int` }).from(inventoryMovementsTable).where(where),
+  ]);
+  return { items, page: query.page, pageSize: query.pageSize, total: totalRow?.total ?? 0 };
 }
 export async function inventoryAgingReport() {
-  const rows = await db.select().from(inventoryBalancesTable);
-  const movements = await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.movementType, "increase"));
-  return rows.map((b) => ({ ...b, ageDays: Math.max(0, Math.floor((Date.now() - new Date(movements.find((m) => m.productId === b.productId)?.createdAt ?? Date.now()).getTime()) / 86400000)) }));
+  return db.select({
+    id: inventoryBalancesTable.id,
+    productId: inventoryBalancesTable.productId,
+    locationId: inventoryBalancesTable.locationId,
+    available: inventoryBalancesTable.available,
+    reserved: inventoryBalancesTable.reserved,
+    incoming: inventoryBalancesTable.incoming,
+    averageCost: inventoryBalancesTable.averageCost,
+    updatedAt: inventoryBalancesTable.updatedAt,
+    ageDays: sql<number>`greatest(0, floor(extract(epoch from (now() - coalesce(min(${inventoryMovementsTable.createdAt}), now()))) / 86400))::int`,
+  }).from(inventoryBalancesTable)
+    .leftJoin(inventoryMovementsTable, and(
+      eq(inventoryMovementsTable.productId, inventoryBalancesTable.productId),
+      eq(inventoryMovementsTable.movementType, "increase"),
+    ))
+    .groupBy(inventoryBalancesTable.id);
 }
 
 export async function inventoryValuationReport() {
@@ -604,9 +650,17 @@ export async function inventoryValuationReport() {
   return [...grouped.values()];
 }
 
-export async function inventoryAuditReport() {
-  return db.select({ id: inventoryMovementsTable.id, productId: inventoryMovementsTable.productId, sourceType: inventoryMovementsTable.sourceType, sourceId: inventoryMovementsTable.sourceId, quantityChange: inventoryMovementsTable.quantityChange, performedBy: inventoryMovementsTable.performedBy, performerName: adminUsersTable.name, createdAt: inventoryMovementsTable.createdAt })
-    .from(inventoryMovementsTable).leftJoin(adminUsersTable, eq(inventoryMovementsTable.performedBy, adminUsersTable.id)).orderBy(desc(inventoryMovementsTable.createdAt));
+export async function inventoryAuditReport(input: InventoryReportQuery = {}) {
+  const query = normalizeReportQuery(input);
+  const where = movementReportWhere(query);
+  const [items, [totalRow]] = await Promise.all([
+    db.select({ id: inventoryMovementsTable.id, productId: inventoryMovementsTable.productId, sourceType: inventoryMovementsTable.sourceType, sourceId: inventoryMovementsTable.sourceId, quantityChange: inventoryMovementsTable.quantityChange, performedBy: inventoryMovementsTable.performedBy, performerName: adminUsersTable.name, createdAt: inventoryMovementsTable.createdAt })
+      .from(inventoryMovementsTable).leftJoin(adminUsersTable, eq(inventoryMovementsTable.performedBy, adminUsersTable.id))
+      .where(where).orderBy(desc(inventoryMovementsTable.createdAt), desc(inventoryMovementsTable.id))
+      .limit(query.pageSize).offset((query.page - 1) * query.pageSize),
+    db.select({ total: sql<number>`count(*)::int` }).from(inventoryMovementsTable).where(where),
+  ]);
+  return { items, page: query.page, pageSize: query.pageSize, total: totalRow?.total ?? 0 };
 }
 
 export async function inventoryReconciliationReport() {

@@ -8,6 +8,7 @@ import {
 import {
   addManufacturingInputs, allocateReceiptPayment, approveManufacturingBatch, approveOpeningBalanceImport,
   createOpeningBalanceImport, createPurchaseReceipt, createPurchaseReceiptPayment, manufacturingOutputUnitCost,
+  inventoryAgingReport, inventoryAuditReport, inventoryMovementReport,
   postPurchaseReceipt, purchaseReceiptPaymentStatus, reviewOpeningBalanceImport, weightedAverageCost,
 } from "./operations";
 
@@ -41,6 +42,7 @@ describe.sequential("linked operations database integration", () => {
   let purchaseProductId: number;
   let materialProductId: number;
   let outputProductId: number;
+  let openingProductId: number;
   const createdProductIds: number[] = [];
   const createdBatchIds: number[] = [];
   const createdReceiptIds: number[] = [];
@@ -62,8 +64,9 @@ describe.sequential("linked operations database integration", () => {
       { nameAr: "شراء", nameEn: "Purchase", slug: `purchase-${suffix}`, price: 10, categoryId, stockQuantity: 10, averageCost: "20" },
       { nameAr: "مادة", nameEn: "Material", slug: `material-${suffix}`, price: 10, categoryId, stockQuantity: 5, averageCost: "10" },
       { nameAr: "ناتج", nameEn: "Output", slug: `output-${suffix}`, price: 10, categoryId, stockQuantity: 1, averageCost: "2" },
+      { nameAr: "افتتاحي", nameEn: "Opening", slug: `opening-${suffix}`, price: 10, categoryId, stockQuantity: 0, averageCost: "0" },
     ]).returning();
-    [purchaseProductId, materialProductId, outputProductId] = products.map((product) => product.id);
+    [purchaseProductId, materialProductId, outputProductId, openingProductId] = products.map((product) => product.id);
     createdProductIds.push(...products.map((product) => product.id));
   });
 
@@ -168,7 +171,10 @@ describe.sequential("linked operations database integration", () => {
       .where(eq(inventoryMovementsTable.sourceId, String(raceBatch.id)));
     expect(raceMovements).toHaveLength(2);
     const raceEvents = await db.select().from(operationEventsTable)
-      .where(eq(operationEventsTable.sourceId, String(raceBatch.id)));
+      .where(and(
+        eq(operationEventsTable.sourceType, "manufacturing_posting"),
+        eq(operationEventsTable.sourceId, String(raceBatch.id)),
+      ));
     expect(raceEvents).toHaveLength(1);
     const raceJournals = await db.select().from(journalEntriesTable)
       .where(and(eq(journalEntriesTable.sourceType, "manufacturing"), eq(journalEntriesTable.sourceId, String(raceBatch.id))));
@@ -189,11 +195,11 @@ describe.sequential("linked operations database integration", () => {
   });
 
   it("rejects approval of a second distinct opening import", async () => {
-    const makeImport = async (key: string) => {
+    const makeImport = async (key: string, productId = openingProductId) => {
       const row = await createOpeningBalanceImport({
         importKey: key, sourceFileName: "integration.xlsx", sourceSheet: "المخوزن الفعلي", createdBy: actorId,
         lines: [{ sourceRow: 2, sourceLabel: "Purchase", sourceQuantity: 1, openingQuantity: 1, fullBatchUnitCost: 24,
-          productId: purchaseProductId, provenance: { file: "integration.xlsx", sheet: "المخوزن الفعلي", row: 2 } }],
+          productId, provenance: { file: "integration.xlsx", sheet: "المخوزن الفعلي", row: 2 } }],
       });
       createdImportIds.push(row.id);
       await reviewOpeningBalanceImport(row.id);
@@ -212,7 +218,7 @@ describe.sequential("linked operations database integration", () => {
     createdImportIds.push(duplicate.id);
     await reviewOpeningBalanceImport(duplicate.id);
     await expect(approveOpeningBalanceImport(duplicate.id, actorId, "2165-02-28")).rejects.toThrow("only once");
-    const live = await makeImport(`opening-${suffix}-live`);
+    const live = await makeImport(`opening-${suffix}-live`, purchaseProductId);
     await expect(approveOpeningBalanceImport(live, actorId, "2165-02-28")).rejects.toThrow("overwrite live inventory");
     }
     const [existingApproved] = await db.select({ id: openingBalanceImportsTable.id })
@@ -223,5 +229,32 @@ describe.sequential("linked operations database integration", () => {
     }
     const secondId = await makeImport(`opening-${suffix}-two`);
     await expect(approveOpeningBalanceImport(secondId, actorId, "2165-03-02")).rejects.toThrow("already been approved");
+  });
+
+  it("keeps movement and audit reports bounded on a large movement history", async () => {
+    const inserted = await db.execute(sql`
+      insert into inventory_movements (
+        product_id, movement_type, quantity_change, quantity_before, quantity_after,
+        reason, source_type, source_id, performed_by, created_at
+      )
+      select ${purchaseProductId}, 'increase', 1, n, n + 1, 'report performance',
+        'performance_test', n::text, ${actorId}, now() - (n || ' seconds')::interval
+      from generate_series(1, 5000) n
+    `);
+    expect(inserted.rowCount).toBe(5000);
+
+    const startedAt = performance.now();
+    const movements = await inventoryMovementReport({ sourceType: "performance_test", page: 2, pageSize: 40 });
+    const audit = await inventoryAuditReport({ sourceType: "performance_test", page: 1, pageSize: 25 });
+    const aging = await inventoryAgingReport();
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(movements.items).toHaveLength(40);
+    expect(movements.total).toBe(5000);
+    expect(movements.page).toBe(2);
+    expect(audit.items).toHaveLength(25);
+    expect(audit.total).toBe(5000);
+    expect(aging.some((row) => row.productId === purchaseProductId)).toBe(true);
+    expect(elapsedMs).toBeLessThan(2000);
   });
 });

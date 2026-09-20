@@ -1,0 +1,4 @@
+CREATE INDEX "inventory_movements_created_id_idx" ON "inventory_movements" USING btree ("created_at","id");--> statement-breakpoint
+CREATE INDEX "inventory_movements_product_created_idx" ON "inventory_movements" USING btree ("product_id","created_at","id");--> statement-breakpoint
+CREATE INDEX "inventory_movements_source_created_idx" ON "inventory_movements" USING btree ("source_type","created_at","id");--> statement-breakpoint
+CREATE INDEX "inventory_movements_increase_product_created_idx" ON "inventory_movements" USING btree ("product_id","created_at") WHERE "inventory_movements"."movement_type" = 'increase';

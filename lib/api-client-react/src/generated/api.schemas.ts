@@ -52,6 +52,12 @@ export interface InventoryBalance {
   averageCost: string;
 }
 
+export type InventoryAgingRow = InventoryBalance & {
+  updatedAt: string;
+  /** @minimum 0 */
+  ageDays: number;
+};
+
 export type InventoryTransferInputLinesItem = {
   productId: number;
   /** @minimum 1 */
@@ -224,6 +230,49 @@ export interface InventoryAuditRow {
   /** @nullable */
   performerName?: string | null;
   createdAt: string;
+}
+
+export type AdminInventoryMovementMovementType = typeof AdminInventoryMovementMovementType[keyof typeof AdminInventoryMovementMovementType];
+
+
+export const AdminInventoryMovementMovementType = {
+  increase: 'increase',
+  decrease: 'decrease',
+  adjustment: 'adjustment',
+} as const;
+
+export interface AdminInventoryMovement {
+  id: number;
+  productId: number;
+  movementType: AdminInventoryMovementMovementType;
+  quantityChange: number;
+  quantityBefore: number;
+  quantityAfter: number;
+  /** @nullable */
+  reason: string | null;
+  /** @nullable */
+  sourceType: string | null;
+  /** @nullable */
+  sourceId: string | null;
+  /** @nullable */
+  performedBy: number | null;
+  /** @nullable */
+  performerName: string | null;
+  createdAt: string;
+}
+
+export interface InventoryMovementPage {
+  items: AdminInventoryMovement[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface InventoryAuditPage {
+  items: InventoryAuditRow[];
+  page: number;
+  pageSize: number;
+  total: number;
 }
 
 export type InventoryReconciliationUnlinkedMovementsItem = {
@@ -2026,35 +2075,6 @@ export interface AdminInventoryAdjustment {
   idempotencyKey: string;
 }
 
-export type AdminInventoryMovementMovementType = typeof AdminInventoryMovementMovementType[keyof typeof AdminInventoryMovementMovementType];
-
-
-export const AdminInventoryMovementMovementType = {
-  increase: 'increase',
-  decrease: 'decrease',
-  adjustment: 'adjustment',
-} as const;
-
-export interface AdminInventoryMovement {
-  id: number;
-  productId: number;
-  movementType: AdminInventoryMovementMovementType;
-  quantityChange: number;
-  quantityBefore: number;
-  quantityAfter: number;
-  /** @nullable */
-  reason: string | null;
-  /** @nullable */
-  sourceType: string | null;
-  /** @nullable */
-  sourceId: string | null;
-  /** @nullable */
-  performedBy: number | null;
-  /** @nullable */
-  performerName: string | null;
-  createdAt: string;
-}
-
 export interface AdminInventoryAdjustmentResult {
   item: AdminInventoryItem;
   movement: AdminInventoryMovement;
@@ -3534,6 +3554,17 @@ export const GetInventoryValueReportFormat = {
 export type GetInventoryMovementReportParams = {
 productId?: number;
 sourceType?: string;
+from?: string;
+to?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
 format?: GetInventoryMovementReportFormat;
 };
 
@@ -3558,6 +3589,19 @@ export const GetInventoryValuationReportFormat = {
 } as const;
 
 export type GetInventoryAuditReportParams = {
+productId?: number;
+sourceType?: string;
+from?: string;
+to?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
 format?: GetInventoryAuditReportFormat;
 };
 

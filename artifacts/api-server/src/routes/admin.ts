@@ -98,6 +98,19 @@ const bearer = (req: Request) => {
 const route = (handler: (req: Request, res: Response) => Promise<void>) =>
   (req: Request, res: Response, next: NextFunction) => { handler(req, res).catch(next); };
 
+function inventoryReportQuery(query: Request["query"]) {
+  const from = typeof query.from === "string" && query.from ? new Date(`${query.from}T00:00:00.000Z`) : undefined;
+  const to = typeof query.to === "string" && query.to ? new Date(`${query.to}T23:59:59.999Z`) : undefined;
+  return {
+    productId: typeof query.productId === "string" && query.productId ? Number(query.productId) : undefined,
+    sourceType: typeof query.sourceType === "string" && query.sourceType ? query.sourceType : undefined,
+    from,
+    to,
+    page: typeof query.page === "string" ? Number(query.page) : undefined,
+    pageSize: typeof query.pageSize === "string" ? Number(query.pageSize) : undefined,
+  };
+}
+
 router.use("/admin", async (req, res, next) => {
  try {
   await ensureAdminSeeded();
@@ -1866,12 +1879,12 @@ router.get("/admin/inventory/alerts", permit("inventory", "view"), route(async (
   res.json(await inventoryReorderSuggestions());
 }));
 router.get("/admin/inventory/reports/movements", permit("inventory", "view"), route(async (req, res) => {
-  const rows = await inventoryMovementReport(req.query.productId ? Number(req.query.productId) : undefined, typeof req.query.sourceType === "string" ? req.query.sourceType : undefined);
-  if (req.query.format === "csv") { res.type("text/csv").send(inventoryCsv(rows as Array<Record<string, unknown>>)); return; } res.json(rows);
+  const report = await inventoryMovementReport(inventoryReportQuery(req.query));
+  if (req.query.format === "csv") { res.type("text/csv").send(inventoryCsv(report.items as Array<Record<string, unknown>>)); return; } res.json(report);
 }));
 router.get("/admin/inventory/reports/aging", permit("inventory", "view"), route(async (_req, res) => { res.json(await inventoryAgingReport()); }));
 router.get("/admin/inventory/reports/valuation", permit("inventory", "view"), route(async (req, res) => { const rows = await inventoryValuationReport(); if (req.query.format === "csv") { res.type("text/csv").send(inventoryCsv(rows as Array<Record<string, unknown>>)); return; } res.json(rows); }));
-router.get("/admin/inventory/reports/audit", permit("inventory", "view"), route(async (req, res) => { const rows = await inventoryAuditReport(); if (req.query.format === "csv") { res.type("text/csv").send(inventoryCsv(rows as Array<Record<string, unknown>>)); return; } res.json(rows); }));
+router.get("/admin/inventory/reports/audit", permit("inventory", "view"), route(async (req, res) => { const report = await inventoryAuditReport(inventoryReportQuery(req.query)); if (req.query.format === "csv") { res.type("text/csv").send(inventoryCsv(report.items as Array<Record<string, unknown>>)); return; } res.json(report); }));
 router.get("/admin/inventory/reports/reconciliation", permit("inventory", "view"), route(async (_req, res) => { res.json(await inventoryReconciliationReport()); }));
 router.post("/admin/inventory/purchase-orders", permit("inventory", "edit"), route(async (req, res) => {
   try { res.status(201).json(await createInventoryPurchaseOrder({ ...req.body, createdBy: res.locals.admin.id })); }

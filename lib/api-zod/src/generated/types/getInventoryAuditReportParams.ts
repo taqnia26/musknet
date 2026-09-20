@@ -8,5 +8,18 @@
 import type { GetInventoryAuditReportFormat } from './getInventoryAuditReportFormat';
 
 export type GetInventoryAuditReportParams = {
+productId?: number;
+sourceType?: string;
+from?: Date;
+to?: Date;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
 format?: GetInventoryAuditReportFormat;
 };

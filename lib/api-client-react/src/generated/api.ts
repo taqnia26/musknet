@@ -141,13 +141,15 @@ import type {
   InfluencerInput,
   InfluencerLogin,
   InfluencerPatchBody,
+  InventoryAgingRow,
   InventoryAlert,
-  InventoryAuditRow,
+  InventoryAuditPage,
   InventoryBalance,
   InventoryCycleCount,
   InventoryCycleCountInput,
   InventoryLocation,
   InventoryLocationInput,
+  InventoryMovementPage,
   InventoryPurchaseOrder,
   InventoryPurchaseOrderInput,
   InventoryReceiptInput,
@@ -13696,9 +13698,9 @@ export const getGetInventoryMovementReportUrl = (params?: GetInventoryMovementRe
   return stringifiedParams.length > 0 ? `/api/admin/inventory/reports/movements?${stringifiedParams}` : `/api/admin/inventory/reports/movements`
 }
 
-export const getInventoryMovementReport = async (params?: GetInventoryMovementReportParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminInventoryMovement[] | string> => {
+export const getInventoryMovementReport = async (params?: GetInventoryMovementReportParams, options?: Parameters<typeof customFetch>[1]): Promise<InventoryMovementPage | string> => {
 
-  return customFetch<AdminInventoryMovement[] | string>(getGetInventoryMovementReportUrl(params),
+  return customFetch<InventoryMovementPage | string>(getGetInventoryMovementReportUrl(params),
   {
     ...options,
     method: 'GET'
@@ -13767,9 +13769,9 @@ export const getGetInventoryAgingReportUrl = () => {
   return `/api/admin/inventory/reports/aging`
 }
 
-export const getInventoryAgingReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<InventoryBalance[]> => {
+export const getInventoryAgingReport = async ( options?: Parameters<typeof customFetch>[1]): Promise<InventoryAgingRow[]> => {
 
-  return customFetch<InventoryBalance[]>(getGetInventoryAgingReportUrl(),
+  return customFetch<InventoryAgingRow[]>(getGetInventoryAgingReportUrl(),
   {
     ...options,
     method: 'GET'
@@ -13923,9 +13925,9 @@ export const getGetInventoryAuditReportUrl = (params?: GetInventoryAuditReportPa
   return stringifiedParams.length > 0 ? `/api/admin/inventory/reports/audit?${stringifiedParams}` : `/api/admin/inventory/reports/audit`
 }
 
-export const getInventoryAuditReport = async (params?: GetInventoryAuditReportParams, options?: Parameters<typeof customFetch>[1]): Promise<InventoryAuditRow[] | string> => {
+export const getInventoryAuditReport = async (params?: GetInventoryAuditReportParams, options?: Parameters<typeof customFetch>[1]): Promise<InventoryAuditPage | string> => {
 
-  return customFetch<InventoryAuditRow[] | string>(getGetInventoryAuditReportUrl(params),
+  return customFetch<InventoryAuditPage | string>(getGetInventoryAuditReportUrl(params),
   {
     ...options,
     method: 'GET'

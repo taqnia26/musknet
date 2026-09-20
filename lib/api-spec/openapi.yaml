@@ -1877,14 +1877,18 @@ paths:
       parameters:
         - { name: productId, in: query, schema: { type: number, multipleOf: 1 } }
         - { name: sourceType, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: number, multipleOf: 1, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: number, multipleOf: 1, minimum: 1, maximum: 100, default: 50 } }
         - { name: format, in: query, schema: { type: string, enum: [json, csv] } }
-      responses: { "200": { description: Inventory movements, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminInventoryMovement" } } }, text/csv: { schema: { type: string } } } } }
+      responses: { "200": { description: Paginated inventory movements, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryMovementPage" } }, text/csv: { schema: { type: string } } } } }
   /admin/inventory/reports/aging:
     get:
       operationId: getInventoryAgingReport
       tags: [Admin Inventory]
       security: [{ adminBearerAuth: [] }]
-      responses: { "200": { description: Inventory aging, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryBalance" } } } } } }
+      responses: { "200": { description: Inventory aging, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryAgingRow" } } } } } }
   /admin/inventory/reports/valuation:
     get:
       operationId: getInventoryValuationReport
@@ -1897,8 +1901,15 @@ paths:
       operationId: getInventoryAuditReport
       tags: [Admin Inventory]
       security: [{ adminBearerAuth: [] }]
-      parameters: [{ name: format, in: query, schema: { type: string, enum: [json, csv] } }]
-      responses: { "200": { description: Movement audit report, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryAuditRow" } } }, text/csv: { schema: { type: string } } } } }
+      parameters:
+        - { name: productId, in: query, schema: { type: number, multipleOf: 1 } }
+        - { name: sourceType, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: page, in: query, schema: { type: number, multipleOf: 1, minimum: 1, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: number, multipleOf: 1, minimum: 1, maximum: 100, default: 50 } }
+        - { name: format, in: query, schema: { type: string, enum: [json, csv] } }
+      responses: { "200": { description: Paginated movement audit report, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryAuditPage" } }, text/csv: { schema: { type: string } } } } }
   /admin/inventory/reports/reconciliation:
     get:
       operationId: getInventoryReconciliationReport
@@ -2044,6 +2055,14 @@ components:
         reserved: { type: number, multipleOf: 1, minimum: 0 }
         incoming: { type: number, multipleOf: 1, minimum: 0 }
         averageCost: { type: string }
+    InventoryAgingRow:
+      allOf:
+        - { $ref: "#/components/schemas/InventoryBalance" }
+        - type: object
+          required: [updatedAt, ageDays]
+          properties:
+            updatedAt: { type: string, format: date-time }
+            ageDays: { type: number, multipleOf: 1, minimum: 0 }
     InventoryTransferInput:
       type: object
       required: [transferNumber, idempotencyKey, fromLocationId, toLocationId, lines]
@@ -2153,6 +2172,22 @@ components:
         performedBy: { type: [number, "null"] }
         performerName: { type: [string, "null"] }
         createdAt: { type: string, format: date-time }
+    InventoryMovementPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AdminInventoryMovement" } }
+        page: { type: number, multipleOf: 1 }
+        pageSize: { type: number, multipleOf: 1 }
+        total: { type: number, multipleOf: 1 }
+    InventoryAuditPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/InventoryAuditRow" } }
+        page: { type: number, multipleOf: 1 }
+        pageSize: { type: number, multipleOf: 1 }
+        total: { type: number, multipleOf: 1 }
     InventoryReconciliation:
       type: object
       required: [operationalValue, accountingInventoryValue, difference, unlinkedMovements, unlinkedInventoryJournals]

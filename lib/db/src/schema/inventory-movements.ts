@@ -1,4 +1,4 @@
-import { integer, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -29,6 +29,11 @@ export const inventoryMovementsTable = pgTable("inventory_movements", {
 }, (table) => [
   uniqueIndex("inventory_movements_event_key_unique").on(table.eventKey)
     .where(sql`${table.eventKey} is not null`),
+  index("inventory_movements_created_id_idx").on(table.createdAt, table.id),
+  index("inventory_movements_product_created_idx").on(table.productId, table.createdAt, table.id),
+  index("inventory_movements_source_created_idx").on(table.sourceType, table.createdAt, table.id),
+  index("inventory_movements_increase_product_created_idx").on(table.productId, table.createdAt)
+    .where(sql`${table.movementType} = 'increase'`),
 ]);
 
 export const insertInventoryMovementSchema = createInsertSchema(inventoryMovementsTable).omit({ id: true, createdAt: true });
