@@ -3544,6 +3544,7 @@ components:
         categoryId: { type: number, minimum: 1, multipleOf: 1 }
         price: { type: number, minimum: 0 }
         openingQuantity: { type: number, minimum: 0, multipleOf: 1 }
+        openingUnitCost: { type: number, minimum: 0 }
         reorderPoint: { type: number, minimum: 0, multipleOf: 1 }
         targetStockQuantity: { type: number, minimum: 0, multipleOf: 1 }
     AdminInventoryAdjustment:
@@ -3552,6 +3553,7 @@ components:
       properties:
         operation: { type: string, enum: [increase, decrease, adjustment] }
         quantity: { type: number, minimum: 0, multipleOf: 1 }
+        unitCost: { type: number, minimum: 0 }
         reason: { type: string, minLength: 1 }
         idempotencyKey: { type: string, minLength: 8, maxLength: 120 }
     AdminInventoryMovement:

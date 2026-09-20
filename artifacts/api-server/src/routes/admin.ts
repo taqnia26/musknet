@@ -1961,7 +1961,8 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
       nameAr: body.nameAr.trim(), nameEn: body.nameEn.trim(), sku: body.sku.trim(),
       barcode: body.barcode ?? null, operationalType: body.operationalType ?? "finished_good", unitOfMeasure: body.unitOfMeasure ?? "unit", preferredSupplier: body.preferredSupplier ?? null, sellable: body.sellable ?? true,
       slug: `${slugBase}-${randomBytes(3).toString("hex")}`, categoryId: body.categoryId, price: body.price,
-      stockQuantity: body.openingQuantity, reorderPoint: body.reorderPoint, targetStockQuantity: body.targetStockQuantity,
+      stockQuantity: body.openingQuantity, averageCost: (body.openingUnitCost ?? 0).toFixed(4),
+      reorderPoint: body.reorderPoint, targetStockQuantity: body.targetStockQuantity,
     }).returning();
     if (created.stockQuantity > 0) {
       let [defaultLocation] = await tx.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.isDefault, true)).limit(1);
@@ -1977,6 +1978,8 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
       await tx.insert(inventoryMovementsTable).values({
         productId: created.id, movementType: "increase", quantityChange: created.stockQuantity,
         quantityBefore: 0, quantityAfter: created.stockQuantity, reason: "Initial stock",
+        unitCost: created.averageCost,
+        totalCost: (created.stockQuantity * Number(created.averageCost)).toFixed(4),
         sourceType: "product_creation", sourceId: String(created.id), eventKey: `product-creation:${created.id}`,
         performedBy: res.locals.admin.id,
       });
@@ -2012,7 +2015,7 @@ router.get("/admin/inventory/:id/movements", permit("inventory", "view"), route(
 }));
 
 async function adjustInventory(productId: number, input: {
-  operation: "increase" | "decrease" | "adjustment"; quantity: number; reason: string; idempotencyKey: string;
+  operation: "increase" | "decrease" | "adjustment"; quantity: number; unitCost?: number; reason: string; idempotencyKey: string;
 }, performedBy: number) {
   return db.transaction(async (tx) => {
     const eventKey = `manual-inventory:${productId}:${input.idempotencyKey}`;
@@ -2041,6 +2044,13 @@ async function adjustInventory(productId: number, input: {
       : input.operation === "decrease" ? quantityBefore - input.quantity : input.quantity;
     if (stockQuantity < 0) throw new Error("Inventory operation cannot produce negative stock");
     const quantityChange = stockQuantity - quantityBefore;
+    const currentAverageCost = Number(product.averageCost);
+    const nextAverageCost = input.unitCost == null || input.operation === "decrease"
+      ? currentAverageCost
+      : input.operation === "increase" && stockQuantity > 0
+        ? ((quantityBefore * currentAverageCost) + (input.quantity * input.unitCost)) / stockQuantity
+        : input.unitCost;
+    const averageCost = nextAverageCost.toFixed(4);
     let [defaultLocation] = await tx.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.isDefault, true)).limit(1);
     if (!defaultLocation) {
       [defaultLocation] = await tx.insert(inventoryLocationsTable).values({ name: "Default warehouse", code: "DEFAULT", type: "warehouse", isDefault: true }).returning();
@@ -2050,12 +2060,12 @@ async function adjustInventory(productId: number, input: {
     const locationQuantity = (defaultBalance?.available ?? 0) + quantityChange;
     if (locationQuantity < 0) throw new Error("Default location cannot produce negative stock");
     if (defaultBalance) {
-      await tx.update(inventoryBalancesTable).set({ available: locationQuantity, updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, defaultBalance.id));
+      await tx.update(inventoryBalancesTable).set({ available: locationQuantity, averageCost, updatedAt: new Date() }).where(eq(inventoryBalancesTable.id, defaultBalance.id));
     } else {
-      await tx.insert(inventoryBalancesTable).values({ productId, locationId: defaultLocation.id, available: locationQuantity, averageCost: product.averageCost });
+      await tx.insert(inventoryBalancesTable).values({ productId, locationId: defaultLocation.id, available: locationQuantity, averageCost });
     }
     const movementType = input.operation;
-    const [updated] = await tx.update(productsTable).set({ stockQuantity }).where(eq(productsTable.id, productId)).returning({
+    const [updated] = await tx.update(productsTable).set({ stockQuantity, averageCost }).where(eq(productsTable.id, productId)).returning({
       id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
       sku: productsTable.sku, barcode: productsTable.barcode, operationalType: productsTable.operationalType,
       unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier,
@@ -2070,6 +2080,8 @@ async function adjustInventory(productId: number, input: {
       quantityBefore,
       quantityAfter: stockQuantity,
       reason: input.reason,
+      unitCost: input.unitCost == null ? currentAverageCost.toFixed(4) : input.unitCost.toFixed(4),
+      totalCost: (Math.abs(quantityChange) * (input.unitCost ?? currentAverageCost)).toFixed(4),
       sourceType: "manual_adjustment", sourceId: String(productId), eventKey,
       performedBy,
     }).returning();
@@ -2083,7 +2095,7 @@ async function adjustInventory(productId: number, input: {
 
 async function handleInventoryAdjustment(
   params: { id: number },
-  body: { operation: "increase" | "decrease" | "adjustment"; quantity: number; reason: string; idempotencyKey: string },
+  body: { operation: "increase" | "decrease" | "adjustment"; quantity: number; unitCost?: number; reason: string; idempotencyKey: string },
   res: Response,
   response: { parse(value: unknown): unknown },
 ) {

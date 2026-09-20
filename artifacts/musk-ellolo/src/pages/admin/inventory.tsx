@@ -31,9 +31,9 @@ type StockStatus = 'all' | 'in_stock' | 'low' | 'out';
 type Sort = 'name_asc' | 'name_desc' | 'quantity_asc' | 'quantity_desc' | 'value_desc';
 type CreateForm = {
   nameAr: string; nameEn: string; sku: string; categoryId: string; price: string;
-  openingQuantity: string; reorderPoint: string; targetStockQuantity: string;
+  openingQuantity: string; openingUnitCost: string; reorderPoint: string; targetStockQuantity: string;
 };
-const emptyCreate: CreateForm = { nameAr: '', nameEn: '', sku: '', categoryId: '', price: '0', openingQuantity: '0', reorderPoint: '5', targetStockQuantity: '20' };
+const emptyCreate: CreateForm = { nameAr: '', nameEn: '', sku: '', categoryId: '', price: '0', openingQuantity: '0', openingUnitCost: '', reorderPoint: '5', targetStockQuantity: '20' };
 
 function statusLabel(status: AdminInventoryItem['stockStatus'], t: (ar: string, en: string) => string) {
   return status === 'out' ? t('نافد', 'Out of stock') : status === 'low' ? t('منخفض', 'Low') : t('متوفر', 'In stock');
@@ -47,8 +47,10 @@ function InventoryDetails({ item, open, onOpenChange, canEdit }: {
   const queryClient = useQueryClient();
   const [operation, setOperation] = useState<AdminInventoryAdjustmentOperation>('increase');
   const [quantity, setQuantity] = useState('1');
+  const [unitCost, setUnitCost] = useState(item.averageCost > 0 ? String(item.averageCost) : '');
   const [reason, setReason] = useState('');
   const [currentStock, setCurrentStock] = useState(item.stockQuantity);
+  const [currentAverageCost, setCurrentAverageCost] = useState(item.averageCost);
   const { data: movements = [], isLoading, isError } = useAdminListInventoryMovements(item.id, {
     query: { enabled: open, queryKey: getAdminListInventoryMovementsQueryKey(item.id) },
   });
@@ -56,20 +58,36 @@ function InventoryDetails({ item, open, onOpenChange, canEdit }: {
   const amount = Number(quantity);
   const expected = operation === 'increase' ? currentStock + amount : operation === 'decrease' ? currentStock - amount : amount;
 
-  useEffect(() => setCurrentStock(item.stockQuantity), [item.stockQuantity]);
+  useEffect(() => {
+    setCurrentStock(item.stockQuantity);
+    setCurrentAverageCost(item.averageCost);
+    setUnitCost(item.averageCost > 0 ? String(item.averageCost) : '');
+  }, [item.stockQuantity, item.averageCost]);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!Number.isSafeInteger(amount) || amount < 0 || expected < 0 || !reason.trim()) {
-      toast({ title: t('تحقق من العملية', 'Check operation'), description: t('أدخل كمية صحيحة وسبباً، ولا يمكن أن يصبح الرصيد سالباً.', 'Enter a valid quantity and reason; stock cannot become negative.'), variant: 'destructive' });
+    const parsedUnitCost = unitCost === '' ? undefined : Number(unitCost);
+    const costRequired = operation !== 'decrease' && expected > 0 && currentAverageCost <= 0 && parsedUnitCost == null;
+    if (!Number.isSafeInteger(amount) || amount < 0 || expected < 0 || !reason.trim() ||
+      (parsedUnitCost != null && (!Number.isFinite(parsedUnitCost) || parsedUnitCost < 0)) ||
+      costRequired) {
+      toast({
+        title: t('تحقق من العملية', 'Check operation'),
+        description: costRequired
+          ? t('أدخل تكلفة الوحدة ليتم حساب قيمة المخزون.', 'Enter the unit cost so inventory value can be calculated.')
+          : t('أدخل كمية صحيحة وسبباً، ولا يمكن أن يصبح الرصيد سالباً.', 'Enter a valid quantity and reason; stock cannot become negative.'),
+        variant: 'destructive',
+      });
       return;
     }
     mutation.mutate({
       id: item.id,
-      data: { operation, quantity: amount, reason: reason.trim(), idempotencyKey: crypto.randomUUID() },
+      data: { operation, quantity: amount, ...(operation !== 'decrease' && parsedUnitCost != null ? { unitCost: parsedUnitCost } : {}), reason: reason.trim(), idempotencyKey: crypto.randomUUID() },
     }, {
       onSuccess: (result) => {
         setCurrentStock(result.item.stockQuantity);
+        setCurrentAverageCost(result.item.averageCost);
+        setUnitCost(result.item.averageCost > 0 ? String(result.item.averageCost) : '');
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryMovementsQueryKey(item.id) });
         setReason('');
@@ -87,7 +105,7 @@ function InventoryDetails({ item, open, onOpenChange, canEdit }: {
           <div><p className="text-xs text-muted-foreground">{t('الرصيد الحالي', 'Current')}</p><p className="text-xl font-bold">{currentStock}</p></div>
           <div><p className="text-xs text-muted-foreground">{t('حد الطلب', 'Reorder point')}</p><p className="text-xl font-bold">{item.reorderPoint}</p></div>
           <div><p className="text-xs text-muted-foreground">{t('المستهدف', 'Target')}</p><p className="text-xl font-bold">{item.targetStockQuantity}</p></div>
-          <div><p className="text-xs text-muted-foreground">{t('التكلفة المتوسطة', 'Average cost')}</p><p className="text-xl font-bold">{item.averageCost.toLocaleString()} SAR</p></div>
+          <div><p className="text-xs text-muted-foreground">{t('التكلفة المتوسطة', 'Average cost')}</p><p className="text-xl font-bold">{currentAverageCost.toLocaleString()} SAR</p></div>
         </div>
         {canEdit && (
           <form onSubmit={submit} className="space-y-4 rounded-lg border p-4">
@@ -97,6 +115,7 @@ function InventoryDetails({ item, open, onOpenChange, canEdit }: {
               <div><Label>{operation === 'adjustment' ? t('الرصيد الجديد', 'New balance') : t('الكمية', 'Quantity')}</Label><Input className="mt-1" type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
               <div><Label>{t('الرصيد الناتج', 'Resulting balance')}</Label><div className={`mt-1 flex h-10 items-center rounded-md border px-3 font-bold ${expected < 0 ? 'text-destructive' : ''}`}>{Number.isFinite(expected) ? expected : '—'}</div></div>
             </div>
+            {operation !== 'decrease' && <div><Label>{t('تكلفة الوحدة (ليست سعر البيع)', 'Unit cost (not selling price)')}</Label><Input className="mt-1" type="number" min="0" step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} placeholder={t('أدخل تكلفة شراء أو تصنيع الوحدة', 'Enter the unit purchase or manufacturing cost')} /></div>}
             <div><Label>{t('السبب (إلزامي)', 'Reason (required)')}</Label><Input className="mt-1" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('مثال: استلام توريد أو جرد فعلي', 'e.g. Delivery received or physical count')} /></div>
             <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? t('جاري التسجيل...', 'Recording...') : t('تأكيد الحركة', 'Confirm movement')}</Button>
           </form>
@@ -149,8 +168,8 @@ export default function AdminInventory() {
 
   const createProduct = (event: React.FormEvent) => {
     event.preventDefault();
-    const payload = { nameAr: create.nameAr.trim(), nameEn: create.nameEn.trim(), sku: create.sku.trim(), categoryId: Number(create.categoryId), price: Number(create.price), openingQuantity: Number(create.openingQuantity), reorderPoint: Number(create.reorderPoint), targetStockQuantity: Number(create.targetStockQuantity) };
-    if (!payload.nameAr || !payload.nameEn || !payload.sku || !Number.isSafeInteger(payload.categoryId) || [payload.price, payload.openingQuantity, payload.reorderPoint, payload.targetStockQuantity].some((value) => !Number.isFinite(value) || value < 0)) {
+    const payload = { nameAr: create.nameAr.trim(), nameEn: create.nameEn.trim(), sku: create.sku.trim(), categoryId: Number(create.categoryId), price: Number(create.price), openingQuantity: Number(create.openingQuantity), ...(create.openingUnitCost !== '' ? { openingUnitCost: Number(create.openingUnitCost) } : {}), reorderPoint: Number(create.reorderPoint), targetStockQuantity: Number(create.targetStockQuantity) };
+    if (!payload.nameAr || !payload.nameEn || !payload.sku || !Number.isSafeInteger(payload.categoryId) || [payload.price, payload.openingQuantity, payload.openingUnitCost, payload.reorderPoint, payload.targetStockQuantity].some((value) => value != null && (!Number.isFinite(value) || value < 0)) || (payload.openingQuantity > 0 && payload.openingUnitCost == null)) {
       toast({ title: t('أكمل الحقول المطلوبة', 'Complete required fields'), variant: 'destructive' }); return;
     }
     const existingProduct = items.find((item) => item.sku?.trim().toLowerCase() === payload.sku.toLowerCase());
@@ -185,7 +204,7 @@ export default function AdminInventory() {
     <Card><CardHeader><CardTitle className="text-base">{t('الرصيد مقابل حدود المخزون', 'Stock versus saved thresholds')}</CardTitle></CardHeader><CardContent className="h-[320px]" dir="ltr"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis /><Tooltip /><Legend /><Bar dataKey="current" name={t('الحالي', 'Current')} fill="hsl(31 78% 66%)" /><Bar dataKey="reorder" name={t('حد الطلب', 'Reorder')} fill="hsl(0 48% 31%)" /><Bar dataKey="target" name={t('المستهدف', 'Target')} fill="hsl(17 57% 46%)" /></BarChart></ResponsiveContainer></CardContent></Card>
     <div className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-4"><div className="relative"><Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('بحث بالاسم أو SKU', 'Search name or SKU')} /></div><Select value={categoryId} onValueChange={setCategoryId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('كل التصنيفات', 'All categories')}</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{lang === 'ar' ? category.nameAr : category.nameEn}</SelectItem>)}</SelectContent></Select><Select value={stockStatus} onValueChange={(value) => setStockStatus(value as StockStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('كل الحالات', 'All statuses')}</SelectItem><SelectItem value="in_stock">{t('متوفر', 'In stock')}</SelectItem><SelectItem value="low">{t('منخفض', 'Low')}</SelectItem><SelectItem value="out">{t('نافد', 'Out')}</SelectItem></SelectContent></Select><Select value={sort} onValueChange={(value) => setSort(value as Sort)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="name_asc">{t('الاسم تصاعدياً', 'Name A-Z')}</SelectItem><SelectItem value="name_desc">{t('الاسم تنازلياً', 'Name Z-A')}</SelectItem><SelectItem value="quantity_asc">{t('الأقل كمية', 'Lowest quantity')}</SelectItem><SelectItem value="quantity_desc">{t('الأعلى كمية', 'Highest quantity')}</SelectItem><SelectItem value="value_desc">{t('الأعلى قيمة', 'Highest value')}</SelectItem></SelectContent></Select></div>
     <div className="overflow-x-auto rounded-xl border bg-card"><Table><TableHeader><TableRow><TableHead>{t('المنتج', 'Product')}</TableHead><TableHead>{t('التصنيف', 'Category')}</TableHead><TableHead>SKU</TableHead><TableHead>{t('الحالي', 'Current')}</TableHead><TableHead>{t('حد الطلب', 'Reorder')}</TableHead><TableHead>{t('المستهدف', 'Target')}</TableHead><TableHead>{t('القيمة', 'Value')}</TableHead><TableHead>{t('الحالة', 'Status')}</TableHead><TableHead /></TableRow></TableHeader><TableBody>{isLoading ? <TableRow><TableCell colSpan={9} className="py-12 text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> : isError ? <TableRow><TableCell colSpan={9} className="py-12 text-center text-destructive">{t('تعذر تحميل المخزون', 'Could not load inventory')}</TableCell></TableRow> : items.length === 0 ? <TableRow><TableCell colSpan={9} className="py-12 text-center text-muted-foreground">{t('لا توجد نتائج', 'No results')}</TableCell></TableRow> : items.map((item) => <TableRow key={item.id}><TableCell className="font-medium">{lang === 'ar' ? item.nameAr : item.nameEn}</TableCell><TableCell>{lang === 'ar' ? item.categoryNameAr : item.categoryNameEn}</TableCell><TableCell dir="ltr">{item.sku || '—'}</TableCell><TableCell className="font-bold">{item.stockQuantity}</TableCell><TableCell>{item.reorderPoint}</TableCell><TableCell>{item.targetStockQuantity}</TableCell><TableCell>{item.inventoryValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell><TableCell><Badge variant={item.stockStatus === 'out' ? 'destructive' : 'outline'} className={item.stockStatus === 'in_stock' ? 'border-success text-success' : item.stockStatus === 'low' ? 'border-amber-500 text-amber-600' : ''}>{statusLabel(item.stockStatus, t)}</Badge></TableCell><TableCell><Button variant="ghost" size="sm" onClick={() => setSelected(item)}>{t('التفاصيل', 'Details')}</Button></TableCell></TableRow>)}</TableBody></Table></div>
-    <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>{t('إضافة منتج إلى المخزون', 'Add inventory product')}</DialogTitle></DialogHeader><form onSubmit={createProduct} className="grid gap-4 sm:grid-cols-2">{([['nameAr', t('الاسم بالعربية', 'Arabic name')], ['nameEn', t('الاسم بالإنجليزية', 'English name')], ['sku', 'SKU']] as const).map(([key, label]) => <div key={key}><Label>{label}</Label><Input className="mt-1" value={create[key]} onChange={(e) => setCreate((value) => ({ ...value, [key]: e.target.value }))} /></div>)}<div><Label>{t('التصنيف', 'Category')}</Label><Select value={create.categoryId} onValueChange={(value) => setCreate((current) => ({ ...current, categoryId: value }))}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر التصنيف', 'Select category')} /></SelectTrigger><SelectContent>{categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{lang === 'ar' ? category.nameAr : category.nameEn}</SelectItem>)}</SelectContent></Select></div>{([['price', t('السعر', 'Price')], ['openingQuantity', t('الكمية الافتتاحية', 'Opening quantity')], ['reorderPoint', t('حد إعادة الطلب', 'Reorder point')], ['targetStockQuantity', t('الكمية المستهدفة', 'Target quantity')]] as const).map(([key, label]) => <div key={key}><Label>{label}</Label><Input className="mt-1" type="number" min="0" step={key === 'price' ? '0.01' : '1'} value={create[key]} onChange={(e) => setCreate((value) => ({ ...value, [key]: e.target.value }))} /></div>)}<Button className="sm:col-span-2" type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? t('جاري الإنشاء...', 'Creating...') : t('إنشاء المنتج', 'Create product')}</Button></form></DialogContent></Dialog>
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>{t('إضافة منتج إلى المخزون', 'Add inventory product')}</DialogTitle></DialogHeader><form onSubmit={createProduct} className="grid gap-4 sm:grid-cols-2">{([['nameAr', t('الاسم بالعربية', 'Arabic name')], ['nameEn', t('الاسم بالإنجليزية', 'English name')], ['sku', 'SKU']] as const).map(([key, label]) => <div key={key}><Label>{label}</Label><Input className="mt-1" value={create[key]} onChange={(e) => setCreate((value) => ({ ...value, [key]: e.target.value }))} /></div>)}<div><Label>{t('التصنيف', 'Category')}</Label><Select value={create.categoryId} onValueChange={(value) => setCreate((current) => ({ ...current, categoryId: value }))}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر التصنيف', 'Select category')} /></SelectTrigger><SelectContent>{categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{lang === 'ar' ? category.nameAr : category.nameEn}</SelectItem>)}</SelectContent></Select></div>{([['price', t('سعر البيع', 'Selling price')], ['openingQuantity', t('الكمية الافتتاحية', 'Opening quantity')], ['openingUnitCost', t('تكلفة الوحدة الافتتاحية', 'Opening unit cost')], ['reorderPoint', t('حد إعادة الطلب', 'Reorder point')], ['targetStockQuantity', t('الكمية المستهدفة', 'Target quantity')]] as const).map(([key, label]) => <div key={key}><Label>{label}</Label><Input className="mt-1" type="number" min="0" step={key === 'price' || key === 'openingUnitCost' ? '0.01' : '1'} value={create[key]} onChange={(e) => setCreate((value) => ({ ...value, [key]: e.target.value }))} /></div>)}<Button className="sm:col-span-2" type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? t('جاري الإنشاء...', 'Creating...') : t('إنشاء المنتج', 'Create product')}</Button></form></DialogContent></Dialog>
     {selected && <InventoryDetails item={selected} open onOpenChange={(open) => !open && setSelected(null)} canEdit={canEdit} />}
   </div>;
 }

@@ -2048,6 +2048,8 @@ export interface AdminInventoryProductInput {
   /** @minimum 0 */
   openingQuantity: number;
   /** @minimum 0 */
+  openingUnitCost?: number;
+  /** @minimum 0 */
   reorderPoint: number;
   /** @minimum 0 */
   targetStockQuantity: number;
@@ -2066,6 +2068,8 @@ export interface AdminInventoryAdjustment {
   operation: AdminInventoryAdjustmentOperation;
   /** @minimum 0 */
   quantity: number;
+  /** @minimum 0 */
+  unitCost?: number;
   /** @minLength 1 */
   reason: string;
   /**
@@ -3612,3 +3616,4 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
+

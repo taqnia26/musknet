@@ -3002,6 +3002,8 @@ export const adminCreateInventoryProductBodyPriceMin = 0;
 export const adminCreateInventoryProductBodyOpeningQuantityMin = 0;
 export const adminCreateInventoryProductBodyOpeningQuantityMultipleOf = 1;
 
+export const adminCreateInventoryProductBodyOpeningUnitCostMin = 0;
+
 export const adminCreateInventoryProductBodyReorderPointMin = 0;
 export const adminCreateInventoryProductBodyReorderPointMultipleOf = 1;
 
@@ -3022,6 +3024,7 @@ export const AdminCreateInventoryProductBody = zod.object({
   "categoryId": zod.number().min(1).multipleOf(adminCreateInventoryProductBodyCategoryIdMultipleOf),
   "price": zod.number().min(adminCreateInventoryProductBodyPriceMin),
   "openingQuantity": zod.number().min(adminCreateInventoryProductBodyOpeningQuantityMin).multipleOf(adminCreateInventoryProductBodyOpeningQuantityMultipleOf),
+  "openingUnitCost": zod.number().min(adminCreateInventoryProductBodyOpeningUnitCostMin).optional(),
   "reorderPoint": zod.number().min(adminCreateInventoryProductBodyReorderPointMin).multipleOf(adminCreateInventoryProductBodyReorderPointMultipleOf),
   "targetStockQuantity": zod.number().min(adminCreateInventoryProductBodyTargetStockQuantityMin).multipleOf(adminCreateInventoryProductBodyTargetStockQuantityMultipleOf)
 })
@@ -3081,6 +3084,8 @@ export const AdminUpdateInventoryParams = zod.object({
 export const adminUpdateInventoryBodyQuantityMin = 0;
 export const adminUpdateInventoryBodyQuantityMultipleOf = 1;
 
+export const adminUpdateInventoryBodyUnitCostMin = 0;
+
 
 export const adminUpdateInventoryBodyIdempotencyKeyMin = 8;
 export const adminUpdateInventoryBodyIdempotencyKeyMax = 120;
@@ -3090,6 +3095,7 @@ export const adminUpdateInventoryBodyIdempotencyKeyMax = 120;
 export const AdminUpdateInventoryBody = zod.object({
   "operation": zod.enum(['increase', 'decrease', 'adjustment']),
   "quantity": zod.number().min(adminUpdateInventoryBodyQuantityMin).multipleOf(adminUpdateInventoryBodyQuantityMultipleOf),
+  "unitCost": zod.number().min(adminUpdateInventoryBodyUnitCostMin).optional(),
   "reason": zod.string().min(1),
   "idempotencyKey": zod.string().min(adminUpdateInventoryBodyIdempotencyKeyMin).max(adminUpdateInventoryBodyIdempotencyKeyMax)
 })
@@ -3141,6 +3147,8 @@ export const AdminAdjustInventoryParams = zod.object({
 export const adminAdjustInventoryBodyQuantityMin = 0;
 export const adminAdjustInventoryBodyQuantityMultipleOf = 1;
 
+export const adminAdjustInventoryBodyUnitCostMin = 0;
+
 
 export const adminAdjustInventoryBodyIdempotencyKeyMin = 8;
 export const adminAdjustInventoryBodyIdempotencyKeyMax = 120;
@@ -3150,6 +3158,7 @@ export const adminAdjustInventoryBodyIdempotencyKeyMax = 120;
 export const AdminAdjustInventoryBody = zod.object({
   "operation": zod.enum(['increase', 'decrease', 'adjustment']),
   "quantity": zod.number().min(adminAdjustInventoryBodyQuantityMin).multipleOf(adminAdjustInventoryBodyQuantityMultipleOf),
+  "unitCost": zod.number().min(adminAdjustInventoryBodyUnitCostMin).optional(),
   "reason": zod.string().min(1),
   "idempotencyKey": zod.string().min(adminAdjustInventoryBodyIdempotencyKeyMin).max(adminAdjustInventoryBodyIdempotencyKeyMax)
 })
@@ -6071,3 +6080,5 @@ export const ListInventoryAlertsResponseItem = zod.object({
   "status": zod.enum(['out', 'low', 'ok'])
 })
 export const ListInventoryAlertsResponse = zod.array(ListInventoryAlertsResponseItem)
+
+

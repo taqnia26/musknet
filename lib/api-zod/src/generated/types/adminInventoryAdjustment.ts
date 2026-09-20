@@ -11,6 +11,8 @@ export interface AdminInventoryAdjustment {
   operation: AdminInventoryAdjustmentOperation;
   /** @minimum 0 */
   quantity: number;
+  /** @minimum 0 */
+  unitCost?: number;
   /** @minLength 1 */
   reason: string;
   /**

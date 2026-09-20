@@ -453,9 +453,11 @@ describe.sequential("admin route authorization", () => {
     const response = await request(app)
       .post(`/api/admin/inventory/${productId}/adjust`)
       .set("Authorization", `Bearer ${superToken}`)
-      .send({ operation: "increase", quantity: 7, reason: "Cycle count correction", idempotencyKey: "cycle-count-0001" })
+      .send({ operation: "increase", quantity: 7, unitCost: 24, reason: "Cycle count correction", idempotencyKey: "cycle-count-0001" })
       .expect(200);
     expect(response.body.item.stockQuantity).toBe(12);
+    expect(response.body.item.averageCost).toBe(14);
+    expect(response.body.item.inventoryValue).toBe(168);
     expect(response.body.movement).toMatchObject({
       productId,
       movementType: "increase",
@@ -478,12 +480,13 @@ describe.sequential("admin route authorization", () => {
       .set("Authorization", `Bearer ${superToken}`)
       .send({
         nameAr: "منتج مخزون جديد", nameEn: "New inventory product", sku: `INV-${Date.now()}`,
-        categoryId, price: 75, openingQuantity: 9, reorderPoint: 4, targetStockQuantity: 18,
+        categoryId, price: 75, openingQuantity: 9, openingUnitCost: 30, reorderPoint: 4, targetStockQuantity: 18,
       })
       .expect(201);
     inventoryCreatedProductId = response.body.id;
     expect(response.body).toMatchObject({
-      stockQuantity: 9, reorderPoint: 4, targetStockQuantity: 18, stockStatus: "in_stock",
+      stockQuantity: 9, averageCost: 30, inventoryValue: 270,
+      reorderPoint: 4, targetStockQuantity: 18, stockStatus: "in_stock",
     });
     const [movement] = await db.select().from(inventoryMovementsTable)
       .where(eq(inventoryMovementsTable.productId, inventoryCreatedProductId)).limit(1);

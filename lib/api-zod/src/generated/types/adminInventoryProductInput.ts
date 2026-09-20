@@ -28,6 +28,8 @@ export interface AdminInventoryProductInput {
   /** @minimum 0 */
   openingQuantity: number;
   /** @minimum 0 */
+  openingUnitCost?: number;
+  /** @minimum 0 */
   reorderPoint: number;
   /** @minimum 0 */
   targetStockQuantity: number;
