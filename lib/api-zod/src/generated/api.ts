@@ -1667,6 +1667,8 @@ export const AdminListProductsResponseItem = zod.object({
   "nameEn": zod.string()
 })),
   "stockQuantity": zod.number(),
+  "reorderPoint": zod.number(),
+  "targetStockQuantity": zod.number(),
   "sku": zod.string().nullish(),
   "isActive": zod.boolean(),
   "isFeatured": zod.boolean(),
@@ -1687,6 +1689,14 @@ export const adminCreateProductBodyDescriptionEnDefault = ``;
 export const adminCreateProductBodyPriceMin = 0;
 
 export const adminCreateProductBodyStockQuantityMin = 0;
+
+export const adminCreateProductBodyReorderPointDefault = 5;
+export const adminCreateProductBodyReorderPointMin = 0;
+export const adminCreateProductBodyReorderPointMultipleOf = 1;
+
+export const adminCreateProductBodyTargetStockQuantityDefault = 20;
+export const adminCreateProductBodyTargetStockQuantityMin = 0;
+export const adminCreateProductBodyTargetStockQuantityMultipleOf = 1;
 
 
 
@@ -1709,6 +1719,8 @@ export const AdminCreateProductBody = zod.object({
   "nameEn": zod.string()
 })).optional(),
   "stockQuantity": zod.number().min(adminCreateProductBodyStockQuantityMin).optional(),
+  "reorderPoint": zod.number().min(adminCreateProductBodyReorderPointMin).multipleOf(adminCreateProductBodyReorderPointMultipleOf).default(adminCreateProductBodyReorderPointDefault),
+  "targetStockQuantity": zod.number().min(adminCreateProductBodyTargetStockQuantityMin).multipleOf(adminCreateProductBodyTargetStockQuantityMultipleOf).default(adminCreateProductBodyTargetStockQuantityDefault),
   "sku": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "isFeatured": zod.boolean().optional(),
@@ -1738,6 +1750,8 @@ export const AdminCreateProductResponse = zod.object({
   "nameEn": zod.string()
 })),
   "stockQuantity": zod.number(),
+  "reorderPoint": zod.number(),
+  "targetStockQuantity": zod.number(),
   "sku": zod.string().nullish(),
   "isActive": zod.boolean(),
   "isFeatured": zod.boolean(),
@@ -1793,6 +1807,8 @@ export const AdminGetProductResponse = zod.object({
   "nameEn": zod.string()
 })),
   "stockQuantity": zod.number(),
+  "reorderPoint": zod.number(),
+  "targetStockQuantity": zod.number(),
   "sku": zod.string().nullish(),
   "isActive": zod.boolean(),
   "isFeatured": zod.boolean(),
@@ -1816,7 +1832,11 @@ export const adminUpdateProductBodyPriceMin = 0;
 
 export const adminUpdateProductBodyCompareAtPriceMin = 0;
 
-export const adminUpdateProductBodyStockQuantityMin = 0;
+export const adminUpdateProductBodyReorderPointMin = 0;
+export const adminUpdateProductBodyReorderPointMultipleOf = 1;
+
+export const adminUpdateProductBodyTargetStockQuantityMin = 0;
+export const adminUpdateProductBodyTargetStockQuantityMultipleOf = 1;
 
 
 
@@ -1829,7 +1849,8 @@ export const AdminUpdateProductBody = zod.object({
   "price": zod.number().min(adminUpdateProductBodyPriceMin).optional(),
   "compareAtPrice": zod.number().min(adminUpdateProductBodyCompareAtPriceMin).nullish(),
   "categoryId": zod.number().optional(),
-  "stockQuantity": zod.number().min(adminUpdateProductBodyStockQuantityMin).optional(),
+  "reorderPoint": zod.number().min(adminUpdateProductBodyReorderPointMin).multipleOf(adminUpdateProductBodyReorderPointMultipleOf).optional(),
+  "targetStockQuantity": zod.number().min(adminUpdateProductBodyTargetStockQuantityMin).multipleOf(adminUpdateProductBodyTargetStockQuantityMultipleOf).optional(),
   "sku": zod.string().nullish(),
   "isActive": zod.boolean().optional(),
   "isFeatured": zod.boolean().optional(),
@@ -1868,6 +1889,8 @@ export const AdminUpdateProductResponse = zod.object({
   "nameEn": zod.string()
 })),
   "stockQuantity": zod.number(),
+  "reorderPoint": zod.number(),
+  "targetStockQuantity": zod.number(),
   "sku": zod.string().nullish(),
   "isActive": zod.boolean(),
   "isFeatured": zod.boolean(),
@@ -2319,20 +2342,91 @@ export const AdminUpdateCustomerResponse = zod.object({
 })
 
 
+export const adminListInventoryQueryCategoryIdMultipleOf = 1;
+
+export const adminListInventoryQueryStockStatusDefault = `all`;
+export const adminListInventoryQuerySortDefault = `name_asc`;
+
 export const AdminListInventoryQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "lowStock": zod.coerce.boolean().optional()
+  "categoryId": zod.coerce.number().min(1).multipleOf(adminListInventoryQueryCategoryIdMultipleOf).optional(),
+  "stockStatus": zod.enum(['all', 'in_stock', 'low', 'out']).default(adminListInventoryQueryStockStatusDefault),
+  "sort": zod.enum(['name_asc', 'name_desc', 'quantity_asc', 'quantity_desc', 'value_desc']).default(adminListInventoryQuerySortDefault)
 })
 
-export const AdminListInventoryResponseItem = zod.object({
+export const AdminListInventoryResponse = zod.object({
+  "items": zod.array(zod.object({
   "id": zod.number(),
   "nameAr": zod.string(),
   "nameEn": zod.string(),
   "sku": zod.string().nullable(),
+  "price": zod.number(),
+  "averageCost": zod.number(),
+  "categoryId": zod.number(),
+  "categoryNameAr": zod.string(),
+  "categoryNameEn": zod.string(),
   "stockQuantity": zod.number(),
+  "reorderPoint": zod.number(),
+  "targetStockQuantity": zod.number(),
+  "stockStatus": zod.enum(['in_stock', 'low', 'out']),
+  "inventoryValue": zod.number(),
+  "isActive": zod.boolean()
+})),
+  "summary": zod.object({
+  "totalUnits": zod.number(),
+  "totalValue": zod.number(),
+  "lowStockProducts": zod.number(),
+  "outOfStockProducts": zod.number()
+})
+})
+
+
+
+
+
+export const adminCreateInventoryProductBodyCategoryIdMultipleOf = 1;
+
+export const adminCreateInventoryProductBodyPriceMin = 0;
+
+export const adminCreateInventoryProductBodyOpeningQuantityMin = 0;
+export const adminCreateInventoryProductBodyOpeningQuantityMultipleOf = 1;
+
+export const adminCreateInventoryProductBodyReorderPointMin = 0;
+export const adminCreateInventoryProductBodyReorderPointMultipleOf = 1;
+
+export const adminCreateInventoryProductBodyTargetStockQuantityMin = 0;
+export const adminCreateInventoryProductBodyTargetStockQuantityMultipleOf = 1;
+
+
+
+export const AdminCreateInventoryProductBody = zod.object({
+  "nameAr": zod.string().min(1),
+  "nameEn": zod.string().min(1),
+  "sku": zod.string().min(1),
+  "categoryId": zod.number().min(1).multipleOf(adminCreateInventoryProductBodyCategoryIdMultipleOf),
+  "price": zod.number().min(adminCreateInventoryProductBodyPriceMin),
+  "openingQuantity": zod.number().min(adminCreateInventoryProductBodyOpeningQuantityMin).multipleOf(adminCreateInventoryProductBodyOpeningQuantityMultipleOf),
+  "reorderPoint": zod.number().min(adminCreateInventoryProductBodyReorderPointMin).multipleOf(adminCreateInventoryProductBodyReorderPointMultipleOf),
+  "targetStockQuantity": zod.number().min(adminCreateInventoryProductBodyTargetStockQuantityMin).multipleOf(adminCreateInventoryProductBodyTargetStockQuantityMultipleOf)
+})
+
+export const AdminCreateInventoryProductResponse = zod.object({
+  "id": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "price": zod.number(),
+  "averageCost": zod.number(),
+  "categoryId": zod.number(),
+  "categoryNameAr": zod.string(),
+  "categoryNameEn": zod.string(),
+  "stockQuantity": zod.number(),
+  "reorderPoint": zod.number(),
+  "targetStockQuantity": zod.number(),
+  "stockStatus": zod.enum(['in_stock', 'low', 'out']),
+  "inventoryValue": zod.number(),
   "isActive": zod.boolean()
 })
-export const AdminListInventoryResponse = zod.array(AdminListInventoryResponseItem)
 
 
 export const AdminListInventoryMovementsParams = zod.object({
@@ -2347,7 +2441,10 @@ export const AdminListInventoryMovementsResponseItem = zod.object({
   "quantityBefore": zod.number(),
   "quantityAfter": zod.number(),
   "reason": zod.string().nullable(),
+  "sourceType": zod.string().nullable(),
+  "sourceId": zod.string().nullable(),
   "performedBy": zod.number().nullable(),
+  "performerName": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
 export const AdminListInventoryMovementsResponse = zod.array(AdminListInventoryMovementsResponseItem)
@@ -2360,14 +2457,20 @@ export const AdminUpdateInventoryParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const adminUpdateInventoryBodyStockQuantityMin = 0;
+export const adminUpdateInventoryBodyQuantityMin = 0;
+export const adminUpdateInventoryBodyQuantityMultipleOf = 1;
 
+
+export const adminUpdateInventoryBodyIdempotencyKeyMin = 8;
+export const adminUpdateInventoryBodyIdempotencyKeyMax = 120;
 
 
 
 export const AdminUpdateInventoryBody = zod.object({
-  "stockQuantity": zod.number().min(adminUpdateInventoryBodyStockQuantityMin),
-  "reason": zod.string().min(1)
+  "operation": zod.enum(['increase', 'decrease', 'adjustment']),
+  "quantity": zod.number().min(adminUpdateInventoryBodyQuantityMin).multipleOf(adminUpdateInventoryBodyQuantityMultipleOf),
+  "reason": zod.string().min(1),
+  "idempotencyKey": zod.string().min(adminUpdateInventoryBodyIdempotencyKeyMin).max(adminUpdateInventoryBodyIdempotencyKeyMax)
 })
 
 export const AdminUpdateInventoryResponse = zod.object({
@@ -2376,7 +2479,16 @@ export const AdminUpdateInventoryResponse = zod.object({
   "nameAr": zod.string(),
   "nameEn": zod.string(),
   "sku": zod.string().nullable(),
+  "price": zod.number(),
+  "averageCost": zod.number(),
+  "categoryId": zod.number(),
+  "categoryNameAr": zod.string(),
+  "categoryNameEn": zod.string(),
   "stockQuantity": zod.number(),
+  "reorderPoint": zod.number(),
+  "targetStockQuantity": zod.number(),
+  "stockStatus": zod.enum(['in_stock', 'low', 'out']),
+  "inventoryValue": zod.number(),
   "isActive": zod.boolean()
 }),
   "movement": zod.object({
@@ -2387,7 +2499,10 @@ export const AdminUpdateInventoryResponse = zod.object({
   "quantityBefore": zod.number(),
   "quantityAfter": zod.number(),
   "reason": zod.string().nullable(),
+  "sourceType": zod.string().nullable(),
+  "sourceId": zod.string().nullable(),
   "performedBy": zod.number().nullable(),
+  "performerName": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
 })
@@ -2397,14 +2512,20 @@ export const AdminAdjustInventoryParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const adminAdjustInventoryBodyStockQuantityMin = 0;
+export const adminAdjustInventoryBodyQuantityMin = 0;
+export const adminAdjustInventoryBodyQuantityMultipleOf = 1;
 
+
+export const adminAdjustInventoryBodyIdempotencyKeyMin = 8;
+export const adminAdjustInventoryBodyIdempotencyKeyMax = 120;
 
 
 
 export const AdminAdjustInventoryBody = zod.object({
-  "stockQuantity": zod.number().min(adminAdjustInventoryBodyStockQuantityMin),
-  "reason": zod.string().min(1)
+  "operation": zod.enum(['increase', 'decrease', 'adjustment']),
+  "quantity": zod.number().min(adminAdjustInventoryBodyQuantityMin).multipleOf(adminAdjustInventoryBodyQuantityMultipleOf),
+  "reason": zod.string().min(1),
+  "idempotencyKey": zod.string().min(adminAdjustInventoryBodyIdempotencyKeyMin).max(adminAdjustInventoryBodyIdempotencyKeyMax)
 })
 
 export const AdminAdjustInventoryResponse = zod.object({
@@ -2413,7 +2534,16 @@ export const AdminAdjustInventoryResponse = zod.object({
   "nameAr": zod.string(),
   "nameEn": zod.string(),
   "sku": zod.string().nullable(),
+  "price": zod.number(),
+  "averageCost": zod.number(),
+  "categoryId": zod.number(),
+  "categoryNameAr": zod.string(),
+  "categoryNameEn": zod.string(),
   "stockQuantity": zod.number(),
+  "reorderPoint": zod.number(),
+  "targetStockQuantity": zod.number(),
+  "stockStatus": zod.enum(['in_stock', 'low', 'out']),
+  "inventoryValue": zod.number(),
   "isActive": zod.boolean()
 }),
   "movement": zod.object({
@@ -2424,7 +2554,10 @@ export const AdminAdjustInventoryResponse = zod.object({
   "quantityBefore": zod.number(),
   "quantityAfter": zod.number(),
   "reason": zod.string().nullable(),
+  "sourceType": zod.string().nullable(),
+  "sourceId": zod.string().nullable(),
   "performedBy": zod.number().nullable(),
+  "performerName": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
 })

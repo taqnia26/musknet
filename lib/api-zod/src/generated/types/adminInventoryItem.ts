@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminInventoryItemStockStatus } from './adminInventoryItemStockStatus';
 
 export interface AdminInventoryItem {
   id: number;
@@ -12,6 +13,15 @@ export interface AdminInventoryItem {
   nameEn: string;
   /** @nullable */
   sku: string | null;
+  price: number;
+  averageCost: number;
+  categoryId: number;
+  categoryNameAr: string;
+  categoryNameEn: string;
   stockQuantity: number;
+  reorderPoint: number;
+  targetStockQuantity: number;
+  stockStatus: AdminInventoryItemStockStatus;
+  inventoryValue: number;
   isActive: boolean;
 }

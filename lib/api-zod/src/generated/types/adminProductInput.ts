@@ -26,6 +26,10 @@ export interface AdminProductInput {
   notes?: FragranceNote[];
   /** @minimum 0 */
   stockQuantity?: number;
+  /** @minimum 0 */
+  reorderPoint?: number;
+  /** @minimum 0 */
+  targetStockQuantity?: number;
   /** @nullable */
   sku?: string | null;
   isActive?: boolean;

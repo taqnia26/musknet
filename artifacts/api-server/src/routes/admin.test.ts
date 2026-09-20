@@ -30,6 +30,7 @@ let productId: number;
 let customerId: number;
 let orderId: number;
 let createdAdminOrderId: number;
+let inventoryCreatedProductId: number;
 
 beforeAll(async () => {
   process.env.ADMIN_EMAIL = seedEmail;
@@ -117,6 +118,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (createdAdminOrderId) await db.delete(ordersTable).where(eq(ordersTable.id, createdAdminOrderId));
+  if (inventoryCreatedProductId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, inventoryCreatedProductId));
+  if (inventoryCreatedProductId) await db.delete(productsTable).where(eq(productsTable.id, inventoryCreatedProductId));
   if (orderId) await db.delete(invoicesTable).where(eq(invoicesTable.orderId, orderId));
   if (orderId) await db.delete(ordersTable).where(eq(ordersTable.id, orderId));
   if (productId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
@@ -182,6 +185,15 @@ describe.sequential("admin route authorization", () => {
     expect(response.body.nameEn).toBe("Partially updated product");
     expect(response.body.nameAr).toBe("منتج اختبار الإدارة");
     expect(response.body.categoryId).toBe(categoryId);
+  });
+
+  it("does not allow the product edit route to change inventory", async () => {
+    const response = await request(app)
+      .patch(`/api/admin/products/${productId}`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({ stockQuantity: 1 })
+      .expect(200);
+    expect(response.body.stockQuantity).toBe(5);
   });
 
   it("creates an admin order and records the inventory decrease", async () => {
@@ -338,7 +350,7 @@ describe.sequential("admin route authorization", () => {
     const response = await request(app)
       .post(`/api/admin/inventory/${productId}/adjust`)
       .set("Authorization", `Bearer ${superToken}`)
-      .send({ stockQuantity: 12, reason: "Cycle count correction" })
+      .send({ operation: "increase", quantity: 7, reason: "Cycle count correction", idempotencyKey: "cycle-count-0001" })
       .expect(200);
     expect(response.body.item.stockQuantity).toBe(12);
     expect(response.body.movement).toMatchObject({
@@ -357,13 +369,63 @@ describe.sequential("admin route authorization", () => {
     expect(movements.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: response.body.movement.id })]));
   });
 
+  it("creates a product with saved thresholds and an audited opening balance", async () => {
+    const response = await request(app)
+      .post("/api/admin/inventory")
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({
+        nameAr: "منتج مخزون جديد", nameEn: "New inventory product", sku: `INV-${Date.now()}`,
+        categoryId, price: 75, openingQuantity: 9, reorderPoint: 4, targetStockQuantity: 18,
+      })
+      .expect(201);
+    inventoryCreatedProductId = response.body.id;
+    expect(response.body).toMatchObject({
+      stockQuantity: 9, reorderPoint: 4, targetStockQuantity: 18, stockStatus: "in_stock",
+    });
+    const [movement] = await db.select().from(inventoryMovementsTable)
+      .where(eq(inventoryMovementsTable.productId, inventoryCreatedProductId)).limit(1);
+    expect(movement).toMatchObject({
+      movementType: "increase", quantityBefore: 0, quantityAfter: 9,
+      sourceType: "product_creation", performedBy: superId,
+    });
+  });
+
+  it("filters inventory using saved thresholds and returns a real summary", async () => {
+    const response = await request(app)
+      .get(`/api/admin/inventory?categoryId=${categoryId}&stockStatus=low&sort=quantity_asc`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .expect(200);
+    expect(response.body.summary).toEqual(expect.objectContaining({
+      totalUnits: expect.any(Number), totalValue: expect.any(Number),
+      lowStockProducts: expect.any(Number), outOfStockProducts: expect.any(Number),
+    }));
+    expect(response.body.items.every((item: { stockStatus: string }) => item.stockStatus === "low")).toBe(true);
+  });
+
+  it("prevents negative stock and deduplicates retried adjustments", async () => {
+    await request(app)
+      .post(`/api/admin/inventory/${productId}/adjust`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({ operation: "decrease", quantity: 99, reason: "Invalid issue", idempotencyKey: "negative-check-0001" })
+      .expect(409);
+    const input = { operation: "increase", quantity: 2, reason: "Retry-safe receipt", idempotencyKey: "retry-safe-0001" };
+    const [first, second] = await Promise.all([
+      request(app).post(`/api/admin/inventory/${productId}/adjust`)
+        .set("Authorization", `Bearer ${superToken}`).send(input).expect(200),
+      request(app).post(`/api/admin/inventory/${productId}/adjust`)
+        .set("Authorization", `Bearer ${superToken}`).send(input).expect(200),
+    ]);
+    expect(second.body.movement.id).toBe(first.body.movement.id);
+    expect(second.body.item.stockQuantity).toBe(first.body.item.stockQuantity);
+  });
+
   it("allows inventory viewers to read but rejects adjustments", async () => {
     await request(app).get(`/api/admin/inventory/${productId}/movements`)
       .set("Authorization", `Bearer ${viewerToken}`).expect(200);
     const response = await request(app)
       .post(`/api/admin/inventory/${productId}/adjust`)
       .set("Authorization", `Bearer ${viewerToken}`)
-      .send({ stockQuantity: 0, reason: "Forbidden" })
+      .send({ operation: "adjustment", quantity: 0, reason: "Forbidden", idempotencyKey: "forbidden-0001" })
       .expect(403);
     expect(response.body.error).toMatch(/permission/i);
   });

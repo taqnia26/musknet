@@ -38,6 +38,8 @@ export const productsTable = pgTable("storefront_products", {
   images: jsonb("images").$type<ProductImage[]>().notNull().default([]),
   notes: jsonb("notes").$type<ProductNote[]>().notNull().default([]),
   stockQuantity: integer("stock_quantity").notNull().default(0),
+  reorderPoint: integer("reorder_point").notNull().default(5),
+  targetStockQuantity: integer("target_stock_quantity").notNull().default(20),
   averageCost: numeric("average_cost", { precision: 19, scale: 4, mode: "string" }).notNull().default("0"),
   sku: text("sku"),
   isActive: boolean("is_active").notNull().default(true),

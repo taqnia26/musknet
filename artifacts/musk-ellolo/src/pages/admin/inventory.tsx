@@ -1,238 +1,127 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  useAdminListInventory,
-  useAdminAdjustInventory,
-  useGetAdminMe,
-  useAdminListInventoryMovements,
+  type AdminInventoryAdjustmentOperation,
+  type AdminInventoryItem,
+  getAdminListInventoryMovementsQueryKey,
   getAdminListInventoryQueryKey,
-  getAdminListInventoryMovementsQueryKey
+  useAdminAdjustInventory,
+  useAdminCreateInventoryProduct,
+  useAdminListCategories,
+  useAdminListInventory,
+  useAdminListInventoryMovements,
+  useGetAdminMe,
 } from '@workspace/api-client-react';
-import { useLanguage } from '@/hooks/use-language';
-import { hasPermission } from '@/lib/permissions';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Search, Save, AlertTriangle, History, ArrowUpRight, ArrowDownRight, Edit2, Box } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, Boxes, CircleDollarSign, History, PackagePlus, Search, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useLanguage } from '@/hooks/use-language';
+import { useToast } from '@/hooks/use-toast';
+import { hasPermission } from '@/lib/permissions';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
-import { OpeningBalanceReconciliation } from '@/components/admin/opening-balance-reconciliation';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-function InventoryHistoryDialog({
-  productId,
-  productName,
-  currentStock,
-  sku,
-  isOpen,
-  onOpenChange,
-  canEdit
-}: {
-  productId: number;
-  productName: string;
-  currentStock: number;
-  sku: string | null;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  canEdit: boolean;
+type StockStatus = 'all' | 'in_stock' | 'low' | 'out';
+type Sort = 'name_asc' | 'name_desc' | 'quantity_asc' | 'quantity_desc' | 'value_desc';
+type CreateForm = {
+  nameAr: string; nameEn: string; sku: string; categoryId: string; price: string;
+  openingQuantity: string; reorderPoint: string; targetStockQuantity: string;
+};
+const emptyCreate: CreateForm = { nameAr: '', nameEn: '', sku: '', categoryId: '', price: '0', openingQuantity: '0', reorderPoint: '5', targetStockQuantity: '20' };
+
+function statusLabel(status: AdminInventoryItem['stockStatus'], t: (ar: string, en: string) => string) {
+  return status === 'out' ? t('نافد', 'Out of stock') : status === 'low' ? t('منخفض', 'Low') : t('متوفر', 'In stock');
+}
+
+function InventoryDetails({ item, open, onOpenChange, canEdit }: {
+  item: AdminInventoryItem; open: boolean; onOpenChange: (open: boolean) => void; canEdit: boolean;
 }) {
   const { t } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showAdjustForm, setShowAdjustForm] = useState(false);
-  const [adjustStock, setAdjustStock] = useState(currentStock.toString());
-  const [adjustReason, setAdjustReason] = useState('');
-
-  const { data: movements, isLoading } = useAdminListInventoryMovements(productId, {
-    query: {
-      enabled: isOpen && productId !== 0,
-      queryKey: getAdminListInventoryMovementsQueryKey(productId)
-    }
+  const [operation, setOperation] = useState<AdminInventoryAdjustmentOperation>('increase');
+  const [quantity, setQuantity] = useState('1');
+  const [reason, setReason] = useState('');
+  const [currentStock, setCurrentStock] = useState(item.stockQuantity);
+  const { data: movements = [], isLoading, isError } = useAdminListInventoryMovements(item.id, {
+    query: { enabled: open, queryKey: getAdminListInventoryMovementsQueryKey(item.id) },
   });
+  const mutation = useAdminAdjustInventory();
+  const amount = Number(quantity);
+  const expected = operation === 'increase' ? currentStock + amount : operation === 'decrease' ? currentStock - amount : amount;
 
-  const adjustMutation = useAdminAdjustInventory();
+  useEffect(() => setCurrentStock(item.stockQuantity), [item.stockQuantity]);
 
-  useEffect(() => {
-    if (isOpen) {
-      setShowAdjustForm(false);
-      setAdjustStock(currentStock.toString());
-      setAdjustReason('');
-    }
-  }, [isOpen, currentStock]);
-
-  const handleAdjustSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newStock = parseInt(adjustStock, 10);
-
-    if (isNaN(newStock) || newStock < 0) {
-      toast({ title: t('تنبيه', 'Warning'), description: t('الكمية يجب أن تكون رقماً صحيحاً موجباً', 'Quantity must be a non-negative integer'), variant: 'destructive' });
+  const submit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!Number.isSafeInteger(amount) || amount < 0 || expected < 0 || !reason.trim()) {
+      toast({ title: t('تحقق من العملية', 'Check operation'), description: t('أدخل كمية صحيحة وسبباً، ولا يمكن أن يصبح الرصيد سالباً.', 'Enter a valid quantity and reason; stock cannot become negative.'), variant: 'destructive' });
       return;
     }
-    if (!adjustReason.trim()) {
-      toast({ title: t('تنبيه', 'Warning'), description: t('سبب التعديل مطلوب', 'Reason is required'), variant: 'destructive' });
-      return;
-    }
-
-    adjustMutation.mutate({ id: productId, data: { stockQuantity: newStock, reason: adjustReason } }, {
-      onSuccess: () => {
+    mutation.mutate({
+      id: item.id,
+      data: { operation, quantity: amount, reason: reason.trim(), idempotencyKey: crypto.randomUUID() },
+    }, {
+      onSuccess: (result) => {
+        setCurrentStock(result.item.stockQuantity);
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getAdminListInventoryMovementsQueryKey(productId) });
-        toast({ title: t('نجاح', 'Success'), description: t('تم تحديث المخزون', 'Stock updated successfully') });
-        setShowAdjustForm(false);
-        setAdjustReason('');
+        queryClient.invalidateQueries({ queryKey: getAdminListInventoryMovementsQueryKey(item.id) });
+        setReason('');
+        toast({ title: t('تم تسجيل الحركة', 'Movement recorded') });
       },
-      onError: () => {
-        toast({ title: t('خطأ', 'Error'), description: t('حدث خطأ أثناء تحديث المخزون', 'Failed to update stock'), variant: 'destructive' });
-      }
+      onError: (error) => toast({ title: t('تعذر تسجيل الحركة', 'Could not record movement'), description: error.message, variant: 'destructive' }),
     });
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 py-4 border-b">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <Box className="h-5 w-5 text-primary" />
-              <span>{productName}</span>
-              {sku && <span className="text-sm font-normal text-muted-foreground ml-2">({sku})</span>}
-            </DialogTitle>
-            <div className="text-sm">
-              <span className="text-muted-foreground me-2">{t('الكمية الحالية:', 'Current Stock:')}</span>
-              <Badge variant="outline" className="text-base px-3 py-0.5">{currentStock}</Badge>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
+        <DialogHeader><DialogTitle>{t('تفاصيل المخزون', 'Inventory details')} · {item.nameAr}</DialogTitle></DialogHeader>
+        <div className="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-4">
+          <div><p className="text-xs text-muted-foreground">{t('الرصيد الحالي', 'Current')}</p><p className="text-xl font-bold">{currentStock}</p></div>
+          <div><p className="text-xs text-muted-foreground">{t('حد الطلب', 'Reorder point')}</p><p className="text-xl font-bold">{item.reorderPoint}</p></div>
+          <div><p className="text-xs text-muted-foreground">{t('المستهدف', 'Target')}</p><p className="text-xl font-bold">{item.targetStockQuantity}</p></div>
+          <div><p className="text-xs text-muted-foreground">{t('التكلفة المتوسطة', 'Average cost')}</p><p className="text-xl font-bold">{item.averageCost.toLocaleString()} SAR</p></div>
+        </div>
+        {canEdit && (
+          <form onSubmit={submit} className="space-y-4 rounded-lg border p-4">
+            <h3 className="font-semibold">{t('تسجيل حركة', 'Record movement')}</h3>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div><Label>{t('العملية', 'Operation')}</Label><Select value={operation} onValueChange={(value) => setOperation(value as AdminInventoryAdjustmentOperation)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="increase">{t('زيادة', 'Increase')}</SelectItem><SelectItem value="decrease">{t('صرف', 'Issue')}</SelectItem><SelectItem value="adjustment">{t('تسوية إلى رصيد', 'Set balance')}</SelectItem></SelectContent></Select></div>
+              <div><Label>{operation === 'adjustment' ? t('الرصيد الجديد', 'New balance') : t('الكمية', 'Quantity')}</Label><Input className="mt-1" type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
+              <div><Label>{t('الرصيد الناتج', 'Resulting balance')}</Label><div className={`mt-1 flex h-10 items-center rounded-md border px-3 font-bold ${expected < 0 ? 'text-destructive' : ''}`}>{Number.isFinite(expected) ? expected : '—'}</div></div>
             </div>
+            <div><Label>{t('السبب (إلزامي)', 'Reason (required)')}</Label><Input className="mt-1" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t('مثال: استلام توريد أو جرد فعلي', 'e.g. Delivery received or physical count')} /></div>
+            <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? t('جاري التسجيل...', 'Recording...') : t('تأكيد الحركة', 'Confirm movement')}</Button>
+          </form>
+        )}
+        <div>
+          <h3 className="mb-3 flex items-center gap-2 font-semibold"><History className="h-4 w-4" />{t('سجل الحركات', 'Movement history')}</h3>
+          <div className="overflow-x-auto rounded-lg border">
+            <Table>
+              <TableHeader><TableRow><TableHead>{t('التاريخ', 'Date')}</TableHead><TableHead>{t('النوع', 'Type')}</TableHead><TableHead>{t('التغيير', 'Change')}</TableHead><TableHead>{t('قبل / بعد', 'Before / after')}</TableHead><TableHead>{t('السبب', 'Reason')}</TableHead><TableHead>{t('المصدر', 'Source')}</TableHead><TableHead>{t('المنفذ', 'By')}</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {isLoading ? <TableRow><TableCell colSpan={7} className="py-8 text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+                  : isError ? <TableRow><TableCell colSpan={7} className="py-8 text-center text-destructive">{t('تعذر تحميل السجل', 'Could not load history')}</TableCell></TableRow>
+                  : movements.length === 0 ? <TableRow><TableCell colSpan={7} className="py-8 text-center text-muted-foreground">{t('لا توجد حركات', 'No movements')}</TableCell></TableRow>
+                  : movements.map((movement) => <TableRow key={movement.id}>
+                    <TableCell className="whitespace-nowrap text-xs">{format(new Date(movement.createdAt), 'yyyy-MM-dd HH:mm')}</TableCell>
+                    <TableCell><Badge variant="outline">{movement.movementType}</Badge></TableCell>
+                    <TableCell className={movement.quantityChange < 0 ? 'text-destructive' : 'text-success'}>{movement.quantityChange > 0 ? '+' : ''}{movement.quantityChange}</TableCell>
+                    <TableCell>{movement.quantityBefore} → {movement.quantityAfter}</TableCell>
+                    <TableCell>{movement.reason || '—'}</TableCell><TableCell>{movement.sourceType || '—'}</TableCell>
+                    <TableCell>{movement.performerName || t('النظام', 'System')}</TableCell>
+                  </TableRow>)}
+              </TableBody>
+            </Table>
           </div>
-        </DialogHeader>
-
-        <ScrollArea className="flex-1 px-6 py-4">
-          <div className="space-y-6">
-            {canEdit && (
-              <div className="border rounded-md bg-muted/20 overflow-hidden">
-                {!showAdjustForm ? (
-                  <div className="p-4 flex items-center justify-between bg-card hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setShowAdjustForm(true)}>
-                    <div className="flex items-center gap-2 font-medium">
-                      <Edit2 className="h-4 w-4 text-primary" />
-                      {t('تعديل الكمية', 'Adjust Quantity')}
-                    </div>
-                    <Button variant="ghost" size="sm">{t('تعديل', 'Edit')}</Button>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-card border-b">
-                    <form onSubmit={handleAdjustSubmit} className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium flex items-center gap-2">
-                          <Edit2 className="h-4 w-4 text-primary" />
-                          {t('تعديل الكمية', 'Adjust Quantity')}
-                        </h4>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setShowAdjustForm(false)}>
-                          {t('إلغاء', 'Cancel')}
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="newStock">{t('الكمية الجديدة', 'New Quantity')}</Label>
-                          <Input
-                            id="newStock"
-                            type="number"
-                            min="0"
-                            className="mt-1"
-                            value={adjustStock}
-                            onChange={e => setAdjustStock(e.target.value)}
-                          />
-                        </div>
-                        <div className="md:col-span-2">
-                          <Label htmlFor="reason">{t('سبب التعديل', 'Reason for Adjustment')}</Label>
-                          <Input
-                            id="reason"
-                            className="mt-1"
-                            placeholder={t('مثال: جرد شهري، بضاعة تالفة...', 'e.g. Monthly audit, damaged goods...')}
-                            value={adjustReason}
-                            onChange={e => setAdjustReason(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex justify-end">
-                        <Button type="submit" disabled={adjustMutation.isPending}>
-                          {adjustMutation.isPending ? t('جاري الحفظ...', 'Saving...') : (
-                            <>
-                              <Save className="h-4 w-4 me-2" />
-                              {t('حفظ التعديل', 'Save Adjustment')}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div>
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <History className="h-4 w-4 text-muted-foreground" />
-                {t('سجل الحركات', 'Movement History')}
-              </h4>
-
-              <div className="border rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead>{t('التاريخ', 'Date')}</TableHead>
-                      <TableHead>{t('النوع', 'Type')}</TableHead>
-                      <TableHead className="text-center">{t('التغيير', 'Change')}</TableHead>
-                      <TableHead className="text-center">{t('قبل', 'Before')}</TableHead>
-                      <TableHead className="text-center">{t('بعد', 'After')}</TableHead>
-                      <TableHead>{t('السبب', 'Reason')}</TableHead>
-                      <TableHead>{t('بواسطة', 'By')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
-                    ) : movements?.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{t('لا يوجد سجل حركات', 'No movement history')}</TableCell></TableRow>
-                    ) : (
-                      movements?.map((m) => {
-                        const isIncrease = m.quantityChange > 0;
-                        const isDecrease = m.quantityChange < 0;
-                        return (
-                          <TableRow key={m.id}>
-                            <TableCell className="text-sm whitespace-nowrap">{format(new Date(m.createdAt), 'yyyy-MM-dd HH:mm')}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="capitalize text-xs">
-                                {m.movementType}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <span className={`flex items-center justify-center font-medium ${isIncrease ? 'text-success' : isDecrease ? 'text-destructive' : 'text-muted-foreground'}`}>
-                                {isIncrease && <ArrowUpRight className="h-3 w-3 me-1" />}
-                                {isDecrease && <ArrowDownRight className="h-3 w-3 me-1" />}
-                                {m.quantityChange > 0 ? '+' : ''}{m.quantityChange}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-center text-muted-foreground">{m.quantityBefore}</TableCell>
-                            <TableCell className="text-center font-medium">{m.quantityAfter}</TableCell>
-                            <TableCell className="text-sm max-w-[200px] truncate" title={m.reason || ''}>
-                              {m.reason || '-'}
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {m.performedBy ? t('إداري', 'Admin') : t('نظام', 'System')}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -240,138 +129,50 @@ function InventoryHistoryDialog({
 
 export default function AdminInventory() {
   const { t, lang } = useLanguage();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [lowStockOnly, setLowStockOnly] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<{ id: number; name: string; stock: number; sku: string | null } | null>(null);
-
+  const [categoryId, setCategoryId] = useState('all');
+  const [stockStatus, setStockStatus] = useState<StockStatus>('all');
+  const [sort, setSort] = useState<Sort>('name_asc');
+  const [selected, setSelected] = useState<AdminInventoryItem | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [create, setCreate] = useState<CreateForm>(emptyCreate);
   const { data: currentUser } = useGetAdminMe();
-  const { data: inventory, isLoading, isError } = useAdminListInventory({ search, lowStock: lowStockOnly });
-
   const canEdit = hasPermission(currentUser, 'inventory', 'edit');
+  const { data: categories = [] } = useAdminListCategories({ status: 'active' });
+  const { data, isLoading, isError } = useAdminListInventory({ search: search || undefined, categoryId: categoryId === 'all' ? undefined : Number(categoryId), stockStatus, sort });
+  const createMutation = useAdminCreateInventoryProduct();
+  const items = data?.items ?? [];
+  const summary = data?.summary ?? { totalUnits: 0, totalValue: 0, lowStockProducts: 0, outOfStockProducts: 0 };
+  const chartData = useMemo(() => items.slice(0, 10).map((item) => ({ name: lang === 'ar' ? item.nameAr : item.nameEn, current: item.stockQuantity, reorder: item.reorderPoint, target: item.targetStockQuantity })), [items, lang]);
 
-  const chartData = inventory?.slice(0, 10).map(item => ({
-    name: lang === 'ar' ? item.nameAr : item.nameEn,
-    current: item.stockQuantity,
-    reorder: Math.max(5, Math.floor(item.stockQuantity * 0.2)),
-    refill: Math.max(20, Math.floor(item.stockQuantity * 1.5))
-  })) || [];
+  const createProduct = (event: React.FormEvent) => {
+    event.preventDefault();
+    const payload = { nameAr: create.nameAr.trim(), nameEn: create.nameEn.trim(), sku: create.sku.trim(), categoryId: Number(create.categoryId), price: Number(create.price), openingQuantity: Number(create.openingQuantity), reorderPoint: Number(create.reorderPoint), targetStockQuantity: Number(create.targetStockQuantity) };
+    if (!payload.nameAr || !payload.nameEn || !payload.sku || !Number.isSafeInteger(payload.categoryId) || [payload.price, payload.openingQuantity, payload.reorderPoint, payload.targetStockQuantity].some((value) => !Number.isFinite(value) || value < 0)) {
+      toast({ title: t('أكمل الحقول المطلوبة', 'Complete required fields'), variant: 'destructive' }); return;
+    }
+    createMutation.mutate({ data: payload }, {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() }); setCreateOpen(false); setCreate(emptyCreate); toast({ title: t('تم إنشاء المنتج', 'Product created') }); },
+      onError: (error) => toast({ title: t('تعذر إنشاء المنتج', 'Could not create product'), description: error.message, variant: 'destructive' }),
+    });
+  };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('المخزون', 'Inventory')}</h1>
-          <p className="text-muted-foreground mt-1">{t('مراقبة وتحديث كميات المنتجات', 'Monitor and update product quantities')}</p>
-        </div>
-      </div>
+  const cards = [
+    { title: t('إجمالي الوحدات', 'Total units'), value: summary.totalUnits.toLocaleString(), icon: Boxes },
+    { title: t('قيمة المخزون', 'Inventory value'), value: `${summary.totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} SAR`, icon: CircleDollarSign },
+    { title: t('منتجات منخفضة', 'Low stock'), value: summary.lowStockProducts.toLocaleString(), icon: AlertTriangle },
+    { title: t('منتجات نافدة', 'Out of stock'), value: summary.outOfStockProducts.toLocaleString(), icon: XCircle },
+  ];
 
-      {canEdit && <OpeningBalanceReconciliation />}
-
-      <div className="bg-card p-6 rounded-xl border shadow-sm h-[350px]" dir="ltr">
-        <h3 className="font-bold mb-4 rtl:text-right">{t('مستويات المخزون (أعلى 10 منتجات)', 'Stock Levels (Top 10 Products)')}</h3>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-            <XAxis dataKey="name" tick={{fontSize: 12}} />
-            <YAxis />
-            <RechartsTooltip />
-            <Legend />
-            <Bar dataKey="current" name={t('الكمية الحالية', 'Current Stock')} fill="hsl(31 78% 66%)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="reorder" name={t('نقطة إعادة الطلب', 'Reorder Point')} fill="hsl(0 48% 31%)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="refill" name={t('كمية التعبئة', 'Refill Qty')} fill="hsl(17 57% 46%)" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-center gap-4 bg-card p-4 rounded-xl border shadow-sm">
-        <div className="relative flex-1 w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground rtl:right-2.5 rtl:left-auto" />
-          <Input
-            placeholder={t('البحث عن منتج...', 'Search products...')}
-            className="pl-9 rtl:pr-9 rtl:pl-3 bg-background"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center space-x-2 rtl:space-x-reverse border-s ps-4">
-          <Checkbox id="lowStock" checked={lowStockOnly} onCheckedChange={(c) => setLowStockOnly(!!c)} />
-          <label htmlFor="lowStock" className="text-sm font-medium leading-none cursor-pointer">
-            {t('عرض المخزون المنخفض فقط', 'Show low stock only')}
-          </label>
-        </div>
-      </div>
-
-      <div className="border rounded-md bg-card shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('المنتج', 'Product')}</TableHead>
-              <TableHead>{t('رمز SKU', 'SKU')}</TableHead>
-              <TableHead className="text-center">{t('الكمية الحالية', 'Current')}</TableHead>
-              <TableHead className="text-center">{t('إعادة الطلب', 'Reorder Point')}</TableHead>
-              <TableHead className="text-center">{t('كمية التعبئة', 'Refill Qty')}</TableHead>
-              <TableHead className="text-center">{t('الحالة', 'Status')}</TableHead>
-              <TableHead className="text-end">{t('إجراءات', 'Actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
-            ) : isError ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-12 text-destructive">{t('تعذر تحميل المخزون. تأكد من صلاحية عرض المخزون ثم أعد تسجيل الدخول.', 'Unable to load inventory. Confirm the inventory view permission, then sign in again.')}</TableCell></TableRow>
-            ) : inventory?.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t('لا توجد منتجات', 'No products found')}</TableCell></TableRow>
-            ) : (
-              inventory?.map((item) => {
-                const isLow = item.stockQuantity <= 5;
-                const itemName = lang === 'ar' ? item.nameAr : item.nameEn;
-                const mockReorderPoint = Math.max(5, Math.floor(item.stockQuantity * 0.2));
-                const mockRefillQty = Math.max(20, Math.floor(item.stockQuantity * 1.5));
-                const isOutOfStock = item.stockQuantity === 0;
-
-                return (
-                  <TableRow key={item.id} data-testid={`row-inventory-${item.id}`}>
-                    <TableCell className="font-medium">{itemName}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.sku || '-'}</TableCell>
-                    <TableCell className="text-center font-bold text-lg">{item.stockQuantity}</TableCell>
-                    <TableCell className="text-center text-muted-foreground">{mockReorderPoint}</TableCell>
-                    <TableCell className="text-center text-muted-foreground">{mockRefillQty}</TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={isOutOfStock ? "destructive" : isLow ? "outline" : "default"} className={!isOutOfStock && !isLow ? "bg-success hover:bg-success/90" : isLow ? "border-amber-500 text-amber-500" : ""}>
-                        {isOutOfStock ? t('نفذ المخزون', 'Out of Stock') : isLow ? t('منخفض', 'Low') : t('متوفر', 'In Stock')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-end">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-primary hover:text-primary hover:bg-primary/10"
-                        onClick={() => setSelectedProduct({ id: item.id, name: itemName, stock: item.stockQuantity, sku: item.sku })}
-                      >
-                        <Save className="h-4 w-4 me-2" />
-                        {t('حفظ', 'Save')}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {selectedProduct && (
-        <InventoryHistoryDialog
-          productId={selectedProduct.id}
-          productName={selectedProduct.name}
-          currentStock={selectedProduct.stock}
-          sku={selectedProduct.sku}
-          isOpen={true}
-          onOpenChange={(open) => !open && setSelectedProduct(null)}
-          canEdit={canEdit}
-        />
-      )}
-    </div>
-  );
+  return <div className="space-y-6">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><h1 className="text-3xl font-bold">{t('مركز المخزون', 'Inventory center')}</h1><p className="mt-1 text-muted-foreground">{t('إدارة الأرصدة والحدود والحركات من مكان واحد', 'Manage balances, thresholds, and movements in one place')}</p></div>{canEdit && <Button onClick={() => setCreateOpen(true)}><PackagePlus className="me-2 h-4 w-4" />{t('إضافة منتج', 'Add product')}</Button>}</div>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(({ title, value, icon: Icon }) => <Card key={title}><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">{title}</CardTitle><Icon className="h-4 w-4 text-muted-foreground" /></CardHeader><CardContent><p className="text-2xl font-bold">{value}</p></CardContent></Card>)}</div>
+    <Card><CardHeader><CardTitle className="text-base">{t('الرصيد مقابل حدود المخزون', 'Stock versus saved thresholds')}</CardTitle></CardHeader><CardContent className="h-[320px]" dir="ltr"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartData}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 11 }} /><YAxis /><Tooltip /><Legend /><Bar dataKey="current" name={t('الحالي', 'Current')} fill="hsl(31 78% 66%)" /><Bar dataKey="reorder" name={t('حد الطلب', 'Reorder')} fill="hsl(0 48% 31%)" /><Bar dataKey="target" name={t('المستهدف', 'Target')} fill="hsl(17 57% 46%)" /></BarChart></ResponsiveContainer></CardContent></Card>
+    <div className="grid gap-3 rounded-xl border bg-card p-4 md:grid-cols-4"><div className="relative"><Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('بحث بالاسم أو SKU', 'Search name or SKU')} /></div><Select value={categoryId} onValueChange={setCategoryId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('كل التصنيفات', 'All categories')}</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{lang === 'ar' ? category.nameAr : category.nameEn}</SelectItem>)}</SelectContent></Select><Select value={stockStatus} onValueChange={(value) => setStockStatus(value as StockStatus)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{t('كل الحالات', 'All statuses')}</SelectItem><SelectItem value="in_stock">{t('متوفر', 'In stock')}</SelectItem><SelectItem value="low">{t('منخفض', 'Low')}</SelectItem><SelectItem value="out">{t('نافد', 'Out')}</SelectItem></SelectContent></Select><Select value={sort} onValueChange={(value) => setSort(value as Sort)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="name_asc">{t('الاسم تصاعدياً', 'Name A-Z')}</SelectItem><SelectItem value="name_desc">{t('الاسم تنازلياً', 'Name Z-A')}</SelectItem><SelectItem value="quantity_asc">{t('الأقل كمية', 'Lowest quantity')}</SelectItem><SelectItem value="quantity_desc">{t('الأعلى كمية', 'Highest quantity')}</SelectItem><SelectItem value="value_desc">{t('الأعلى قيمة', 'Highest value')}</SelectItem></SelectContent></Select></div>
+    <div className="overflow-x-auto rounded-xl border bg-card"><Table><TableHeader><TableRow><TableHead>{t('المنتج', 'Product')}</TableHead><TableHead>{t('التصنيف', 'Category')}</TableHead><TableHead>SKU</TableHead><TableHead>{t('الحالي', 'Current')}</TableHead><TableHead>{t('حد الطلب', 'Reorder')}</TableHead><TableHead>{t('المستهدف', 'Target')}</TableHead><TableHead>{t('القيمة', 'Value')}</TableHead><TableHead>{t('الحالة', 'Status')}</TableHead><TableHead /></TableRow></TableHeader><TableBody>{isLoading ? <TableRow><TableCell colSpan={9} className="py-12 text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> : isError ? <TableRow><TableCell colSpan={9} className="py-12 text-center text-destructive">{t('تعذر تحميل المخزون', 'Could not load inventory')}</TableCell></TableRow> : items.length === 0 ? <TableRow><TableCell colSpan={9} className="py-12 text-center text-muted-foreground">{t('لا توجد نتائج', 'No results')}</TableCell></TableRow> : items.map((item) => <TableRow key={item.id}><TableCell className="font-medium">{lang === 'ar' ? item.nameAr : item.nameEn}</TableCell><TableCell>{lang === 'ar' ? item.categoryNameAr : item.categoryNameEn}</TableCell><TableCell dir="ltr">{item.sku || '—'}</TableCell><TableCell className="font-bold">{item.stockQuantity}</TableCell><TableCell>{item.reorderPoint}</TableCell><TableCell>{item.targetStockQuantity}</TableCell><TableCell>{item.inventoryValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</TableCell><TableCell><Badge variant={item.stockStatus === 'out' ? 'destructive' : 'outline'} className={item.stockStatus === 'in_stock' ? 'border-success text-success' : item.stockStatus === 'low' ? 'border-amber-500 text-amber-600' : ''}>{statusLabel(item.stockStatus, t)}</Badge></TableCell><TableCell><Button variant="ghost" size="sm" onClick={() => setSelected(item)}>{t('التفاصيل', 'Details')}</Button></TableCell></TableRow>)}</TableBody></Table></div>
+    <Dialog open={createOpen} onOpenChange={setCreateOpen}><DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>{t('إضافة منتج إلى المخزون', 'Add inventory product')}</DialogTitle></DialogHeader><form onSubmit={createProduct} className="grid gap-4 sm:grid-cols-2">{([['nameAr', t('الاسم بالعربية', 'Arabic name')], ['nameEn', t('الاسم بالإنجليزية', 'English name')], ['sku', 'SKU']] as const).map(([key, label]) => <div key={key}><Label>{label}</Label><Input className="mt-1" value={create[key]} onChange={(e) => setCreate((value) => ({ ...value, [key]: e.target.value }))} /></div>)}<div><Label>{t('التصنيف', 'Category')}</Label><Select value={create.categoryId} onValueChange={(value) => setCreate((current) => ({ ...current, categoryId: value }))}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر التصنيف', 'Select category')} /></SelectTrigger><SelectContent>{categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{lang === 'ar' ? category.nameAr : category.nameEn}</SelectItem>)}</SelectContent></Select></div>{([['price', t('السعر', 'Price')], ['openingQuantity', t('الكمية الافتتاحية', 'Opening quantity')], ['reorderPoint', t('حد إعادة الطلب', 'Reorder point')], ['targetStockQuantity', t('الكمية المستهدفة', 'Target quantity')]] as const).map(([key, label]) => <div key={key}><Label>{label}</Label><Input className="mt-1" type="number" min="0" step={key === 'price' ? '0.01' : '1'} value={create[key]} onChange={(e) => setCreate((value) => ({ ...value, [key]: e.target.value }))} /></div>)}<Button className="sm:col-span-2" type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? t('جاري الإنشاء...', 'Creating...') : t('إنشاء المنتج', 'Create product')}</Button></form></DialogContent></Dialog>
+    {selected && <InventoryDetails item={selected} open onOpenChange={(open) => !open && setSelected(null)} canEdit={canEdit} />}
+  </div>;
 }
-

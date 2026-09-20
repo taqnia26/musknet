@@ -779,6 +779,8 @@ export interface AdminProduct {
   images: AdminProductImage[];
   notes: FragranceNote[];
   stockQuantity: number;
+  reorderPoint: number;
+  targetStockQuantity: number;
   /** @nullable */
   sku?: string | null;
   isActive: boolean;
@@ -842,6 +844,10 @@ export interface AdminProductInput {
   notes?: FragranceNote[];
   /** @minimum 0 */
   stockQuantity?: number;
+  /** @minimum 0 */
+  reorderPoint?: number;
+  /** @minimum 0 */
+  targetStockQuantity?: number;
   /** @nullable */
   sku?: string | null;
   isActive?: boolean;
@@ -872,7 +878,9 @@ export interface AdminProductUpdate {
   compareAtPrice?: number | null;
   categoryId?: number;
   /** @minimum 0 */
-  stockQuantity?: number;
+  reorderPoint?: number;
+  /** @minimum 0 */
+  targetStockQuantity?: number;
   /** @nullable */
   sku?: string | null;
   isActive?: boolean;
@@ -1154,21 +1162,85 @@ export interface AdminCustomerUpdate {
   isActive?: boolean;
 }
 
+export type AdminInventoryItemStockStatus = typeof AdminInventoryItemStockStatus[keyof typeof AdminInventoryItemStockStatus];
+
+
+export const AdminInventoryItemStockStatus = {
+  in_stock: 'in_stock',
+  low: 'low',
+  out: 'out',
+} as const;
+
 export interface AdminInventoryItem {
   id: number;
   nameAr: string;
   nameEn: string;
   /** @nullable */
   sku: string | null;
+  price: number;
+  averageCost: number;
+  categoryId: number;
+  categoryNameAr: string;
+  categoryNameEn: string;
   stockQuantity: number;
+  reorderPoint: number;
+  targetStockQuantity: number;
+  stockStatus: AdminInventoryItemStockStatus;
+  inventoryValue: number;
   isActive: boolean;
 }
 
-export interface AdminInventoryAdjustment {
+export interface AdminInventorySummary {
+  totalUnits: number;
+  totalValue: number;
+  lowStockProducts: number;
+  outOfStockProducts: number;
+}
+
+export interface AdminInventoryOverview {
+  items: AdminInventoryItem[];
+  summary: AdminInventorySummary;
+}
+
+export interface AdminInventoryProductInput {
+  /** @minLength 1 */
+  nameAr: string;
+  /** @minLength 1 */
+  nameEn: string;
+  /** @minLength 1 */
+  sku: string;
+  /** @minimum 1 */
+  categoryId: number;
   /** @minimum 0 */
-  stockQuantity: number;
+  price: number;
+  /** @minimum 0 */
+  openingQuantity: number;
+  /** @minimum 0 */
+  reorderPoint: number;
+  /** @minimum 0 */
+  targetStockQuantity: number;
+}
+
+export type AdminInventoryAdjustmentOperation = typeof AdminInventoryAdjustmentOperation[keyof typeof AdminInventoryAdjustmentOperation];
+
+
+export const AdminInventoryAdjustmentOperation = {
+  increase: 'increase',
+  decrease: 'decrease',
+  adjustment: 'adjustment',
+} as const;
+
+export interface AdminInventoryAdjustment {
+  operation: AdminInventoryAdjustmentOperation;
+  /** @minimum 0 */
+  quantity: number;
   /** @minLength 1 */
   reason: string;
+  /**
+     * @minLength 8
+     * @maxLength 120
+     */
+  idempotencyKey: string;
 }
 
 export type AdminInventoryMovementMovementType = typeof AdminInventoryMovementMovementType[keyof typeof AdminInventoryMovementMovementType];
@@ -1190,7 +1262,13 @@ export interface AdminInventoryMovement {
   /** @nullable */
   reason: string | null;
   /** @nullable */
+  sourceType: string | null;
+  /** @nullable */
+  sourceId: string | null;
+  /** @nullable */
   performedBy: number | null;
+  /** @nullable */
+  performerName: string | null;
   createdAt: string;
 }
 
@@ -2472,8 +2550,34 @@ status?: AdminStatusParameter;
 
 export type AdminListInventoryParams = {
 search?: AdminSearchParameter;
-lowStock?: boolean;
+/**
+ * @minimum 1
+ */
+categoryId?: number;
+stockStatus?: AdminListInventoryStockStatus;
+sort?: AdminListInventorySort;
 };
+
+export type AdminListInventoryStockStatus = typeof AdminListInventoryStockStatus[keyof typeof AdminListInventoryStockStatus];
+
+
+export const AdminListInventoryStockStatus = {
+  all: 'all',
+  in_stock: 'in_stock',
+  low: 'low',
+  out: 'out',
+} as const;
+
+export type AdminListInventorySort = typeof AdminListInventorySort[keyof typeof AdminListInventorySort];
+
+
+export const AdminListInventorySort = {
+  name_asc: 'name_asc',
+  name_desc: 'name_desc',
+  quantity_asc: 'quantity_asc',
+  quantity_desc: 'quantity_desc',
+  value_desc: 'value_desc',
+} as const;
 
 export type AdminListDistributorsParams = {
 search?: AdminSearchParameter;

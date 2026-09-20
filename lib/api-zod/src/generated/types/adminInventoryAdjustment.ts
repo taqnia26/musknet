@@ -5,10 +5,17 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminInventoryAdjustmentOperation } from './adminInventoryAdjustmentOperation';
 
 export interface AdminInventoryAdjustment {
+  operation: AdminInventoryAdjustmentOperation;
   /** @minimum 0 */
-  stockQuantity: number;
+  quantity: number;
   /** @minLength 1 */
   reason: string;
+  /**
+     * @minLength 8
+     * @maxLength 120
+     */
+  idempotencyKey: string;
 }

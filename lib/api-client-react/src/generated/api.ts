@@ -45,6 +45,8 @@ import type {
   AdminInventoryAdjustmentResult,
   AdminInventoryItem,
   AdminInventoryMovement,
+  AdminInventoryOverview,
+  AdminInventoryProductInput,
   AdminInvoice,
   AdminJournalEntry,
   AdminListCategoriesParams,
@@ -5991,9 +5993,9 @@ export const getAdminListInventoryUrl = (params?: AdminListInventoryParams,) => 
   return stringifiedParams.length > 0 ? `/api/admin/inventory?${stringifiedParams}` : `/api/admin/inventory`
 }
 
-export const adminListInventory = async (params?: AdminListInventoryParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminInventoryItem[]> => {
+export const adminListInventory = async (params?: AdminListInventoryParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminInventoryOverview> => {
 
-  return customFetch<AdminInventoryItem[]>(getAdminListInventoryUrl(params),
+  return customFetch<AdminInventoryOverview>(getAdminListInventoryUrl(params),
   {
     ...options,
     method: 'GET'
@@ -6053,6 +6055,71 @@ export function useAdminListInventory<TData = Awaited<ReturnType<typeof adminLis
 
 
 
+
+export const getAdminCreateInventoryProductUrl = () => {
+
+
+
+
+  return `/api/admin/inventory`
+}
+
+export const adminCreateInventoryProduct = async (adminInventoryProductInput: AdminInventoryProductInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminInventoryItem> => {
+
+  return customFetch<AdminInventoryItem>(getAdminCreateInventoryProductUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminInventoryProductInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateInventoryProductMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateInventoryProduct>>, TError,{data: BodyType<AdminInventoryProductInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateInventoryProduct>>, TError,{data: BodyType<AdminInventoryProductInput>}, TContext> => {
+
+const mutationKey = ['adminCreateInventoryProduct'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateInventoryProduct>>, {data: BodyType<AdminInventoryProductInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateInventoryProduct(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateInventoryProductMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateInventoryProduct>>>
+    export type AdminCreateInventoryProductMutationBody = BodyType<AdminInventoryProductInput>
+    export type AdminCreateInventoryProductMutationError = ErrorType<unknown>
+
+    export const useAdminCreateInventoryProduct = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateInventoryProduct>>, TError,{data: BodyType<AdminInventoryProductInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateInventoryProduct>>,
+        TError,
+        {data: BodyType<AdminInventoryProductInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateInventoryProductMutationOptions(options));
+    }
 
 export const getAdminListInventoryMovementsUrl = (id: number,) => {
 

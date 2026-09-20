@@ -17,6 +17,12 @@ export interface AdminInventoryMovement {
   /** @nullable */
   reason: string | null;
   /** @nullable */
+  sourceType: string | null;
+  /** @nullable */
+  sourceId: string | null;
+  /** @nullable */
   performedBy: number | null;
+  /** @nullable */
+  performerName: string | null;
   createdAt: Date;
 }

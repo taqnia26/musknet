@@ -5,9 +5,16 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminListInventorySort } from './adminListInventorySort';
+import type { AdminListInventoryStockStatus } from './adminListInventoryStockStatus';
 import type { AdminSearchParameter } from './adminSearchParameter';
 
 export type AdminListInventoryParams = {
 search?: AdminSearchParameter;
-lowStock?: boolean;
+/**
+ * @minimum 1
+ */
+categoryId?: number;
+stockStatus?: AdminListInventoryStockStatus;
+sort?: AdminListInventorySort;
 };

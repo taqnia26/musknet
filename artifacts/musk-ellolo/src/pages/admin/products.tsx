@@ -47,6 +47,8 @@ const productSchema = z.object({
   price: z.coerce.number().min(0),
   categoryId: z.coerce.number().min(1),
   stockQuantity: z.coerce.number().int().min(0),
+  reorderPoint: z.coerce.number().int().min(0),
+  targetStockQuantity: z.coerce.number().int().min(0),
   isActive: z.boolean().default(true),
 });
 
@@ -59,6 +61,8 @@ const emptyProduct = {
   price: 0,
   categoryId: 0,
   stockQuantity: 0,
+  reorderPoint: 5,
+  targetStockQuantity: 20,
   isActive: true,
 };
 
@@ -134,6 +138,8 @@ export default function AdminProducts() {
       price: product.price,
       categoryId: product.categoryId,
       stockQuantity: product.stockQuantity,
+      reorderPoint: product.reorderPoint,
+      targetStockQuantity: product.targetStockQuantity,
       isActive: product.isActive,
     });
     setIsDialogOpen(true);
@@ -316,8 +322,16 @@ export default function AdminProducts() {
                       <FormField control={form.control} name="price" render={({ field }) => (
                         <FormItem><FormLabel>{t('السعر', 'Price')}</FormLabel><FormControl><Input type="number" min="0" step="0.01" inputMode="decimal" {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                       )} />
-                      <FormField control={form.control} name="stockQuantity" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الكمية', 'Stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" inputMode="numeric" {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                      {!editingId && <FormField control={form.control} name="stockQuantity" render={({ field }) => (
+                        <FormItem><FormLabel>{t('الكمية الافتتاحية', 'Opening stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" inputMode="numeric" {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                      )} />}
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <FormField control={form.control} name="reorderPoint" render={({ field }) => (
+                        <FormItem><FormLabel>{t('حد إعادة الطلب', 'Reorder point')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="targetStockQuantity" render={({ field }) => (
+                        <FormItem><FormLabel>{t('الكمية المستهدفة', 'Target stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                   </section>

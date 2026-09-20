@@ -629,7 +629,18 @@ router.post("/admin/products", permit("products", "edit"), route(async (req, res
     .where(eq(categoriesTable.id, body.categoryId))
     .limit(1);
   if (!category) { res.status(400).json({ error: "Category not found" }); return; }
-  const [row] = await db.insert(productsTable).values(body).returning();
+  const row = await db.transaction(async (tx) => {
+    const [created] = await tx.insert(productsTable).values(body).returning();
+    if (created.stockQuantity > 0) {
+      await tx.insert(inventoryMovementsTable).values({
+        productId: created.id, movementType: "increase", quantityChange: created.stockQuantity,
+        quantityBefore: 0, quantityAfter: created.stockQuantity, reason: "Initial stock",
+        sourceType: "product_creation", sourceId: String(created.id), eventKey: `product-creation:${created.id}`,
+        performedBy: res.locals.admin.id,
+      });
+    }
+    return created;
+  });
   res.status(201).json(Api.AdminCreateProductResponse.parse(row));
 }));
 router.post("/admin/products/images/upload-url", permit("products", "edit"), route(async (req, res) => {
@@ -661,11 +672,15 @@ router.patch("/admin/products/:id", permit("products", "edit"), route(async (req
   if (res.headersSent) return;
   const params = parse(Api.AdminUpdateProductParams, req.params, res);
   const body = parse(Api.AdminUpdateProductBody, req.body, res); if (!params || !body) return;
-  const [existingProduct] = await db.select({ id: productsTable.id })
+  const [existingProduct] = await db.select()
     .from(productsTable)
     .where(eq(productsTable.id, params.id))
     .limit(1);
   if (!existingProduct) { res.status(404).json({ error: "Product not found" }); return; }
+  if (Object.keys(body).length === 0) {
+    res.json(Api.AdminUpdateProductResponse.parse(existingProduct));
+    return;
+  }
   if (body.categoryId !== undefined) {
     const [category] = await db.select({ id: categoriesTable.id })
       .from(categoriesTable)
@@ -982,33 +997,116 @@ router.get("/admin/inventory", permit("inventory", "view"), route(async (req, re
   const query = parse(Api.AdminListInventoryQueryParams, req.query, res); if (!query) return;
   let rows = (await db.select({
     id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
-    sku: productsTable.sku, stockQuantity: productsTable.stockQuantity, isActive: productsTable.isActive,
-  }).from(productsTable).orderBy(productsTable.id));
+    sku: productsTable.sku, price: productsTable.price, averageCost: productsTable.averageCost,
+    categoryId: productsTable.categoryId, categoryNameAr: categoriesTable.nameAr, categoryNameEn: categoriesTable.nameEn,
+    stockQuantity: productsTable.stockQuantity, reorderPoint: productsTable.reorderPoint,
+    targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
+  }).from(productsTable).innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id)));
   rows = searchFilter(rows, query.search, ["nameAr", "nameEn", "sku"]);
-  if (query.lowStock) rows = rows.filter((row) => row.stockQuantity <= 10);
-  res.json(Api.AdminListInventoryResponse.parse(rows));
+  if (query.categoryId) rows = rows.filter((row) => row.categoryId === query.categoryId);
+  const enriched = rows.map((row) => ({
+    ...row,
+    averageCost: Number(row.averageCost),
+    inventoryValue: row.stockQuantity * Number(row.averageCost),
+    stockStatus: row.stockQuantity === 0 ? "out" as const : row.stockQuantity <= row.reorderPoint ? "low" as const : "in_stock" as const,
+  }));
+  const summary = {
+    totalUnits: enriched.reduce((total, row) => total + row.stockQuantity, 0),
+    totalValue: enriched.reduce((total, row) => total + row.inventoryValue, 0),
+    lowStockProducts: enriched.filter((row) => row.stockStatus === "low").length,
+    outOfStockProducts: enriched.filter((row) => row.stockStatus === "out").length,
+  };
+  let items = query.stockStatus === "all" ? enriched : enriched.filter((row) => row.stockStatus === query.stockStatus);
+  items.sort((a, b) => {
+    if (query.sort === "name_desc") return b.nameAr.localeCompare(a.nameAr);
+    if (query.sort === "quantity_asc") return a.stockQuantity - b.stockQuantity;
+    if (query.sort === "quantity_desc") return b.stockQuantity - a.stockQuantity;
+    if (query.sort === "value_desc") return b.inventoryValue - a.inventoryValue;
+    return a.nameAr.localeCompare(b.nameAr);
+  });
+  res.json(Api.AdminListInventoryResponse.parse({ items, summary }));
+}));
+router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateInventoryProductBody, req.body, res); if (!body) return;
+  const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, body.categoryId)).limit(1);
+  if (!category) { res.status(400).json({ error: "Category not found" }); return; }
+  const item = await db.transaction(async (tx) => {
+    const slugBase = body.sku.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `product-${Date.now()}`;
+    const [created] = await tx.insert(productsTable).values({
+      nameAr: body.nameAr.trim(), nameEn: body.nameEn.trim(), sku: body.sku.trim(),
+      slug: `${slugBase}-${randomBytes(3).toString("hex")}`, categoryId: body.categoryId, price: body.price,
+      stockQuantity: body.openingQuantity, reorderPoint: body.reorderPoint, targetStockQuantity: body.targetStockQuantity,
+    }).returning();
+    if (created.stockQuantity > 0) {
+      await tx.insert(inventoryMovementsTable).values({
+        productId: created.id, movementType: "increase", quantityChange: created.stockQuantity,
+        quantityBefore: 0, quantityAfter: created.stockQuantity, reason: "Initial stock",
+        sourceType: "product_creation", sourceId: String(created.id), eventKey: `product-creation:${created.id}`,
+        performedBy: res.locals.admin.id,
+      });
+    }
+    return {
+      id: created.id, nameAr: created.nameAr, nameEn: created.nameEn, sku: created.sku,
+      price: created.price, averageCost: Number(created.averageCost), categoryId: created.categoryId,
+      categoryNameAr: category.nameAr, categoryNameEn: category.nameEn, stockQuantity: created.stockQuantity,
+      reorderPoint: created.reorderPoint, targetStockQuantity: created.targetStockQuantity,
+      stockStatus: created.stockQuantity === 0 ? "out" as const : created.stockQuantity <= created.reorderPoint ? "low" as const : "in_stock" as const,
+      inventoryValue: created.stockQuantity * Number(created.averageCost), isActive: created.isActive,
+    };
+  });
+  res.status(201).json(Api.AdminCreateInventoryProductResponse.parse(item));
 }));
 router.get("/admin/inventory/:id/movements", permit("inventory", "view"), route(async (req, res) => {
   const params = parse(Api.AdminListInventoryMovementsParams, req.params, res); if (!params) return;
   const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, params.id)).limit(1);
   if (!product) { res.status(404).json({ error: "Product not found" }); return; }
-  const movements = await db.select().from(inventoryMovementsTable)
+  const movements = await db.select({
+    id: inventoryMovementsTable.id, productId: inventoryMovementsTable.productId,
+    movementType: inventoryMovementsTable.movementType, quantityChange: inventoryMovementsTable.quantityChange,
+    quantityBefore: inventoryMovementsTable.quantityBefore, quantityAfter: inventoryMovementsTable.quantityAfter,
+    reason: inventoryMovementsTable.reason, sourceType: inventoryMovementsTable.sourceType,
+    sourceId: inventoryMovementsTable.sourceId, performedBy: inventoryMovementsTable.performedBy,
+    performerName: adminUsersTable.name, createdAt: inventoryMovementsTable.createdAt,
+  }).from(inventoryMovementsTable)
+    .leftJoin(adminUsersTable, eq(inventoryMovementsTable.performedBy, adminUsersTable.id))
     .where(eq(inventoryMovementsTable.productId, params.id))
     .orderBy(sql`${inventoryMovementsTable.createdAt} desc`, sql`${inventoryMovementsTable.id} desc`);
   res.json(Api.AdminListInventoryMovementsResponse.parse(movements));
 }));
 
-async function adjustInventory(productId: number, stockQuantity: number, reason: string, performedBy: number) {
+async function adjustInventory(productId: number, input: {
+  operation: "increase" | "decrease" | "adjustment"; quantity: number; reason: string; idempotencyKey: string;
+}, performedBy: number) {
   return db.transaction(async (tx) => {
+    const eventKey = `manual-inventory:${productId}:${input.idempotencyKey}`;
     await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${productId} for update`);
+    const [existing] = await tx.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.eventKey, eventKey)).limit(1);
+    if (existing) {
+      const [item] = await tx.select({
+        id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn, sku: productsTable.sku,
+        price: productsTable.price, averageCost: productsTable.averageCost, categoryId: productsTable.categoryId,
+        categoryNameAr: categoriesTable.nameAr, categoryNameEn: categoriesTable.nameEn, stockQuantity: productsTable.stockQuantity,
+        reorderPoint: productsTable.reorderPoint, targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
+      }).from(productsTable).innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+        .where(eq(productsTable.id, productId)).limit(1);
+      if (!item) return null;
+      return { item: { ...item, averageCost: Number(item.averageCost), inventoryValue: item.stockQuantity * Number(item.averageCost),
+        stockStatus: item.stockQuantity === 0 ? "out" as const : item.stockQuantity <= item.reorderPoint ? "low" as const : "in_stock" as const },
+        movement: { ...existing, performerName: null } };
+    }
     const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, productId)).limit(1);
     if (!product) return null;
     const quantityBefore = product.stockQuantity;
+    const stockQuantity = input.operation === "increase" ? quantityBefore + input.quantity
+      : input.operation === "decrease" ? quantityBefore - input.quantity : input.quantity;
+    if (stockQuantity < 0) throw new Error("Inventory operation cannot produce negative stock");
     const quantityChange = stockQuantity - quantityBefore;
-    const movementType = quantityChange > 0 ? "increase" : quantityChange < 0 ? "decrease" : "adjustment";
+    const movementType = input.operation;
     const [updated] = await tx.update(productsTable).set({ stockQuantity }).where(eq(productsTable.id, productId)).returning({
       id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
-      sku: productsTable.sku, stockQuantity: productsTable.stockQuantity, isActive: productsTable.isActive,
+      sku: productsTable.sku, price: productsTable.price, averageCost: productsTable.averageCost,
+      categoryId: productsTable.categoryId, stockQuantity: productsTable.stockQuantity,
+      reorderPoint: productsTable.reorderPoint, targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
     });
     const [movement] = await tx.insert(inventoryMovementsTable).values({
       productId,
@@ -1016,22 +1114,29 @@ async function adjustInventory(productId: number, stockQuantity: number, reason:
       quantityChange,
       quantityBefore,
       quantityAfter: stockQuantity,
-      reason,
+      reason: input.reason,
+      sourceType: "manual_adjustment", sourceId: String(productId), eventKey,
       performedBy,
     }).returning();
-    return { item: updated, movement };
+    const [category] = await tx.select().from(categoriesTable).where(eq(categoriesTable.id, updated.categoryId)).limit(1);
+    return { item: { ...updated, averageCost: Number(updated.averageCost), categoryNameAr: category.nameAr, categoryNameEn: category.nameEn,
+      inventoryValue: updated.stockQuantity * Number(updated.averageCost),
+      stockStatus: updated.stockQuantity === 0 ? "out" as const : updated.stockQuantity <= updated.reorderPoint ? "low" as const : "in_stock" as const },
+      movement: { ...movement, performerName: null } };
   });
 }
 
 async function handleInventoryAdjustment(
   params: { id: number },
-  body: { stockQuantity: number; reason: string },
+  body: { operation: "increase" | "decrease" | "adjustment"; quantity: number; reason: string; idempotencyKey: string },
   res: Response,
   response: { parse(value: unknown): unknown },
 ) {
   const reason = body.reason.trim();
   if (!reason) { res.status(400).json({ error: "Adjustment reason is required" }); return; }
-  const result = await adjustInventory(params.id, body.stockQuantity, reason, res.locals.admin.id);
+  let result;
+  try { result = await adjustInventory(params.id, { ...body, reason }, res.locals.admin.id); }
+  catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Inventory adjustment failed" }); return; }
   if (!result) { res.status(404).json({ error: "Product not found" }); return; }
   res.json(response.parse(result));
 }

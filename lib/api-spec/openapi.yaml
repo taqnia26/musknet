@@ -888,8 +888,18 @@ paths:
       operationId: adminListInventory
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
-      parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { name: lowStock, in: query, schema: { type: boolean } }]
-      responses: { "200": { description: Inventory, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminInventoryItem" } } } } } }
+      parameters:
+        - $ref: "#/components/parameters/AdminSearch"
+        - { name: categoryId, in: query, schema: { type: number, minimum: 1, multipleOf: 1 } }
+        - { name: stockStatus, in: query, schema: { type: string, enum: [all, in_stock, low, out], default: all } }
+        - { name: sort, in: query, schema: { type: string, enum: [name_asc, name_desc, quantity_asc, quantity_desc, value_desc], default: name_asc } }
+      responses: { "200": { description: Inventory, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryOverview" } } } } }
+    post:
+      operationId: adminCreateInventoryProduct
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryProductInput" } } } }
+      responses: { "201": { description: Created inventory product, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryItem" } } } } }
   /admin/inventory/{id}:
     get:
       operationId: adminListInventoryMovements
@@ -2372,7 +2382,7 @@ components:
         distributorImageOverride: { type: [string, "null"] }
     AdminProduct:
       type: object
-      required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, isActive, isFeatured, isBestseller, createdAt, updatedAt]
+      required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, isActive, isFeatured, isBestseller, createdAt, updatedAt]
       properties:
         id: { type: number }
         nameAr: { type: string }
@@ -2386,6 +2396,8 @@ components:
         images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
         notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
         stockQuantity: { type: number }
+        reorderPoint: { type: number }
+        targetStockQuantity: { type: number }
         sku: { type: [string, "null"] }
         isActive: { type: boolean }
         isFeatured: { type: boolean }
@@ -2430,6 +2442,8 @@ components:
         images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
         notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
         stockQuantity: { type: number, minimum: 0 }
+        reorderPoint: { type: number, minimum: 0, multipleOf: 1, default: 5 }
+        targetStockQuantity: { type: number, minimum: 0, multipleOf: 1, default: 20 }
         sku: { type: [string, "null"] }
         isActive: { type: boolean }
         isFeatured: { type: boolean }
@@ -2448,7 +2462,8 @@ components:
         price: { type: number, minimum: 0 }
         compareAtPrice: { type: [number, "null"], minimum: 0 }
         categoryId: { type: number }
-        stockQuantity: { type: number, minimum: 0 }
+        reorderPoint: { type: number, minimum: 0, multipleOf: 1 }
+        targetStockQuantity: { type: number, minimum: 0, multipleOf: 1 }
         sku: { type: [string, "null"] }
         isActive: { type: boolean }
         isFeatured: { type: boolean }
@@ -2637,23 +2652,60 @@ components:
         isActive: { type: boolean }
     AdminInventoryItem:
       type: object
-      required: [id, nameAr, nameEn, sku, stockQuantity, isActive]
+      required: [id, nameAr, nameEn, sku, price, averageCost, categoryId, categoryNameAr, categoryNameEn, stockQuantity, reorderPoint, targetStockQuantity, stockStatus, inventoryValue, isActive]
       properties:
         id: { type: number }
         nameAr: { type: string }
         nameEn: { type: string }
         sku: { type: [string, "null"] }
+        price: { type: number }
+        averageCost: { type: number }
+        categoryId: { type: number }
+        categoryNameAr: { type: string }
+        categoryNameEn: { type: string }
         stockQuantity: { type: number }
+        reorderPoint: { type: number }
+        targetStockQuantity: { type: number }
+        stockStatus: { type: string, enum: [in_stock, low, out] }
+        inventoryValue: { type: number }
         isActive: { type: boolean }
+    AdminInventorySummary:
+      type: object
+      required: [totalUnits, totalValue, lowStockProducts, outOfStockProducts]
+      properties:
+        totalUnits: { type: number }
+        totalValue: { type: number }
+        lowStockProducts: { type: number }
+        outOfStockProducts: { type: number }
+    AdminInventoryOverview:
+      type: object
+      required: [items, summary]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/AdminInventoryItem" } }
+        summary: { $ref: "#/components/schemas/AdminInventorySummary" }
+    AdminInventoryProductInput:
+      type: object
+      required: [nameAr, nameEn, sku, categoryId, price, openingQuantity, reorderPoint, targetStockQuantity]
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        sku: { type: string, minLength: 1 }
+        categoryId: { type: number, minimum: 1, multipleOf: 1 }
+        price: { type: number, minimum: 0 }
+        openingQuantity: { type: number, minimum: 0, multipleOf: 1 }
+        reorderPoint: { type: number, minimum: 0, multipleOf: 1 }
+        targetStockQuantity: { type: number, minimum: 0, multipleOf: 1 }
     AdminInventoryAdjustment:
       type: object
-      required: [stockQuantity, reason]
+      required: [operation, quantity, reason, idempotencyKey]
       properties:
-        stockQuantity: { type: number, minimum: 0 }
+        operation: { type: string, enum: [increase, decrease, adjustment] }
+        quantity: { type: number, minimum: 0, multipleOf: 1 }
         reason: { type: string, minLength: 1 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 120 }
     AdminInventoryMovement:
       type: object
-      required: [id, productId, movementType, quantityChange, quantityBefore, quantityAfter, reason, performedBy, createdAt]
+      required: [id, productId, movementType, quantityChange, quantityBefore, quantityAfter, reason, sourceType, sourceId, performedBy, performerName, createdAt]
       properties:
         id: { type: number }
         productId: { type: number }
@@ -2662,7 +2714,10 @@ components:
         quantityBefore: { type: number }
         quantityAfter: { type: number }
         reason: { type: [string, "null"] }
+        sourceType: { type: [string, "null"] }
+        sourceId: { type: [string, "null"] }
         performedBy: { type: [number, "null"] }
+        performerName: { type: [string, "null"] }
         createdAt: { type: string, format: date-time }
     AdminInventoryAdjustmentResult:
       type: object

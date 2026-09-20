@@ -22,6 +22,8 @@ export interface AdminProduct {
   images: AdminProductImage[];
   notes: FragranceNote[];
   stockQuantity: number;
+  reorderPoint: number;
+  targetStockQuantity: number;
   /** @nullable */
   sku?: string | null;
   isActive: boolean;

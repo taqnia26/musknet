@@ -26,7 +26,9 @@ export interface AdminProductUpdate {
   compareAtPrice?: number | null;
   categoryId?: number;
   /** @minimum 0 */
-  stockQuantity?: number;
+  reorderPoint?: number;
+  /** @minimum 0 */
+  targetStockQuantity?: number;
   /** @nullable */
   sku?: string | null;
   isActive?: boolean;

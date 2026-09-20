@@ -1,0 +1,2 @@
+ALTER TABLE "storefront_products" ADD COLUMN "reorder_point" integer DEFAULT 5 NOT NULL;--> statement-breakpoint
+ALTER TABLE "storefront_products" ADD COLUMN "target_stock_quantity" integer DEFAULT 20 NOT NULL;
