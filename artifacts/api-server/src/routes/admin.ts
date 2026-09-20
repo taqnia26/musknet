@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, count, desc, eq, gte, ilike, inArray, lt, lte, or, sql, sum } from "drizzle-orm";
+import ExcelJS from "exceljs";
 import QRCode from "qrcode";
 import * as Api from "@workspace/api-zod";
 import {
@@ -1487,16 +1488,13 @@ router.get("/admin/campaigns/coupon-options", permit("campaigns", "view"), route
   res.json(Api.AdminListCampaignCouponOptionsResponse.parse(rows));
 }));
 
-router.get("/admin/campaigns/results", permit("campaigns", "view"), route(async (req, res) => {
-  const query = parse(Api.AdminGetCampaignResultsQueryParams, {
-    ...req.query,
-    ...(typeof req.query.from === "string" ? { from: new Date(req.query.from) } : {}),
-    ...(typeof req.query.to === "string" ? { to: new Date(req.query.to) } : {}),
-  }, res); if (!query) return;
-  if (query.from && query.to && query.to < query.from) {
-    res.status(400).json({ error: "Report end must be after its start" }); return;
-  }
+type CampaignReportQuery = {
+  from?: Date;
+  to?: Date;
+  channel?: string;
+};
 
+async function campaignResults(query: CampaignReportQuery) {
   const campaignConditions = query.channel ? eq(campaignsTable.channel, query.channel) : undefined;
   const campaigns = await db.select().from(campaignsTable)
     .where(campaignConditions)
@@ -1568,13 +1566,120 @@ router.get("/admin/campaigns/results", permit("campaigns", "view"), route(async 
       revenue: channelCampaigns.reduce((total, campaign) => total + campaign.revenue, 0),
     };
   }).sort((left, right) => right.revenue - left.revenue);
-  res.json(Api.AdminGetCampaignResultsResponse.parse({
+  return Api.AdminGetCampaignResultsResponse.parse({
     couponUses: results.reduce((total, campaign) => total + campaign.couponUses, 0),
     orders: results.reduce((total, campaign) => total + campaign.orders, 0),
     revenue: results.reduce((total, campaign) => total + campaign.revenue, 0),
     byChannel,
     campaigns: results,
-  }));
+  });
+}
+
+function campaignReportQueryInput(req: Request) {
+  return {
+    ...req.query,
+    ...(typeof req.query.from === "string" ? { from: new Date(req.query.from) } : {}),
+    ...(typeof req.query.to === "string" ? { to: new Date(req.query.to) } : {}),
+  };
+}
+
+function validCampaignReportRange(query: CampaignReportQuery, res: Response) {
+  if (query.from && query.to && query.to < query.from) {
+    res.status(400).json({ error: "Report end must be after its start" });
+    return false;
+  }
+  return true;
+}
+
+function parseCampaignReportQuery(req: Request, res: Response) {
+  const query = parse(Api.AdminGetCampaignResultsQueryParams, campaignReportQueryInput(req), res);
+  if (!query) return;
+  if (!validCampaignReportRange(query, res)) return;
+  return query;
+}
+
+router.get("/admin/campaigns/results", permit("campaigns", "view"), route(async (req, res) => {
+  const query = parseCampaignReportQuery(req, res);
+  if (!query) return;
+  res.json(await campaignResults(query));
+}));
+
+const csvCell = (value: string | number) => {
+  const text = String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+};
+
+router.get("/admin/campaigns/results/export", permit("campaigns", "view"), route(async (req, res) => {
+  const query = parse(Api.AdminExportCampaignResultsQueryParams, campaignReportQueryInput(req), res);
+  if (!query) return;
+  if (!validCampaignReportRange(query, res)) return;
+  const report = await campaignResults(query);
+  const filename = `campaign-results-${new Date().toISOString().slice(0, 10)}`;
+
+  if (query.format === "csv") {
+    const rows: Array<Array<string | number>> = [
+      ["row_type", "channel", "campaign_id", "campaign", "status", "starts_at", "ends_at", "coupon_id", "coupon_code", "campaigns", "coupon_uses", "orders", "revenue_sar"],
+      ...report.byChannel.map((channel) => ["channel", channel.channel, "", "", "", "", "", "", "", channel.campaigns, channel.couponUses, channel.orders, channel.revenue]),
+      ...report.campaigns.map((campaign) => ["campaign", campaign.channel, campaign.id, campaign.name, campaign.status, campaign.startsAt.toISOString(), campaign.endsAt.toISOString(), "", "", "", campaign.couponUses, campaign.orders, campaign.revenue]),
+      ...report.campaigns.flatMap((campaign) => campaign.coupons.map((coupon) => ["coupon", campaign.channel, campaign.id, campaign.name, campaign.status, campaign.startsAt.toISOString(), campaign.endsAt.toISOString(), coupon.id, coupon.code, "", coupon.uses, coupon.orders, coupon.revenue])),
+    ];
+    const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;
+    res.type("text/csv; charset=utf-8")
+      .setHeader("Content-Disposition", `attachment; filename="${filename}.csv"`)
+      .send(csv);
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Musk Ellolo";
+  workbook.created = new Date();
+  const addSheet = (name: string, columns: Array<{ header: string; key: string; width: number }>, rows: Record<string, unknown>[]) => {
+    const sheet = workbook.addWorksheet(name);
+    sheet.columns = columns;
+    sheet.addRows(rows);
+    sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+    sheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF166534" } };
+    sheet.autoFilter = { from: "A1", to: `${String.fromCharCode(64 + columns.length)}1` };
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    return sheet;
+  };
+  addSheet("Channels", [
+    { header: "Channel", key: "channel", width: 22 },
+    { header: "Campaigns", key: "campaigns", width: 14 },
+    { header: "Coupon uses", key: "couponUses", width: 16 },
+    { header: "Orders", key: "orders", width: 14 },
+    { header: "Revenue (SAR)", key: "revenue", width: 18 },
+  ], report.byChannel);
+  addSheet("Campaigns", [
+    { header: "ID", key: "id", width: 10 },
+    { header: "Campaign", key: "name", width: 30 },
+    { header: "Channel", key: "channel", width: 20 },
+    { header: "Status", key: "status", width: 14 },
+    { header: "Starts at", key: "startsAt", width: 24 },
+    { header: "Ends at", key: "endsAt", width: 24 },
+    { header: "Coupon uses", key: "couponUses", width: 16 },
+    { header: "Orders", key: "orders", width: 14 },
+    { header: "Revenue (SAR)", key: "revenue", width: 18 },
+  ], report.campaigns.map(({ coupons: _coupons, ...campaign }) => campaign));
+  addSheet("Coupons", [
+    { header: "Campaign ID", key: "campaignId", width: 14 },
+    { header: "Campaign", key: "campaign", width: 30 },
+    { header: "Channel", key: "channel", width: 20 },
+    { header: "Coupon ID", key: "id", width: 12 },
+    { header: "Coupon code", key: "code", width: 22 },
+    { header: "Uses", key: "uses", width: 12 },
+    { header: "Orders", key: "orders", width: 12 },
+    { header: "Revenue (SAR)", key: "revenue", width: 18 },
+  ], report.campaigns.flatMap((campaign) => campaign.coupons.map((coupon) => ({
+    campaignId: campaign.id,
+    campaign: campaign.name,
+    channel: campaign.channel,
+    ...coupon,
+  }))));
+  const buffer = await workbook.xlsx.writeBuffer();
+  res.type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    .setHeader("Content-Disposition", `attachment; filename="${filename}.xlsx"`)
+    .send(Buffer.from(buffer));
 }));
 
 router.post("/admin/campaigns", permit("campaigns", "edit"), route(async (req, res) => {

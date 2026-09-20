@@ -1039,6 +1039,29 @@ paths:
         "200": { description: Campaign performance grouped by campaign and channel, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaignResults" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/campaigns/results/export:
+    get:
+      operationId: adminExportCampaignResults
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: channel, in: query, schema: { type: string, minLength: 1 } }
+        - { name: format, in: query, required: true, schema: { type: string, enum: [csv, xlsx] } }
+      responses:
+        "200":
+          description: Downloadable campaign performance report
+          headers:
+            Content-Disposition:
+              schema: { type: string }
+          content:
+            text/csv:
+              schema: { type: string, format: binary }
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: { type: string, format: binary }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /admin/campaigns/{id}:
     patch:
       operationId: adminUpdateCampaign

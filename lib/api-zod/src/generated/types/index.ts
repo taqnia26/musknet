@@ -48,6 +48,8 @@ export * from './adminDashboard';
 export * from './adminDistributor';
 export * from './adminDistributorInput';
 export * from './adminDistributorUpdate';
+export * from './adminExportCampaignResultsFormat';
+export * from './adminExportCampaignResultsParams';
 export * from './adminGetCampaignResultsParams';
 export * from './adminGetFinanceSummaryParams';
 export * from './adminGetTrialBalanceParams';

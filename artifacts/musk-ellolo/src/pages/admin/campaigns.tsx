@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   type AdminCampaign,
+  adminExportCampaignResults,
   getAdminGetCampaignResultsQueryKey,
   getAdminListCampaignsQueryKey,
   useAdminCreateCampaign,
@@ -15,8 +16,9 @@ import {
   useAdminUpdateCampaign,
   useGetAdminMe,
 } from '@workspace/api-client-react';
-import { CalendarDays, DollarSign, Edit2, Megaphone, PauseCircle, Plus, ShoppingCart, TicketCheck } from 'lucide-react';
+import { CalendarDays, DollarSign, Download, Edit2, Megaphone, PauseCircle, Plus, ShoppingCart, TicketCheck } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { useToast } from '@/hooks/use-toast';
 import { hasPermission } from '@/lib/permissions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,6 +70,7 @@ function lifecycle(campaign: AdminCampaign) {
 
 export default function AdminCampaigns() {
   const { t, lang } = useLanguage();
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: currentUser } = useGetAdminMe();
   const { data: campaigns, isLoading } = useAdminListCampaigns();
@@ -80,6 +83,7 @@ export default function AdminCampaigns() {
   const [reportFrom, setReportFrom] = useState('');
   const [reportTo, setReportTo] = useState('');
   const [reportChannel, setReportChannel] = useState('all');
+  const [exportingFormat, setExportingFormat] = useState<'csv' | 'xlsx' | null>(null);
   const reportParams = {
     ...(reportFrom ? { from: new Date(`${reportFrom}T00:00:00`).toISOString() } : {}),
     ...(reportTo ? { to: new Date(`${reportTo}T23:59:59.999`).toISOString() } : {}),
@@ -127,6 +131,29 @@ export default function AdminCampaigns() {
   const pause = (campaign: AdminCampaign) => {
     if (!confirm(t(`إيقاف حملة "${campaign.name}"؟`, `Pause "${campaign.name}"?`))) return;
     pauseMutation.mutate({ id: campaign.id }, { onSuccess: refresh });
+  };
+  const downloadResults = async (format: 'csv' | 'xlsx') => {
+    try {
+      setExportingFormat(format);
+      const blob = await adminExportCampaignResults({ ...reportParams, format });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `campaign-results-${new Date().toISOString().slice(0, 10)}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: t('تم تنزيل التقرير', 'Report downloaded') });
+    } catch {
+      toast({
+        title: t('تعذر تنزيل التقرير', 'Could not download report'),
+        description: t('تحقق من الفلاتر والصلاحيات ثم حاول مرة أخرى.', 'Check the filters and permissions, then try again.'),
+        variant: 'destructive',
+      });
+    } finally {
+      setExportingFormat(null);
+    }
   };
 
   const activeCount = campaigns?.filter((campaign) => lifecycle(campaign) === 'active').length ?? 0;
@@ -233,9 +260,19 @@ export default function AdminCampaigns() {
 
       <Card>
         <CardHeader className="space-y-4">
-          <div>
-            <CardTitle>{t('نتائج الحملات', 'Campaign results')}</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">{t('الطلبات المدفوعة غير الملغاة والمنسوبة إلى كوبونات الحملة خلال فترة تشغيلها', 'Paid, non-cancelled orders attributed to campaign coupons during the campaign period')}</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle>{t('نتائج الحملات', 'Campaign results')}</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">{t('الطلبات المدفوعة غير الملغاة والمنسوبة إلى كوبونات الحملة خلال فترة تشغيلها', 'Paid, non-cancelled orders attributed to campaign coupons during the campaign period')}</p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button variant="outline" size="sm" disabled={resultsLoading || !!exportingFormat || resultsError} onClick={() => downloadResults('csv')}>
+                <Download className="me-2 h-4 w-4" />{exportingFormat === 'csv' ? t('جارٍ التنزيل...', 'Downloading...') : 'CSV'}
+              </Button>
+              <Button variant="outline" size="sm" disabled={resultsLoading || !!exportingFormat || resultsError} onClick={() => downloadResults('xlsx')}>
+                <Download className="me-2 h-4 w-4" />{exportingFormat === 'xlsx' ? t('جارٍ التنزيل...', 'Downloading...') : 'Excel'}
+              </Button>
+            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div><label className="mb-1 block text-sm font-medium">{t('من تاريخ', 'From')}</label><Input type="date" value={reportFrom} onChange={(event) => setReportFrom(event.target.value)} /></div>

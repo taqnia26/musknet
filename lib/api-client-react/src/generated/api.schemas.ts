@@ -3116,6 +3116,15 @@ to?: string;
 channel?: string;
 };
 
+export type AdminExportCampaignResultsParams = {
+from?: string;
+to?: string;
+/**
+ * @minLength 1
+ */
+channel?: string;
+format: AdminExportCampaignResultsFormat;
+};
 export type AdminListCustomersParams = {
 search?: AdminSearchParameter;
 status?: AdminStatusParameter;
@@ -3222,3 +3231,9 @@ export type CaptureInfluencerReferralParams = {
 ref: string;
 };
 
+export const AdminExportCampaignResultsFormat = {
+  csv: 'csv',
+  xlsx: 'xlsx',
+} as const;
+
+export type AdminExportCampaignResultsFormat = typeof AdminExportCampaignResultsFormat[keyof typeof AdminExportCampaignResultsFormat];
