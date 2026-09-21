@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Coins, Package, Search, Plus, Trash2, Clock, FileStack, Pencil, type LucideIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -15,7 +15,7 @@ import type { GiftingIssue, GiftingIssueCategory, GiftingIssueInputCategory } fr
 import { useLanguage } from '@/hooks/use-language';
 import { useToast } from '@/hooks/use-toast';
 import { sortProductsForSelection } from '@/lib/product-sort';
-import { countryForCity } from '@/lib/city-country';
+import { countryForCity, lookupCountryForCity } from '@/lib/city-country';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +51,8 @@ export default function AdminGiftingIssues() {
   const [editing, setEditing] = useState<GiftingIssue | null>(null);
   const [editForm, setEditForm] = useState({ category: '' as GiftingIssueCategory | '', issueDate: '', recipientName: '', city: '', country: '', occasion: '', reason: '' });
   const [form, setForm] = useState(initialForm);
+  const [cityLookupPending, setCityLookupPending] = useState(false);
+  const [editCityLookupPending, setEditCityLookupPending] = useState(false);
 
   const params = { search: search || undefined, category };
   const { data, isLoading, error } = useGetAdminGiftingIssues(params, { query: { retry: false, queryKey: getGetAdminGiftingIssuesQueryKey(params) } });
@@ -110,6 +112,62 @@ export default function AdminGiftingIssues() {
       ...(detectedCountry ? { country: detectedCountry } : {}),
     }));
   };
+
+  useEffect(() => {
+    const city = form.city.trim();
+    if (city.length < 2 || countryForCity(city, lang)) {
+      setCityLookupPending(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setCityLookupPending(true);
+      void lookupCountryForCity(city, lang, controller.signal)
+        .then((country) => {
+          if (country) setForm((current) => current.city.trim() === city ? { ...current, country } : current);
+        })
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === 'AbortError')) console.warn('Could not identify city country', error);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setCityLookupPending(false);
+        });
+    }, 450);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [form.city, lang]);
+
+  useEffect(() => {
+    const city = editForm.city.trim();
+    if (!editing || city.length < 2 || countryForCity(city, lang)) {
+      setEditCityLookupPending(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      setEditCityLookupPending(true);
+      void lookupCountryForCity(city, lang, controller.signal)
+        .then((country) => {
+          if (country) setEditForm((current) => current.city.trim() === city ? { ...current, country } : current);
+        })
+        .catch((error) => {
+          if (!(error instanceof DOMException && error.name === 'AbortError')) console.warn('Could not identify edit city country', error);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setEditCityLookupPending(false);
+        });
+    }, 450);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [editForm.city, editing, lang]);
 
   const openEdit = (row: GiftingIssue) => {
     setEditing(row);
@@ -309,7 +367,7 @@ export default function AdminGiftingIssues() {
 
               <div>
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('الدولة (اختياري)', 'Country (optional)')}</Label>
-                <Input className="h-10" value={form.country} onChange={(e) => setForm(f => ({ ...f, country: e.target.value }))} placeholder={t('تُعبأ تلقائيًا من المدينة', 'Filled automatically from city')} />
+                <Input className="h-10" value={form.country} onChange={(e) => setForm(f => ({ ...f, country: e.target.value }))} placeholder={cityLookupPending ? t('جارٍ تحديد الدولة...', 'Identifying country...') : t('تُعبأ تلقائيًا من المدينة', 'Filled automatically from city')} />
               </div>
 
               <div>
@@ -574,7 +632,7 @@ export default function AdminGiftingIssues() {
               </div>
               <div>
                 <Label>{t('الدولة', 'Country')}</Label>
-                <Input className="mt-1.5" value={editForm.country} onChange={(e) => setEditForm((current) => ({ ...current, country: e.target.value }))} placeholder={t('تُعبأ تلقائيًا من المدينة', 'Filled automatically from city')} />
+                <Input className="mt-1.5" value={editForm.country} onChange={(e) => setEditForm((current) => ({ ...current, country: e.target.value }))} placeholder={editCityLookupPending ? t('جارٍ تحديد الدولة...', 'Identifying country...') : t('تُعبأ تلقائيًا من المدينة', 'Filled automatically from city')} />
               </div>
             </div>
             <div>

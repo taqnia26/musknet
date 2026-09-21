@@ -74,3 +74,42 @@ export function countryForCity(city: string, lang: 'ar' | 'en') {
   const country = normalizedCityCountries.get(normalizeCity(city));
   return country?.[lang] ?? null;
 }
+
+type GeocodingResult = {
+  country?: string;
+};
+
+type GeocodingResponse = {
+  results?: GeocodingResult[];
+};
+
+const globalCountryCache = new Map<string, string | null>();
+
+export async function lookupCountryForCity(
+  city: string,
+  lang: 'ar' | 'en',
+  signal?: AbortSignal,
+) {
+  const localCountry = countryForCity(city, lang);
+  if (localCountry) return localCountry;
+
+  const trimmedCity = city.trim();
+  if (trimmedCity.length < 2) return null;
+
+  const cacheKey = `${lang}:${normalizeCity(trimmedCity)}`;
+  if (globalCountryCache.has(cacheKey)) return globalCountryCache.get(cacheKey) ?? null;
+
+  const params = new URLSearchParams({
+    name: trimmedCity,
+    count: '1',
+    language: lang,
+    format: 'json',
+  });
+  const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`, { signal });
+  if (!response.ok) throw new Error(`City lookup failed (${response.status})`);
+
+  const data = await response.json() as GeocodingResponse;
+  const country = data.results?.[0]?.country?.trim() || null;
+  globalCountryCache.set(cacheKey, country);
+  return country;
+}
