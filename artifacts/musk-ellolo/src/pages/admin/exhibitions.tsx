@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { 
   useAdminListExhibitions,
   useAdminCreateExhibition,
@@ -23,11 +23,13 @@ import { Plus, Edit2, Trash2, Calendar, MapPin, DollarSign, Package } from 'luci
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 function ExhibitionProducts({ exhibitionId, canEdit }: { exhibitionId: number, canEdit: boolean }) {
   const { t, lang } = useLanguage();
   const { data: allocations, isLoading } = useAdminListExhibitionProducts(exhibitionId);
   const { data: products } = useAdminListProducts({});
+  const productOptions = useMemo(() => sortProductsForSelection(products ?? [], lang), [products, lang]);
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
   const allocateMutation = useAdminCreateExhibitionProduct();
@@ -75,7 +77,7 @@ function ExhibitionProducts({ exhibitionId, canEdit }: { exhibitionId: number, c
                   <label className="text-sm font-medium">{t('المنتج', 'Product')}</label>
                   <select name="productId" required className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
                     <option value="">{t('اختر منتج...', 'Select product...')}</option>
-                    {products?.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.nameAr : p.nameEn}</option>)}
+                    {productOptions.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.nameAr : p.nameEn}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">

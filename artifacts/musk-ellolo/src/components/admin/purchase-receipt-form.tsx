@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   useAdminCreatePurchaseReceipt,
   getAdminListPurchaseReceiptsQueryKey,
@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 type ReceiptLine = { productId: string; quantity: string; unitCost: string };
 
@@ -22,6 +23,7 @@ export function PurchaseReceiptForm() {
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const { data: products = [] } = useAdminListProducts({});
+  const productOptions = useMemo(() => sortProductsForSelection(products, lang), [products, lang]);
   const { data: receipts = [], isLoading: receiptsLoading } = useAdminListPurchaseReceipts();
   const createMutation = useAdminCreatePurchaseReceipt();
   const postMutation = useAdminPostPurchaseReceipt();
@@ -149,7 +151,7 @@ export function PurchaseReceiptForm() {
               <div key={index} className="grid gap-2 md:grid-cols-[1fr_140px_160px_auto]">
                 <select value={line.productId} onChange={(event) => updateLine(index, { productId: event.target.value })} className="h-10 rounded-md border bg-background px-3 text-sm" required>
                   <option value="">{t('اختر المنتج', 'Select product')}</option>
-                  {products.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
+                  {productOptions.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
                 </select>
                 <Input type="number" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} aria-label={t('الكمية', 'Quantity')} />
                 <Input type="number" min="0" step="0.0001" value={line.unitCost} onChange={(event) => updateLine(index, { unitCost: event.target.value })} aria-label={t('تكلفة الوحدة', 'Unit cost')} />

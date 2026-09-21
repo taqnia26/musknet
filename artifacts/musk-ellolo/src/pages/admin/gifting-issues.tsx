@@ -14,6 +14,7 @@ import {
 import type { GiftingIssue, GiftingIssueCategory, GiftingIssueInputCategory } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { useToast } from '@/hooks/use-toast';
+import { sortProductsForSelection } from '@/lib/product-sort';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -65,22 +66,7 @@ export default function AdminGiftingIssues() {
 
   const productOptions = useMemo(() => {
     if (!inventory) return [];
-
-    const categoryPriority = (item: (typeof inventory.items)[number]) => {
-      const category = `${item.categoryNameAr} ${item.categoryNameEn}`.toLocaleLowerCase();
-      if (category.includes('عطور الشعر') || category.includes('hair')) return 1;
-      if (category.includes('عطور') || category.includes('perfume')) return 0;
-      return 2;
-    };
-
-    return [...inventory.items].sort((a, b) => {
-      const priorityDifference = categoryPriority(a) - categoryPriority(b);
-      if (priorityDifference !== 0) return priorityDifference;
-
-      const aName = lang === 'ar' ? a.nameAr : a.nameEn;
-      const bName = lang === 'ar' ? b.nameAr : b.nameEn;
-      return aName.localeCompare(bName, lang === 'ar' ? 'ar' : 'en');
-    });
+    return sortProductsForSelection(inventory.items, lang);
   }, [inventory, lang]);
 
   const selectedProducts = useMemo(() => {

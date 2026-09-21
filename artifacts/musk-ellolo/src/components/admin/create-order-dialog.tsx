@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 type Line = { productId: string; quantity: number };
 
@@ -46,8 +47,11 @@ export function CreateOrderDialog() {
   const { data: products } = useAdminListProducts({ status: 'active' });
   const createOrder = useAdminCreateOrder();
   const availableProducts = useMemo(
-    () => (products ?? []).filter((product) => product.stockQuantity > 0),
-    [products],
+    () => sortProductsForSelection(
+      (products ?? []).filter((product) => product.stockQuantity > 0),
+      lang,
+    ),
+    [products, lang],
   );
 
   const reset = () => {

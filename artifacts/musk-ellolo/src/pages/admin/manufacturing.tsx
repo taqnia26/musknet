@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { 
   useAdminListManufacturingBatches,
   useAdminCreateManufacturingBatch,
@@ -20,6 +20,7 @@ import { Plus, Edit2, Trash2, Search } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 export default function AdminManufacturing() {
   const { t, lang } = useLanguage();
@@ -33,6 +34,7 @@ export default function AdminManufacturing() {
   
   const { data: batches, isLoading } = useAdminListManufacturingBatches();
   const { data: products } = useAdminListProducts({});
+  const productOptions = useMemo(() => sortProductsForSelection(products ?? [], lang), [products, lang]);
   
   const queryClient = useQueryClient();
   const createMutation = useAdminCreateManufacturingBatch();
@@ -132,7 +134,7 @@ export default function AdminManufacturing() {
                   <label className="text-sm font-medium">{t('المنتج', 'Product')}</label>
                   <select name="productId" required defaultValue={editingBatch?.productId || ''} className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm">
                     <option value="">{t('اختر منتج...', 'Select product...')}</option>
-                    {products?.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.nameAr : p.nameEn}</option>)}
+                    {productOptions.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.nameAr : p.nameEn}</option>)}
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -174,7 +176,7 @@ export default function AdminManufacturing() {
                       <div key={index} className="grid grid-cols-[1fr_120px_auto] gap-2">
                         <select value={line.materialProductId} onChange={(event) => setInputLines(inputLines.map((item, itemIndex) => itemIndex === index ? { ...item, materialProductId: event.target.value } : item))} className="h-9 rounded-md border bg-background px-2 text-sm">
                           <option value="">{t('اختر مادة', 'Select material')}</option>
-                          {products?.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
+                           {productOptions.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
                         </select>
                         <Input type="number" min="1" step="1" value={line.quantity} onChange={(event) => setInputLines(inputLines.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} />
                         <Button type="button" variant="ghost" size="icon" onClick={() => setInputLines(inputLines.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="h-4 w-4 text-destructive" /></Button>

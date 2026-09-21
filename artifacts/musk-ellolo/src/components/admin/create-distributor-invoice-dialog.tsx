@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 type Line = { productId: string; quantity: number; unitPrice: number };
 const emptyLine = (): Line => ({ productId: '', quantity: 1, unitPrice: 0 });
@@ -36,6 +37,7 @@ export function CreateDistributorInvoiceDialog() {
   const [error, setError] = useState<string | null>(null);
   const { data: distributors } = useAdminListDistributors({ status: 'active' });
   const { data: products } = useAdminListProducts({ status: 'active' });
+  const productOptions = useMemo(() => sortProductsForSelection(products ?? [], lang), [products, lang]);
   const createInvoice = useAdminCreateDistributorInvoice();
 
   const totals = useMemo(() => {
@@ -117,7 +119,7 @@ export function CreateDistributorInvoiceDialog() {
                   updateLine(index, { productId, unitPrice: product?.price ?? 0 });
                 }}>
                   <SelectTrigger><SelectValue placeholder={t('اختر المنتج', 'Select product')} /></SelectTrigger>
-                  <SelectContent>{(products ?? []).map((product) => <SelectItem key={product.id} value={String(product.id)} disabled={lines.some((candidate, candidateIndex) => candidateIndex !== index && candidate.productId === String(product.id))}>{lang === 'ar' ? product.nameAr : product.nameEn}</SelectItem>)}</SelectContent>
+                  <SelectContent>{productOptions.map((product) => <SelectItem key={product.id} value={String(product.id)} disabled={lines.some((candidate, candidateIndex) => candidateIndex !== index && candidate.productId === String(product.id))}>{lang === 'ar' ? product.nameAr : product.nameEn}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input type="number" min={1} step={1} value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} aria-label={t('الكمية', 'Quantity')} />
                 <Input type="number" min={0.01} step={0.01} value={line.unitPrice || ''} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} aria-label={t('سعر الوحدة', 'Unit Price')} />

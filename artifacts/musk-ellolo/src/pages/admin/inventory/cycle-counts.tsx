@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/use-language';
+import { sortProductsForSelection } from '@/lib/product-sort';
 import { useListInventoryCycleCounts, useCreateInventoryCycleCount, useReviewInventoryCycleCount, useApproveInventoryCycleCount, useListInventoryLocations, useAdminListInventory } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,21 +10,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListInventoryCycleCountsQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
 
 export default function AdminInventoryCounts() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: counts, isLoading } = useListInventoryCycleCounts();
   const { data: rawLocations } = useListInventoryLocations();
   const { data: inventory } = useAdminListInventory();
   const locations = (rawLocations as unknown as Array<{ id: number; name: string; code: string }> | undefined) ?? [];
-  const items = inventory?.items ?? [];
+  const items = useMemo(
+    () => sortProductsForSelection(inventory?.items ?? [], lang),
+    [inventory, lang],
+  );
   const createMutation = useCreateInventoryCycleCount();
   const reviewMutation = useReviewInventoryCycleCount();
   const approveMutation = useApproveInventoryCycleCount();

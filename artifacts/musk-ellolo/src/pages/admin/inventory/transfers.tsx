@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/use-language';
+import { sortProductsForSelection } from '@/lib/product-sort';
 import { useListInventoryTransfers, useCreateInventoryTransfer, useSendInventoryTransfer, useReceiveInventoryTransfer, useListInventoryLocations, useAdminListInventory } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,20 +10,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListInventoryTransfersQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminInventoryTransfers() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: transfers, isLoading } = useListInventoryTransfers();
   const { data: rawLocations } = useListInventoryLocations();
   const { data: inventory } = useAdminListInventory();
   const locations = (rawLocations as unknown as Array<{ id: number; name: string; code: string }> | undefined) ?? [];
-  const items = inventory?.items ?? [];
+  const items = useMemo(
+    () => sortProductsForSelection(inventory?.items ?? [], lang),
+    [inventory, lang],
+  );
   const createMutation = useCreateInventoryTransfer();
   const sendMutation = useSendInventoryTransfer();
   const receiveMutation = useReceiveInventoryTransfer();

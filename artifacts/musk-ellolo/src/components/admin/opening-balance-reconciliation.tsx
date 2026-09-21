@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   getAdminListOpeningBalanceImportsQueryKey,
   useAdminApproveOpeningBalanceImport,
@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { sortProductsForSelection } from '@/lib/product-sort';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -127,6 +128,7 @@ export function OpeningBalanceReconciliation() {
   const [entryDate, setEntryDate] = useState(new Date().toISOString().slice(0, 10));
   const { data: imports = [], isLoading, isError } = useAdminListOpeningBalanceImports();
   const { data: products = [] } = useAdminListProducts({});
+  const productOptions = useMemo(() => sortProductsForSelection(products, lang), [products, lang]);
   const createMutation = useAdminCreateOpeningBalanceImport();
   const mapMutation = useAdminMapOpeningBalanceLine();
   const reviewMutation = useAdminReviewOpeningBalanceImport();
@@ -242,7 +244,7 @@ export function OpeningBalanceReconciliation() {
                       ) : (
                         <select className="h-9 min-w-[220px] rounded-md border bg-background px-2 text-sm" value={line.productId ?? ''} onChange={(event) => mapLine(line, event.target.value)}>
                           <option value="">{t('اختر يدويًا — لا يوجد تخمين', 'Select manually — no fuzzy match')}</option>
-                          {products.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
+                           {productOptions.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
                         </select>
                       )}
                     </TableCell>
