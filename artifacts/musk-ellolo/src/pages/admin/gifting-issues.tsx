@@ -63,6 +63,26 @@ export default function AdminGiftingIssues() {
   const rows = data?.rows ?? [];
   const summary = data?.summary;
 
+  const productOptions = useMemo(() => {
+    if (!inventory) return [];
+
+    const categoryPriority = (item: (typeof inventory.items)[number]) => {
+      const category = `${item.categoryNameAr} ${item.categoryNameEn}`.toLocaleLowerCase();
+      if (category.includes('عطور الشعر') || category.includes('hair')) return 1;
+      if (category.includes('عطور') || category.includes('perfume')) return 0;
+      return 2;
+    };
+
+    return [...inventory.items].sort((a, b) => {
+      const priorityDifference = categoryPriority(a) - categoryPriority(b);
+      if (priorityDifference !== 0) return priorityDifference;
+
+      const aName = lang === 'ar' ? a.nameAr : a.nameEn;
+      const bName = lang === 'ar' ? b.nameAr : b.nameEn;
+      return aName.localeCompare(bName, lang === 'ar' ? 'ar' : 'en');
+    });
+  }, [inventory, lang]);
+
   const selectedProducts = useMemo(() => {
     if (!inventory) return [];
     return form.lines
@@ -328,7 +348,7 @@ export default function AdminGiftingIssues() {
                             <SelectValue placeholder={t('اختر المنتج', 'Select product')} />
                           </SelectTrigger>
                           <SelectContent>
-                            {inventory?.items.map((item) => (
+                            {productOptions.map((item) => (
                               <SelectItem key={item.id} value={String(item.id)}>
                                  {lang === 'ar' ? item.nameAr : item.nameEn} — {t('المتاح', 'Available')}: {formatInteger(item.stockQuantity, lang)}
                               </SelectItem>
