@@ -4612,6 +4612,8 @@ export const GetAdminGiftingIssuesResponse = zod.object({
   "rows": zod.array(zod.object({
   "id": zod.number().multipleOf(getAdminGiftingIssuesResponseRowsItemIdMultipleOf),
   "recipientName": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "country": zod.string().nullish(),
   "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
   "comment": zod.string(),
   "reason": zod.string().nullish(),
@@ -4640,6 +4642,10 @@ export const GetAdminGiftingIssuesResponse = zod.object({
 
 export const createAdminGiftingIssueBodyOneRecipientNameMax = 200;
 
+export const createAdminGiftingIssueBodyOneCityMax = 120;
+
+export const createAdminGiftingIssueBodyOneCountryMax = 120;
+
 export const createAdminGiftingIssueBodyOneOccasionMax = 500;
 
 export const createAdminGiftingIssueBodyOneReasonMax = 500;
@@ -4661,6 +4667,8 @@ export const CreateAdminGiftingIssueBody = zod.object({
   "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
   "issueDate": zod.coerce.date().optional(),
   "recipientName": zod.string().max(createAdminGiftingIssueBodyOneRecipientNameMax).optional(),
+  "city": zod.string().max(createAdminGiftingIssueBodyOneCityMax).optional(),
+  "country": zod.string().max(createAdminGiftingIssueBodyOneCountryMax).optional(),
   "occasion": zod.string().max(createAdminGiftingIssueBodyOneOccasionMax).optional(),
   "reason": zod.string().max(createAdminGiftingIssueBodyOneReasonMax).optional(),
   "idempotencyKey": zod.string().min(1).max(createAdminGiftingIssueBodyOneIdempotencyKeyMax)
@@ -4687,6 +4695,8 @@ export const createAdminGiftingIssueResponseSourceRowMultipleOf = 1;
 export const CreateAdminGiftingIssueResponse = zod.object({
   "id": zod.number().multipleOf(createAdminGiftingIssueResponseIdMultipleOf),
   "recipientName": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "country": zod.string().nullish(),
   "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
   "comment": zod.string(),
   "reason": zod.string().nullish(),
@@ -4710,45 +4720,123 @@ export const CreateAdminGiftingIssueResponse = zod.object({
 /**
  * @summary Gifting issue detail
  */
-export const getAdminGiftingIssuesIdPathIdMultipleOf = 1;
+export const getAdminGiftingIssuePathIdMultipleOf = 1;
 
 
 
-export const GetAdminGiftingIssuesIdParams = zod.object({
-  "id": zod.coerce.number().multipleOf(getAdminGiftingIssuesIdPathIdMultipleOf)
+export const GetAdminGiftingIssueParams = zod.object({
+  "id": zod.coerce.number().multipleOf(getAdminGiftingIssuePathIdMultipleOf)
 })
 
-export const getAdminGiftingIssuesIdResponseIdMultipleOf = 1;
+export const getAdminGiftingIssueResponseIdMultipleOf = 1;
 
-export const getAdminGiftingIssuesIdResponseProductIdMultipleOf = 1;
+export const getAdminGiftingIssueResponseProductIdMultipleOf = 1;
 
-export const getAdminGiftingIssuesIdResponseQuantityMultipleOf = 1;
+export const getAdminGiftingIssueResponseQuantityMultipleOf = 1;
 
-export const getAdminGiftingIssuesIdResponseSourceRowMultipleOf = 1;
+export const getAdminGiftingIssueResponseSourceRowMultipleOf = 1;
 
 
 
-export const GetAdminGiftingIssuesIdResponse = zod.object({
-  "id": zod.number().multipleOf(getAdminGiftingIssuesIdResponseIdMultipleOf),
+export const GetAdminGiftingIssueResponse = zod.object({
+  "id": zod.number().multipleOf(getAdminGiftingIssueResponseIdMultipleOf),
   "recipientName": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "country": zod.string().nullish(),
   "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
   "comment": zod.string(),
   "reason": zod.string().nullish(),
   "occasion": zod.string().nullish(),
   "program": zod.string().nullish(),
-  "productId": zod.number().multipleOf(getAdminGiftingIssuesIdResponseProductIdMultipleOf),
+  "productId": zod.number().multipleOf(getAdminGiftingIssueResponseProductIdMultipleOf),
   "barcode": zod.string(),
   "descriptionSnapshot": zod.string(),
-  "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssuesIdResponseQuantityMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssueResponseQuantityMultipleOf),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
   "sourceFilename": zod.string().nullish(),
   "sourceSheet": zod.string().nullish(),
-  "sourceRow": zod.number().multipleOf(getAdminGiftingIssuesIdResponseSourceRowMultipleOf).nullish(),
+  "sourceRow": zod.number().multipleOf(getAdminGiftingIssueResponseSourceRowMultipleOf).nullish(),
   "dedupeKey": zod.string(),
   "idempotencyKey": zod.string().nullish(),
   "importedAt": zod.coerce.date()
 })
+
+
+export const updateAdminGiftingIssuePathIdMultipleOf = 1;
+
+
+
+export const UpdateAdminGiftingIssueParams = zod.object({
+  "id": zod.coerce.number().multipleOf(updateAdminGiftingIssuePathIdMultipleOf)
+})
+
+export const updateAdminGiftingIssueBodyRecipientNameMax = 200;
+
+export const updateAdminGiftingIssueBodyCityMax = 120;
+
+export const updateAdminGiftingIssueBodyCountryMax = 120;
+
+export const updateAdminGiftingIssueBodyOccasionMax = 500;
+
+export const updateAdminGiftingIssueBodyReasonMax = 500;
+
+
+
+export const UpdateAdminGiftingIssueBody = zod.object({
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']).optional(),
+  "issueDate": zod.coerce.date().optional(),
+  "recipientName": zod.string().max(updateAdminGiftingIssueBodyRecipientNameMax).nullish(),
+  "city": zod.string().max(updateAdminGiftingIssueBodyCityMax).nullish(),
+  "country": zod.string().max(updateAdminGiftingIssueBodyCountryMax).nullish(),
+  "occasion": zod.string().max(updateAdminGiftingIssueBodyOccasionMax).nullish(),
+  "reason": zod.string().max(updateAdminGiftingIssueBodyReasonMax).nullish()
+})
+
+export const updateAdminGiftingIssueResponseIdMultipleOf = 1;
+
+export const updateAdminGiftingIssueResponseProductIdMultipleOf = 1;
+
+export const updateAdminGiftingIssueResponseQuantityMultipleOf = 1;
+
+export const updateAdminGiftingIssueResponseSourceRowMultipleOf = 1;
+
+
+
+export const UpdateAdminGiftingIssueResponse = zod.object({
+  "id": zod.number().multipleOf(updateAdminGiftingIssueResponseIdMultipleOf),
+  "recipientName": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
+  "comment": zod.string(),
+  "reason": zod.string().nullish(),
+  "occasion": zod.string().nullish(),
+  "program": zod.string().nullish(),
+  "productId": zod.number().multipleOf(updateAdminGiftingIssueResponseProductIdMultipleOf),
+  "barcode": zod.string(),
+  "descriptionSnapshot": zod.string(),
+  "quantity": zod.number().min(1).multipleOf(updateAdminGiftingIssueResponseQuantityMultipleOf),
+  "totalCost": zod.string(),
+  "issueDate": zod.coerce.date(),
+  "sourceFilename": zod.string().nullish(),
+  "sourceSheet": zod.string().nullish(),
+  "sourceRow": zod.number().multipleOf(updateAdminGiftingIssueResponseSourceRowMultipleOf).nullish(),
+  "dedupeKey": zod.string(),
+  "idempotencyKey": zod.string().nullish(),
+  "importedAt": zod.coerce.date()
+})
+
+
+export const deleteAdminGiftingIssuePathIdMultipleOf = 1;
+
+
+
+export const DeleteAdminGiftingIssueParams = zod.object({
+  "id": zod.coerce.number().multipleOf(deleteAdminGiftingIssuePathIdMultipleOf)
+})
+
+export const DeleteAdminGiftingIssueResponse = zod.void()
 
 
 export const influencerLoginBodyPasswordMin = 8;

@@ -12,6 +12,8 @@ export const giftingCategoryEnum = pgEnum("gifting_issue_category", [
 export const giftingIssuesTable = pgTable("gifting_issues", {
   id: serial("id").primaryKey(),
   recipientName: text("recipient_name"),
+  city: text("city"),
+  country: text("country"),
   category: giftingCategoryEnum("category").notNull(),
   comment: text("comment").notNull().default(""),
   reason: text("reason"),
@@ -33,12 +35,14 @@ export const giftingIssuesTable = pgTable("gifting_issues", {
   idempotencyKey: text("idempotency_key"),
   createdBy: integer("created_by").notNull().references(() => adminUsersTable.id, { onDelete: "restrict" }),
   importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
+  voidedAt: timestamp("voided_at", { withTimezone: true }),
+  voidedBy: integer("voided_by").references(() => adminUsersTable.id, { onDelete: "restrict" }),
 }, (table) => [
   uniqueIndex("gifting_issues_dedupe_key_unique").on(table.dedupeKey),
   uniqueIndex("gifting_issues_row_fingerprint_unique").on(table.rowFingerprint),
   uniqueIndex("gifting_issues_idempotency_key_unique").on(table.idempotencyKey),
 ]);
 
-export const insertGiftingIssueSchema = createInsertSchema(giftingIssuesTable).omit({ id: true, importedAt: true });
+export const insertGiftingIssueSchema = createInsertSchema(giftingIssuesTable).omit({ id: true, importedAt: true, voidedAt: true, voidedBy: true });
 export type InsertGiftingIssue = z.infer<typeof insertGiftingIssueSchema>;
 export type GiftingIssue = typeof giftingIssuesTable.$inferSelect;

@@ -133,6 +133,7 @@ import type {
   GetInventoryValueReportParams,
   GiftingIssue,
   GiftingIssueInput,
+  GiftingIssueUpdate,
   HealthStatus,
   HomeContent,
   Influencer,
@@ -11067,7 +11068,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getCreateAdminGiftingIssueMutationOptions(options));
     }
 
-export const getGetAdminGiftingIssuesIdUrl = (id: number,) => {
+export const getGetAdminGiftingIssueUrl = (id: number,) => {
 
 
 
@@ -11078,9 +11079,9 @@ export const getGetAdminGiftingIssuesIdUrl = (id: number,) => {
 /**
  * @summary Gifting issue detail
  */
-export const getAdminGiftingIssuesId = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<GiftingIssue> => {
+export const getAdminGiftingIssue = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<GiftingIssue> => {
 
-  return customFetch<GiftingIssue>(getGetAdminGiftingIssuesIdUrl(id),
+  return customFetch<GiftingIssue>(getGetAdminGiftingIssueUrl(id),
   {
     ...options,
     method: 'GET'
@@ -11093,45 +11094,45 @@ export const getAdminGiftingIssuesId = async (id: number, options?: Parameters<t
 
 
 
-export const getGetAdminGiftingIssuesIdQueryKey = (id: number,) => {
+export const getGetAdminGiftingIssueQueryKey = (id: number,) => {
     return [
     `/api/admin/gifting-issues/${id}`
     ] as const;
     }
 
 
-export const getGetAdminGiftingIssuesIdQueryOptions = <TData = Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetAdminGiftingIssueQueryOptions = <TData = Awaited<ReturnType<typeof getAdminGiftingIssue>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetAdminGiftingIssuesIdQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminGiftingIssueQueryKey(id);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>> = ({ signal }) => getAdminGiftingIssuesId(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminGiftingIssue>>> = ({ signal }) => getAdminGiftingIssue(id, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssue>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type GetAdminGiftingIssuesIdQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>>
-export type GetAdminGiftingIssuesIdQueryError = ErrorType<void>
+export type GetAdminGiftingIssueQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminGiftingIssue>>>
+export type GetAdminGiftingIssueQueryError = ErrorType<void>
 
 
 /**
  * @summary Gifting issue detail
  */
 
-export function useGetAdminGiftingIssuesId<TData = Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError = ErrorType<void>>(
- id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssuesId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useGetAdminGiftingIssue<TData = Awaited<ReturnType<typeof getAdminGiftingIssue>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminGiftingIssue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetAdminGiftingIssuesIdQueryOptions(id,options)
+  const queryOptions = getGetAdminGiftingIssueQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -11143,6 +11144,137 @@ export function useGetAdminGiftingIssuesId<TData = Awaited<ReturnType<typeof get
 
 
 
+
+export const getUpdateAdminGiftingIssueUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/gifting-issues/${id}`
+}
+
+export const updateAdminGiftingIssue = async (id: number,
+    giftingIssueUpdate: GiftingIssueUpdate, options?: Parameters<typeof customFetch>[1]): Promise<GiftingIssue> => {
+
+  return customFetch<GiftingIssue>(getUpdateAdminGiftingIssueUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(giftingIssueUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminGiftingIssueMutationOptions = <TError = ErrorType<BadRequestResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftingIssue>>, TError,{id: number;data: BodyType<GiftingIssueUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftingIssue>>, TError,{id: number;data: BodyType<GiftingIssueUpdate>}, TContext> => {
+
+const mutationKey = ['updateAdminGiftingIssue'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminGiftingIssue>>, {id: number;data: BodyType<GiftingIssueUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAdminGiftingIssue(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminGiftingIssueMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminGiftingIssue>>>
+    export type UpdateAdminGiftingIssueMutationBody = BodyType<GiftingIssueUpdate>
+    export type UpdateAdminGiftingIssueMutationError = ErrorType<BadRequestResponse | void>
+
+    export const useUpdateAdminGiftingIssue = <TError = ErrorType<BadRequestResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminGiftingIssue>>, TError,{id: number;data: BodyType<GiftingIssueUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminGiftingIssue>>,
+        TError,
+        {id: number;data: BodyType<GiftingIssueUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminGiftingIssueMutationOptions(options));
+    }
+
+export const getDeleteAdminGiftingIssueUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/gifting-issues/${id}`
+}
+
+export const deleteAdminGiftingIssue = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteAdminGiftingIssueUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAdminGiftingIssueMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminGiftingIssue>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAdminGiftingIssue>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteAdminGiftingIssue'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAdminGiftingIssue>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAdminGiftingIssue(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAdminGiftingIssueMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAdminGiftingIssue>>>
+
+    export type DeleteAdminGiftingIssueMutationError = ErrorType<void>
+
+    export const useDeleteAdminGiftingIssue = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAdminGiftingIssue>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAdminGiftingIssue>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAdminGiftingIssueMutationOptions(options));
+    }
 
 export const getInfluencerLoginUrl = () => {
 

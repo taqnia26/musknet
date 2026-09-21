@@ -11,6 +11,10 @@ export interface GiftingIssue {
   id: number;
   /** @nullable */
   recipientName?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  country?: string | null;
   category: GiftingIssueCategory;
   comment: string;
   /** @nullable */

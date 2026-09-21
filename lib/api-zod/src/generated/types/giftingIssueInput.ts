@@ -27,6 +27,10 @@ export type GiftingIssueInput = ({
   issueDate?: Date;
   /** @maxLength 200 */
   recipientName?: string;
+  /** @maxLength 120 */
+  city?: string;
+  /** @maxLength 120 */
+  country?: string;
   /** @maxLength 500 */
   occasion?: string;
   /** @maxLength 500 */

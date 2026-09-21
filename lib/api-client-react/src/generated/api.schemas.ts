@@ -2893,6 +2893,10 @@ export interface GiftingIssue {
   id: number;
   /** @nullable */
   recipientName?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  country?: string | null;
   category: GiftingIssueCategory;
   comment: string;
   /** @nullable */
@@ -2963,6 +2967,10 @@ export type GiftingIssueInput = ({
   issueDate?: string;
   /** @maxLength 200 */
   recipientName?: string;
+  /** @maxLength 120 */
+  city?: string;
+  /** @maxLength 120 */
+  country?: string;
   /** @maxLength 500 */
   occasion?: string;
   /** @maxLength 500 */
@@ -2973,6 +2981,36 @@ export type GiftingIssueInput = ({
      */
   idempotencyKey: string;
 };
+
+export interface GiftingIssueUpdate {
+  category?: GiftingIssueCategory;
+  issueDate?: string;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  recipientName?: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  city?: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  country?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  occasion?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  reason?: string | null;
+}
 
 export interface InfluencerLogin {
   email: string;

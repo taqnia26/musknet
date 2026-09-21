@@ -48,6 +48,7 @@ afterAll(async () => {
     .where(or(
       and(eq(journalEntriesTable.sourceType, "gifting_issue"), inArray(journalEntriesTable.sourceId, issues.map((issue) => String(issue.id)))),
       and(eq(journalEntriesTable.sourceType, "gifting_issue_batch"), eq(journalEntriesTable.sourceId, `multi-%_${suffix}`)),
+      and(eq(journalEntriesTable.sourceType, "gifting_issue_void"), inArray(journalEntriesTable.sourceId, issues.map((issue) => String(issue.id)))),
     ));
   if (entries.length) {
     await db.execute(sql`alter table journal_entry_lines disable trigger journal_entry_lines_immutable`);
@@ -122,6 +123,36 @@ describe.sequential("gifting issue operations", () => {
     expect(product.stockQuantity).toBe(2);
     expect(await db.select().from(giftingIssuesTable).where(eq(giftingIssuesTable.idempotencyKey, `short-${suffix}`))).toHaveLength(0);
     expect(await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.eventKey, `gifting:short-${suffix}`))).toHaveLength(0);
+  });
+
+  it("updates location metadata and safely voids a movement", async () => {
+    const created = await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        productId: secondProductId, category: "VIP_GIFT", quantity: 1,
+        recipientName: "مستلم قديم", city: "الرياض", country: "السعودية",
+        idempotencyKey: `editable-${suffix}`,
+      }).expect(201);
+    expect(created.body).toMatchObject({ city: "الرياض", country: "السعودية" });
+
+    const updated = await request(app).patch(`/api/admin/gifting-issues/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ recipientName: "مستلم جديد", city: "جدة", country: "السعودية" }).expect(200);
+    expect(updated.body).toMatchObject({ recipientName: "مستلم جديد", city: "جدة", country: "السعودية" });
+
+    const [beforeDelete] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
+    await request(app).delete(`/api/admin/gifting-issues/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`).expect(204);
+    const [afterDelete] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
+    expect(afterDelete.stockQuantity).toBe(beforeDelete.stockQuantity + 1);
+    expect((await db.select().from(inventoryMovementsTable)
+      .where(eq(inventoryMovementsTable.eventKey, `gifting:void:${created.body.id}`)))).toHaveLength(1);
+    expect((await db.select().from(journalEntriesTable).where(and(
+      eq(journalEntriesTable.sourceType, "gifting_issue_void"),
+      eq(journalEntriesTable.sourceId, String(created.body.id)),
+    )))).toHaveLength(1);
+    await request(app).get(`/api/admin/gifting-issues/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`).expect(404);
   });
 
   it("issues multiple products atomically and requires reasons for damaged/other", async () => {

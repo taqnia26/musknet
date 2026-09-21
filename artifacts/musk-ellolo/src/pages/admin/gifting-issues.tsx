@@ -1,13 +1,15 @@
 import { useMemo, useState, useRef } from 'react';
-import { Coins, Package, Search, Plus, Trash2, Clock, FileStack, type LucideIcon } from 'lucide-react';
+import { Coins, Package, Search, Plus, Trash2, Clock, FileStack, Pencil, type LucideIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetAdminGiftingIssuesQueryKey,
-  getGetAdminGiftingIssuesIdQueryKey,
+  getGetAdminGiftingIssueQueryKey,
   useAdminListInventory,
   useCreateAdminGiftingIssue,
+  useDeleteAdminGiftingIssue,
   useGetAdminGiftingIssues,
-  useGetAdminGiftingIssuesId,
+  useGetAdminGiftingIssue,
+  useUpdateAdminGiftingIssue,
 } from '@workspace/api-client-react';
 import type { GiftingIssue, GiftingIssueCategory, GiftingIssueInputCategory } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
@@ -30,6 +32,8 @@ const initialForm = {
   category: '' as GiftingIssueInputCategory | '',
   issueDate: '',
   recipientName: '',
+  city: '',
+  country: '',
   occasion: '',
   reason: '',
 };
@@ -42,13 +46,17 @@ export default function AdminGiftingIssues() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<GiftingIssueCategory | undefined>();
   const [selected, setSelected] = useState<number | null>(null);
+  const [editing, setEditing] = useState<GiftingIssue | null>(null);
+  const [editForm, setEditForm] = useState({ category: '' as GiftingIssueCategory | '', issueDate: '', recipientName: '', city: '', country: '', occasion: '', reason: '' });
   const [form, setForm] = useState(initialForm);
 
   const params = { search: search || undefined, category };
   const { data, isLoading, error } = useGetAdminGiftingIssues(params, { query: { retry: false, queryKey: getGetAdminGiftingIssuesQueryKey(params) } });
-  const detail = useGetAdminGiftingIssuesId(selected ?? 0, { query: { enabled: selected !== null, queryKey: getGetAdminGiftingIssuesIdQueryKey(selected ?? 0) } });
+  const detail = useGetAdminGiftingIssue(selected ?? 0, { query: { enabled: selected !== null, queryKey: getGetAdminGiftingIssueQueryKey(selected ?? 0) } });
   const { data: inventory } = useAdminListInventory({ stockStatus: 'all', sort: 'name_asc' });
   const mutation = useCreateAdminGiftingIssue();
+  const updateMutation = useUpdateAdminGiftingIssue();
+  const deleteMutation = useDeleteAdminGiftingIssue();
   const idempotencyKeyRef = useRef(crypto.randomUUID());
   const lastAttemptedFormRef = useRef('');
 
@@ -76,6 +84,61 @@ export default function AdminGiftingIssues() {
 
   const removeLine = (index: number) => {
     setForm(f => ({ ...f, lines: f.lines.filter((_, i) => i !== index) }));
+  };
+
+  const openEdit = (row: GiftingIssue) => {
+    setEditing(row);
+    setEditForm({
+      category: row.category,
+      issueDate: new Date(row.issueDate).toISOString().slice(0, 10),
+      recipientName: row.recipientName ?? '',
+      city: row.city ?? '',
+      country: row.country ?? '',
+      occasion: row.occasion ?? '',
+      reason: row.reason ?? '',
+    });
+  };
+
+  const saveEdit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editing || !editForm.category) return;
+    updateMutation.mutate({ id: editing.id, data: {
+      category: editForm.category,
+      issueDate: editForm.issueDate,
+      recipientName: editForm.recipientName.trim() || null,
+      city: editForm.city.trim() || null,
+      country: editForm.country.trim() || null,
+      occasion: editForm.occasion.trim() || null,
+      reason: editForm.reason.trim() || null,
+    } }, {
+      onSuccess: async () => {
+        setEditing(null);
+        await queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] });
+        toast({ title: t('تم تعديل الحركة بنجاح', 'Movement updated successfully') });
+      },
+      onError: (cause: unknown) => {
+        const error = cause as { data?: { error?: string }; message?: string };
+        toast({ title: t('تعذر تعديل الحركة', 'Could not update movement'), description: error.data?.error ?? error.message, variant: 'destructive' });
+      },
+    });
+  };
+
+  const removeMovement = (row: GiftingIssue) => {
+    if (!window.confirm(t('سيتم حذف الحركة وإعادة الكمية للمخزون وعكس أثرها المحاسبي. هل تريد المتابعة؟', 'This will remove the movement, restore inventory, and reverse its accounting effect. Continue?'))) return;
+    deleteMutation.mutate({ id: row.id }, {
+      onSuccess: async () => {
+        if (selected === row.id) setSelected(null);
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] }),
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/inventory'] }),
+        ]);
+        toast({ title: t('تم حذف الحركة وإعادة الكمية للمخزون', 'Movement removed and inventory restored') });
+      },
+      onError: (cause: unknown) => {
+        const error = cause as { data?: { error?: string }; message?: string };
+        toast({ title: t('تعذر حذف الحركة', 'Could not remove movement'), description: error.data?.error ?? error.message, variant: 'destructive' });
+      },
+    });
   };
 
   const submit = (event: React.FormEvent) => {
@@ -135,6 +198,8 @@ export default function AdminGiftingIssues() {
       idempotencyKey: idempotencyKeyRef.current,
       ...(form.issueDate ? { issueDate: form.issueDate } : {}),
       ...(form.recipientName.trim() ? { recipientName: form.recipientName.trim() } : {}),
+      ...(form.city.trim() ? { city: form.city.trim() } : {}),
+      ...(form.country.trim() ? { country: form.country.trim() } : {}),
       ...(form.occasion.trim() ? { occasion: form.occasion.trim() } : {}),
       ...(form.reason.trim() ? { reason: form.reason.trim() } : {}),
     } }, {
@@ -210,6 +275,16 @@ export default function AdminGiftingIssues() {
               <div>
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('المرسل إليه (اختياري)', 'Recipient (optional)')}</Label>
                 <Input className="h-10" value={form.recipientName} onChange={(e) => setForm(f => ({ ...f, recipientName: e.target.value }))} />
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('المدينة (اختياري)', 'City (optional)')}</Label>
+                <Input className="h-10" value={form.city} onChange={(e) => setForm(f => ({ ...f, city: e.target.value }))} />
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('الدولة (اختياري)', 'Country (optional)')}</Label>
+                <Input className="h-10" value={form.country} onChange={(e) => setForm(f => ({ ...f, country: e.target.value }))} />
               </div>
 
               <div>
@@ -370,8 +445,11 @@ export default function AdminGiftingIssues() {
                     <TableHead>{t('التصنيف', 'Category')}</TableHead>
                     <TableHead>{t('المنتج', 'Product')}</TableHead>
                     <TableHead>{t('الشخص / السبب', 'Person / Reason')}</TableHead>
+                    <TableHead>{t('المدينة', 'City')}</TableHead>
+                    <TableHead>{t('الدولة', 'Country')}</TableHead>
                     <TableHead className="text-center w-[80px]">{t('الكمية', 'Qty')}</TableHead>
                     <TableHead className="text-right rtl:text-left">{t('التكلفة', 'Cost')}</TableHead>
+                    <TableHead className="w-[100px] text-center">{t('الإجراءات', 'Actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -397,11 +475,23 @@ export default function AdminGiftingIssues() {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{row.city || '—'}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{row.country || '—'}</TableCell>
                       <TableCell className="text-center font-mono">
                          {formatInteger(row.quantity, lang)}
                       </TableCell>
                       <TableCell className="text-right rtl:text-left font-mono font-medium">
                          {formatCurrency(row.totalCost, lang)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button type="button" variant="ghost" size="icon" title={t('تعديل', 'Edit')} onClick={(event) => { event.stopPropagation(); openEdit(row); }}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" title={t('حذف', 'Delete')} disabled={deleteMutation.isPending} onClick={(event) => { event.stopPropagation(); removeMovement(row); }}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -424,6 +514,56 @@ export default function AdminGiftingIssues() {
               <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-primary"></div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>{t('تعديل بيانات الحركة', 'Edit movement details')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={saveEdit} className="grid gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label>{t('التصنيف', 'Category')}</Label>
+                <Select value={editForm.category} onValueChange={(value) => setEditForm((current) => ({ ...current, category: value as GiftingIssueCategory }))}>
+                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectContent>{Object.entries(labels).map(([value, label]) => <SelectItem key={value} value={value}>{lang === 'ar' ? label.ar : label.en}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>{t('التاريخ', 'Date')}</Label>
+                <Input className="mt-1.5" type="date" dir="ltr" value={editForm.issueDate} onChange={(e) => setEditForm((current) => ({ ...current, issueDate: e.target.value }))} />
+              </div>
+              <div>
+                <Label>{t('الشخص / المستلم', 'Person / recipient')}</Label>
+                <Input className="mt-1.5" value={editForm.recipientName} onChange={(e) => setEditForm((current) => ({ ...current, recipientName: e.target.value }))} />
+              </div>
+              <div>
+                <Label>{t('المناسبة', 'Occasion')}</Label>
+                <Input className="mt-1.5" value={editForm.occasion} onChange={(e) => setEditForm((current) => ({ ...current, occasion: e.target.value }))} />
+              </div>
+              <div>
+                <Label>{t('المدينة', 'City')}</Label>
+                <Input className="mt-1.5" value={editForm.city} onChange={(e) => setEditForm((current) => ({ ...current, city: e.target.value }))} />
+              </div>
+              <div>
+                <Label>{t('الدولة', 'Country')}</Label>
+                <Input className="mt-1.5" value={editForm.country} onChange={(e) => setEditForm((current) => ({ ...current, country: e.target.value }))} />
+              </div>
+            </div>
+            <div>
+              <Label>{t('السبب', 'Reason')}</Label>
+              <Input className="mt-1.5" value={editForm.reason} onChange={(e) => setEditForm((current) => ({ ...current, reason: e.target.value }))} />
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+              {t('حمايةً للمخزون والحسابات، المنتج والكمية والتكلفة لا تتغير من هذه النافذة.', 'To protect inventory and accounting, product, quantity, and cost cannot be changed here.')}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditing(null)}>{t('إلغاء', 'Cancel')}</Button>
+              <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ التعديل', 'Save changes')}</Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
