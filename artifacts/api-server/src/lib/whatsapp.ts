@@ -124,11 +124,14 @@ class WhatsAppManager {
     this.explicitLogout = false;
     const socket = makeWASocket({ auth, browser: Browsers.macOS("Chrome"), printQRInTerminal: false, syncFullHistory: true, logger: waLogger });
     this.socket = socket;
-    socket.ev.on("creds.update", async (update) => {
+    let credsSave = Promise.resolve();
+    socket.ev.on("creds.update", (update) => {
       Object.assign(auth.creds, update);
-      const value = encryptWhatsappState(encode(auth.creds));
-      await db.insert(whatsappAuthStateTable).values({ key: "creds", value })
-        .onConflictDoUpdate({ target: whatsappAuthStateTable.key, set: { value, updatedAt: new Date() } });
+      credsSave = credsSave.then(async () => {
+        const value = encryptWhatsappState(encode(auth.creds));
+        await db.insert(whatsappAuthStateTable).values({ key: "creds", value })
+          .onConflictDoUpdate({ target: whatsappAuthStateTable.key, set: { value, updatedAt: new Date() } });
+      });
     });
     socket.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
       if (qr) { this.status = "qr"; this.lastError = null; this.qr = await QRCode.toDataURL(qr, { margin: 1, width: 320 }); }
@@ -137,15 +140,19 @@ class WhatsAppManager {
         this.socket = null; this.qr = null;
         const code = (lastDisconnect?.error as { output?: { statusCode?: number } })?.output?.statusCode;
         const message = lastDisconnect?.error instanceof Error ? lastDisconnect.error.message : "WhatsApp connection closed";
-        this.lastError = code ? `${message} (${code})` : message;
+        await credsSave.catch((error) => {
+          this.lastError = error instanceof Error ? error.message : "Could not save WhatsApp credentials";
+        });
+        const restartRequired = code === DisconnectReason.restartRequired;
+        this.lastError = restartRequired ? null : (code ? `${message} (${code})` : message);
         if (code === DisconnectReason.loggedOut || this.explicitLogout) {
           this.status = "disconnected"; this.explicitLogout = false;
           await this.clearAuth();
           return;
         }
-        this.status = "disconnected";
+        this.status = restartRequired ? "connecting" : "disconnected";
         if (generation === this.generation && !this.explicitLogout) {
-          this.reconnectTimer = setTimeout(() => { this.reconnectTimer = null; void this.start(false); }, 1500);
+          this.reconnectTimer = setTimeout(() => { this.reconnectTimer = null; void this.start(false); }, restartRequired ? 100 : 1500);
         }
       }
     });
