@@ -3632,7 +3632,7 @@ components:
         companyName: { type: string, minLength: 1 }
         contactName: { type: string, minLength: 1 }
         email: { type: [string, "null"] }
-        phone: { type: string, minLength: 1, pattern: '^(?=(?:\\D*\\d){8,15}\\D*$)\\+?[\\d\\s().-]+$' }
+        phone: { type: string, minLength: 1, pattern: '^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$' }
         city: { type: [string, "null"] }
         address: { type: [string, "null"] }
         taxNumber: { type: [string, "null"] }

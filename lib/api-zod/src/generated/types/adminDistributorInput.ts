@@ -15,7 +15,7 @@ export interface AdminDistributorInput {
   email?: string | null;
   /**
      * @minLength 1
-     * @pattern ^(?=(?:\\D*\\d){8,15}\\D*$)\\+?[\\d\\s().-]+$
+     * @pattern ^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$
      */
   phone: string;
   /** @nullable */

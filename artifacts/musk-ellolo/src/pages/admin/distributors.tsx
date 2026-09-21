@@ -14,6 +14,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListDistributorsQueryKey } from '@workspace/api-client-react';
+import { useToast } from '@/hooks/use-toast';
 
 const distributorSchema = z.object({
   companyName: z.string().min(1),
@@ -21,7 +22,7 @@ const distributorSchema = z.object({
   phone: z.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, {
     message: 'رقم الهاتف غير صالح. استخدم 8-15 رقماً (مثال: ‎+966 50 123 4567) / Invalid phone. Use 8-15 digits (e.g. +966 50 123 4567).',
   }),
-  email: z.string().email().nullable().optional(),
+  email: z.union([z.string().email(), z.literal('')]).nullable().optional(),
   city: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
   taxNumber: z.string().nullable().optional(),
@@ -32,6 +33,7 @@ const distributorSchema = z.object({
 
 export default function AdminDistributors() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -43,13 +45,24 @@ export default function AdminDistributors() {
   const createMutation = useAdminCreateDistributor();
   const updateMutation = useAdminUpdateDistributor();
   const disableMutation = useAdminDisableDistributor();
+  const mutationError = (error: unknown, fallback: string) => {
+    const cause = error as { data?: { error?: string }; message?: string };
+    return cause.data?.error ?? cause.message ?? fallback;
+  };
+  const normalizeOptional = (value: string | null | undefined) => value?.trim() || null;
 
   const handleDisable = (id: number) => {
     if (confirm(t('هل أنت متأكد من تعطيل/حذف هذا الموزع؟', 'Are you sure you want to disable/delete this distributor?'))) {
       disableMutation.mutate({ id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListDistributorsQueryKey() });
-        }
+          toast({ title: t('تم تعطيل الشركة', 'Company disabled') });
+        },
+        onError: (error) => toast({
+          title: t('تعذر تعطيل الشركة', 'Could not disable company'),
+          description: mutationError(error, t('حاول مرة أخرى', 'Please try again')),
+          variant: 'destructive',
+        }),
       });
     }
   };
@@ -60,22 +73,46 @@ export default function AdminDistributors() {
   });
 
   const onSubmit = (data: z.infer<typeof distributorSchema>) => {
+    const payload = {
+      ...data,
+      companyName: data.companyName.trim(),
+      contactName: data.contactName.trim(),
+      phone: data.phone.trim(),
+      email: normalizeOptional(data.email),
+      city: normalizeOptional(data.city),
+      address: normalizeOptional(data.address),
+      taxNumber: normalizeOptional(data.taxNumber),
+      commercialRegistrationNumber: normalizeOptional(data.commercialRegistrationNumber),
+      notes: normalizeOptional(data.notes),
+    };
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data }, {
+      updateMutation.mutate({ id: editingId, data: payload }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListDistributorsQueryKey() });
           setIsDialogOpen(false);
           setEditingId(null);
           form.reset();
-        }
+          toast({ title: t('تم حفظ تعديلات الشركة', 'Company changes saved') });
+        },
+        onError: (error) => toast({
+          title: t('تعذر حفظ تعديلات الشركة', 'Could not save company changes'),
+          description: mutationError(error, t('تحقق من البيانات والصلاحيات ثم حاول مرة أخرى', 'Check the data and permissions, then try again')),
+          variant: 'destructive',
+        }),
       });
     } else {
-      createMutation.mutate({ data }, {
+      createMutation.mutate({ data: payload }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListDistributorsQueryKey() });
           setIsDialogOpen(false);
           form.reset();
-        }
+          toast({ title: t('تمت إضافة الشركة', 'Company added') });
+        },
+        onError: (error) => toast({
+          title: t('تعذر إضافة الشركة', 'Could not add company'),
+          description: mutationError(error, t('تحقق من البيانات والصلاحيات ثم حاول مرة أخرى', 'Check the data and permissions, then try again')),
+          variant: 'destructive',
+        }),
       });
     }
   };
@@ -117,7 +154,14 @@ export default function AdminDistributors() {
               <DialogTitle>{editingId ? t('تعديل موزع', 'Edit Distributor') : t('إضافة موزع', 'Add Distributor')}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form
+                onSubmit={form.handleSubmit(onSubmit, () => toast({
+                  title: t('تعذر الحفظ', 'Could not save'),
+                  description: t('راجع الحقول المعلّمة وصحح البيانات المطلوبة', 'Review the marked fields and correct the required information'),
+                  variant: 'destructive',
+                }))}
+                className="space-y-4"
+              >
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="companyName" render={({ field }) => (
                     <FormItem><FormLabel>{t('اسم الشركة', 'Company Name')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -148,8 +192,8 @@ export default function AdminDistributors() {
                 <FormField control={form.control} name="address" render={({ field }) => (
                   <FormItem><FormLabel>{t('العنوان', 'Address')}</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {t('حفظ', 'Save')}
+                <Button data-testid="button-save-distributor" type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {createMutation.isPending || updateMutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ', 'Save')}
                 </Button>
               </form>
             </Form>

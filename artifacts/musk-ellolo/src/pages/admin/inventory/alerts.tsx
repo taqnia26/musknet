@@ -21,7 +21,7 @@ export default function AdminInventoryAlerts() {
         <Link href="/admin/inventory/purchases">
           <Button size="sm">
             <ShoppingCart className="w-4 h-4 me-2" />
-            {t('إنشاء أمر شراء', 'Create PO')}
+            {t('تسجيل استلام مشتريات', 'Record purchase receipt')}
           </Button>
         </Link>
       </div>

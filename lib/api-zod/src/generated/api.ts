@@ -3232,7 +3232,7 @@ export const AdminListDistributorsResponse = zod.array(AdminListDistributorsResp
 
 
 
-export const adminCreateDistributorBodyPhoneRegExp = new RegExp('^(?=(?:\\\\D*\\\\d){8,15}\\\\D*$)\\\\+?[\\\\d\\\\s().-]+$');
+export const adminCreateDistributorBodyPhoneRegExp = new RegExp('^(?=(?:\\D*\\d){8,15}\\D*$)\\+?[\\d\\s().-]+$');
 
 
 export const AdminCreateDistributorBody = zod.object({
@@ -3273,7 +3273,7 @@ export const AdminUpdateDistributorParams = zod.object({
 
 
 
-export const adminUpdateDistributorBodyOnePhoneRegExp = new RegExp('^(?=(?:\\\\D*\\\\d){8,15}\\\\D*$)\\\\+?[\\\\d\\\\s().-]+$');
+export const adminUpdateDistributorBodyOnePhoneRegExp = new RegExp('^(?=(?:\\D*\\d){8,15}\\D*$)\\+?[\\d\\s().-]+$');
 
 
 export const AdminUpdateDistributorBody = zod.object({
