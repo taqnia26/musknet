@@ -56,7 +56,7 @@ export function AdminWhatsAppTemplates() {
 
 export function AdminWhatsAppSettings() {
   const { t } = useLanguage();
-  const [state, setState] = useState<{ status: string; qr: string | null }>({ status: 'disconnected', qr: null });
+  const [state, setState] = useState<{ status: string; qr: string | null; lastError?: string | null }>({ status: 'disconnected', qr: null, lastError: null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const api = async (path: string, init?: RequestInit) => {
@@ -80,6 +80,7 @@ export function AdminWhatsAppSettings() {
         <p className="text-muted-foreground">{t('اربط حساب واتساب بزنس عبر رمز QR مثل واتساب ويب، ثم اعرض المحادثات من صندوق الوارد.', 'Pair your WhatsApp Business account with a QR code like WhatsApp Web, then manage conversations from the inbox.')}</p>
         <div className="rounded-xl border bg-muted/30 p-4">
           <div className="flex items-center justify-between"><span className="font-semibold">{t('حالة الاتصال', 'Connection status')}</span><span data-testid="whatsapp-connection-status" className={state.status === 'connected' ? 'text-success' : 'text-muted-foreground'}>{state.status === 'connected' ? t('متصل', 'Connected') : state.status === 'qr' ? t('بانتظار مسح QR', 'Waiting for QR scan') : state.status === 'connecting' ? t('جاري الاتصال', 'Connecting') : t('غير متصل', 'Disconnected')}</span></div>
+          {state.lastError && <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{t('سبب آخر فصل:', 'Last disconnect reason:')} {state.lastError}</p>}
           {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
           {state.qr && <div className="mt-5 text-center"><img data-testid="whatsapp-pairing-qr" src={state.qr} alt={t('رمز ربط واتساب', 'WhatsApp pairing QR code')} className="mx-auto rounded-lg border bg-white p-2" /><p className="mt-3 text-sm text-muted-foreground">{t('افتح واتساب بزنس ← الأجهزة المرتبطة ← ربط جهاز، ثم امسح الرمز.', 'Open WhatsApp Business → Linked devices → Link a device, then scan this code.')}</p></div>}
         </div>

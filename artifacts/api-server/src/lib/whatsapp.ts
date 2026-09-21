@@ -88,15 +88,30 @@ class WhatsAppManager {
   private explicitLogout = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private generation = 0;
+  private lastError: string | null = null;
 
   async start(forcePair = false) {
     if (this.starting) return this.starting;
-    if (this.socket) return;
+    if (forcePair) await this.resetPairing();
+    else if (this.socket) return;
     this.starting = this.connect(forcePair).finally(() => { this.starting = null; });
     return this.starting;
   }
 
   async restore() { return this.start(false); }
+
+  private async resetPairing() {
+    this.generation++;
+    this.explicitLogout = true;
+    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    if (this.socket) this.socket.end(new Error("Starting a fresh WhatsApp pairing session"));
+    this.socket = null;
+    this.status = "disconnected";
+    this.qr = null;
+    this.lastError = null;
+    await this.clearAuth();
+    this.explicitLogout = false;
+  }
 
   private async connect(forcePair: boolean) {
     this.status = "connecting"; this.qr = null;
@@ -116,11 +131,13 @@ class WhatsAppManager {
         .onConflictDoUpdate({ target: whatsappAuthStateTable.key, set: { value, updatedAt: new Date() } });
     });
     socket.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
-      if (qr) { this.status = "qr"; this.qr = await QRCode.toDataURL(qr, { margin: 1, width: 320 }); }
-      if (connection === "open") { this.status = "connected"; this.qr = null; }
+      if (qr) { this.status = "qr"; this.lastError = null; this.qr = await QRCode.toDataURL(qr, { margin: 1, width: 320 }); }
+      if (connection === "open") { this.status = "connected"; this.lastError = null; this.qr = null; }
       if (connection === "close") {
         this.socket = null; this.qr = null;
         const code = (lastDisconnect?.error as { output?: { statusCode?: number } })?.output?.statusCode;
+        const message = lastDisconnect?.error instanceof Error ? lastDisconnect.error.message : "WhatsApp connection closed";
+        this.lastError = code ? `${message} (${code})` : message;
         if (code === DisconnectReason.loggedOut || this.explicitLogout) {
           this.status = "disconnected"; this.explicitLogout = false;
           await this.clearAuth();
@@ -164,7 +181,7 @@ class WhatsAppManager {
     this.generation++;
     if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
     if (this.socket) await this.socket.logout().catch(() => undefined);
-    this.socket = null; this.status = "disconnected"; this.qr = null;
+    this.socket = null; this.status = "disconnected"; this.qr = null; this.lastError = null;
     await this.clearAuth();
   }
 
@@ -172,7 +189,7 @@ class WhatsAppManager {
     await db.delete(whatsappAuthStateTable);
   }
 
-  state() { return { status: this.status, qr: this.qr, connected: this.status === "connected" }; }
+  state() { return { status: this.status, qr: this.qr, connected: this.status === "connected", lastError: this.lastError }; }
   async send(jid: string, text: string) {
     if (!this.socket || this.status !== "connected") throw new Error("WhatsApp is not connected");
     const result = await this.socket.sendMessage(jid, { text });
