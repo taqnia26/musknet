@@ -6,6 +6,23 @@ type ProductForSelection = {
   nameEn: string;
 };
 
+const preferredProductOrder = [
+  'رويال مسك',
+  'رويال عود',
+  'رويال جازمين',
+  'ليدي لولو',
+  'ايفورا',
+  'سولين',
+  'لومسك',
+  'لونيرا',
+  'بيتش موس',
+];
+
+const normalizeProductName = (value: string) => value.trim().toLocaleLowerCase();
+const preferredProductRanks = new Map(
+  preferredProductOrder.map((name, index) => [normalizeProductName(name), index]),
+);
+
 export function sortProductsForSelection<T extends ProductForSelection>(
   products: readonly T[],
   lang: 'ar' | 'en',
@@ -20,6 +37,14 @@ export function sortProductsForSelection<T extends ProductForSelection>(
   };
 
   return [...products].sort((a, b) => {
+    const aPreferredRank = preferredProductRanks.get(normalizeProductName(a.nameAr));
+    const bPreferredRank = preferredProductRanks.get(normalizeProductName(b.nameAr));
+    if (aPreferredRank !== undefined || bPreferredRank !== undefined) {
+      if (aPreferredRank === undefined) return 1;
+      if (bPreferredRank === undefined) return -1;
+      return aPreferredRank - bPreferredRank;
+    }
+
     const priorityDifference = categoryPriority(a) - categoryPriority(b);
     if (priorityDifference !== 0) return priorityDifference;
 
