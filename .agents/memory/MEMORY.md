@@ -15,3 +15,4 @@
 - [Polymorphic journal sources](polymorphic-journal-sources.md) — identify journal sources by type and ID together; numeric IDs are reused across business tables.
 - [Inventory valuation lifecycle](inventory-valuation-lifecycle.md) — lock inventory writers and carry immutable unit cost through fulfillment, COGS, returns, and reversals.
 - [API auth test isolation](api-auth-test-isolation.md) — admin integration suites share auth environment state, so run those files sequentially to avoid false 401 failures.
+- [Baileys bundle runtime](baileys-bundle-runtime.md) — an esbuild success can still hide Baileys runtime imports; keep protobufjs directly resolvable by the server.

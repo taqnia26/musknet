@@ -55,3 +55,4 @@ export * from "./operations";
 export * from "./operations-documents";
 export * from "./shipments";
 export * from "./inventory-operations";
+export * from "./whatsapp";
