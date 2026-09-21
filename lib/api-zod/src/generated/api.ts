@@ -4771,6 +4771,8 @@ export const UpdateAdminGiftingIssueParams = zod.object({
   "id": zod.coerce.number().multipleOf(updateAdminGiftingIssuePathIdMultipleOf)
 })
 
+export const updateAdminGiftingIssueBodyQuantityMultipleOf = 1;
+
 export const updateAdminGiftingIssueBodyRecipientNameMax = 200;
 
 export const updateAdminGiftingIssueBodyCityMax = 120;
@@ -4785,6 +4787,7 @@ export const updateAdminGiftingIssueBodyReasonMax = 500;
 
 export const UpdateAdminGiftingIssueBody = zod.object({
   "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']).optional(),
+  "quantity": zod.number().min(1).multipleOf(updateAdminGiftingIssueBodyQuantityMultipleOf).optional(),
   "issueDate": zod.coerce.date().optional(),
   "recipientName": zod.string().max(updateAdminGiftingIssueBodyRecipientNameMax).nullish(),
   "city": zod.string().max(updateAdminGiftingIssueBodyCityMax).nullish(),

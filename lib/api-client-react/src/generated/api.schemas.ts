@@ -2984,6 +2984,8 @@ export type GiftingIssueInput = ({
 
 export interface GiftingIssueUpdate {
   category?: GiftingIssueCategory;
+  /** @minimum 1 */
+  quantity?: number;
   issueDate?: string;
   /**
      * @maxLength 200

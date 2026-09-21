@@ -9,6 +9,8 @@ import type { GiftingIssueCategory } from './giftingIssueCategory';
 
 export interface GiftingIssueUpdate {
   category?: GiftingIssueCategory;
+  /** @minimum 1 */
+  quantity?: number;
   issueDate?: Date;
   /**
      * @maxLength 200

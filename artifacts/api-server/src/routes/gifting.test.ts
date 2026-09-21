@@ -49,6 +49,7 @@ afterAll(async () => {
       and(eq(journalEntriesTable.sourceType, "gifting_issue"), inArray(journalEntriesTable.sourceId, issues.map((issue) => String(issue.id)))),
       and(eq(journalEntriesTable.sourceType, "gifting_issue_batch"), eq(journalEntriesTable.sourceId, `multi-%_${suffix}`)),
       and(eq(journalEntriesTable.sourceType, "gifting_issue_void"), inArray(journalEntriesTable.sourceId, issues.map((issue) => String(issue.id)))),
+      and(eq(journalEntriesTable.sourceType, "gifting_issue_adjustment"), inArray(sql<string>`split_part(${journalEntriesTable.sourceId}, ':', 1)`, issues.map((issue) => String(issue.id)))),
     ));
   if (entries.length) {
     await db.execute(sql`alter table journal_entry_lines disable trigger journal_entry_lines_immutable`);
@@ -125,7 +126,7 @@ describe.sequential("gifting issue operations", () => {
     expect(await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.eventKey, `gifting:short-${suffix}`))).toHaveLength(0);
   });
 
-  it("updates location metadata and safely voids a movement", async () => {
+  it("updates quantity and metadata with inventory and accounting corrections, then safely voids the movement", async () => {
     const created = await request(app).post("/api/admin/gifting-issues")
       .set("Authorization", `Bearer ${token}`)
       .send({
@@ -137,14 +138,32 @@ describe.sequential("gifting issue operations", () => {
 
     const updated = await request(app).patch(`/api/admin/gifting-issues/${created.body.id}`)
       .set("Authorization", `Bearer ${token}`)
-      .send({ recipientName: "مستلم جديد", city: "جدة", country: "السعودية" }).expect(200);
-    expect(updated.body).toMatchObject({ recipientName: "مستلم جديد", city: "جدة", country: "السعودية" });
+      .send({ quantity: 2, recipientName: "مستلم جديد", city: "جدة", country: "السعودية" }).expect(200);
+    expect(updated.body).toMatchObject({
+      quantity: 2,
+      totalCost: "16.00000000",
+      recipientName: "مستلم جديد",
+      city: "جدة",
+      country: "السعودية",
+    });
+    const [afterUpdate] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
+    expect(afterUpdate.stockQuantity).toBe(2);
+    const [adjustment] = await db.select().from(inventoryMovementsTable).where(and(
+      eq(inventoryMovementsTable.sourceType, "gifting_issue_adjustment"),
+      eq(inventoryMovementsTable.sourceId, String(created.body.id)),
+    ));
+    expect(adjustment).toMatchObject({ quantityChange: -1, quantityBefore: 3, quantityAfter: 2, totalCost: "8.0000" });
+    const [adjustmentEntry] = await db.select().from(journalEntriesTable).where(and(
+      eq(journalEntriesTable.sourceType, "gifting_issue_adjustment"),
+      sql`${journalEntriesTable.sourceId} like ${`${created.body.id}:%`}`,
+    ));
+    expect(adjustmentEntry).toMatchObject({ status: "posted" });
 
     const [beforeDelete] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
     await request(app).delete(`/api/admin/gifting-issues/${created.body.id}`)
       .set("Authorization", `Bearer ${token}`).expect(204);
     const [afterDelete] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
-    expect(afterDelete.stockQuantity).toBe(beforeDelete.stockQuantity + 1);
+    expect(afterDelete.stockQuantity).toBe(beforeDelete.stockQuantity + 2);
     expect((await db.select().from(inventoryMovementsTable)
       .where(eq(inventoryMovementsTable.eventKey, `gifting:void:${created.body.id}`)))).toHaveLength(1);
     expect((await db.select().from(journalEntriesTable).where(and(

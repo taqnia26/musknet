@@ -49,7 +49,7 @@ export default function AdminGiftingIssues() {
   const [category, setCategory] = useState<GiftingIssueCategory | undefined>();
   const [selected, setSelected] = useState<number | null>(null);
   const [editing, setEditing] = useState<GiftingIssue | null>(null);
-  const [editForm, setEditForm] = useState({ category: '' as GiftingIssueCategory | '', issueDate: '', recipientName: '', city: '', country: '', occasion: '', reason: '' });
+  const [editForm, setEditForm] = useState({ category: '' as GiftingIssueCategory | '', quantity: '', issueDate: '', recipientName: '', city: '', country: '', occasion: '', reason: '' });
   const [form, setForm] = useState(initialForm);
   const [cityLookupPending, setCityLookupPending] = useState(false);
   const [editCityLookupPending, setEditCityLookupPending] = useState(false);
@@ -173,6 +173,7 @@ export default function AdminGiftingIssues() {
     setEditing(row);
     setEditForm({
       category: row.category,
+      quantity: String(row.quantity),
       issueDate: new Date(row.issueDate).toISOString().slice(0, 10),
       recipientName: row.recipientName ?? '',
       city: row.city ?? '',
@@ -185,8 +186,14 @@ export default function AdminGiftingIssues() {
   const saveEdit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!editing || !editForm.category) return;
+    const quantity = Number(editForm.quantity);
+    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+      toast({ title: t('أدخل كمية موجبة صحيحة', 'Enter a valid positive quantity'), variant: 'destructive' });
+      return;
+    }
     updateMutation.mutate({ id: editing.id, data: {
       category: editForm.category,
+      quantity,
       issueDate: editForm.issueDate,
       recipientName: editForm.recipientName.trim() || null,
       city: editForm.city.trim() || null,
@@ -196,7 +203,10 @@ export default function AdminGiftingIssues() {
     } }, {
       onSuccess: async () => {
         setEditing(null);
-        await queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] }),
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/inventory'] }),
+        ]);
         toast({ title: t('تم تعديل الحركة بنجاح', 'Movement updated successfully') });
       },
       onError: (cause: unknown) => {
@@ -619,6 +629,10 @@ export default function AdminGiftingIssues() {
                 <Input className="mt-1.5" type="date" dir="ltr" value={editForm.issueDate} onChange={(e) => setEditForm((current) => ({ ...current, issueDate: e.target.value }))} />
               </div>
               <div>
+                <Label>{t('الكمية', 'Quantity')}</Label>
+                <Input className="mt-1.5 font-mono" type="number" min="1" step="1" value={editForm.quantity} onChange={(e) => setEditForm((current) => ({ ...current, quantity: e.target.value }))} />
+              </div>
+              <div>
                 <Label>{t('الشخص / المستلم', 'Person / recipient')}</Label>
                 <Input className="mt-1.5" value={editForm.recipientName} onChange={(e) => setEditForm((current) => ({ ...current, recipientName: e.target.value }))} />
               </div>
@@ -640,7 +654,7 @@ export default function AdminGiftingIssues() {
               <Input className="mt-1.5" value={editForm.reason} onChange={(e) => setEditForm((current) => ({ ...current, reason: e.target.value }))} />
             </div>
             <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-              {t('حمايةً للمخزون والحسابات، المنتج والكمية والتكلفة لا تتغير من هذه النافذة.', 'To protect inventory and accounting, product, quantity, and cost cannot be changed here.')}
+              {t('عند تعديل الكمية، يُحدّث المخزون والتكلفة والقيد المحاسبي تلقائيًا. لا يمكن تغيير المنتج من هذه النافذة.', 'Changing the quantity automatically updates inventory, cost, and accounting. The product cannot be changed here.')}
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>{t('إلغاء', 'Cancel')}</Button>

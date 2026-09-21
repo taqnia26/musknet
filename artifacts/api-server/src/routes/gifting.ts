@@ -169,6 +169,7 @@ router.patch("/admin/gifting-issues/:id", permit("inventory", "edit"), async (re
   try {
     const id = Number(req.params.id);
     const category = req.body?.category;
+    const quantity = req.body?.quantity === undefined ? undefined : Number(req.body.quantity);
     const issueDateText = req.body?.issueDate;
     const nullableText = (value: unknown, max: number) => {
       if (value === undefined) return undefined;
@@ -177,11 +178,13 @@ router.patch("/admin/gifting-issues/:id", permit("inventory", "edit"), async (re
       return value.trim() || null;
     };
     if (!Number.isSafeInteger(id) || id <= 0 || (category !== undefined && !newCategories.has(category)) ||
+      (quantity !== undefined && (!Number.isSafeInteger(quantity) || quantity <= 0)) ||
       (issueDateText !== undefined && (typeof issueDateText !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(issueDateText)))) {
       return res.status(400).json({ error: "Invalid movement details" });
     }
     const values = {
       ...(category !== undefined ? { category } : {}),
+      ...(quantity !== undefined ? { quantity } : {}),
       ...(issueDateText !== undefined ? { issueDate: new Date(`${issueDateText}T12:00:00.000Z`) } : {}),
       ...(req.body?.recipientName !== undefined ? { recipientName: nullableText(req.body.recipientName, 200) } : {}),
       ...(req.body?.city !== undefined ? { city: nullableText(req.body.city, 120) } : {}),
@@ -190,8 +193,62 @@ router.patch("/admin/gifting-issues/:id", permit("inventory", "edit"), async (re
       ...(req.body?.reason !== undefined ? { reason: nullableText(req.body.reason, 500), comment: nullableText(req.body.reason, 500) ?? "" } : {}),
     };
     if (!Object.keys(values).length) return res.status(400).json({ error: "At least one field is required" });
-    const [updated] = await db.update(giftingIssuesTable).set(values as any)
-      .where(and(eq(giftingIssuesTable.id, id), isNull(giftingIssuesTable.voidedAt))).returning();
+    if (quantity !== undefined) await ensureStandardAccountingChart();
+    const actorId = res.locals.admin.id as number;
+    const updated = await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from ${giftingIssuesTable} where ${giftingIssuesTable.id} = ${id} for update`);
+      const [issue] = await tx.select().from(giftingIssuesTable)
+        .where(and(eq(giftingIssuesTable.id, id), isNull(giftingIssuesTable.voidedAt))).limit(1);
+      if (!issue) return undefined;
+
+      const quantityDelta = quantity === undefined ? 0 : quantity - issue.quantity;
+      if (quantityDelta !== 0) {
+        const [product] = await tx.select().from(productsTable)
+          .where(eq(productsTable.id, issue.productId)).for("update").limit(1);
+        if (!product) throw Object.assign(new Error("Product not found"), { status: 404 });
+        const stockChange = -quantityDelta;
+        const quantityAfter = product.stockQuantity + stockChange;
+        if (quantityAfter < 0) {
+          throw Object.assign(new Error(`Insufficient stock: ${product.stockQuantity} available`), { status: 409 });
+        }
+        const unitCost = Number(issue.totalCost) / issue.quantity;
+        const adjustmentCost = (Math.abs(quantityDelta) * unitCost).toFixed(4);
+        const totalCost = (quantity! * unitCost).toFixed(8);
+        const adjustmentId = randomUUID();
+
+        await adjustOperationalBalances(tx, product.id, stockChange, unitCost, product.stockQuantity);
+        await tx.update(productsTable).set({ stockQuantity: quantityAfter }).where(eq(productsTable.id, product.id));
+        await tx.insert(inventoryMovementsTable).values({
+          productId: product.id,
+          movementType: stockChange > 0 ? "increase" : "decrease",
+          quantityChange: stockChange,
+          quantityBefore: product.stockQuantity,
+          quantityAfter,
+          reason: `Quantity correction for product movement #${issue.id}`,
+          unitCost: unitCost.toFixed(4),
+          totalCost: adjustmentCost,
+          sourceType: "gifting_issue_adjustment",
+          sourceId: String(issue.id),
+          eventKey: `gifting:adjust:${issue.id}:${adjustmentId}`,
+          performedBy: actorId,
+        });
+        await postJournalEntry({
+          entryDate: new Date().toISOString().slice(0, 10),
+          description: `Quantity correction for product movement #${issue.id}`,
+          createdBy: actorId,
+          sourceType: "gifting_issue_adjustment",
+          sourceId: `${issue.id}:${adjustmentId}`,
+          lines: quantityDelta > 0
+            ? [{ accountCode: "6160", debit: adjustmentCost }, { accountCode: "1140", credit: adjustmentCost }]
+            : [{ accountCode: "1140", debit: adjustmentCost }, { accountCode: "6160", credit: adjustmentCost }],
+        }, tx);
+        (values as any).totalCost = totalCost;
+      }
+
+      const [result] = await tx.update(giftingIssuesTable).set(values as any)
+        .where(eq(giftingIssuesTable.id, id)).returning();
+      return result;
+    });
     if (!updated) return res.status(404).json({ error: "Gifting issue not found" });
     return res.json(updated);
   } catch (error) {

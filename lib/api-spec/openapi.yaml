@@ -4123,6 +4123,7 @@ components:
       minProperties: 1
       properties:
         category: { $ref: "#/components/schemas/GiftingIssueCategory" }
+        quantity: { type: number, multipleOf: 1, minimum: 1 }
         issueDate: { type: string, format: date }
         recipientName: { type: ["string", "null"], maxLength: 200 }
         city: { type: ["string", "null"], maxLength: 120 }
