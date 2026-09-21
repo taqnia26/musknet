@@ -356,7 +356,7 @@ export default function AdminGiftingIssues() {
               </div>
 
               <div>
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('المرسل إليه (اختياري)', 'Recipient (optional)')}</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('الاسم (اختياري)', 'Name (optional)')}</Label>
                 <Input className="h-10" value={form.recipientName} onChange={(e) => setForm(f => ({ ...f, recipientName: e.target.value }))} />
               </div>
 
@@ -377,7 +377,7 @@ export default function AdminGiftingIssues() {
 
               {(form.category === 'DAMAGED' || form.category === 'OTHER') && (
                 <div className="md:col-span-2 lg:col-span-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-destructive mb-1.5 block">{t('سبب الاستخدام (مطلوب)', 'Reason for use (required)')} *</Label>
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-destructive mb-1.5 block">{t('السبب (مطلوب)', 'Reason (required)')} *</Label>
                   <Input
                     className="h-10 border-destructive/40 focus-visible:ring-destructive/30"
                     value={form.reason}
