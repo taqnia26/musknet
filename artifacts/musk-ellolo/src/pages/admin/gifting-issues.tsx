@@ -15,6 +15,7 @@ import type { GiftingIssue, GiftingIssueCategory, GiftingIssueInputCategory } fr
 import { useLanguage } from '@/hooks/use-language';
 import { useToast } from '@/hooks/use-toast';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import { countryForCity } from '@/lib/city-country';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -90,6 +91,24 @@ export default function AdminGiftingIssues() {
 
   const removeLine = (index: number) => {
     setForm(f => ({ ...f, lines: f.lines.filter((_, i) => i !== index) }));
+  };
+
+  const updateCity = (city: string) => {
+    const detectedCountry = countryForCity(city, lang);
+    setForm((current) => ({
+      ...current,
+      city,
+      ...(detectedCountry ? { country: detectedCountry } : {}),
+    }));
+  };
+
+  const updateEditCity = (city: string) => {
+    const detectedCountry = countryForCity(city, lang);
+    setEditForm((current) => ({
+      ...current,
+      city,
+      ...(detectedCountry ? { country: detectedCountry } : {}),
+    }));
   };
 
   const openEdit = (row: GiftingIssue) => {
@@ -285,12 +304,12 @@ export default function AdminGiftingIssues() {
 
               <div>
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('المدينة (اختياري)', 'City (optional)')}</Label>
-                <Input className="h-10" value={form.city} onChange={(e) => setForm(f => ({ ...f, city: e.target.value }))} />
+                <Input className="h-10" value={form.city} onChange={(e) => updateCity(e.target.value)} placeholder={t('مثال: الرياض', 'Example: Riyadh')} />
               </div>
 
               <div>
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('الدولة (اختياري)', 'Country (optional)')}</Label>
-                <Input className="h-10" value={form.country} onChange={(e) => setForm(f => ({ ...f, country: e.target.value }))} />
+                <Input className="h-10" value={form.country} onChange={(e) => setForm(f => ({ ...f, country: e.target.value }))} placeholder={t('تُعبأ تلقائيًا من المدينة', 'Filled automatically from city')} />
               </div>
 
               <div>
@@ -551,11 +570,11 @@ export default function AdminGiftingIssues() {
               </div>
               <div>
                 <Label>{t('المدينة', 'City')}</Label>
-                <Input className="mt-1.5" value={editForm.city} onChange={(e) => setEditForm((current) => ({ ...current, city: e.target.value }))} />
+                <Input className="mt-1.5" value={editForm.city} onChange={(e) => updateEditCity(e.target.value)} placeholder={t('مثال: الرياض', 'Example: Riyadh')} />
               </div>
               <div>
                 <Label>{t('الدولة', 'Country')}</Label>
-                <Input className="mt-1.5" value={editForm.country} onChange={(e) => setEditForm((current) => ({ ...current, country: e.target.value }))} />
+                <Input className="mt-1.5" value={editForm.country} onChange={(e) => setEditForm((current) => ({ ...current, country: e.target.value }))} placeholder={t('تُعبأ تلقائيًا من المدينة', 'Filled automatically from city')} />
               </div>
             </div>
             <div>
