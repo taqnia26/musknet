@@ -20,4 +20,5 @@
 - [Historical shipping scope](historical-shipping-scope.md) — legacy shipments default to domestic because geography was not previously stored; correct exceptions explicitly.
 - [Scrollable flex dialogs](scrollable-flex-dialogs.md) — prefer a native overflow region when Radix ScrollArea expands its viewport to content height inside flex dialogs.
 - [External protocol browser tests](external-protocol-browser-tests.md) — verify computed mailto-style URLs in-page; headless Chromium may not navigate to external protocols.
+- [Object storage abort signals](object-storage-abort-signals.md) — browser automation can report ERR_ABORTED after a signed upload or delete already completed successfully.
 - [Transactional email credentials](transactional-email-credentials.md) — connector setup may not attach; keep a secret-based provider fallback without persisting credentials.

@@ -6,6 +6,7 @@ import { useLanguage } from '@/hooks/use-language';
 import { useTheme } from 'next-themes';
 import {
   LayoutDashboard,
+  ShoppingCart,
   Package,
   Gift,
   Tags,
@@ -66,11 +67,10 @@ export const navStructure = [
     ]
   },
   {
-    labelEn: 'Products', labelAr: 'المنتجات', icon: Package, module: 'products',
+    labelEn: 'Orders', labelAr: 'الطلبات', icon: ShoppingCart,
     children: [
-      { href: '/admin/products', labelEn: 'Manage Products', labelAr: 'إدارة المنتجات' },
-      { href: '/admin/categories', labelEn: 'Categories', labelAr: 'الفئات', module: 'categories' },
-      { href: '/admin/gifting-issues', labelEn: 'Product Movement Log', labelAr: 'سجل حركة المنتجات', module: 'inventory' },
+      { href: '/admin/sales/online', labelEn: 'Individual Orders', labelAr: 'طلبات الأفراد', module: 'orders' },
+      { href: '/admin/sales/companies', labelEn: 'Company Orders', labelAr: 'طلبات الشركات', module: 'invoices' },
     ]
   },
   {
@@ -79,6 +79,14 @@ export const navStructure = [
       { href: '/admin/sales/online', labelEn: 'Individual Sales', labelAr: 'مبيعات الأفراد', module: 'orders' },
       { href: '/admin/sales/companies', labelEn: 'Company Sales', labelAr: 'مبيعات الشركات', module: 'invoices' },
       { href: '/admin/sales/exhibitions', labelEn: 'Exhibition Sales', labelAr: 'مبيعات المعارض', module: 'exhibitions' },
+    ]
+  },
+  {
+    labelEn: 'Products', labelAr: 'المنتجات', icon: Package, module: 'products',
+    children: [
+      { href: '/admin/products', labelEn: 'Manage Products', labelAr: 'إدارة المنتجات' },
+      { href: '/admin/categories', labelEn: 'Categories', labelAr: 'الفئات', module: 'categories' },
+      { href: '/admin/gifting-issues', labelEn: 'Product Movement Log', labelAr: 'سجل حركة المنتجات', module: 'inventory' },
     ]
   },
   {

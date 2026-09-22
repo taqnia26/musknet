@@ -145,6 +145,7 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
     if (!mimeType) return;
 
     setUploading(true);
+    let uploadStage: 'prepare' | 'storage' | 'record' = 'prepare';
     try {
       // 1. Request upload URL
       const { uploadUrl, objectPath } = await requestUpload.mutateAsync({
@@ -156,19 +157,26 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
       });
 
       // 2. Upload file directly to storage
-      const uploadResponse = await fetch(uploadUrl, {
+      uploadStage = 'storage';
+      const putFile = () => fetch(uploadUrl, {
         method: 'PUT',
         body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
+        headers: { 'Content-Type': mimeType },
       });
+      let uploadResponse: Response;
+      try {
+        uploadResponse = await putFile();
+      } catch {
+        // A signed PUT is safe to retry because it replaces the same object path.
+        uploadResponse = await putFile();
+      }
 
       if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file to storage');
+        throw new Error(`تعذر إرسال الملف إلى التخزين (HTTP ${uploadResponse.status})`);
       }
 
       // 3. Create metadata record in DB
+      uploadStage = 'record';
       await createFileRecord.mutateAsync({
         data: {
           ownerType: values.ownerType as UploadedContractFileInputOwnerType,
@@ -188,10 +196,16 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
       form.reset();
       removeFile();
     } catch (error) {
-      console.error(error);
+      console.error('Contract upload failed', { stage: uploadStage, error });
+      const stageLabel = uploadStage === 'prepare'
+        ? 'تعذر تجهيز رابط رفع الملف'
+        : uploadStage === 'storage'
+          ? 'انقطع رفع الملف إلى التخزين'
+          : 'تم رفع الملف لكن تعذر حفظ بيانات العقد';
+      const details = error instanceof Error ? error.message : 'خطأ غير معروف';
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء رفع العقد',
+        title: stageLabel,
+        description: `${details}. حاول مرة أخرى، وإذا تكرر الخطأ تحقق من الاتصال.`,
         variant: 'destructive',
       });
     } finally {
