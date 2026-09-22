@@ -37,6 +37,17 @@ export default function AdminOrders() {
   const { data: orders, isLoading } = useAdminListOrders({ search, status: statusFilter !== 'all' ? statusFilter : undefined });
   const updateMutation = useAdminUpdateOrder();
 
+  const totals = (orders ?? []).reduce((summary, order) => {
+    summary.totalOrders++;
+    if (order.status !== 'cancelled') {
+      summary.totalRevenue += order.total;
+    }
+    if (order.status === 'new' || order.status === 'processing') {
+      summary.pendingOrders++;
+    }
+    return summary;
+  }, { totalOrders: 0, totalRevenue: 0, pendingOrders: 0 });
+
   const { data: orderDetail, isLoading: isDetailLoading, isError: isDetailError } = useAdminGetOrder(
     selectedOrderId as number, 
     { 
@@ -92,17 +103,32 @@ export default function AdminOrders() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('مبيعات الموقع الإلكتروني', 'Online Sales')}</h1>
-          <p className="text-muted-foreground mt-1">{t('متابعة وإدارة طلبات الموقع الإلكتروني', 'Track and manage online orders')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('طلبات الأفراد', 'Individual Orders')}</h1>
+          <p className="text-muted-foreground mt-1">{t('متابعة وإدارة طلبات الأفراد', 'Track and manage individual orders')}</p>
         </div>
         {hasPermission(currentUser, 'orders', 'edit') && <CreateOrderDialog />}
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> {t('إجمالي الطلبات', 'Total Orders')}</p>
+          <p className="mt-2 text-2xl font-bold">{totals.totalOrders}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Truck className="h-4 w-4 text-amber-600" /> {t('طلبات قيد المعالجة', 'Pending Orders')}</p>
+          <p className="mt-2 text-2xl font-bold text-amber-600">{totals.pendingOrders}</p>
+        </div>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Receipt className="h-4 w-4 text-emerald-600" /> {t('إجمالي الإيرادات (المكتملة)', 'Total Revenue (Active)')}</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-600">{totals.totalRevenue.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">SAR</span></p>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row items-center gap-4">
-        <div className="relative flex-1 w-full max-w-sm">
+        <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground rtl:right-2.5 rtl:left-auto" />
           <Input 
-            placeholder={t('رقم الطلب...', 'Search orders...')} 
+            placeholder={t('بحث برقم الطلب، اسم العميل...', 'Search orders...')} 
             className="pl-9 rtl:pr-9 rtl:pl-3" 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -130,9 +156,9 @@ export default function AdminOrders() {
         </div>
       )}
 
-      <div className="border rounded-md bg-card shadow-sm">
-        <Table>
-          <TableHeader>
+      <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
+        <Table className="min-w-[760px]">
+          <TableHeader className="bg-muted/30">
             <TableRow>
               <TableHead>{t('رقم الطلب', 'Order #')}</TableHead>
               <TableHead>{t('التاريخ', 'Date')}</TableHead>
@@ -149,7 +175,7 @@ export default function AdminOrders() {
               <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{t('لا توجد طلبات', 'No orders found')}</TableCell></TableRow>
             ) : (
               orders?.map((order) => (
-                <TableRow key={order.id} data-testid={`row-order-${order.id}`}>
+                <TableRow key={order.id} data-testid={`row-order-${order.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">#{order.orderNumber}</TableCell>
                   <TableCell>{format(new Date(order.createdAt), 'yyyy-MM-dd')}</TableCell>
                   <TableCell className="font-semibold">{order.total.toFixed(2)} {t('ر.س', 'SAR')}</TableCell>

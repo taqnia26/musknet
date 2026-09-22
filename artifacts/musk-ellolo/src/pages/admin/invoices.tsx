@@ -615,24 +615,24 @@ export default function AdminInvoices() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('مبيعات الشركات', 'Company Sales')}</h1>
-          <p className="text-muted-foreground mt-1">{t('فواتير البيع المرتبطة بالشركات والموزعين', 'Sales invoices linked to companies and distributors')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('طلبات الشركات', 'Company Orders')}</h1>
+          <p className="text-muted-foreground mt-1">{t('إدارة فواتير وطلبات الشركات والموزعين', 'Manage company and distributor orders and invoices')}</p>
         </div>
         {hasPermission(currentUser, 'invoices', 'edit') && <CreateDistributorInvoiceDialog />}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">{t('إجمالي الفواتير', 'Total billed')}</p>
-          <p className="mt-1 text-2xl font-bold">{totals.billed.toFixed(2)}</p>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Banknote className="h-4 w-4" /> {t('إجمالي الفواتير', 'Total billed')}</p>
+          <p className="mt-2 text-2xl font-bold">{totals.billed.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">SAR</span></p>
         </div>
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">{t('المحصل', 'Collected')}</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-600">{totals.paid.toFixed(2)}</p>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Banknote className="h-4 w-4 text-emerald-600" /> {t('المحصل', 'Collected')}</p>
+          <p className="mt-2 text-2xl font-bold text-emerald-600">{totals.paid.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">SAR</span></p>
         </div>
-        <div className="rounded-lg border bg-card p-4">
-          <p className="text-sm text-muted-foreground">{t('الرصيد المستحق', 'Outstanding')}</p>
-          <p className="mt-1 text-2xl font-bold text-amber-600">{totals.outstanding.toFixed(2)}</p>
+        <div className="rounded-lg border bg-card p-4 shadow-sm">
+          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><AlertCircle className="h-4 w-4 text-destructive" /> {t('الرصيد المستحق', 'Outstanding')}</p>
+          <p className="mt-2 text-2xl font-bold text-destructive">{totals.outstanding.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">SAR</span></p>
         </div>
       </div>
 
@@ -657,8 +657,8 @@ export default function AdminInvoices() {
         </Select>
       </div>
 
-      <div className="border rounded-md bg-card shadow-sm overflow-hidden">
-        <Table>
+      <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
+        <Table className="min-w-[980px]">
           <TableHeader className="bg-muted/30">
             <TableRow>
               <TableHead>{t('رقم الفاتورة', 'Invoice #')}</TableHead>
