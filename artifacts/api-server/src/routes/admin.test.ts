@@ -13,6 +13,7 @@ import {
   db,
   inventoryBalancesTable,
   inventoryMovementsTable,
+  invoiceEmailDeliveriesTable,
   journalEntriesTable,
   journalEntryLinesTable,
   journalEntryAuditTable,
@@ -27,6 +28,7 @@ import {
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
 import * as accounting from "../lib/accounting";
+import * as invoiceEmail from "../lib/invoice-email";
 import * as Api from "@workspace/api-zod";
 
 const seedEmail = `route-super-${Date.now()}@example.com`;
@@ -168,7 +170,11 @@ afterAll(async () => {
   }
   if (inventoryCreatedProductId) await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, inventoryCreatedProductId));
   if (inventoryCreatedProductId) await db.delete(productsTable).where(eq(productsTable.id, inventoryCreatedProductId));
-  if (orderId) await db.delete(invoicesTable).where(eq(invoicesTable.orderId, orderId));
+  if (orderId) {
+    const invoiceRows = await db.select({ id: invoicesTable.id }).from(invoicesTable).where(eq(invoicesTable.orderId, orderId));
+    if (invoiceRows.length) await db.delete(invoiceEmailDeliveriesTable).where(eq(invoiceEmailDeliveriesTable.invoiceId, invoiceRows[0].id));
+    await db.delete(invoicesTable).where(eq(invoicesTable.orderId, orderId));
+  }
   if (orderId) await db.delete(ordersTable).where(eq(ordersTable.id, orderId));
   if (productId) await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
   if (productId) await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
@@ -461,6 +467,35 @@ describe.sequential("admin route authorization", () => {
       .set("Authorization", `Bearer ${viewerToken}`).expect(403);
     await request(app).get(`/api/admin/invoices/${invoice.id}/qr`)
       .set("Authorization", `Bearer ${viewerToken}`).expect(403);
+  });
+
+  it("persists successful and failed invoice email attempts and returns their history", async () => {
+    const [invoice] = await db.select({ id: invoicesTable.id }).from(invoicesTable).where(eq(invoicesTable.orderId, orderId));
+    const pdf = vi.spyOn(invoiceEmail, "createInvoicePdf").mockResolvedValue(Buffer.from("%PDF-test"));
+    const send = vi.spyOn(invoiceEmail, "sendInvoiceEmail")
+      .mockResolvedValueOnce("provider-message-1")
+      .mockRejectedValueOnce(new Error("provider unavailable"));
+
+    await request(app).post(`/api/admin/invoices/${invoice.id}/email`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({ recipient: "client-success@example.com" })
+      .expect(201);
+    await request(app).post(`/api/admin/invoices/${invoice.id}/email`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({ recipient: "client-retry@example.com" })
+      .expect(502);
+
+    const history = await request(app).get(`/api/admin/invoices/${invoice.id}/email-deliveries`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .expect(200);
+    expect(history.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ recipient: "client-success@example.com", status: "sent", sentByAdminId: superId }),
+      expect.objectContaining({ recipient: "client-retry@example.com", status: "failed", errorMessage: "provider unavailable", sentByAdminId: superId }),
+    ]));
+    expect(pdf).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenCalledTimes(2);
+    pdf.mockRestore();
+    send.mockRestore();
   });
 
   it("rejects an invalid order status", async () => {

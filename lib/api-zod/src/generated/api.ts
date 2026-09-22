@@ -2586,6 +2586,55 @@ export const AdminCreateReceivablePaymentResponse = zod.object({
 
 
 /**
+ * @summary List invoice email delivery attempts
+ */
+export const AdminListInvoiceEmailDeliveriesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminListInvoiceEmailDeliveriesResponseItem = zod.object({
+  "id": zod.number(),
+  "invoiceId": zod.number(),
+  "recipient": zod.string(),
+  "status": zod.enum(['sent', 'failed']),
+  "errorMessage": zod.string().nullable(),
+  "sentByAdminId": zod.number(),
+  "sentByName": zod.string(),
+  "attemptedAt": zod.coerce.date()
+})
+export const AdminListInvoiceEmailDeliveriesResponse = zod.array(AdminListInvoiceEmailDeliveriesResponseItem)
+
+
+/**
+ * @summary Send an invoice PDF by email
+ */
+export const AdminSendInvoiceEmailParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminSendInvoiceEmailBodyRecipientMax = 320;
+
+
+export const adminSendInvoiceEmailBodyRecipientRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+
+export const AdminSendInvoiceEmailBody = zod.object({
+  "recipient": zod.string().max(adminSendInvoiceEmailBodyRecipientMax).regex(adminSendInvoiceEmailBodyRecipientRegExp)
+})
+
+export const AdminSendInvoiceEmailResponse = zod.object({
+  "id": zod.number(),
+  "invoiceId": zod.number(),
+  "recipient": zod.string(),
+  "status": zod.enum(['sent', 'failed']),
+  "errorMessage": zod.string().nullable(),
+  "sentByAdminId": zod.number(),
+  "sentByName": zod.string(),
+  "attemptedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Render an invoice ZATCA QR code as PNG
  */
 export const AdminGetInvoiceQrParams = zod.object({
@@ -6884,5 +6933,3 @@ export const ListInventoryAlertsResponseItem = zod.object({
   "status": zod.enum(['out', 'low', 'ok'])
 })
 export const ListInventoryAlertsResponse = zod.array(ListInventoryAlertsResponseItem)
-
-

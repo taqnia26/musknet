@@ -927,6 +927,42 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: Payment exceeds outstanding balance, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/{id}/email-deliveries:
+    get:
+      operationId: adminListInvoiceEmailDeliveries
+      summary: List invoice email delivery attempts
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200":
+          description: Delivery attempts ordered newest first
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/InvoiceEmailDelivery" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/invoices/{id}/email:
+    post:
+      operationId: adminSendInvoiceEmail
+      summary: Send an invoice PDF by email
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvoiceEmailInput" }
+      responses:
+        "201":
+          description: Invoice email sent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoiceEmailDelivery" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "502": { description: Provider delivery failed and the attempt was logged }
   /admin/invoices/{id}/qr:
     get:
       operationId: adminGetInvoiceQr
@@ -3469,6 +3505,23 @@ components:
         buyerTaxNumber: { type: [string, "null"], maxLength: 30 }
         buyerCommercialRegistrationNumber: { type: [string, "null"], maxLength: 30 }
         buyerAddress: { type: [string, "null"], maxLength: 500 }
+    InvoiceEmailInput:
+      type: object
+      required: [recipient]
+      properties:
+        recipient: { type: string, pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", maxLength: 320 }
+    InvoiceEmailDelivery:
+      type: object
+      required: [id, invoiceId, recipient, status, errorMessage, sentByAdminId, sentByName, attemptedAt]
+      properties:
+        id: { type: number }
+        invoiceId: { type: number }
+        recipient: { type: string }
+        status: { type: string, enum: [sent, failed] }
+        errorMessage: { type: [string, "null"] }
+        sentByAdminId: { type: number }
+        sentByName: { type: string }
+        attemptedAt: { type: string, format: date-time }
     ContractFileUploadRequest:
       type: object
       required: [fileName, mimeType, sizeBytes]

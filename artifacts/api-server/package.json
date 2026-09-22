@@ -17,6 +17,7 @@
     "@whiskeysockets/baileys": "7.0.0-rc14",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@replit/connectors-sdk": "^0.4.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "drizzle-orm": "catalog:",

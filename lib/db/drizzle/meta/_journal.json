@@ -281,6 +281,13 @@
       "when": 1790073712610,
       "tag": "0039_mature_wallow",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1790076982322,
+      "tag": "0040_classy_liz_osborn",
+      "breakpoints": true
     }
   ]
 }

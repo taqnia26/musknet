@@ -43,6 +43,7 @@ export * from "./finance";
 export * from "./manufacturing";
 export * from "./exhibitions";
 export * from "./invoices";
+export * from "./invoice-email-deliveries";
 export * from "./receivable-payments";
 export * from "./accounting";
 export * from "./admin-integrations";

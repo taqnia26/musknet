@@ -167,6 +167,8 @@ import type {
   InventoryTransfer,
   InventoryTransferInput,
   InventoryValuationRow,
+  InvoiceEmailDelivery,
+  InvoiceEmailInput,
   JournalEntry,
   JournalEntryReversalInput,
   LeaveRequest,
@@ -333,10 +335,6 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
 
 
 
@@ -6165,6 +6163,155 @@ export const useAdminCreateReceivablePayment = <TError = ErrorType<BadRequestRes
         TContext
       > => {
       return useMutation(getAdminCreateReceivablePaymentMutationOptions(options));
+    }
+
+export const getAdminListInvoiceEmailDeliveriesUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/invoices/${id}/email-deliveries`
+}
+
+/**
+ * @summary List invoice email delivery attempts
+ */
+export const adminListInvoiceEmailDeliveries = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceEmailDelivery[]> => {
+
+  return customFetch<InvoiceEmailDelivery[]>(getAdminListInvoiceEmailDeliveriesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListInvoiceEmailDeliveriesQueryKey = (id: number,) => {
+    return [
+    `/api/admin/invoices/${id}/email-deliveries`
+    ] as const;
+    }
+
+
+export const getAdminListInvoiceEmailDeliveriesQueryOptions = <TData = Awaited<ReturnType<typeof adminListInvoiceEmailDeliveries>>, TError = ErrorType<ForbiddenResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListInvoiceEmailDeliveries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListInvoiceEmailDeliveriesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListInvoiceEmailDeliveries>>> = ({ signal }) => adminListInvoiceEmailDeliveries(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListInvoiceEmailDeliveries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListInvoiceEmailDeliveriesQueryResult = NonNullable<Awaited<ReturnType<typeof adminListInvoiceEmailDeliveries>>>
+export type AdminListInvoiceEmailDeliveriesQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary List invoice email delivery attempts
+ */
+
+export function useAdminListInvoiceEmailDeliveries<TData = Awaited<ReturnType<typeof adminListInvoiceEmailDeliveries>>, TError = ErrorType<ForbiddenResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListInvoiceEmailDeliveries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListInvoiceEmailDeliveriesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminSendInvoiceEmailUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/invoices/${id}/email`
+}
+
+/**
+ * @summary Send an invoice PDF by email
+ */
+export const adminSendInvoiceEmail = async (id: number,
+    invoiceEmailInput: InvoiceEmailInput, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceEmailDelivery> => {
+
+  return customFetch<InvoiceEmailDelivery>(getAdminSendInvoiceEmailUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invoiceEmailInput)
+  }
+);}
+
+
+
+
+
+export const getAdminSendInvoiceEmailMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendInvoiceEmail>>, TError,{id: number;data: BodyType<InvoiceEmailInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSendInvoiceEmail>>, TError,{id: number;data: BodyType<InvoiceEmailInput>}, TContext> => {
+
+const mutationKey = ['adminSendInvoiceEmail'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSendInvoiceEmail>>, {id: number;data: BodyType<InvoiceEmailInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminSendInvoiceEmail(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSendInvoiceEmailMutationResult = NonNullable<Awaited<ReturnType<typeof adminSendInvoiceEmail>>>
+    export type AdminSendInvoiceEmailMutationBody = BodyType<InvoiceEmailInput>
+    export type AdminSendInvoiceEmailMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | void>
+
+    /**
+ * @summary Send an invoice PDF by email
+ */
+export const useAdminSendInvoiceEmail = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendInvoiceEmail>>, TError,{id: number;data: BodyType<InvoiceEmailInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSendInvoiceEmail>>,
+        TError,
+        {id: number;data: BodyType<InvoiceEmailInput>},
+        TContext
+      > => {
+      return useMutation(getAdminSendInvoiceEmailMutationOptions(options));
     }
 
 export const getAdminGetInvoiceQrUrl = (id: number,) => {
@@ -15426,10 +15573,5 @@ export function useListInventoryAlerts<TData = Awaited<ReturnType<typeof listInv
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
 
 

@@ -5,7 +5,10 @@ import {
   useAdminCreateReceivablePayment,
   useAdminUpdateInvoice,
   useAdminArchiveInvoice,
+  useAdminListInvoiceEmailDeliveries,
+  useAdminSendInvoiceEmail,
   useGetAdminMe,
+  getAdminListInvoiceEmailDeliveriesQueryKey,
   getAdminGetInvoiceQrQueryKey,
   getAdminListInvoicesQueryKey,
   type AdminInvoice 
@@ -356,45 +359,42 @@ function EmailInvoiceDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t, lang } = useLanguage();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const mutation = useAdminSendInvoiceEmail();
+  const { data: deliveries, isLoading: deliveriesLoading } = useAdminListInvoiceEmailDeliveries(
+    invoice?.id as number,
+    { query: {
+      enabled: open && !!invoice,
+      queryKey: invoice ? getAdminListInvoiceEmailDeliveriesQueryKey(invoice.id) : ['invoice-email-deliveries-null'],
+    } },
+  );
 
   useEffect(() => {
     if (open) {
-      setEmail('');
+      setEmail(deliveries?.[0]?.recipient ?? '');
       setError(null);
     }
-  }, [open]);
-
-  const buildDraftHref = () => {
-    if (!invoice) return null;
-    const recipient = email.trim();
-    if (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
-      return null;
-    }
-    const subject = `${t('فاتورة ضريبية', 'Tax Invoice')} - ${invoice.invoiceNumber} - Musk Ellolo`;
-    const body = `${t('مرحباً،', 'Hello,')}
-    
-${t('تجدون أدناه تفاصيل الفاتورة:', 'Below are the invoice details:')}
-${t('رقم الفاتورة:', 'Invoice No:')} ${invoice.invoiceNumber}
-${t('تاريخ الإصدار:', 'Issue Date:')} ${format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}
-${t('الإجمالي:', 'Total:')} ${invoice.totalAmount.toFixed(2)}
-${t('الرصيد المستحق:', 'Amount Due:')} ${invoice.outstandingAmount.toFixed(2)}
-
-${t('مع التحية،', 'Best regards,')}
-Musk Ellolo
-`;
-    return `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  };
+  }, [open, invoice?.id, deliveries?.[0]?.recipient]);
 
   const handleSend = () => {
-    const draftHref = buildDraftHref();
-    if (!draftHref) {
+    if (!invoice || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError(t('أدخل عنوان بريد إلكتروني صالحاً', 'Enter a valid email address'));
       return;
     }
-    window.location.href = draftHref;
-    onOpenChange(false);
+    setError(null);
+    mutation.mutate({ id: invoice.id, data: { recipient: email.trim() } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getAdminListInvoiceEmailDeliveriesQueryKey(invoice.id) });
+        toast({ title: t('تم إرسال الفاتورة بنجاح', 'Invoice sent successfully'), description: email.trim() });
+      },
+      onError: (sendError) => {
+        queryClient.invalidateQueries({ queryKey: getAdminListInvoiceEmailDeliveriesQueryKey(invoice.id) });
+        setError(sendError instanceof Error ? sendError.message : t('تعذر إرسال الفاتورة', 'Unable to send invoice'));
+      },
+    });
   };
 
   return (
@@ -419,12 +419,31 @@ Musk Ellolo
           </div>
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
           <p className="text-sm text-muted-foreground leading-relaxed">
-            {t('سيتم فتح تطبيق البريد الإلكتروني الخاص بك مع رسالة مجهزة تحتوي على تفاصيل الفاتورة الرئيسية.', 'Your default email client will open with a drafted message containing the key invoice details.')}
+            {t('سيُرسل النظام نسخة PDF مطابقة للفاتورة مباشرة إلى المستلم، وسيتم حفظ نتيجة المحاولة.', 'The system will send a matching invoice PDF directly and save the delivery result.')}
           </p>
+          <div className="space-y-2 border-t pt-4">
+            <p className="text-sm font-semibold">{t('سجل الإرسال', 'Delivery history')}</p>
+            {deliveriesLoading ? (
+              <p className="text-sm text-muted-foreground">{t('جاري التحميل...', 'Loading...')}</p>
+            ) : deliveries?.length ? deliveries.slice(0, 5).map((delivery) => (
+              <div key={delivery.id} className="rounded-md border p-2 text-xs">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-medium">{delivery.recipient}</span>
+                  <Badge variant={delivery.status === 'sent' ? 'secondary' : 'destructive'}>
+                    {delivery.status === 'sent' ? t('تم الإرسال', 'Sent') : t('فشل', 'Failed')}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-muted-foreground">{format(new Date(delivery.attemptedAt), 'yyyy-MM-dd HH:mm')} · {delivery.sentByName}</p>
+                {delivery.errorMessage && <p className="mt-1 text-destructive">{delivery.errorMessage}</p>}
+              </div>
+            )) : <p className="text-sm text-muted-foreground">{t('لا توجد محاولات سابقة', 'No previous attempts')}</p>}
+          </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('إلغاء', 'Cancel')}</Button>
-          <Button data-testid="button-draft-invoice-email" data-mailto={buildDraftHref() ?? undefined} onClick={handleSend} disabled={!email.trim()}>{t('تجهيز الرسالة', 'Draft Email')}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={mutation.isPending}>{t('إغلاق', 'Close')}</Button>
+          <Button data-testid="button-send-invoice-email" onClick={handleSend} disabled={!email.trim() || mutation.isPending}>
+            {mutation.isPending ? t('جاري الإرسال...', 'Sending...') : deliveries?.length ? t('إعادة الإرسال', 'Send again') : t('إرسال PDF', 'Send PDF')}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

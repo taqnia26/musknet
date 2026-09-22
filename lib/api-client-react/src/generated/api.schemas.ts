@@ -1607,6 +1607,34 @@ export interface AdminInvoiceUpdate {
   buyerAddress?: string | null;
 }
 
+export interface InvoiceEmailInput {
+  /**
+     * @maxLength 320
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  recipient: string;
+}
+
+export type InvoiceEmailDeliveryStatus = typeof InvoiceEmailDeliveryStatus[keyof typeof InvoiceEmailDeliveryStatus];
+
+
+export const InvoiceEmailDeliveryStatus = {
+  sent: 'sent',
+  failed: 'failed',
+} as const;
+
+export interface InvoiceEmailDelivery {
+  id: number;
+  invoiceId: number;
+  recipient: string;
+  status: InvoiceEmailDeliveryStatus;
+  /** @nullable */
+  errorMessage: string | null;
+  sentByAdminId: number;
+  sentByName: string;
+  attemptedAt: string;
+}
+
 export type ContractFileUploadRequestMimeType = typeof ContractFileUploadRequestMimeType[keyof typeof ContractFileUploadRequestMimeType];
 
 
@@ -4216,4 +4244,3 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
-

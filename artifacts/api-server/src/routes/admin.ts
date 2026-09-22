@@ -27,6 +27,7 @@ import {
   exhibitionProductsTable,
   inventoryMovementsTable,
   invoiceItemsTable,
+  invoiceEmailDeliveriesTable,
   invoicesTable,
   orderAddressesTable,
   orderItemsTable,
@@ -82,6 +83,7 @@ import { ObjectStorageService } from "../lib/object-storage";
 import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
 import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch, ensureDefaultInventoryLocation, listInventoryLocations, lookupInventoryBarcode, listInventoryBalances, transferInventory, sendInventoryTransfer, receiveInventoryTransfer, inventoryValueReport, inventoryCsv, createInventoryPurchaseOrder, receiveInventoryPurchaseOrder, createCycleCount, approveCycleCount, inventoryReorderSuggestions, inventoryMovementReport, inventoryAgingReport, inventoryValuationReport, inventoryAuditReport, inventoryReconciliationReport, adjustOperationalBalances } from "../lib/operations";
 import { createSmsaShippingLabel } from "../lib/shipping-carriers";
+import { createInvoicePdf, sendInvoiceEmail } from "../lib/invoice-email";
 import { assertShippingStatusTransition, canApplyCarrierShippingStatus, ShippingStatusTransitionError } from "../lib/shipping-status";
 
 const router: IRouter = Router();
@@ -1598,6 +1600,59 @@ router.post("/admin/invoices/:id/payments", permit("invoices", "edit"), route(as
       res.status(409).json({ error: error.message }); return;
     }
     throw error;
+  }
+}));
+
+router.get("/admin/invoices/:id/email-deliveries", permit("invoices", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminListInvoiceEmailDeliveriesParams, req.params, res); if (!params) return;
+  const rows = await db.select({
+    id: invoiceEmailDeliveriesTable.id,
+    invoiceId: invoiceEmailDeliveriesTable.invoiceId,
+    recipient: invoiceEmailDeliveriesTable.recipient,
+    status: invoiceEmailDeliveriesTable.status,
+    errorMessage: invoiceEmailDeliveriesTable.errorMessage,
+    sentByAdminId: invoiceEmailDeliveriesTable.sentByAdminId,
+    sentByName: adminUsersTable.name,
+    attemptedAt: invoiceEmailDeliveriesTable.attemptedAt,
+  }).from(invoiceEmailDeliveriesTable)
+    .innerJoin(adminUsersTable, eq(invoiceEmailDeliveriesTable.sentByAdminId, adminUsersTable.id))
+    .where(eq(invoiceEmailDeliveriesTable.invoiceId, params.id))
+    .orderBy(desc(invoiceEmailDeliveriesTable.attemptedAt));
+  res.json(Api.AdminListInvoiceEmailDeliveriesResponse.parse(rows));
+}));
+
+router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminSendInvoiceEmailParams, req.params, res);
+  const body = parse(Api.AdminSendInvoiceEmailBody, req.body, res); if (!params || !body) return;
+  const [invoice] = await db.select({
+    id: invoicesTable.id, invoiceNumber: invoicesTable.invoiceNumber, orderNumber: ordersTable.orderNumber,
+    sellerName: invoicesTable.sellerName, sellerVatNumber: invoicesTable.sellerVatNumber,
+    buyerName: invoicesTable.buyerName, buyerAddress: invoicesTable.buyerAddress,
+    buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
+    issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
+    vatAmount: invoicesTable.vatAmount, totalAmount: invoicesTable.totalAmount, qrCodeData: invoicesTable.qrCodeData,
+  }).from(invoicesTable).leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
+    .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).limit(1);
+  if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
+  const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id)).orderBy(invoiceItemsTable.id);
+  const payments = await db.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoice.id));
+  const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
+  const emailInvoice = { ...invoice, items, paidAmount, outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100) };
+  try {
+    const pdf = await createInvoicePdf(emailInvoice);
+    const providerMessageId = await sendInvoiceEmail({ recipient: body.recipient, invoice: emailInvoice, pdf });
+    const [delivery] = await db.insert(invoiceEmailDeliveriesTable).values({
+      invoiceId: invoice.id, recipient: body.recipient.toLowerCase(), status: "sent", providerMessageId,
+      sentByAdminId: res.locals.admin.id,
+    }).returning();
+    res.status(201).json(Api.AdminSendInvoiceEmailResponse.parse({ ...delivery, sentByName: res.locals.admin.name }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 500) : "Email delivery failed";
+    const [delivery] = await db.insert(invoiceEmailDeliveriesTable).values({
+      invoiceId: invoice.id, recipient: body.recipient.toLowerCase(), status: "failed", errorMessage: message,
+      sentByAdminId: res.locals.admin.id,
+    }).returning();
+    res.status(502).json({ error: message, deliveryId: delivery.id });
   }
 }));
 

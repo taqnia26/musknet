@@ -218,19 +218,37 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await expect(page.getByTestId("invoice-template")).toContainText(updatedAddress);
   await page.getByRole("button", { name: "Close", exact: true }).click();
 
+  await page.route(`**/api/admin/invoices/${invoiceId}/email-deliveries`, async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
+  let sentRecipient = "";
+  await page.route(`**/api/admin/invoices/${invoiceId}/email`, async (route) => {
+    sentRecipient = (route.request().postDataJSON() as { recipient: string }).recipient;
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: 1,
+        invoiceId,
+        recipient: sentRecipient,
+        status: "sent",
+        errorMessage: null,
+        sentByAdminId: 1,
+        sentByName: "Admin",
+        attemptedAt: new Date().toISOString(),
+      }),
+    });
+  });
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText(/إرسال بالبريد|Email Invoice/, { exact: true }).click();
   await page.getByTestId("invoice-email-recipient").fill("not-an-email");
-  await page.getByTestId("button-draft-invoice-email").click();
+  await page.getByTestId("button-send-invoice-email").click();
   await expect(page.getByRole("alert")).toContainText(/عنوان بريد إلكتروني صالح|valid email address/);
   await page.getByTestId("invoice-email-recipient").fill("client@example.com");
-  const mailto = decodeURIComponent((await page.getByTestId("button-draft-invoice-email").getAttribute("data-mailto")) ?? "");
-  expect(mailto).toContain("client@example.com");
-  expect(mailto).toContain(invoiceNumber);
-  expect(mailto.toLowerCase()).not.toContain("attachment");
-  expect(mailto).not.toContain("مرفق");
-  await page.getByTestId("button-draft-invoice-email").click();
-  await expect(page.getByTestId("invoice-email-recipient")).toHaveCount(0);
+  await page.getByTestId("button-send-invoice-email").click();
+  await expect(page.getByText(/تم إرسال الفاتورة بنجاح|Invoice sent successfully/)).toBeVisible();
+  expect(sentRecipient).toBe("client@example.com");
+  await page.getByRole("button", { name: /إغلاق|Close/, exact: true }).click();
 
   await page.goto("/admin/sales/companies");
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
