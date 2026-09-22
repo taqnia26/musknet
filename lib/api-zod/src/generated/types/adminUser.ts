@@ -10,6 +10,10 @@ export interface AdminUser {
   id: number;
   email: string;
   name: string;
+  /** @nullable */
+  jobTitle: string | null;
+  /** @nullable */
+  phone: string | null;
   isSuperAdmin: boolean;
   isActive: boolean;
   permissions: string[];

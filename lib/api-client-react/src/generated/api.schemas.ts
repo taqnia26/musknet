@@ -649,6 +649,10 @@ export interface AdminUser {
   id: number;
   email: string;
   name: string;
+  /** @nullable */
+  jobTitle: string | null;
+  /** @nullable */
+  phone: string | null;
   isSuperAdmin: boolean;
   isActive: boolean;
   permissions: string[];
@@ -1578,6 +1582,31 @@ export interface DistributorInvoiceInput {
   items: DistributorInvoiceLineInput[];
 }
 
+export interface AdminInvoiceUpdate {
+  /** @nullable */
+  dueDate?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  buyerName?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  buyerTaxNumber?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  buyerCommercialRegistrationNumber?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  buyerAddress?: string | null;
+}
+
 export type ReceivablePaymentInputPaymentMethod = typeof ReceivablePaymentInputPaymentMethod[keyof typeof ReceivablePaymentInputPaymentMethod];
 
 
@@ -2202,6 +2231,8 @@ export interface AdminInventoryProductInput {
   nameAr: string;
   /** @minLength 1 */
   nameEn: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
   /** @minLength 1 */
   sku: string;
   /** @nullable */
@@ -2307,6 +2338,10 @@ export interface AdminStaffInput {
   email: string;
   /** @minLength 1 */
   name: string;
+  /** @minLength 1 */
+  jobTitle: string;
+  /** @minLength 1 */
+  phone: string;
   /** @minLength 8 */
   password: string;
   isActive?: boolean;
@@ -2318,6 +2353,10 @@ export interface AdminStaffUpdate {
   email?: string;
   /** @minLength 1 */
   name?: string;
+  /** @minLength 1 */
+  jobTitle?: string;
+  /** @minLength 1 */
+  phone?: string;
   /** @minLength 8 */
   password?: string;
   isActive?: boolean;

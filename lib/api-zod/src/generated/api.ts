@@ -589,6 +589,8 @@ export const AdminLoginResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
+  "jobTitle": zod.string().nullable(),
+  "phone": zod.string().nullable(),
   "isSuperAdmin": zod.boolean(),
   "isActive": zod.boolean(),
   "permissions": zod.array(zod.string()),
@@ -725,6 +727,8 @@ export const GetAdminMeResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
+  "jobTitle": zod.string().nullable(),
+  "phone": zod.string().nullable(),
   "isSuperAdmin": zod.boolean(),
   "isActive": zod.boolean(),
   "permissions": zod.array(zod.string()),
@@ -2426,6 +2430,44 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
 
 
 /**
+ * @summary Update editable buyer and due-date details on an issued invoice
+ */
+export const AdminUpdateInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminUpdateInvoiceBodyBuyerNameMax = 200;
+
+export const adminUpdateInvoiceBodyBuyerTaxNumberMax = 30;
+
+export const adminUpdateInvoiceBodyBuyerCommercialRegistrationNumberMax = 30;
+
+export const adminUpdateInvoiceBodyBuyerAddressMax = 500;
+
+
+
+export const AdminUpdateInvoiceBody = zod.object({
+  "dueDate": zod.coerce.date().nullish(),
+  "buyerName": zod.string().max(adminUpdateInvoiceBodyBuyerNameMax).nullish(),
+  "buyerTaxNumber": zod.string().max(adminUpdateInvoiceBodyBuyerTaxNumberMax).nullish(),
+  "buyerCommercialRegistrationNumber": zod.string().max(adminUpdateInvoiceBodyBuyerCommercialRegistrationNumberMax).nullish(),
+  "buyerAddress": zod.string().max(adminUpdateInvoiceBodyBuyerAddressMax).nullish()
+})
+
+export const AdminUpdateInvoiceResponse = zod.void()
+
+
+/**
+ * @summary Archive an invoice without deleting its accounting history
+ */
+export const AdminArchiveInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminArchiveInvoiceResponse = zod.void()
+
+
+/**
  * @summary Record a partial or full company invoice payment
  */
 export const AdminCreateReceivablePaymentParams = zod.object({
@@ -3123,7 +3165,8 @@ export const AdminListInventoryResponse = zod.object({
 
 
 
-
+export const adminCreateInventoryProductBodyDescriptionArDefault = ``;
+export const adminCreateInventoryProductBodyDescriptionEnDefault = ``;
 export const adminCreateInventoryProductBodyOperationalTypeDefault = `finished_good`;
 export const adminCreateInventoryProductBodyUnitOfMeasureDefault = `unit`;
 export const adminCreateInventoryProductBodySellableDefault = true;
@@ -3147,6 +3190,8 @@ export const adminCreateInventoryProductBodyTargetStockQuantityMultipleOf = 1;
 export const AdminCreateInventoryProductBody = zod.object({
   "nameAr": zod.string().min(1),
   "nameEn": zod.string().min(1),
+  "descriptionAr": zod.string().default(adminCreateInventoryProductBodyDescriptionArDefault),
+  "descriptionEn": zod.string().default(adminCreateInventoryProductBodyDescriptionEnDefault),
   "sku": zod.string().min(1),
   "barcode": zod.string().nullish(),
   "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']).default(adminCreateInventoryProductBodyOperationalTypeDefault),
@@ -3449,6 +3494,8 @@ export const AdminListStaffResponseItem = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
+  "jobTitle": zod.string().nullable(),
+  "phone": zod.string().nullable(),
   "isSuperAdmin": zod.boolean(),
   "isActive": zod.boolean(),
   "permissions": zod.array(zod.string()),
@@ -3459,6 +3506,8 @@ export const AdminListStaffResponse = zod.array(AdminListStaffResponseItem)
 
 
 
+
+
 export const adminCreateStaffBodyPasswordMin = 8;
 
 
@@ -3466,6 +3515,8 @@ export const adminCreateStaffBodyPasswordMin = 8;
 export const AdminCreateStaffBody = zod.object({
   "email": zod.string(),
   "name": zod.string().min(1),
+  "jobTitle": zod.string().min(1),
+  "phone": zod.string().min(1),
   "password": zod.string().min(adminCreateStaffBodyPasswordMin),
   "isActive": zod.boolean().optional(),
   "isSuperAdmin": zod.boolean().optional(),
@@ -3476,6 +3527,8 @@ export const AdminCreateStaffResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
+  "jobTitle": zod.string().nullable(),
+  "phone": zod.string().nullable(),
   "isSuperAdmin": zod.boolean(),
   "isActive": zod.boolean(),
   "permissions": zod.array(zod.string()),
@@ -3489,6 +3542,8 @@ export const AdminUpdateStaffParams = zod.object({
 })
 
 
+
+
 export const adminUpdateStaffBodyPasswordMin = 8;
 
 
@@ -3496,6 +3551,8 @@ export const adminUpdateStaffBodyPasswordMin = 8;
 export const AdminUpdateStaffBody = zod.object({
   "email": zod.string().optional(),
   "name": zod.string().min(1).optional(),
+  "jobTitle": zod.string().min(1).optional(),
+  "phone": zod.string().min(1).optional(),
   "password": zod.string().min(adminUpdateStaffBodyPasswordMin).optional(),
   "isActive": zod.boolean().optional(),
   "isSuperAdmin": zod.boolean().optional()
@@ -3505,6 +3562,8 @@ export const AdminUpdateStaffResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
+  "jobTitle": zod.string().nullable(),
+  "phone": zod.string().nullable(),
   "isSuperAdmin": zod.boolean(),
   "isActive": zod.boolean(),
   "permissions": zod.array(zod.string()),
@@ -3541,6 +3600,8 @@ export const AdminSetStaffPermissionsResponse = zod.object({
   "id": zod.number(),
   "email": zod.string(),
   "name": zod.string(),
+  "jobTitle": zod.string().nullable(),
+  "phone": zod.string().nullable(),
   "isSuperAdmin": zod.boolean(),
   "isActive": zod.boolean(),
   "permissions": zod.array(zod.string()),

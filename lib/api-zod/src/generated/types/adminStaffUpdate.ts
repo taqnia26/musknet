@@ -10,6 +10,10 @@ export interface AdminStaffUpdate {
   email?: string;
   /** @minLength 1 */
   name?: string;
+  /** @minLength 1 */
+  jobTitle?: string;
+  /** @minLength 1 */
+  phone?: string;
   /** @minLength 8 */
   password?: string;
   isActive?: boolean;

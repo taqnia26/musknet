@@ -134,11 +134,11 @@ export default function AdminDashboard() {
 
       {/* Header section matching reference */}
       <div className="flex flex-col sm:flex-row items-start justify-between gap-4 mb-2">
-        <div className="flex flex-col gap-1">
-          <div className="text-xs font-bold text-foreground uppercase tracking-wider">{t('نظرة عامة', 'Overview')}</div>
-          <h1 className="text-[15px] font-medium text-muted-foreground">
+        <div>
+          <h1>{t('نظرة عامة', 'Overview')}</h1>
+          <p className="text-muted-foreground">
             {t('مرحباً بك، إليك ملخص أداء مسك اللولو', 'Welcome, here is a summary of Musk Ellolo performance')}
-          </h1>
+          </p>
         </div>
 
         <div className="flex items-center gap-2">

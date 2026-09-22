@@ -6,6 +6,8 @@ export const adminUsersTable = pgTable("admin_users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull(),
   name: text("name").notNull(),
+  jobTitle: text("job_title"),
+  phone: text("phone"),
   passwordHash: text("password_hash").notNull(),
   isSuperAdmin: boolean("is_super_admin").notNull().default(false),
   isActive: boolean("is_active").notNull().default(true),

@@ -71,6 +71,7 @@ export * from './adminInventorySummary';
 export * from './adminInvoice';
 export * from './adminInvoiceItem';
 export * from './adminInvoicePaymentStatus';
+export * from './adminInvoiceUpdate';
 export * from './adminJournalEntry';
 export * from './adminListCategoriesParams';
 export * from './adminListContractsParams';

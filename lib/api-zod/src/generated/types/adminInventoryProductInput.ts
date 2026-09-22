@@ -12,6 +12,8 @@ export interface AdminInventoryProductInput {
   nameAr: string;
   /** @minLength 1 */
   nameEn: string;
+  descriptionAr?: string;
+  descriptionEn?: string;
   /** @minLength 1 */
   sku: string;
   /** @nullable */

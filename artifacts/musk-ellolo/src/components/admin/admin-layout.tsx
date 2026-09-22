@@ -63,7 +63,7 @@ export const navStructure = [
     labelEn: 'Dashboard', labelAr: 'لوحة المتابعة', icon: LayoutDashboard, module: 'dashboard',
     children: [
       { href: '/admin', labelEn: 'Overview', labelAr: 'نظرة عامة' },
-      { href: '/admin/revenue-analytics', labelEn: 'Detailed Revenue Dashboard', labelAr: 'لوحة الإيرادات التفصيلية' },
+      { href: '/admin/revenue-analytics', labelEn: 'Detailed Revenue Dashboard', labelAr: 'لوحة الإيرادات التفصيلية', module: 'revenue' },
     ]
   },
   {
@@ -81,7 +81,7 @@ export const navStructure = [
       { href: '/admin/customers/companies', labelEn: 'Companies', labelAr: 'الشركات', module: 'distributors' },
     ]
   },
-  { href: '/admin/influencers', icon: UserCog, labelEn: 'Influencers', labelAr: 'المشاهير', module: 'dashboard', direct: true },
+  { href: '/admin/influencers', icon: UserCog, labelEn: 'Influencers', labelAr: 'المشاهير', module: 'influencers', direct: true },
   {
     labelEn: 'HR', labelAr: 'شؤون الموظفين', icon: Briefcase, module: 'hr',
     children: [
@@ -105,19 +105,19 @@ export const navStructure = [
     ]
   },
   {
-    labelEn: 'Customer Service', labelAr: 'خدمة العملاء', icon: MessageCircle, module: 'dashboard',
+    labelEn: 'Customer Service', labelAr: 'خدمة العملاء', icon: MessageCircle, module: 'customer-service',
     children: [
       { href: '/admin/whatsapp/inbox', labelEn: 'Customer Service WhatsApp', labelAr: 'واتساب خدمة العملاء' },
       { href: '/admin/whatsapp/templates', labelEn: 'Templates', labelAr: 'القوالب' },
       { href: '/admin/whatsapp/settings', labelEn: 'General Administration WhatsApp', labelAr: 'واتساب الإدارة العامة' },
     ]
   },
-  { href: '/admin/chatbot', icon: MessageCircle, labelEn: 'Chatbot', labelAr: 'الشات بوت', module: 'dashboard', direct: true },
+  { href: '/admin/chatbot', icon: MessageCircle, labelEn: 'Chatbot', labelAr: 'الشات بوت', module: 'chatbot', direct: true },
   {
-    labelEn: 'Shipping', labelAr: 'الشحن', icon: Truck,
+    labelEn: 'Shipping', labelAr: 'الشحن', icon: Truck, module: 'shipping',
     children: [
-      { href: '/admin/shipping/online', labelEn: 'Online Shipments', labelAr: 'شحنات الموقع الإلكتروني', module: 'orders' },
-      { href: '/admin/shipping/b2b', labelEn: 'B2B Shipments', labelAr: 'شحنات B2B', module: 'invoices' },
+      { href: '/admin/shipping/online', labelEn: 'Online Shipments', labelAr: 'شحنات الموقع الإلكتروني' },
+      { href: '/admin/shipping/b2b', labelEn: 'B2B Shipments', labelAr: 'شحنات B2B' },
     ]
   },
   {
@@ -164,7 +164,7 @@ export const navStructure = [
     ]
   },
   {
-    labelEn: 'Integrations', labelAr: 'التكاملات', icon: Network, module: 'dashboard',
+    labelEn: 'Integrations', labelAr: 'التكاملات', icon: Network, module: 'integrations',
     children: [
       { href: '/admin/integrations', labelEn: 'Integrations Shell', labelAr: 'واجهة التكاملات' },
     ]

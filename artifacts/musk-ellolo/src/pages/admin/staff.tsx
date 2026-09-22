@@ -20,6 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 
 const staffSchema = z.object({
   name: z.string().min(1),
+  jobTitle: z.string().min(1),
+  phone: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8).optional().or(z.literal('')),
   isSuperAdmin: z.boolean().default(false),
@@ -29,20 +31,29 @@ const staffSchema = z.object({
 
 const permissionModuleLabels: Record<string, { ar: string; en: string }> = {
   dashboard: { ar: 'لوحة القيادة', en: 'Dashboard' },
+  revenue: { ar: 'لوحة الإيرادات التفصيلية', en: 'Detailed Revenue' },
   products: { ar: 'المنتجات', en: 'Products' },
   categories: { ar: 'الأقسام', en: 'Categories' },
   orders: { ar: 'الطلبات', en: 'Orders' },
   invoices: { ar: 'الفواتير', en: 'Invoices' },
   coupons: { ar: 'الكوبونات', en: 'Coupons' },
+  campaigns: { ar: 'الحملات التسويقية', en: 'Marketing Campaigns' },
   customers: { ar: 'العملاء', en: 'Customers' },
   inventory: { ar: 'المخزون', en: 'Inventory' },
-  distributors: { ar: 'الموزعين', en: 'Distributors' },
+  distributors: { ar: 'B2B — الشركات والكتالوج', en: 'B2B — Companies & Catalog' },
   staff: { ar: 'فريق العمل', en: 'Staff' },
   hr: { ar: 'الموارد البشرية', en: 'Human Resources' },
   finance: { ar: 'المالية', en: 'Finance' },
   accounting: { ar: 'المحاسبة', en: 'Accounting' },
   manufacturing: { ar: 'التصنيع', en: 'Manufacturing' },
   exhibitions: { ar: 'المعارض', en: 'Exhibitions' },
+  contracts: { ar: 'B2B — العقود', en: 'B2B — Contracts' },
+  'site-content': { ar: 'واجهة المتجر', en: 'Storefront' },
+  influencers: { ar: 'المشاهير', en: 'Influencers' },
+  'customer-service': { ar: 'خدمة العملاء', en: 'Customer Service' },
+  chatbot: { ar: 'الشات بوت', en: 'Chatbot' },
+  shipping: { ar: 'الشحن', en: 'Shipping' },
+  integrations: { ar: 'التكاملات', en: 'Integrations' },
 };
 
 const permissionActionLabels: Record<string, { ar: string; en: string }> = {
@@ -83,7 +94,7 @@ export default function AdminStaff() {
 
   const form = useForm<z.infer<typeof staffSchema>>({
     resolver: zodResolver(staffSchema),
-    defaultValues: { name: '', email: '', password: '', isSuperAdmin: false, isActive: true, permissionIds: [] }
+    defaultValues: { name: '', jobTitle: '', phone: '', email: '', password: '', isSuperAdmin: false, isActive: true, permissionIds: [] }
   });
 
   const onSubmit = (data: z.infer<typeof staffSchema>) => {
@@ -139,6 +150,8 @@ export default function AdminStaff() {
 
     form.reset({
       name: user.name,
+      jobTitle: user.jobTitle || '',
+      phone: user.phone || '',
       email: user.email,
       password: '',
       isSuperAdmin: user.isSuperAdmin,
@@ -203,6 +216,14 @@ export default function AdminStaff() {
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem><FormLabel>{t('الاسم', 'Name')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField control={form.control} name="jobTitle" render={({ field }) => (
+                    <FormItem><FormLabel>{t('المسمى الوظيفي', 'Job Title')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="phone" render={({ field }) => (
+                    <FormItem><FormLabel>{t('رقم الجوال', 'Mobile Number')}</FormLabel><FormControl><Input {...field} type="tel" dir="ltr" /></FormControl><FormMessage /></FormItem>
+                  )} />
+                </div>
                 <FormField control={form.control} name="email" render={({ field }) => (
                   <FormItem><FormLabel>{t('البريد الإلكتروني', 'Email')}</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                 )} />
@@ -316,6 +337,8 @@ export default function AdminStaff() {
             <TableRow>
               <TableHead>{t('الاسم', 'Name')}</TableHead>
               <TableHead>{t('البريد الإلكتروني', 'Email')}</TableHead>
+              <TableHead>{t('المسمى الوظيفي', 'Job Title')}</TableHead>
+              <TableHead>{t('رقم الجوال', 'Mobile')}</TableHead>
               <TableHead>{t('الدور', 'Role')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>
               <TableHead className="w-[100px]"></TableHead>
@@ -323,14 +346,16 @@ export default function AdminStaff() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : filteredStaff?.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{t('لا يوجد مستخدمين', 'No users found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t('لا يوجد مستخدمين', 'No users found')}</TableCell></TableRow>
             ) : (
               filteredStaff?.map((user) => (
                 <TableRow key={user.id} data-testid={`row-staff-${user.id}`}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.jobTitle || '—'}</TableCell>
+                  <TableCell dir="ltr">{user.phone || '—'}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className={user.isSuperAdmin ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"}>
                       {user.isSuperAdmin ? t('مدير عام', 'Super Admin') : t('مستخدم', 'User')}

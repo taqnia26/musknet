@@ -24,6 +24,8 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   vatAmount: doublePrecision("vat_amount").notNull(),
   totalAmount: doublePrecision("total_amount").notNull(),
   qrCodeData: text("qr_code_data").notNull(),
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  archivedByAdminId: integer("archived_by_admin_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("invoices_order_id_unique").on(table.orderId),

@@ -856,6 +856,28 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Distributor or product is unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/{id}:
+    patch:
+      operationId: adminUpdateInvoice
+      summary: Update editable buyer and due-date details on an issued invoice
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInvoiceUpdate" } } } }
+      responses:
+        "204": { description: Invoice updated }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: adminArchiveInvoice
+      summary: Archive an invoice without deleting its accounting history
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "204": { description: Invoice archived }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /admin/invoices/{id}/payments:
     post:
       operationId: adminCreateReceivablePayment
@@ -2792,11 +2814,13 @@ components:
         createdAt: { type: string, format: date-time }
     AdminUser:
       type: object
-      required: [id, email, name, isSuperAdmin, isActive, permissions, createdAt]
+      required: [id, email, name, jobTitle, phone, isSuperAdmin, isActive, permissions, createdAt]
       properties:
         id: { type: number }
         email: { type: string }
         name: { type: string }
+        jobTitle: { type: [string, "null"] }
+        phone: { type: [string, "null"] }
         isSuperAdmin: { type: boolean }
         isActive: { type: boolean }
         permissions: { type: array, items: { type: string } }
@@ -3394,6 +3418,14 @@ components:
           minItems: 1
           maxItems: 100
           items: { $ref: "#/components/schemas/DistributorInvoiceLineInput" }
+    AdminInvoiceUpdate:
+      type: object
+      properties:
+        dueDate: { type: [string, "null"], format: date }
+        buyerName: { type: [string, "null"], maxLength: 200 }
+        buyerTaxNumber: { type: [string, "null"], maxLength: 30 }
+        buyerCommercialRegistrationNumber: { type: [string, "null"], maxLength: 30 }
+        buyerAddress: { type: [string, "null"], maxLength: 500 }
     ReceivablePaymentInput:
       type: object
       required: [paymentKey, paymentDate, amount, paymentMethod]
@@ -3775,6 +3807,8 @@ components:
       properties:
         nameAr: { type: string, minLength: 1 }
         nameEn: { type: string, minLength: 1 }
+        descriptionAr: { type: string, default: "" }
+        descriptionEn: { type: string, default: "" }
         sku: { type: string, minLength: 1 }
         barcode: { type: [string, "null"] }
         operationalType: { type: string, enum: [finished_good, raw_material, packaging], default: finished_good }
@@ -3853,10 +3887,12 @@ components:
       allOf: [{ $ref: "#/components/schemas/AdminDistributorInput" }]
     AdminStaffInput:
       type: object
-      required: [email, name, password]
+      required: [email, name, jobTitle, phone, password]
       properties:
         email: { type: string }
         name: { type: string, minLength: 1 }
+        jobTitle: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 1 }
         password: { type: string, minLength: 8 }
         isActive: { type: boolean }
         isSuperAdmin: { type: boolean }
@@ -3866,6 +3902,8 @@ components:
       properties:
         email: { type: string }
         name: { type: string, minLength: 1 }
+        jobTitle: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 1 }
         password: { type: string, minLength: 8 }
         isActive: { type: boolean }
         isSuperAdmin: { type: boolean }

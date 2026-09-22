@@ -10,7 +10,11 @@ import {
 } from "@workspace/db";
 
 const scrypt = promisify(nodeScrypt);
-const modules = ["dashboard", "products", "categories", "orders", "invoices", "coupons", "campaigns", "customers", "inventory", "distributors", "staff", "hr", "finance", "manufacturing", "exhibitions", "contracts", "site-content", "influencers"];
+const modules = [
+  "dashboard", "revenue", "products", "categories", "orders", "invoices", "coupons", "campaigns",
+  "customers", "inventory", "distributors", "staff", "hr", "finance", "manufacturing", "exhibitions",
+  "contracts", "site-content", "influencers", "customer-service", "chatbot", "shipping", "integrations",
+];
 const actions = ["view", "edit", "delete"];
 const permissionSpecs = [
   ...modules.flatMap((module) => actions.map((action) => ({ module, action }))),
@@ -78,7 +82,7 @@ export async function permissionsFor(userId: number, superAdmin: boolean) {
 
 export async function publicAdmin(user: typeof adminUsersTable.$inferSelect) {
   return {
-    id: user.id, email: user.email, name: user.name, isSuperAdmin: user.isSuperAdmin,
+    id: user.id, email: user.email, name: user.name, jobTitle: user.jobTitle, phone: user.phone, isSuperAdmin: user.isSuperAdmin,
     isActive: user.isActive, permissions: await permissionsFor(user.id, user.isSuperAdmin),
     lastLoginAt: user.lastLoginAt, createdAt: user.createdAt,
   };

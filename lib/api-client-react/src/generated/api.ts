@@ -56,6 +56,7 @@ import type {
   AdminInventoryOverview,
   AdminInventoryProductInput,
   AdminInvoice,
+  AdminInvoiceUpdate,
   AdminJournalEntry,
   AdminListCategoriesParams,
   AdminListContractsParams,
@@ -5608,6 +5609,149 @@ export const useAdminCreateDistributorInvoice = <TError = ErrorType<BadRequestRe
         TContext
       > => {
       return useMutation(getAdminCreateDistributorInvoiceMutationOptions(options));
+    }
+
+export const getAdminUpdateInvoiceUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/invoices/${id}`
+}
+
+/**
+ * @summary Update editable buyer and due-date details on an issued invoice
+ */
+export const adminUpdateInvoice = async (id: number,
+    adminInvoiceUpdate: AdminInvoiceUpdate, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminUpdateInvoiceUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminInvoiceUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateInvoiceMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInvoice>>, TError,{id: number;data: BodyType<AdminInvoiceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInvoice>>, TError,{id: number;data: BodyType<AdminInvoiceUpdate>}, TContext> => {
+
+const mutationKey = ['adminUpdateInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateInvoice>>, {id: number;data: BodyType<AdminInvoiceUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminUpdateInvoice(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateInvoice>>>
+    export type AdminUpdateInvoiceMutationBody = BodyType<AdminInvoiceUpdate>
+    export type AdminUpdateInvoiceMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Update editable buyer and due-date details on an issued invoice
+ */
+export const useAdminUpdateInvoice = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInvoice>>, TError,{id: number;data: BodyType<AdminInvoiceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateInvoice>>,
+        TError,
+        {id: number;data: BodyType<AdminInvoiceUpdate>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateInvoiceMutationOptions(options));
+    }
+
+export const getAdminArchiveInvoiceUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/invoices/${id}`
+}
+
+/**
+ * @summary Archive an invoice without deleting its accounting history
+ */
+export const adminArchiveInvoice = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminArchiveInvoiceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminArchiveInvoiceMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminArchiveInvoice>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminArchiveInvoice>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminArchiveInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminArchiveInvoice>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminArchiveInvoice(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminArchiveInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adminArchiveInvoice>>>
+
+    export type AdminArchiveInvoiceMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+    /**
+ * @summary Archive an invoice without deleting its accounting history
+ */
+export const useAdminArchiveInvoice = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminArchiveInvoice>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminArchiveInvoice>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminArchiveInvoiceMutationOptions(options));
     }
 
 export const getAdminCreateReceivablePaymentUrl = (id: number,) => {

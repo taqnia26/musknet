@@ -390,7 +390,8 @@ html.dark.admin-route {
     letter-spacing: -0.015em;
   }
 
-  .admin-theme main h1 + p {
+  .admin-theme main h1 + p,
+  .admin-theme main header > p {
     margin-top: 0.25rem !important;
     font-size: 0.875rem !important;
     line-height: 1.375rem !important;

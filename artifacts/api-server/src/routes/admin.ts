@@ -658,7 +658,7 @@ router.get("/admin/analytics/dashboard", permit("dashboard", "view"), route(asyn
   }));
 }));
 
-router.get("/admin/analytics/revenue", permit("dashboard", "view"), route(async (req, res) => {
+router.get("/admin/analytics/revenue", permit("revenue", "view"), route(async (req, res) => {
   const rawRangeDays = Array.isArray(req.query.rangeDays) ? req.query.rangeDays[0] : req.query.rangeDays;
   const query = parse(Api.GetAdminRevenueAnalyticsQueryParams, {
     ...req.query,
@@ -1020,11 +1020,11 @@ router.get("/admin/analytics/revenue", permit("dashboard", "view"), route(async 
   }));
 }));
 
-router.get("/admin/integrations", superOnly, route(async (_req, res) => {
+router.get("/admin/integrations", permit("integrations", "view"), route(async (_req, res) => {
   const rows = await db.select().from(adminIntegrationsTable).orderBy(adminIntegrationsTable.providerId);
   res.json(Api.AdminListIntegrationsResponse.parse(rows));
 }));
-router.put("/admin/integrations/:providerId", superOnly, route(async (req, res) => {
+router.put("/admin/integrations/:providerId", permit("integrations", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminConfigureIntegrationParams, req.params, res);
   const body = parse(Api.AdminConfigureIntegrationBody, req.body, res);
   if (!params || !body) return;
@@ -1063,7 +1063,7 @@ router.put("/admin/integrations/:providerId", superOnly, route(async (req, res) 
   }).returning();
   res.json(Api.AdminConfigureIntegrationResponse.parse(row));
 }));
-router.delete("/admin/integrations/:providerId", superOnly, route(async (req, res) => {
+router.delete("/admin/integrations/:providerId", permit("integrations", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDisconnectIntegrationParams, req.params, res);
   if (!params) return;
   if (!integrationProviderIds.has(params.providerId)) {
@@ -1405,6 +1405,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
   }).from(invoicesTable)
     .leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
     .where(and(
+      isNull(invoicesTable.archivedAt),
       query.channel === "companies" ? sql`${invoicesTable.distributorId} is not null` : undefined,
       search ? or(
         ilike(invoicesTable.invoiceNumber, `%${search}%`),
@@ -1455,6 +1456,33 @@ router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res
   }
 }));
 
+router.patch("/admin/invoices/:id", permit("invoices", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateInvoiceParams, req.params, res);
+  const body = parse(Api.AdminUpdateInvoiceBody, req.body, res); if (!params || !body) return;
+  const clean = (value: string | null | undefined) => value === undefined ? undefined : value?.trim() || null;
+  const [updated] = await db.update(invoicesTable).set({
+    ...(body.dueDate !== undefined ? {
+      dueDate: body.dueDate instanceof Date ? body.dueDate.toISOString().slice(0, 10) : body.dueDate,
+    } : {}),
+    ...(body.buyerName !== undefined ? { buyerName: clean(body.buyerName) } : {}),
+    ...(body.buyerTaxNumber !== undefined ? { buyerTaxNumber: clean(body.buyerTaxNumber) } : {}),
+    ...(body.buyerCommercialRegistrationNumber !== undefined ? { buyerCommercialRegistrationNumber: clean(body.buyerCommercialRegistrationNumber) } : {}),
+    ...(body.buyerAddress !== undefined ? { buyerAddress: clean(body.buyerAddress) } : {}),
+  }).where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).returning({ id: invoicesTable.id });
+  if (!updated) { res.status(404).json({ error: "Invoice not found" }); return; }
+  res.sendStatus(204);
+}));
+
+router.delete("/admin/invoices/:id", permit("invoices", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminArchiveInvoiceParams, req.params, res); if (!params) return;
+  const [archived] = await db.update(invoicesTable).set({
+    archivedAt: new Date(),
+    archivedByAdminId: res.locals.admin.id,
+  }).where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).returning({ id: invoicesTable.id });
+  if (!archived) { res.status(404).json({ error: "Invoice not found" }); return; }
+  res.sendStatus(204);
+}));
+
 router.post("/admin/invoices/:id/payments", permit("invoices", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminCreateReceivablePaymentParams, req.params, res);
   const body = parse(Api.AdminCreateReceivablePaymentBody, req.body, res); if (!params || !body) return;
@@ -1488,7 +1516,7 @@ router.get("/admin/invoices/:id/qr", permit("invoices", "view"), route(async (re
   res.type("image/png").send(png);
 }));
 
-router.get("/admin/shipping", route(async (req, res) => {
+router.get("/admin/shipping", permit("shipping", "view"), route(async (req, res) => {
   const query = parse(Api.GetAdminShippingDashboardQueryParams, {
     ...req.query,
     status: req.query.status ?? "all",
@@ -1559,7 +1587,7 @@ router.get("/admin/shipping", route(async (req, res) => {
   }));
 }));
 
-router.post("/admin/shipping", route(async (req, res) => {
+router.post("/admin/shipping", permit("shipping", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateShipmentBody, req.body, res); if (!body) return;
   if (!Number.isInteger(body.sourceId) || body.sourceId < 1
     || (body.actualCost != null && body.actualCost < 0)
@@ -1588,7 +1616,7 @@ router.post("/admin/shipping", route(async (req, res) => {
   res.status(201).json(Api.AdminCreateShipmentResponse.parse(publicShipment(row)));
 }));
 
-router.patch("/admin/shipping/:id", route(async (req, res) => {
+router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateShipmentParams, req.params, res);
   const body = parse(Api.AdminUpdateShipmentBody, req.body, res); if (!params || !body) return;
   if ((body.actualCost != null && body.actualCost < 0)
@@ -1624,7 +1652,7 @@ router.patch("/admin/shipping/:id", route(async (req, res) => {
   res.json(Api.AdminUpdateShipmentResponse.parse(publicShipment(row)));
 }));
 
-router.post("/admin/shipping/:id/label", route(async (req, res) => {
+router.post("/admin/shipping/:id/label", permit("shipping", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminCreateShippingLabelParams, req.params, res);
   const body = parse(Api.AdminCreateShippingLabelBody, req.body, res);
   if (!params || !body) return;
@@ -2457,7 +2485,9 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
   const item = await db.transaction(async (tx) => {
     const slugBase = body.sku.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `product-${Date.now()}`;
     const [created] = await tx.insert(productsTable).values({
-      nameAr: body.nameAr.trim(), nameEn: body.nameEn.trim(), sku: body.sku.trim(),
+      nameAr: body.nameAr.trim(), nameEn: body.nameEn.trim(),
+      descriptionAr: (body.descriptionAr ?? "").trim(), descriptionEn: (body.descriptionEn ?? "").trim(),
+      sku: body.sku.trim(),
       barcode: body.barcode ?? null, operationalType: body.operationalType ?? "finished_good", unitOfMeasure: body.unitOfMeasure ?? "unit", preferredSupplier: body.preferredSupplier ?? null, sellable: body.sellable ?? true,
       slug: `${slugBase}-${randomBytes(3).toString("hex")}`, categoryId: body.categoryId, price: body.price,
       stockQuantity: body.openingQuantity, averageCost: (body.openingUnitCost ?? 0).toFixed(4),
@@ -3242,7 +3272,12 @@ router.post("/admin/staff", superOnly, route(async (req, res) => {
   const body = parse(Api.AdminCreateStaffBody, req.body, res); if (!body) return;
   const { password, permissionIds = [], ...values } = body;
   const [row] = await db.insert(adminUsersTable).values({
-    ...values, email: values.email.trim().toLowerCase(), passwordHash: await hashAdminPassword(password),
+    ...values,
+    email: values.email.trim().toLowerCase(),
+    name: values.name.trim(),
+    jobTitle: values.jobTitle.trim(),
+    phone: values.phone.trim(),
+    passwordHash: await hashAdminPassword(password),
   }).returning();
   if (permissionIds.length && !row.isSuperAdmin) {
     await db.insert(adminUserPermissionsTable).values(permissionIds.map((permissionId) => ({ adminUserId: row.id, permissionId })));
@@ -3268,6 +3303,9 @@ router.patch("/admin/staff/:id", superOnly, route(async (req, res) => {
   const update = {
     ...values,
     ...(values.email ? { email: values.email.trim().toLowerCase() } : {}),
+    ...(values.name ? { name: values.name.trim() } : {}),
+    ...(values.jobTitle ? { jobTitle: values.jobTitle.trim() } : {}),
+    ...(values.phone ? { phone: values.phone.trim() } : {}),
     ...(password ? { passwordHash: await hashAdminPassword(password) } : {}),
   };
   const [row] = await db.update(adminUsersTable).set(update).where(eq(adminUsersTable.id, params.id)).returning();
