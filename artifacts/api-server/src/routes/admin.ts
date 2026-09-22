@@ -2232,6 +2232,61 @@ router.get("/admin/inventory/cycle-counts/:id", permit("inventory", "view"), rou
   const lines = await db.select().from(inventoryCycleCountLinesTable).where(eq(inventoryCycleCountLinesTable.cycleCountId, id));
   res.json({ ...row, lines });
 }));
+router.patch("/admin/inventory/cycle-counts/:id", permit("inventory", "edit"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  const locationId = Number(req.body?.locationId);
+  const lines = Array.isArray(req.body?.lines) ? req.body.lines.map((line: any) => ({
+    productId: Number(line?.productId),
+    countedQuantity: Number(line?.countedQuantity),
+  })) : [];
+  if (!Number.isSafeInteger(id) || id < 1 || !Number.isSafeInteger(locationId) || locationId < 1 ||
+    !lines.length || lines.some((line: { productId: number; countedQuantity: number }) =>
+      !Number.isSafeInteger(line.productId) || line.productId < 1 ||
+      !Number.isSafeInteger(line.countedQuantity) || line.countedQuantity < 0) ||
+    new Set(lines.map((line: { productId: number }) => line.productId)).size !== lines.length) {
+    res.status(400).json({ error: "Valid location and unique counted product lines are required" }); return;
+  }
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [countRow] = await tx.select().from(inventoryCycleCountsTable)
+        .where(eq(inventoryCycleCountsTable.id, id)).for("update").limit(1);
+      if (!countRow) throw Object.assign(new Error("Cycle count not found"), { status: 404 });
+      if (countRow.status !== "draft") throw Object.assign(new Error("Only draft cycle counts can be edited"), { status: 409 });
+      const [location] = await tx.select().from(inventoryLocationsTable)
+        .where(and(eq(inventoryLocationsTable.id, locationId), eq(inventoryLocationsTable.active, true))).limit(1);
+      if (!location) throw Object.assign(new Error("Inventory location not found"), { status: 400 });
+      const products = await tx.select({ id: productsTable.id }).from(productsTable)
+        .where(inArray(productsTable.id, lines.map((line: { productId: number }) => line.productId)));
+      if (products.length !== lines.length) throw Object.assign(new Error("One or more products were not found"), { status: 400 });
+      await tx.delete(inventoryCycleCountLinesTable).where(eq(inventoryCycleCountLinesTable.cycleCountId, id));
+      const createdLines = [];
+      for (const line of lines) {
+        const [balance] = await tx.select().from(inventoryBalancesTable)
+          .where(and(eq(inventoryBalancesTable.productId, line.productId), eq(inventoryBalancesTable.locationId, locationId))).limit(1);
+        const [created] = await tx.insert(inventoryCycleCountLinesTable).values({
+          cycleCountId: id, productId: line.productId,
+          expectedQuantity: balance?.available ?? 0, countedQuantity: line.countedQuantity,
+          unitCost: balance?.averageCost ?? "0",
+        }).returning();
+        createdLines.push(created);
+      }
+      const [updated] = await tx.update(inventoryCycleCountsTable).set({ locationId })
+        .where(eq(inventoryCycleCountsTable.id, id)).returning();
+      return { ...updated, lines: createdLines };
+    });
+    res.json(result);
+  } catch (error) {
+    const status = typeof (error as any)?.status === "number" ? (error as any).status : 409;
+    res.status(status).json({ error: error instanceof Error ? error.message : "Cycle count update failed" });
+  }
+}));
+router.delete("/admin/inventory/cycle-counts/:id", permit("inventory", "delete"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  const [deleted] = await db.delete(inventoryCycleCountsTable)
+    .where(and(eq(inventoryCycleCountsTable.id, id), eq(inventoryCycleCountsTable.status, "draft"))).returning({ id: inventoryCycleCountsTable.id });
+  if (!deleted) { res.status(409).json({ error: "Only draft cycle counts can be deleted" }); return; }
+  res.sendStatus(204);
+}));
 router.post("/admin/inventory/cycle-counts/:id/review", permit("inventory", "edit"), route(async (_req, res) => {
   const [row] = await db.update(inventoryCycleCountsTable).set({ status: "review" }).where(and(eq(inventoryCycleCountsTable.id, Number(_req.params.id)), eq(inventoryCycleCountsTable.status, "draft"))).returning();
   if (!row) { res.status(404).json({ error: "Draft cycle count not found" }); return; }

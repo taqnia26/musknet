@@ -793,7 +793,7 @@ export async function approveCycleCount(countId: number, actorId: number) {
       if (delta) await tx.insert(inventoryMovementsTable).values({ productId: l.productId, movementType: "adjustment", quantityChange: delta, quantityBefore: before, quantityAfter: l.countedQuantity, unitCost: l.unitCost, totalCost: money(Math.abs(delta) * Number(l.unitCost)), reason: `Cycle count ${count.id}`, sourceType: "cycle_count", sourceId: String(count.id), eventKey: `cycle-count:${count.id}:${l.id}`, performedBy: actorId });
     }
     const variance = lines.reduce((n, l) => n + (l.countedQuantity - l.expectedQuantity) * Number(l.unitCost), 0);
-    if (variance !== 0) await postJournalEntry({ entryDate: new Date().toISOString().slice(0, 10), description: `Cycle count ${count.id} variance`, createdBy: actorId, sourceType: "cycle_count", sourceId: String(count.id), lines: variance > 0 ? [{ accountCode: "1140", debit: variance }, { accountCode: "4900", credit: variance }] : [{ accountCode: "5100", debit: -variance }, { accountCode: "1140", credit: -variance }] }, tx);
+    if (variance !== 0) await postJournalEntry({ entryDate: new Date().toISOString().slice(0, 10), description: `Cycle count ${count.id} variance`, createdBy: actorId, sourceType: "cycle_count", sourceId: String(count.id), lines: variance > 0 ? [{ accountCode: "1140", debit: variance }, { accountCode: "5100", credit: variance }] : [{ accountCode: "5100", debit: -variance }, { accountCode: "1140", credit: -variance }] }, tx);
     const [updated] = await tx.update(inventoryCycleCountsTable).set({ status: "approved", approvedBy: actorId, approvedAt: new Date() }).where(eq(inventoryCycleCountsTable.id, countId)).returning();
     return { ...updated, lines };
   });

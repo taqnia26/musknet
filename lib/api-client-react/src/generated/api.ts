@@ -13900,6 +13900,208 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getCreateInventoryCycleCountMutationOptions(options));
     }
 
+export const getGetInventoryCycleCountUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/inventory/cycle-counts/${id}`
+}
+
+export const getInventoryCycleCount = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<InventoryCycleCount> => {
+
+  return customFetch<InventoryCycleCount>(getGetInventoryCycleCountUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInventoryCycleCountQueryKey = (id: number,) => {
+    return [
+    `/api/admin/inventory/cycle-counts/${id}`
+    ] as const;
+    }
+
+
+export const getGetInventoryCycleCountQueryOptions = <TData = Awaited<ReturnType<typeof getInventoryCycleCount>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInventoryCycleCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInventoryCycleCountQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInventoryCycleCount>>> = ({ signal }) => getInventoryCycleCount(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInventoryCycleCount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInventoryCycleCountQueryResult = NonNullable<Awaited<ReturnType<typeof getInventoryCycleCount>>>
+export type GetInventoryCycleCountQueryError = ErrorType<unknown>
+
+
+
+export function useGetInventoryCycleCount<TData = Awaited<ReturnType<typeof getInventoryCycleCount>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInventoryCycleCount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInventoryCycleCountQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateInventoryCycleCountUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/inventory/cycle-counts/${id}`
+}
+
+export const updateInventoryCycleCount = async (id: number,
+    inventoryCycleCountInput: InventoryCycleCountInput, options?: Parameters<typeof customFetch>[1]): Promise<InventoryCycleCount> => {
+
+  return customFetch<InventoryCycleCount>(getUpdateInventoryCycleCountUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inventoryCycleCountInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateInventoryCycleCountMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInventoryCycleCount>>, TError,{id: number;data: BodyType<InventoryCycleCountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInventoryCycleCount>>, TError,{id: number;data: BodyType<InventoryCycleCountInput>}, TContext> => {
+
+const mutationKey = ['updateInventoryCycleCount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInventoryCycleCount>>, {id: number;data: BodyType<InventoryCycleCountInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInventoryCycleCount(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInventoryCycleCountMutationResult = NonNullable<Awaited<ReturnType<typeof updateInventoryCycleCount>>>
+    export type UpdateInventoryCycleCountMutationBody = BodyType<InventoryCycleCountInput>
+    export type UpdateInventoryCycleCountMutationError = ErrorType<unknown>
+
+    export const useUpdateInventoryCycleCount = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInventoryCycleCount>>, TError,{id: number;data: BodyType<InventoryCycleCountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInventoryCycleCount>>,
+        TError,
+        {id: number;data: BodyType<InventoryCycleCountInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateInventoryCycleCountMutationOptions(options));
+    }
+
+export const getDeleteInventoryCycleCountUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/inventory/cycle-counts/${id}`
+}
+
+export const deleteInventoryCycleCount = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteInventoryCycleCountUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteInventoryCycleCountMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInventoryCycleCount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInventoryCycleCount>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteInventoryCycleCount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInventoryCycleCount>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteInventoryCycleCount(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInventoryCycleCountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInventoryCycleCount>>>
+
+    export type DeleteInventoryCycleCountMutationError = ErrorType<unknown>
+
+    export const useDeleteInventoryCycleCount = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInventoryCycleCount>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInventoryCycleCount>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteInventoryCycleCountMutationOptions(options));
+    }
+
 export const getReviewInventoryCycleCountUrl = (id: number,) => {
 
 

@@ -16,12 +16,21 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListDistributorsQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 
+const normalizePhone = (value: string) => value
+  .trim()
+  .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+  .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+  .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
+
 const distributorSchema = z.object({
   companyName: z.string().min(1),
   contactName: z.string().min(1),
-  phone: z.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, {
-    message: 'رقم الهاتف غير صالح. استخدم 8-15 رقماً (مثال: ‎+966 50 123 4567) / Invalid phone. Use 8-15 digits (e.g. +966 50 123 4567).',
-  }),
+  phone: z.preprocess(
+    (value) => normalizePhone(String(value ?? '')),
+    z.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, {
+      message: 'رقم الهاتف غير صالح. استخدم 8-15 رقماً (مثال: ‎+966 50 123 4567) / Invalid phone. Use 8-15 digits (e.g. +966 50 123 4567).',
+    }),
+  ),
   email: z.union([z.string().email(), z.literal('')]).nullable().optional(),
   city: z.string().nullable().optional(),
   address: z.string().nullable().optional(),
@@ -77,7 +86,7 @@ export default function AdminDistributors() {
       ...data,
       companyName: data.companyName.trim(),
       contactName: data.contactName.trim(),
-      phone: data.phone.trim(),
+      phone: normalizePhone(data.phone),
       email: normalizeOptional(data.email),
       city: normalizeOptional(data.city),
       address: normalizeOptional(data.address),
@@ -155,11 +164,22 @@ export default function AdminDistributors() {
             </DialogHeader>
             <Form {...form}>
               <form
-                onSubmit={form.handleSubmit(onSubmit, () => toast({
-                  title: t('تعذر الحفظ', 'Could not save'),
-                  description: t('راجع الحقول المعلّمة وصحح البيانات المطلوبة', 'Review the marked fields and correct the required information'),
-                  variant: 'destructive',
-                }))}
+                onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                  const labels: Record<string, string> = {
+                    companyName: t('اسم الشركة', 'Company name'),
+                    contactName: t('اسم المسؤول', 'Contact name'),
+                    phone: t('رقم الهاتف', 'Phone'),
+                    email: t('البريد الإلكتروني', 'Email'),
+                  };
+                  const firstError = Object.entries(errors)[0];
+                  toast({
+                    title: t('تعذر الحفظ', 'Could not save'),
+                    description: firstError
+                      ? `${labels[firstError[0]] ?? firstError[0]}: ${String(firstError[1]?.message ?? t('قيمة غير صالحة', 'Invalid value'))}`
+                      : t('راجع الحقول المعلّمة وصحح البيانات المطلوبة', 'Review the marked fields and correct the required information'),
+                    variant: 'destructive',
+                  });
+                })}
                 className="space-y-4"
               >
                 <div className="grid grid-cols-2 gap-4">

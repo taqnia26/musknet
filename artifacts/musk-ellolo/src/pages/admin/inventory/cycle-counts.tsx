@@ -1,12 +1,13 @@
 import { useLanguage } from '@/hooks/use-language';
 import { sortProductsForSelection } from '@/lib/product-sort';
-import { useListInventoryCycleCounts, useCreateInventoryCycleCount, useReviewInventoryCycleCount, useApproveInventoryCycleCount, useListInventoryLocations, useAdminListInventory } from '@workspace/api-client-react';
+import { useListInventoryCycleCounts, useCreateInventoryCycleCount, useUpdateInventoryCycleCount, useDeleteInventoryCycleCount, useReviewInventoryCycleCount, useApproveInventoryCycleCount, useListInventoryLocations, useAdminListInventory } from '@workspace/api-client-react';
+import type { InventoryCycleCount } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, Plus } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ClipboardCheck, Mail, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,26 +30,83 @@ export default function AdminInventoryCounts() {
     [inventory, lang],
   );
   const createMutation = useCreateInventoryCycleCount();
+  const updateMutation = useUpdateInventoryCycleCount();
+  const deleteMutation = useDeleteInventoryCycleCount();
   const reviewMutation = useReviewInventoryCycleCount();
   const approveMutation = useApproveInventoryCycleCount();
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<InventoryCycleCount | null>(null);
+  const [locationId, setLocationId] = useState('');
   const [lines, setLines] = useState([{ productId: '', countedQuantity: '' }]);
+
+  const closeDialog = () => {
+    setOpen(false);
+    setEditing(null);
+    setLocationId('');
+    setLines([{ productId: '', countedQuantity: '' }]);
+  };
+
+  const openNew = () => {
+    setEditing(null);
+    setLocationId(locations[0] ? String(locations[0].id) : '');
+    setLines([{ productId: '', countedQuantity: '' }]);
+    setOpen(true);
+  };
+
+  const openEdit = (count: InventoryCycleCount) => {
+    setEditing(count);
+    setLocationId(String(count.locationId));
+    setLines(count.lines.map((line) => ({ productId: String(line.productId), countedQuantity: String(line.countedQuantity) })));
+    setOpen(true);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    createMutation.mutate({
-      data: {
-        locationId: Number(fd.get('locationId')),
-         lines: lines.map((line) => ({ productId: Number(line.productId), countedQuantity: Number(line.countedQuantity) }))
-      }
-    }, {
+    const data = {
+      locationId: Number(locationId),
+      lines: lines.map((line) => ({ productId: Number(line.productId), countedQuantity: Number(line.countedQuantity) })),
+    };
+    const options = {
       onSuccess: () => {
-        toast({ title: t('تم تسجيل الجرد', 'Count recorded') });
-        setOpen(false);
+        toast({ title: editing ? t('تم تعديل الجرد', 'Count updated') : t('تم تسجيل الجرد', 'Count recorded') });
+        closeDialog();
         queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() });
-      }
+      },
+      onError: (error: Error) => toast({ title: t('تعذر حفظ الجرد', 'Could not save count'), description: error.message, variant: 'destructive' }),
+    };
+    if (editing) updateMutation.mutate({ id: editing.id, data }, options);
+    else createMutation.mutate({ data }, options);
+  };
+
+  const removeCount = (count: InventoryCycleCount) => {
+    if (!window.confirm(t('سيتم حذف مسودة الجرد نهائيًا. هل تريد المتابعة؟', 'This draft count will be permanently deleted. Continue?'))) return;
+    deleteMutation.mutate({ id: count.id }, {
+      onSuccess: () => {
+        toast({ title: t('تم حذف مسودة الجرد', 'Draft count deleted') });
+        queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() });
+      },
+      onError: (error) => toast({ title: t('تعذر حذف الجرد', 'Could not delete count'), description: error.message, variant: 'destructive' }),
     });
+  };
+
+  const productLabel = (productId: number) => {
+    const product = items.find((item) => item.id === productId);
+    return product ? `${product.sku || product.id} · ${lang === 'ar' ? product.nameAr : product.nameEn}` : `#${productId}`;
+  };
+
+  const printCount = (count: InventoryCycleCount) => {
+    const location = locations.find((entry) => entry.id === count.locationId);
+    const rows = count.lines.map((line) => `<tr><td>${productLabel(line.productId)}</td><td>${line.expectedQuantity}</td><td>${line.countedQuantity}</td><td>${line.countedQuantity - line.expectedQuantity}</td></tr>`).join('');
+    const popup = window.open('', '_blank', 'width=900,height=700');
+    if (!popup) return;
+    popup.document.write(`<!doctype html><html lang="${lang}" dir="${lang === 'ar' ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${t('جرد المخزون', 'Inventory Count')} #${count.id}</title><style>body{font-family:Arial,sans-serif;padding:32px;color:#111}h1{margin:0 0 8px}p{color:#555}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #ccc;padding:10px;text-align:center}th{background:#f3f3f3}</style></head><body><h1>${t('الجرد الدوري للمخزون', 'Inventory Cycle Count')} #${count.id}</h1><p>${t('الموقع', 'Location')}: ${location?.name ?? count.locationId} · ${t('الحالة', 'Status')}: ${count.status}</p><table><thead><tr><th>${t('الصنف', 'Item')}</th><th>${t('المتوقع', 'Expected')}</th><th>${t('الفعلي', 'Counted')}</th><th>${t('الفرق', 'Variance')}</th></tr></thead><tbody>${rows}</tbody></table><script>window.onload=()=>window.print()</script></body></html>`);
+    popup.document.close();
+  };
+
+  const emailCount = (count: InventoryCycleCount) => {
+    const subject = t(`تقرير الجرد رقم ${count.id}`, `Inventory count report #${count.id}`);
+    const body = count.lines.map((line) => `${productLabel(line.productId)}: ${line.countedQuantity} (${line.countedQuantity - line.expectedQuantity >= 0 ? '+' : ''}${line.countedQuantity - line.expectedQuantity})`).join('\n');
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
 
   return (
@@ -58,21 +116,19 @@ export default function AdminInventoryCounts() {
           <ClipboardCheck className="w-5 h-5 text-primary" />
           {t('الجرد الدوري للمخزون', 'Inventory Cycle Counts')}
         </h2>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="w-4 h-4 me-2" />
-              {t('جرد جديد', 'New Count')}
-            </Button>
-          </DialogTrigger>
+        <Button size="sm" onClick={openNew}>
+          <Plus className="w-4 h-4 me-2" />
+          {t('جرد جديد', 'New Count')}
+        </Button>
+        <Dialog open={open} onOpenChange={(next) => next ? setOpen(true) : closeDialog()}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t('تسجيل جرد فعلي', 'Record Physical Count')}</DialogTitle>
+              <DialogTitle>{editing ? t('تعديل مسودة الجرد', 'Edit Cycle Count Draft') : t('تسجيل جرد فعلي', 'Record Physical Count')}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label>{t('موقع الجرد (ID)', 'Location ID')}</Label>
-                <Select name="locationId" defaultValue={locations[0] ? String(locations[0].id) : undefined}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر الموقع', 'Select location')} /></SelectTrigger><SelectContent>{locations.map((location) => <SelectItem key={location.id} value={String(location.id)}>{location.code} · {location.name}</SelectItem>)}</SelectContent></Select>
+                <Select value={locationId} onValueChange={setLocationId}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر الموقع', 'Select location')} /></SelectTrigger><SelectContent>{locations.map((location) => <SelectItem key={location.id} value={String(location.id)}>{location.code} · {location.name}</SelectItem>)}</SelectContent></Select>
               </div>
               <div className="border p-4 rounded-lg bg-muted/20">
                 <h4 className="text-sm font-medium mb-3">{t('صنف الجرد', 'Counted Item')}</h4>
@@ -90,8 +146,8 @@ export default function AdminInventoryCounts() {
                 <Button type="button" variant="outline" onClick={() => setLines((current) => [...current, { productId: '', countedQuantity: '' }])}>{t('إضافة سطر', 'Add line')}</Button>
               </div>
               <div className="flex justify-end pt-2">
-                <Button type="submit" disabled={createMutation.isPending}>
-                  {t('إرسال للمراجعة', 'Submit for Review')}
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  {editing ? t('حفظ التعديلات', 'Save Changes') : t('حفظ كمسودة', 'Save Draft')}
                 </Button>
               </div>
             </form>
@@ -136,9 +192,15 @@ export default function AdminInventoryCounts() {
                         {count.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-wrap items-center justify-center gap-1">
                       {count.status === 'draft' && <Button variant="ghost" size="sm" disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر إرسال الجرد', 'Could not submit count'), description: error.message, variant: 'destructive' }) })}>{t('مراجعة', 'Review')}</Button>}
                       {count.status === 'review' && <Button variant="ghost" size="sm" disabled={approveMutation.isPending} onClick={() => approveMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر اعتماد الجرد', 'Could not approve count'), description: error.message, variant: 'destructive' }) })}>{t('اعتماد', 'Approve')}</Button>}
+                      <Button variant="ghost" size="icon" title={t('طباعة', 'Print')} onClick={() => printCount(count)}><Printer className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" title={t('إرسال بالبريد', 'Send by email')} onClick={() => emailCount(count)}><Mail className="h-4 w-4" /></Button>
+                      {count.status === 'draft' && <Button variant="ghost" size="icon" title={t('تعديل', 'Edit')} onClick={() => openEdit(count)}><Pencil className="h-4 w-4" /></Button>}
+                      {count.status === 'draft' && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title={t('حذف', 'Delete')} disabled={deleteMutation.isPending} onClick={() => removeCount(count)}><Trash2 className="h-4 w-4" /></Button>}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -43,6 +43,14 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { GuidedTour } from '@/components/guided-tour/guided-tour';
 import { getAdminNavTourKey, getAdminTourSteps } from '@/components/guided-tour/tour-definitions';
 import { ADMIN_TOUR_STORAGE_KEY } from '@/components/guided-tour/tour-state';
@@ -367,29 +375,29 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <div className="hidden lg:flex items-center gap-3">
+          <div className="hidden min-w-[150px] flex-col items-center justify-center gap-0.5 lg:flex">
             <img
               src="/site-assets/musk-ellolo-mark-black.png"
               alt=""
-              className="h-11 w-11 shrink-0 object-contain dark:hidden"
+              className="h-9 w-9 shrink-0 object-contain dark:hidden"
             />
             <img
               src="/site-assets/musk-ellolo-mark-white.png"
               alt=""
-              className="hidden h-11 w-11 shrink-0 object-contain dark:block"
+              className="hidden h-9 w-9 shrink-0 object-contain dark:block"
             />
-            <span className="truncate text-[15px] font-semibold tracking-wide text-foreground/90">{t('نظام إدارة مسك اللولو', 'Musk Ellolo System')}</span>
+            <span className="whitespace-nowrap text-center text-[11px] font-semibold leading-tight tracking-wide text-foreground/90">{t('نظام إدارة مسك اللولو', 'Musk Ellolo System')}</span>
           </div>
         </div>
 
         {/* Center: Logo */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
-          <img src="/site-assets/musk-ellolo-wordmark-black.png" alt="Musk Ellolo" className="w-[230px] object-contain dark:hidden" />
-          <img src="/site-assets/musk-ellolo-wordmark-white.png" alt="Musk Ellolo" className="hidden w-[230px] object-contain dark:block" />
+          <img src="/site-assets/musk-ellolo-wordmark-black.png" alt="Musk Ellolo" className="w-[184px] object-contain dark:hidden" />
+          <img src="/site-assets/musk-ellolo-wordmark-white.png" alt="Musk Ellolo" className="hidden w-[184px] object-contain dark:block" />
         </div>
         <div className="flex-1 flex justify-center sm:hidden pointer-events-none mx-2">
-          <img src="/site-assets/musk-ellolo-wordmark-black.png" alt="Musk Ellolo" className="w-[145px] object-contain dark:hidden" />
-          <img src="/site-assets/musk-ellolo-wordmark-white.png" alt="Musk Ellolo" className="hidden w-[145px] object-contain dark:block" />
+          <img src="/site-assets/musk-ellolo-wordmark-black.png" alt="Musk Ellolo" className="w-[116px] object-contain dark:hidden" />
+          <img src="/site-assets/musk-ellolo-wordmark-white.png" alt="Musk Ellolo" className="hidden w-[116px] object-contain dark:block" />
         </div>
 
         {/* Left side (RTL end): Date & User Actions */}
@@ -447,11 +455,32 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
           <div className="h-5 w-px bg-border/60 mx-2"></div>
 
-          <Avatar className="h-7 w-7 ring-2 ring-background cursor-pointer">
-            <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-semibold">
-              {user.name.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={t('قائمة الحساب', 'Account menu')}>
+                <Avatar className="h-7 w-7 cursor-pointer ring-2 ring-background">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-[10px] font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align={lang === 'ar' ? 'start' : 'end'} className="w-56 admin-theme">
+              <DropdownMenuLabel>
+                <div className="text-sm font-semibold">{user.name}</div>
+                <div className="mt-0.5 text-xs font-normal text-muted-foreground" dir="ltr">{user.email}</div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setTourRestart((value) => value + 1)}>
+                <CircleHelp className="me-2 h-4 w-4" />
+                {t('جولة المساعدة', 'Help tour')}
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={handleLogout}>
+                <LogOut className="me-2 h-4 w-4" />
+                {t('تسجيل الخروج', 'Logout')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 

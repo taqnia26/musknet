@@ -1925,6 +1925,26 @@ paths:
       tags: [Admin Inventory]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCountInput" } } } }
       responses: { "201": { description: Cycle count draft, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCount" } } } } }
+  /admin/inventory/cycle-counts/{id}:
+    get:
+      operationId: getInventoryCycleCount
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      responses: { "200": { description: Cycle count, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCount" } } } } }
+    patch:
+      operationId: updateInventoryCycleCount
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCountInput" } } } }
+      responses: { "200": { description: Draft cycle count updated, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCount" } } } } }
+    delete:
+      operationId: deleteInventoryCycleCount
+      security: [{ adminBearerAuth: [] }]
+      tags: [Admin Inventory]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      responses: { "204": { description: Draft cycle count deleted } }
   /admin/inventory/cycle-counts/{id}/review:
     post:
       operationId: reviewInventoryCycleCount

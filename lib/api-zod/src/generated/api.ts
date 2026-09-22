@@ -6139,6 +6139,117 @@ export const CreateInventoryCycleCountResponse = zod.object({
 })
 
 
+export const getInventoryCycleCountPathIdMultipleOf = 1;
+
+
+
+export const GetInventoryCycleCountParams = zod.object({
+  "id": zod.coerce.number().multipleOf(getInventoryCycleCountPathIdMultipleOf)
+})
+
+export const getInventoryCycleCountResponseIdMultipleOf = 1;
+
+export const getInventoryCycleCountResponseLocationIdMultipleOf = 1;
+
+export const getInventoryCycleCountResponseLinesItemIdMultipleOf = 1;
+
+export const getInventoryCycleCountResponseLinesItemProductIdMultipleOf = 1;
+
+export const getInventoryCycleCountResponseLinesItemExpectedQuantityMultipleOf = 1;
+
+export const getInventoryCycleCountResponseLinesItemCountedQuantityMultipleOf = 1;
+
+export const getInventoryCycleCountResponseLinesItemUnitCostMinOne = 0;
+
+export const getInventoryCycleCountResponseLinesItemUnitCostMinTwo = 0;
+
+
+
+export const GetInventoryCycleCountResponse = zod.object({
+  "id": zod.number().multipleOf(getInventoryCycleCountResponseIdMultipleOf),
+  "locationId": zod.number().multipleOf(getInventoryCycleCountResponseLocationIdMultipleOf),
+  "status": zod.enum(['draft', 'review', 'approved', 'cancelled']),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(getInventoryCycleCountResponseLinesItemIdMultipleOf),
+  "productId": zod.number().multipleOf(getInventoryCycleCountResponseLinesItemProductIdMultipleOf),
+  "expectedQuantity": zod.number().multipleOf(getInventoryCycleCountResponseLinesItemExpectedQuantityMultipleOf),
+  "countedQuantity": zod.number().multipleOf(getInventoryCycleCountResponseLinesItemCountedQuantityMultipleOf),
+  "unitCost": zod.union([zod.string().min(getInventoryCycleCountResponseLinesItemUnitCostMinOne),zod.number().min(getInventoryCycleCountResponseLinesItemUnitCostMinTwo)]),
+  "note": zod.string().nullish()
+}))
+})
+
+
+export const updateInventoryCycleCountPathIdMultipleOf = 1;
+
+
+
+export const UpdateInventoryCycleCountParams = zod.object({
+  "id": zod.coerce.number().multipleOf(updateInventoryCycleCountPathIdMultipleOf)
+})
+
+export const updateInventoryCycleCountBodyLocationIdMultipleOf = 1;
+
+export const updateInventoryCycleCountBodyLinesItemProductIdMultipleOf = 1;
+
+export const updateInventoryCycleCountBodyLinesItemCountedQuantityMin = 0;
+export const updateInventoryCycleCountBodyLinesItemCountedQuantityMultipleOf = 1;
+
+
+
+
+export const UpdateInventoryCycleCountBody = zod.object({
+  "locationId": zod.number().multipleOf(updateInventoryCycleCountBodyLocationIdMultipleOf),
+  "lines": zod.array(zod.object({
+  "productId": zod.number().multipleOf(updateInventoryCycleCountBodyLinesItemProductIdMultipleOf),
+  "countedQuantity": zod.number().min(updateInventoryCycleCountBodyLinesItemCountedQuantityMin).multipleOf(updateInventoryCycleCountBodyLinesItemCountedQuantityMultipleOf)
+})).min(1)
+})
+
+export const updateInventoryCycleCountResponseIdMultipleOf = 1;
+
+export const updateInventoryCycleCountResponseLocationIdMultipleOf = 1;
+
+export const updateInventoryCycleCountResponseLinesItemIdMultipleOf = 1;
+
+export const updateInventoryCycleCountResponseLinesItemProductIdMultipleOf = 1;
+
+export const updateInventoryCycleCountResponseLinesItemExpectedQuantityMultipleOf = 1;
+
+export const updateInventoryCycleCountResponseLinesItemCountedQuantityMultipleOf = 1;
+
+export const updateInventoryCycleCountResponseLinesItemUnitCostMinOne = 0;
+
+export const updateInventoryCycleCountResponseLinesItemUnitCostMinTwo = 0;
+
+
+
+export const UpdateInventoryCycleCountResponse = zod.object({
+  "id": zod.number().multipleOf(updateInventoryCycleCountResponseIdMultipleOf),
+  "locationId": zod.number().multipleOf(updateInventoryCycleCountResponseLocationIdMultipleOf),
+  "status": zod.enum(['draft', 'review', 'approved', 'cancelled']),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(updateInventoryCycleCountResponseLinesItemIdMultipleOf),
+  "productId": zod.number().multipleOf(updateInventoryCycleCountResponseLinesItemProductIdMultipleOf),
+  "expectedQuantity": zod.number().multipleOf(updateInventoryCycleCountResponseLinesItemExpectedQuantityMultipleOf),
+  "countedQuantity": zod.number().multipleOf(updateInventoryCycleCountResponseLinesItemCountedQuantityMultipleOf),
+  "unitCost": zod.union([zod.string().min(updateInventoryCycleCountResponseLinesItemUnitCostMinOne),zod.number().min(updateInventoryCycleCountResponseLinesItemUnitCostMinTwo)]),
+  "note": zod.string().nullish()
+}))
+})
+
+
+export const deleteInventoryCycleCountPathIdMultipleOf = 1;
+
+
+
+export const DeleteInventoryCycleCountParams = zod.object({
+  "id": zod.coerce.number().multipleOf(deleteInventoryCycleCountPathIdMultipleOf)
+})
+
+export const DeleteInventoryCycleCountResponse = zod.void()
+
+
 export const reviewInventoryCycleCountPathIdMultipleOf = 1;
 
 
