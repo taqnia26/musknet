@@ -2332,7 +2332,7 @@ router.patch("/admin/inventory/cycle-counts/:id", permit("inventory", "edit"), r
       const [countRow] = await tx.select().from(inventoryCycleCountsTable)
         .where(eq(inventoryCycleCountsTable.id, id)).for("update").limit(1);
       if (!countRow) throw Object.assign(new Error("Cycle count not found"), { status: 404 });
-      if (countRow.status !== "draft") throw Object.assign(new Error("Only draft cycle counts can be edited"), { status: 409 });
+      if (!["draft", "review"].includes(countRow.status)) throw Object.assign(new Error("Approved or cancelled cycle counts cannot be edited"), { status: 409 });
       const [location] = await tx.select().from(inventoryLocationsTable)
         .where(and(eq(inventoryLocationsTable.id, locationId), eq(inventoryLocationsTable.active, true))).limit(1);
       if (!location) throw Object.assign(new Error("Inventory location not found"), { status: 400 });
@@ -2351,7 +2351,12 @@ router.patch("/admin/inventory/cycle-counts/:id", permit("inventory", "edit"), r
         }).returning();
         createdLines.push(created);
       }
-      const [updated] = await tx.update(inventoryCycleCountsTable).set({ locationId })
+      const [updated] = await tx.update(inventoryCycleCountsTable).set({
+        locationId,
+        status: "draft",
+        approvedBy: null,
+        approvedAt: null,
+      })
         .where(eq(inventoryCycleCountsTable.id, id)).returning();
       return { ...updated, lines: createdLines };
     });
@@ -2364,8 +2369,8 @@ router.patch("/admin/inventory/cycle-counts/:id", permit("inventory", "edit"), r
 router.delete("/admin/inventory/cycle-counts/:id", permit("inventory", "delete"), route(async (req, res) => {
   const id = Number(req.params.id);
   const [deleted] = await db.delete(inventoryCycleCountsTable)
-    .where(and(eq(inventoryCycleCountsTable.id, id), eq(inventoryCycleCountsTable.status, "draft"))).returning({ id: inventoryCycleCountsTable.id });
-  if (!deleted) { res.status(409).json({ error: "Only draft cycle counts can be deleted" }); return; }
+    .where(and(eq(inventoryCycleCountsTable.id, id), inArray(inventoryCycleCountsTable.status, ["draft", "review"]))).returning({ id: inventoryCycleCountsTable.id });
+  if (!deleted) { res.status(409).json({ error: "Approved or cancelled cycle counts cannot be deleted" }); return; }
   res.sendStatus(204);
 }));
 router.post("/admin/inventory/cycle-counts/:id/review", permit("inventory", "edit"), route(async (_req, res) => {

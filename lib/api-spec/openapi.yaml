@@ -1938,13 +1938,13 @@ paths:
       tags: [Admin Inventory]
       parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCountInput" } } } }
-      responses: { "200": { description: Draft cycle count updated, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCount" } } } } }
+      responses: { "200": { description: Editable cycle count updated and returned to draft, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryCycleCount" } } } } }
     delete:
       operationId: deleteInventoryCycleCount
       security: [{ adminBearerAuth: [] }]
       tags: [Admin Inventory]
       parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
-      responses: { "204": { description: Draft cycle count deleted } }
+      responses: { "204": { description: Draft or review cycle count deleted } }
   /admin/inventory/cycle-counts/{id}/review:
     post:
       operationId: reviewInventoryCycleCount

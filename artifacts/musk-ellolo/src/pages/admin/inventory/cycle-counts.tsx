@@ -79,10 +79,10 @@ export default function AdminInventoryCounts() {
   };
 
   const removeCount = (count: InventoryCycleCount) => {
-    if (!window.confirm(t('سيتم حذف مسودة الجرد نهائيًا. هل تريد المتابعة؟', 'This draft count will be permanently deleted. Continue?'))) return;
+    if (!window.confirm(t('سيتم حذف الجرد غير المعتمد كاملًا ونهائيًا. هل تريد المتابعة؟', 'This unapproved count will be permanently deleted. Continue?'))) return;
     deleteMutation.mutate({ id: count.id }, {
       onSuccess: () => {
-        toast({ title: t('تم حذف مسودة الجرد', 'Draft count deleted') });
+        toast({ title: t('تم حذف الجرد', 'Count deleted') });
         queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() });
       },
       onError: (error) => toast({ title: t('تعذر حذف الجرد', 'Could not delete count'), description: error.message, variant: 'destructive' }),
@@ -123,7 +123,7 @@ export default function AdminInventoryCounts() {
         <Dialog open={open} onOpenChange={(next) => next ? setOpen(true) : closeDialog()}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editing ? t('تعديل مسودة الجرد', 'Edit Cycle Count Draft') : t('تسجيل جرد فعلي', 'Record Physical Count')}</DialogTitle>
+              <DialogTitle>{editing ? t('تعديل الجرد كاملًا', 'Edit Full Cycle Count') : t('تسجيل جرد فعلي', 'Record Physical Count')}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -165,7 +165,7 @@ export default function AdminInventoryCounts() {
                 <TableHead>{t('الفروقات', 'Variances')}</TableHead>
                 <TableHead>{t('قيمة الفرق', 'Variance value')}</TableHead>
                 <TableHead>{t('الحالة', 'Status')}</TableHead>
-                <TableHead></TableHead>
+                <TableHead className="min-w-[220px]">{t('الإجراءات', 'Actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -193,13 +193,13 @@ export default function AdminInventoryCounts() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex flex-wrap items-center justify-center gap-1">
-                      {count.status === 'draft' && <Button variant="ghost" size="sm" disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر إرسال الجرد', 'Could not submit count'), description: error.message, variant: 'destructive' }) })}>{t('مراجعة', 'Review')}</Button>}
-                      {count.status === 'review' && <Button variant="ghost" size="sm" disabled={approveMutation.isPending} onClick={() => approveMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر اعتماد الجرد', 'Could not approve count'), description: error.message, variant: 'destructive' }) })}>{t('اعتماد', 'Approve')}</Button>}
-                      <Button variant="ghost" size="icon" title={t('طباعة', 'Print')} onClick={() => printCount(count)}><Printer className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" title={t('إرسال بالبريد', 'Send by email')} onClick={() => emailCount(count)}><Mail className="h-4 w-4" /></Button>
-                      {count.status === 'draft' && <Button variant="ghost" size="icon" title={t('تعديل', 'Edit')} onClick={() => openEdit(count)}><Pencil className="h-4 w-4" /></Button>}
-                      {count.status === 'draft' && <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title={t('حذف', 'Delete')} disabled={deleteMutation.isPending} onClick={() => removeCount(count)}><Trash2 className="h-4 w-4" /></Button>}
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                      {count.status === 'draft' && <Button variant="outline" size="sm" className="h-8 rounded-lg border-primary/30 bg-primary/10 text-primary hover:bg-primary/20" disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر إرسال الجرد', 'Could not submit count'), description: error.message, variant: 'destructive' }) })}>{t('مراجعة', 'Review')}</Button>}
+                      {count.status === 'review' && <Button variant="outline" size="sm" className="h-8 rounded-lg border-primary/30 bg-primary/10 text-primary hover:bg-primary/20" disabled={approveMutation.isPending} onClick={() => approveMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر اعتماد الجرد', 'Could not approve count'), description: error.message, variant: 'destructive' }) })}>{t('اعتماد', 'Approve')}</Button>}
+                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-sky-500/25 bg-sky-500/10 text-sky-600 shadow-sm hover:bg-sky-500/20 hover:text-sky-700" title={t('طباعة', 'Print')} onClick={() => printCount(count)}><Printer className="h-4 w-4 stroke-[1.8]" /></Button>
+                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-violet-500/25 bg-violet-500/10 text-violet-600 shadow-sm hover:bg-violet-500/20 hover:text-violet-700" title={t('إرسال بالبريد', 'Send by email')} onClick={() => emailCount(count)}><Mail className="h-4 w-4 stroke-[1.8]" /></Button>
+                      {(["draft", "review"] as const).includes(count.status as "draft" | "review") && <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-amber-500/25 bg-amber-500/10 text-amber-600 shadow-sm hover:bg-amber-500/20 hover:text-amber-700" title={t('تعديل الجرد كاملًا', 'Edit full count')} onClick={() => openEdit(count)}><Pencil className="h-4 w-4 stroke-[1.8]" /></Button>}
+                      {(["draft", "review"] as const).includes(count.status as "draft" | "review") && <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-destructive/25 bg-destructive/10 text-destructive shadow-sm hover:bg-destructive/20 hover:text-destructive" title={t('حذف الجرد كاملًا', 'Delete full count')} disabled={deleteMutation.isPending} onClick={() => removeCount(count)}><Trash2 className="h-4 w-4 stroke-[1.8]" /></Button>}
                       </div>
                     </TableCell>
                   </TableRow>
