@@ -80,12 +80,14 @@ import type {
   AdminProductImageUploadInput,
   AdminProductInput,
   AdminProductUpdate,
+  AdminRevenueAnalytics,
   AdminStaffInput,
   AdminStaffUpdate,
   AdminUser,
   AttendanceInput,
   AttendanceRecord,
   AuthSession,
+  B2BEvaluationReturnInput,
   BadRequestResponse,
   CaptureInfluencerReferralParams,
   Cart,
@@ -126,7 +128,9 @@ import type {
   GetAdminAnalyticsDashboardParams,
   GetAdminGiftingIssues200,
   GetAdminGiftingIssuesParams,
+  GetAdminRevenueAnalyticsParams,
   GetAdminShippingDashboardParams,
+  GetAdminTesterAvailabilityParams,
   GetInventoryAuditReportParams,
   GetInventoryMovementReportParams,
   GetInventoryValuationReportParams,
@@ -220,6 +224,7 @@ import type {
   ShippingWebhookResult,
   SiteContent,
   SiteContentUpsert,
+  TesterStockAvailability,
   TrackPageViewInput,
   TrialBalance,
   UnauthorizedResponse
@@ -4128,6 +4133,84 @@ export function useGetAdminAnalyticsDashboard<TData = Awaited<ReturnType<typeof 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAdminAnalyticsDashboardQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdminRevenueAnalyticsUrl = (params?: GetAdminRevenueAnalyticsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/analytics/revenue?${stringifiedParams}` : `/api/admin/analytics/revenue`
+}
+
+export const getAdminRevenueAnalytics = async (params?: GetAdminRevenueAnalyticsParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminRevenueAnalytics> => {
+
+  return customFetch<AdminRevenueAnalytics>(getGetAdminRevenueAnalyticsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminRevenueAnalyticsQueryKey = (params?: GetAdminRevenueAnalyticsParams,) => {
+    return [
+    `/api/admin/analytics/revenue`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAdminRevenueAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminRevenueAnalytics>>, TError = ErrorType<ForbiddenResponse>>(params?: GetAdminRevenueAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminRevenueAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminRevenueAnalyticsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminRevenueAnalytics>>> = ({ signal }) => getAdminRevenueAnalytics(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminRevenueAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminRevenueAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminRevenueAnalytics>>>
+export type GetAdminRevenueAnalyticsQueryError = ErrorType<ForbiddenResponse>
+
+
+
+export function useGetAdminRevenueAnalytics<TData = Awaited<ReturnType<typeof getAdminRevenueAnalytics>>, TError = ErrorType<ForbiddenResponse>>(
+ params?: GetAdminRevenueAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminRevenueAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminRevenueAnalyticsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -11068,6 +11151,84 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getCreateAdminGiftingIssueMutationOptions(options));
     }
 
+export const getGetAdminTesterAvailabilityUrl = (params: GetAdminTesterAvailabilityParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/gifting-issues/tester-availability?${stringifiedParams}` : `/api/admin/gifting-issues/tester-availability`
+}
+
+export const getAdminTesterAvailability = async (params: GetAdminTesterAvailabilityParams, options?: Parameters<typeof customFetch>[1]): Promise<TesterStockAvailability> => {
+
+  return customFetch<TesterStockAvailability>(getGetAdminTesterAvailabilityUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminTesterAvailabilityQueryKey = (params?: GetAdminTesterAvailabilityParams,) => {
+    return [
+    `/api/admin/gifting-issues/tester-availability`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAdminTesterAvailabilityQueryOptions = <TData = Awaited<ReturnType<typeof getAdminTesterAvailability>>, TError = ErrorType<unknown>>(params: GetAdminTesterAvailabilityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminTesterAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminTesterAvailabilityQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminTesterAvailability>>> = ({ signal }) => getAdminTesterAvailability(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminTesterAvailability>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminTesterAvailabilityQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminTesterAvailability>>>
+export type GetAdminTesterAvailabilityQueryError = ErrorType<unknown>
+
+
+
+export function useGetAdminTesterAvailability<TData = Awaited<ReturnType<typeof getAdminTesterAvailability>>, TError = ErrorType<unknown>>(
+ params: GetAdminTesterAvailabilityParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminTesterAvailability>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminTesterAvailabilityQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetAdminGiftingIssueUrl = (id: number,) => {
 
 
@@ -11274,6 +11435,72 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getDeleteAdminGiftingIssueMutationOptions(options));
+    }
+
+export const getReturnAdminB2BEvaluationUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/gifting-issues/${id}/return`
+}
+
+export const returnAdminB2BEvaluation = async (id: number,
+    b2BEvaluationReturnInput: B2BEvaluationReturnInput, options?: Parameters<typeof customFetch>[1]): Promise<GiftingIssue> => {
+
+  return customFetch<GiftingIssue>(getReturnAdminB2BEvaluationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(b2BEvaluationReturnInput)
+  }
+);}
+
+
+
+
+
+export const getReturnAdminB2BEvaluationMutationOptions = <TError = ErrorType<BadRequestResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext> => {
+
+const mutationKey = ['returnAdminB2BEvaluation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>, {id: number;data: BodyType<B2BEvaluationReturnInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  returnAdminB2BEvaluation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReturnAdminB2BEvaluationMutationResult = NonNullable<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>>
+    export type ReturnAdminB2BEvaluationMutationBody = BodyType<B2BEvaluationReturnInput>
+    export type ReturnAdminB2BEvaluationMutationError = ErrorType<BadRequestResponse | void>
+
+    export const useReturnAdminB2BEvaluation = <TError = ErrorType<BadRequestResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof returnAdminB2BEvaluation>>,
+        TError,
+        {id: number;data: BodyType<B2BEvaluationReturnInput>},
+        TContext
+      > => {
+      return useMutation(getReturnAdminB2BEvaluationMutationOptions(options));
     }
 
 export const getInfluencerLoginUrl = () => {

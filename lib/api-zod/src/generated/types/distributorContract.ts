@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { DistributorContractContractType } from './distributorContractContractType';
 import type { DistributorContractStatus } from './distributorContractStatus';
 
 export interface DistributorContract {
@@ -12,7 +13,7 @@ export interface DistributorContract {
   contractNumber: string;
   /** @nullable */
   distributorId?: number | null;
-  contractType: string;
+  contractType: DistributorContractContractType;
   status: DistributorContractStatus;
   /** @nullable */
   contractDate?: Date | null;

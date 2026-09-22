@@ -89,7 +89,7 @@ export default function AdminContractForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(contractSchema),
     defaultValues: {
-      contractType: 'موزع',
+      contractType: 'عقد توريد أجل المملكة العربية السعودية',
       sellerName: '',
       sellerCrNumber: '',
       sellerCrDate: '',
@@ -419,9 +419,10 @@ export default function AdminContractForm() {
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
-                        <SelectItem value="موزع">موزع (بضاعة)</SelectItem>
-                        <SelectItem value="امتياز">امتياز تجاري</SelectItem>
-                        <SelectItem value="وكالة">وكالة حصرية</SelectItem>
+                        <SelectItem value="عقد توريد أجل المملكة العربية السعودية">عقد توريد أجل المملكة العربية السعودية</SelectItem>
+                        <SelectItem value="عقد توريد نقد المملكة العربية السعودية">عقد توريد نقد المملكة العربية السعودية</SelectItem>
+                        <SelectItem value="عقد توريد أجل دول الخليج">عقد توريد أجل دول الخليج</SelectItem>
+                        <SelectItem value="عقد توريد نقد دول الخليج">عقد توريد نقد دول الخليج</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

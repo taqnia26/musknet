@@ -753,7 +753,7 @@ export const AdminListContractsResponseItem = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -816,11 +816,10 @@ export const AdminListContractsResponse = zod.array(AdminListContractsResponseIt
 
 
 
-
 export const AdminCreateContractBody = zod.object({
   "contractNumber": zod.string().nullish(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string().min(1),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
   "gregorianDateStr": zod.string().nullish(),
@@ -866,7 +865,7 @@ export const AdminCreateContractResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -926,7 +925,7 @@ export const AdminGetContractResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -992,11 +991,10 @@ export const AdminUpdateContractParams = zod.object({
 
 
 
-
 export const AdminUpdateContractBody = zod.object({
   "contractNumber": zod.string().nullish(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string().min(1),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
   "gregorianDateStr": zod.string().nullish(),
@@ -1042,7 +1040,7 @@ export const AdminUpdateContractResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -1116,7 +1114,7 @@ export const AdminSignContractResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -1195,7 +1193,7 @@ export const AdminSendContractResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -1258,7 +1256,7 @@ export const AdminCancelContractResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -1387,7 +1385,7 @@ export const GetPublicContractByTokenResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -1460,7 +1458,7 @@ export const SignPublicContractResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
   "distributorId": zod.number().nullish(),
-  "contractType": zod.string(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
   "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
   "contractDate": zod.coerce.date().nullish(),
   "hijriDateStr": zod.string().nullish(),
@@ -1570,6 +1568,85 @@ export const GetAdminAnalyticsDashboardResponse = zod.object({
   "source": zod.enum(['direct', 'search', 'social', 'referral']),
   "visits": zod.number()
 }))
+})
+
+
+export const getAdminRevenueAnalyticsQueryRangeDaysDefault = 30;
+
+export const GetAdminRevenueAnalyticsQueryParams = zod.object({
+  "rangeDays": zod.union([zod.literal(7),zod.literal(30),zod.literal(90),zod.literal(365)]).default(getAdminRevenueAnalyticsQueryRangeDaysDefault)
+})
+
+export const GetAdminRevenueAnalyticsResponse = zod.object({
+  "rangeDays": zod.number(),
+  "currency": zod.enum(['SAR']),
+  "period": zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date()
+}),
+  "previousPeriod": zod.object({
+  "from": zod.coerce.date(),
+  "to": zod.coerce.date()
+}),
+  "summary": zod.object({
+  "onlineRevenue": zod.number(),
+  "companyRevenue": zod.number(),
+  "totalRevenue": zod.number(),
+  "onlineOrders": zod.number(),
+  "companyInvoices": zod.number(),
+  "activeCompanies": zod.number(),
+  "changePct": zod.number()
+}),
+  "previousSummary": zod.object({
+  "onlineRevenue": zod.number(),
+  "companyRevenue": zod.number(),
+  "totalRevenue": zod.number(),
+  "onlineOrders": zod.number(),
+  "companyInvoices": zod.number(),
+  "activeCompanies": zod.number(),
+  "changePct": zod.number()
+}),
+  "trend": zod.array(zod.object({
+  "date": zod.coerce.date(),
+  "onlineRevenue": zod.number(),
+  "companyRevenue": zod.number(),
+  "totalRevenue": zod.number()
+})),
+  "byCompany": zod.array(zod.object({
+  "companyId": zod.number(),
+  "companyName": zod.string(),
+  "revenue": zod.number(),
+  "previousRevenue": zod.number(),
+  "invoices": zod.number(),
+  "sharePct": zod.number(),
+  "changePct": zod.number()
+})),
+  "shipping": zod.object({
+  "total": zod.object({
+  "shipmentCount": zod.number(),
+  "shippedCount": zod.number(),
+  "quantity": zod.number(),
+  "amountRequired": zod.number(),
+  "amountPaid": zod.number(),
+  "outstandingAmount": zod.number()
+}),
+  "online": zod.object({
+  "shipmentCount": zod.number(),
+  "shippedCount": zod.number(),
+  "quantity": zod.number(),
+  "amountRequired": zod.number(),
+  "amountPaid": zod.number(),
+  "outstandingAmount": zod.number()
+}),
+  "companies": zod.object({
+  "shipmentCount": zod.number(),
+  "shippedCount": zod.number(),
+  "quantity": zod.number(),
+  "amountRequired": zod.number(),
+  "amountPaid": zod.number(),
+  "outstandingAmount": zod.number()
+})
+})
 })
 
 
@@ -4600,6 +4677,9 @@ export const getAdminGiftingIssuesResponseRowsItemProductIdMultipleOf = 1;
 
 export const getAdminGiftingIssuesResponseRowsItemQuantityMultipleOf = 1;
 
+export const getAdminGiftingIssuesResponseRowsItemReturnedQuantityMin = 0;
+export const getAdminGiftingIssuesResponseRowsItemReturnedQuantityMultipleOf = 1;
+
 export const getAdminGiftingIssuesResponseRowsItemSourceRowMultipleOf = 1;
 
 export const getAdminGiftingIssuesResponseSummaryRowsMultipleOf = 1;
@@ -4623,6 +4703,10 @@ export const GetAdminGiftingIssuesResponse = zod.object({
   "barcode": zod.string(),
   "descriptionSnapshot": zod.string(),
   "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssuesResponseRowsItemQuantityMultipleOf),
+  "stockSource": zod.enum(['normal', 'used_return']),
+  "returnedQuantity": zod.number().min(getAdminGiftingIssuesResponseRowsItemReturnedQuantityMin).multipleOf(getAdminGiftingIssuesResponseRowsItemReturnedQuantityMultipleOf),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
   "sourceFilename": zod.string().nullish(),
@@ -4656,7 +4740,7 @@ export const createAdminGiftingIssueBodyTwoOneLinesItemProductIdMultipleOf = 1;
 
 export const createAdminGiftingIssueBodyTwoOneLinesItemQuantityMultipleOf = 1;
 
-
+export const createAdminGiftingIssueBodyTwoOneLinesItemStockSourceDefault = `normal`;
 export const createAdminGiftingIssueBodyTwoTwoProductIdMultipleOf = 1;
 
 export const createAdminGiftingIssueBodyTwoTwoQuantityMultipleOf = 1;
@@ -4675,7 +4759,8 @@ export const CreateAdminGiftingIssueBody = zod.object({
 }).and(zod.union([zod.object({
   "lines": zod.array(zod.object({
   "productId": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoOneLinesItemProductIdMultipleOf),
-  "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoOneLinesItemQuantityMultipleOf)
+  "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoOneLinesItemQuantityMultipleOf),
+  "stockSource": zod.enum(['normal', 'used_return']).default(createAdminGiftingIssueBodyTwoOneLinesItemStockSourceDefault)
 })).min(1)
 }),zod.object({
   "productId": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoTwoProductIdMultipleOf).describe('Legacy single-line form'),
@@ -4687,6 +4772,9 @@ export const createAdminGiftingIssueResponseIdMultipleOf = 1;
 export const createAdminGiftingIssueResponseProductIdMultipleOf = 1;
 
 export const createAdminGiftingIssueResponseQuantityMultipleOf = 1;
+
+export const createAdminGiftingIssueResponseReturnedQuantityMin = 0;
+export const createAdminGiftingIssueResponseReturnedQuantityMultipleOf = 1;
 
 export const createAdminGiftingIssueResponseSourceRowMultipleOf = 1;
 
@@ -4706,6 +4794,10 @@ export const CreateAdminGiftingIssueResponse = zod.object({
   "barcode": zod.string(),
   "descriptionSnapshot": zod.string(),
   "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueResponseQuantityMultipleOf),
+  "stockSource": zod.enum(['normal', 'used_return']),
+  "returnedQuantity": zod.number().min(createAdminGiftingIssueResponseReturnedQuantityMin).multipleOf(createAdminGiftingIssueResponseReturnedQuantityMultipleOf),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
   "sourceFilename": zod.string().nullish(),
@@ -4714,6 +4806,35 @@ export const CreateAdminGiftingIssueResponse = zod.object({
   "dedupeKey": zod.string(),
   "idempotencyKey": zod.string().nullish(),
   "importedAt": zod.coerce.date()
+})
+
+
+export const getAdminTesterAvailabilityQueryProductIdMultipleOf = 1;
+
+
+
+export const GetAdminTesterAvailabilityQueryParams = zod.object({
+  "productId": zod.coerce.number().min(1).multipleOf(getAdminTesterAvailabilityQueryProductIdMultipleOf)
+})
+
+export const getAdminTesterAvailabilityResponseProductIdMultipleOf = 1;
+
+export const getAdminTesterAvailabilityResponseNormalAvailableMin = 0;
+export const getAdminTesterAvailabilityResponseNormalAvailableMultipleOf = 1;
+
+export const getAdminTesterAvailabilityResponseUsedReturnAvailableMin = 0;
+export const getAdminTesterAvailabilityResponseUsedReturnAvailableMultipleOf = 1;
+
+export const getAdminTesterAvailabilityResponseTotalAvailableMin = 0;
+export const getAdminTesterAvailabilityResponseTotalAvailableMultipleOf = 1;
+
+
+
+export const GetAdminTesterAvailabilityResponse = zod.object({
+  "productId": zod.number().multipleOf(getAdminTesterAvailabilityResponseProductIdMultipleOf),
+  "normalAvailable": zod.number().min(getAdminTesterAvailabilityResponseNormalAvailableMin).multipleOf(getAdminTesterAvailabilityResponseNormalAvailableMultipleOf),
+  "usedReturnAvailable": zod.number().min(getAdminTesterAvailabilityResponseUsedReturnAvailableMin).multipleOf(getAdminTesterAvailabilityResponseUsedReturnAvailableMultipleOf),
+  "totalAvailable": zod.number().min(getAdminTesterAvailabilityResponseTotalAvailableMin).multipleOf(getAdminTesterAvailabilityResponseTotalAvailableMultipleOf)
 })
 
 
@@ -4734,6 +4855,9 @@ export const getAdminGiftingIssueResponseProductIdMultipleOf = 1;
 
 export const getAdminGiftingIssueResponseQuantityMultipleOf = 1;
 
+export const getAdminGiftingIssueResponseReturnedQuantityMin = 0;
+export const getAdminGiftingIssueResponseReturnedQuantityMultipleOf = 1;
+
 export const getAdminGiftingIssueResponseSourceRowMultipleOf = 1;
 
 
@@ -4752,6 +4876,10 @@ export const GetAdminGiftingIssueResponse = zod.object({
   "barcode": zod.string(),
   "descriptionSnapshot": zod.string(),
   "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssueResponseQuantityMultipleOf),
+  "stockSource": zod.enum(['normal', 'used_return']),
+  "returnedQuantity": zod.number().min(getAdminGiftingIssueResponseReturnedQuantityMin).multipleOf(getAdminGiftingIssueResponseReturnedQuantityMultipleOf),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
   "sourceFilename": zod.string().nullish(),
@@ -4802,6 +4930,9 @@ export const updateAdminGiftingIssueResponseProductIdMultipleOf = 1;
 
 export const updateAdminGiftingIssueResponseQuantityMultipleOf = 1;
 
+export const updateAdminGiftingIssueResponseReturnedQuantityMin = 0;
+export const updateAdminGiftingIssueResponseReturnedQuantityMultipleOf = 1;
+
 export const updateAdminGiftingIssueResponseSourceRowMultipleOf = 1;
 
 
@@ -4820,6 +4951,10 @@ export const UpdateAdminGiftingIssueResponse = zod.object({
   "barcode": zod.string(),
   "descriptionSnapshot": zod.string(),
   "quantity": zod.number().min(1).multipleOf(updateAdminGiftingIssueResponseQuantityMultipleOf),
+  "stockSource": zod.enum(['normal', 'used_return']),
+  "returnedQuantity": zod.number().min(updateAdminGiftingIssueResponseReturnedQuantityMin).multipleOf(updateAdminGiftingIssueResponseReturnedQuantityMultipleOf),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
   "sourceFilename": zod.string().nullish(),
@@ -4840,6 +4975,65 @@ export const DeleteAdminGiftingIssueParams = zod.object({
 })
 
 export const DeleteAdminGiftingIssueResponse = zod.void()
+
+
+export const returnAdminB2BEvaluationPathIdMultipleOf = 1;
+
+
+
+export const ReturnAdminB2BEvaluationParams = zod.object({
+  "id": zod.coerce.number().multipleOf(returnAdminB2BEvaluationPathIdMultipleOf)
+})
+
+export const returnAdminB2BEvaluationBodyQuantityMultipleOf = 1;
+
+
+
+export const ReturnAdminB2BEvaluationBody = zod.object({
+  "quantity": zod.number().min(1).multipleOf(returnAdminB2BEvaluationBodyQuantityMultipleOf),
+  "condition": zod.enum(['new', 'used'])
+})
+
+export const returnAdminB2BEvaluationResponseIdMultipleOf = 1;
+
+export const returnAdminB2BEvaluationResponseProductIdMultipleOf = 1;
+
+export const returnAdminB2BEvaluationResponseQuantityMultipleOf = 1;
+
+export const returnAdminB2BEvaluationResponseReturnedQuantityMin = 0;
+export const returnAdminB2BEvaluationResponseReturnedQuantityMultipleOf = 1;
+
+export const returnAdminB2BEvaluationResponseSourceRowMultipleOf = 1;
+
+
+
+export const ReturnAdminB2BEvaluationResponse = zod.object({
+  "id": zod.number().multipleOf(returnAdminB2BEvaluationResponseIdMultipleOf),
+  "recipientName": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "category": zod.enum(['VIP', 'Sample', 'Damage', 'Marketing', 'Tester', 'B2B_EVALUATION', 'TESTER', 'VIP_GIFT', 'INFLUENCERS', 'DAMAGED', 'OTHER']),
+  "comment": zod.string(),
+  "reason": zod.string().nullish(),
+  "occasion": zod.string().nullish(),
+  "program": zod.string().nullish(),
+  "productId": zod.number().multipleOf(returnAdminB2BEvaluationResponseProductIdMultipleOf),
+  "barcode": zod.string(),
+  "descriptionSnapshot": zod.string(),
+  "quantity": zod.number().min(1).multipleOf(returnAdminB2BEvaluationResponseQuantityMultipleOf),
+  "stockSource": zod.enum(['normal', 'used_return']),
+  "returnedQuantity": zod.number().min(returnAdminB2BEvaluationResponseReturnedQuantityMin).multipleOf(returnAdminB2BEvaluationResponseReturnedQuantityMultipleOf),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnedAt": zod.coerce.date().nullish(),
+  "totalCost": zod.string(),
+  "issueDate": zod.coerce.date(),
+  "sourceFilename": zod.string().nullish(),
+  "sourceSheet": zod.string().nullish(),
+  "sourceRow": zod.number().multipleOf(returnAdminB2BEvaluationResponseSourceRowMultipleOf).nullish(),
+  "dedupeKey": zod.string(),
+  "idempotencyKey": zod.string().nullish(),
+  "importedAt": zod.coerce.date()
+})
 
 
 export const influencerLoginBodyPasswordMin = 8;

@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Coins, Package, Search, Plus, Trash2, Clock, FileStack, Pencil, type LucideIcon } from 'lucide-react';
+import { Coins, Package, Search, Plus, Trash2, Clock, FileStack, Pencil, RotateCcw, type LucideIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetAdminGiftingIssuesQueryKey,
   getGetAdminGiftingIssueQueryKey,
+  getGetAdminTesterAvailabilityQueryKey,
   useAdminListInventory,
   useCreateAdminGiftingIssue,
   useDeleteAdminGiftingIssue,
   useGetAdminGiftingIssues,
   useGetAdminGiftingIssue,
+  useGetAdminTesterAvailability,
+  useReturnAdminB2BEvaluation,
   useUpdateAdminGiftingIssue,
 } from '@workspace/api-client-react';
 import type { GiftingIssue, GiftingIssueCategory, GiftingIssueInputCategory } from '@workspace/api-client-react';
@@ -27,10 +30,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { giftingIssueLabels as labels, issueUses } from './gifting-issues-config';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
 
-type Line = { productId: string; quantity: string };
+type Line = { productId: string; quantity: string; stockSource: 'normal' | 'used_return' };
 
 const initialForm = {
-  lines: [{ productId: '', quantity: '1' }] as Line[],
+  lines: [{ productId: '', quantity: '1', stockSource: 'normal' }] as Line[],
   category: '' as GiftingIssueInputCategory | '',
   issueDate: '',
   recipientName: '',
@@ -49,6 +52,8 @@ export default function AdminGiftingIssues() {
   const [category, setCategory] = useState<GiftingIssueCategory | undefined>();
   const [selected, setSelected] = useState<number | null>(null);
   const [editing, setEditing] = useState<GiftingIssue | null>(null);
+  const [returning, setReturning] = useState<GiftingIssue | null>(null);
+  const [returnForm, setReturnForm] = useState({ quantity: '1', condition: 'new' as 'new' | 'used' });
   const [editForm, setEditForm] = useState({ category: '' as GiftingIssueCategory | '', quantity: '', issueDate: '', recipientName: '', city: '', country: '', occasion: '', reason: '' });
   const [form, setForm] = useState(initialForm);
   const [cityLookupPending, setCityLookupPending] = useState(false);
@@ -61,6 +66,7 @@ export default function AdminGiftingIssues() {
   const mutation = useCreateAdminGiftingIssue();
   const updateMutation = useUpdateAdminGiftingIssue();
   const deleteMutation = useDeleteAdminGiftingIssue();
+  const returnMutation = useReturnAdminB2BEvaluation();
   const idempotencyKeyRef = useRef(crypto.randomUUID());
   const lastAttemptedFormRef = useRef('');
 
@@ -83,7 +89,7 @@ export default function AdminGiftingIssues() {
   const allLinesHaveProduct = form.lines.every(l => l.productId !== '');
   const hasDuplicates = new Set(form.lines.map(l => l.productId).filter(Boolean)).size !== form.lines.filter(l => l.productId).length;
 
-  const addLine = () => setForm(f => ({ ...f, lines: [...f.lines, { productId: '', quantity: '1' }] }));
+  const addLine = () => setForm(f => ({ ...f, lines: [...f.lines, { productId: '', quantity: '1', stockSource: 'normal' }] }));
 
   const updateLine = (index: number, field: keyof Line, value: string) => {
     const newLines = [...form.lines];
@@ -234,6 +240,32 @@ export default function AdminGiftingIssues() {
     });
   };
 
+  const submitReturn = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!returning) return;
+    const quantity = Number(returnForm.quantity);
+    const outstanding = returning.quantity - returning.returnedQuantity;
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || quantity > outstanding) {
+      toast({ title: t('أدخل كمية صحيحة ضمن الكمية المتبقية', 'Enter a valid quantity within the outstanding amount'), variant: 'destructive' });
+      return;
+    }
+    returnMutation.mutate({ id: returning.id, data: { quantity, condition: returnForm.condition } }, {
+      onSuccess: async () => {
+        setReturning(null);
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] }),
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/inventory'] }),
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues/tester-availability'] }),
+        ]);
+        toast({ title: t('تم استرجاع الكمية وتحديث المخزون', 'Return recorded and inventory updated') });
+      },
+      onError: (cause: unknown) => {
+        const error = cause as { data?: { error?: string }; message?: string };
+        toast({ title: t('تعذر تسجيل الاسترجاع', 'Could not record return'), description: error.data?.error ?? error.message, variant: 'destructive' });
+      },
+    });
+  };
+
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -276,7 +308,8 @@ export default function AdminGiftingIssues() {
 
     const validLines = form.lines.map(l => ({
       productId: Number(l.productId),
-      quantity: Number(l.quantity)
+      quantity: Number(l.quantity),
+      stockSource: l.stockSource,
     }));
 
     const currentFormState = JSON.stringify(form);
@@ -346,7 +379,7 @@ export default function AdminGiftingIssues() {
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               <div>
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('التصنيف', 'Category')} *</Label>
-                <Select value={form.category} onValueChange={(value) => setForm(f => ({ ...f, category: value as GiftingIssueInputCategory }))}>
+                <Select value={form.category} onValueChange={(value) => setForm(f => ({ ...f, category: value as GiftingIssueInputCategory, lines: f.lines.map(line => ({ ...line, stockSource: value === 'TESTER' ? line.stockSource : 'normal' })) }))}>
                   <SelectTrigger className="h-10">
                     <SelectValue placeholder={t('اختر التصنيف', 'Select category')} />
                   </SelectTrigger>
@@ -434,13 +467,21 @@ export default function AdminGiftingIssues() {
                              {productNeedsCost ? t('لا توجد تكلفة للوحدة. أدخلها من المخزون.', 'No unit cost. Enter it from Inventory.') : <>{t('المتاح', 'Available')}: <span className="font-mono">{formatInteger(product.stockQuantity, lang)}</span> · {t('متوسط التكلفة', 'Avg Cost')}: <span className="font-mono">{formatCurrency(product.averageCost, lang)}</span> SAR</>}
                           </p>
                         )}
+                        {form.category === 'TESTER' && line.productId && (
+                          <TesterSourceSelector
+                            productId={Number(line.productId)}
+                            value={line.stockSource}
+                            onChange={(value) => updateLine(index, 'stockSource', value)}
+                            lang={lang}
+                          />
+                        )}
                       </div>
 
                       <div className="w-full sm:w-32 flex-shrink-0">
                         <Input
                           type="number"
                           min="1"
-                          max={product?.stockQuantity}
+                          max={line.stockSource === 'normal' ? product?.stockQuantity : undefined}
                           step="1"
                           className="h-10 font-mono text-center"
                           value={line.quantity}
@@ -581,6 +622,15 @@ export default function AdminGiftingIssues() {
                           <Button type="button" variant="ghost" size="icon" title={t('تعديل', 'Edit')} onClick={(event) => { event.stopPropagation(); openEdit(row); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
+                           {row.category === 'B2B_EVALUATION' && row.returnedQuantity < row.quantity && (
+                             <Button type="button" variant="ghost" size="icon" className="text-primary hover:bg-primary/10" title={t('استرجاع', 'Return')} onClick={(event) => {
+                               event.stopPropagation();
+                               setReturning(row);
+                               setReturnForm({ quantity: String(row.quantity - row.returnedQuantity), condition: row.returnCondition ?? 'new' });
+                             }}>
+                               <RotateCcw className="h-4 w-4" />
+                             </Button>
+                           )}
                           <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" title={t('حذف', 'Delete')} disabled={deleteMutation.isPending} onClick={(event) => { event.stopPropagation(); removeMovement(row); }}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -663,6 +713,67 @@ export default function AdminGiftingIssues() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={returning !== null} onOpenChange={(open) => !open && setReturning(null)}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>{t('استرجاع تقييم شركة', 'Return B2B evaluation stock')}</DialogTitle>
+          </DialogHeader>
+          {returning && (
+            <form onSubmit={submitReturn} className="grid gap-4">
+              <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+                <div className="font-semibold">{returning.descriptionSnapshot}</div>
+                <div className="mt-1 text-muted-foreground">
+                  {t('المتبقي للاسترجاع', 'Outstanding to return')}: {formatInteger(returning.quantity - returning.returnedQuantity, lang)}
+                </div>
+              </div>
+              <div>
+                <Label>{t('حالة المنتج', 'Product condition')}</Label>
+                <Select value={returnForm.condition} onValueChange={(condition) => setReturnForm(current => ({ ...current, condition: condition as 'new' | 'used' }))}>
+                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">{t('جديد — يعاد للمخزون الطبيعي', 'New — return to normal stock')}</SelectItem>
+                    <SelectItem value="used">{t('مستعمل — ينقل لمخزون المرتجعات', 'Used — move to used-return stock')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>{t('الكمية المسترجعة', 'Returned quantity')}</Label>
+                <Input className="mt-1.5 font-mono" type="number" min="1" max={returning.quantity - returning.returnedQuantity} step="1" value={returnForm.quantity} onChange={(event) => setReturnForm(current => ({ ...current, quantity: event.target.value }))} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setReturning(null)}>{t('إلغاء', 'Cancel')}</Button>
+                <Button type="submit" disabled={returnMutation.isPending}>{returnMutation.isPending ? t('جارٍ الاسترجاع...', 'Returning...') : t('تأكيد الاسترجاع', 'Confirm return')}</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function TesterSourceSelector({ productId, value, onChange, lang }: {
+  productId: number;
+  value: 'normal' | 'used_return';
+  onChange: (value: 'normal' | 'used_return') => void;
+  lang: 'ar' | 'en';
+}) {
+  const params = { productId };
+  const { data } = useGetAdminTesterAvailability(params, { query: { enabled: productId > 0, queryKey: getGetAdminTesterAvailabilityQueryKey(params) } });
+  return (
+    <div className="mt-2">
+      <Select value={value} onValueChange={(next) => onChange(next as 'normal' | 'used_return')}>
+        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="normal">
+            {lang === 'ar' ? 'المخزون الطبيعي' : 'Normal stock'} — {formatInteger(data?.normalAvailable ?? 0, lang)}
+          </SelectItem>
+          <SelectItem value="used_return" disabled={(data?.usedReturnAvailable ?? 0) <= 0}>
+            {lang === 'ar' ? 'مرتجعات مستعملة' : 'Used returns'} — {formatInteger(data?.usedReturnAvailable ?? 0, lang)}
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -719,6 +830,12 @@ function Detail({ row, lang }: { row: GiftingIssue; lang: 'ar' | 'en' }) {
            <div className="text-xl font-bold font-mono">{formatCurrency(row.totalCost, lang)} <span className="text-xs text-muted-foreground ml-1">SAR</span></div>
         </div>
       </div>
+      {row.category === 'B2B_EVALUATION' && (
+        <div className="rounded-lg border bg-muted/20 p-3 text-xs">
+          {lang === 'ar' ? 'المسترجع' : 'Returned'}: {formatInteger(row.returnedQuantity, lang)} / {formatInteger(row.quantity, lang)}
+          {row.returnCondition ? ` · ${row.returnCondition === 'new' ? (lang === 'ar' ? 'جديد' : 'New') : (lang === 'ar' ? 'مستعمل' : 'Used')}` : ''}
+        </div>
+      )}
 
       {row.sourceFilename && (
         <div className="text-[11px] text-muted-foreground mt-5 text-center font-mono">

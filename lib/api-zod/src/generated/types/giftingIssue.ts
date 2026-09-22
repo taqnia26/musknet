@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { GiftingIssueCategory } from './giftingIssueCategory';
+import type { GiftingIssueReturnCondition } from './giftingIssueReturnCondition';
+import type { GiftingIssueStockSource } from './giftingIssueStockSource';
 
 export interface GiftingIssue {
   id: number;
@@ -28,6 +30,13 @@ export interface GiftingIssue {
   descriptionSnapshot: string;
   /** @minimum 1 */
   quantity: number;
+  stockSource: GiftingIssueStockSource;
+  /** @minimum 0 */
+  returnedQuantity: number;
+  /** @nullable */
+  returnCondition?: GiftingIssueReturnCondition;
+  /** @nullable */
+  returnedAt?: Date | null;
   totalCost: string;
   issueDate: Date;
   /** @nullable */

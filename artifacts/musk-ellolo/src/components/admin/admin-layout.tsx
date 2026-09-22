@@ -29,7 +29,9 @@ import {
   Moon,
   Sun,
   KeyRound,
-  CircleHelp
+  CircleHelp,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -44,10 +46,18 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { GuidedTour } from '@/components/guided-tour/guided-tour';
 import { getAdminNavTourKey, getAdminTourSteps } from '@/components/guided-tour/tour-definitions';
 import { ADMIN_TOUR_STORAGE_KEY } from '@/components/guided-tour/tour-state';
+import { useAdminNumericMask } from '@/hooks/use-admin-numeric-mask';
+import { AdminNumericMask } from '@/components/admin/admin-numeric-mask';
 
 // Hierarchical Navigation matching requirements
 export const navStructure = [
-  { href: '/admin', icon: LayoutDashboard, labelEn: 'Dashboard', labelAr: 'لوحة المتابعة', module: 'dashboard', direct: true },
+  {
+    labelEn: 'Dashboard', labelAr: 'لوحة المتابعة', icon: LayoutDashboard, module: 'dashboard',
+    children: [
+      { href: '/admin', labelEn: 'Overview', labelAr: 'نظرة عامة' },
+      { href: '/admin/revenue-analytics', labelEn: 'Detailed Revenue Dashboard', labelAr: 'لوحة الإيرادات التفصيلية' },
+    ]
+  },
   {
     labelEn: 'Products', labelAr: 'المنتجات', icon: Package, module: 'products',
     children: [
@@ -243,6 +253,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const { lang, setLang, t } = useLanguage();
   const { theme, setTheme } = useTheme();
+  const numericMask = useAdminNumericMask();
 
   // Admin theme preference is independent from the storefront. New admin
   // sessions start in the reference dark identity, while explicit toggles persist.
@@ -305,8 +316,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div
       dir={lang === 'ar' ? 'rtl' : 'ltr'}
+      data-mask-numeric={numericMask.enabled ? 'true' : 'false'}
       className="admin-theme flex h-screen min-w-0 flex-col overflow-hidden bg-background font-sans text-foreground transition-colors duration-300"
     >
+      <AdminNumericMask enabled={numericMask.enabled} />
       {/* Top Header */}
       <header data-tour="admin-header" className="z-20 flex h-[76px] min-w-0 shrink-0 items-center justify-between border-b border-sidebar-border bg-card px-3 lg:px-6 shadow-[0_1px_2px_rgba(0,0,0,0.02)] relative">
         {/* Right side (RTL start): System name & Mobile menu trigger */}
@@ -386,6 +399,18 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             <div className="h-3 w-px bg-border/60"></div>
           </div>
           <div className="flex items-center" data-tour="admin-tools">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted"
+              onClick={numericMask.toggle}
+              title={numericMask.enabled ? t('إظهار الأرقام', 'Show numbers') : t('إخفاء الأرقام', 'Hide numbers')}
+              aria-label={numericMask.enabled ? t('إظهار الأرقام', 'Show numbers') : t('إخفاء الأرقام', 'Hide numbers')}
+              data-testid="button-toggle-number-privacy"
+              data-privacy-mask-ignore="true"
+            >
+              {numericMask.enabled ? <EyeOff className="h-[16px] w-[16px]" /> : <Eye className="h-[16px] w-[16px]" />}
+            </Button>
             <Button
               variant="ghost"
               size="icon"

@@ -1,13 +1,14 @@
 import { Router, type IRouter } from "express";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm";
-import { db, giftingIssuesTable, inventoryMovementsTable, productsTable } from "@workspace/db";
+import { db, giftingIssuesTable, inventoryBalancesTable, inventoryLocationsTable, inventoryMovementsTable, productsTable } from "@workspace/db";
 import { adminFromToken, publicAdmin } from "../lib/admin-auth";
 import { permit } from "./admin";
 import { adjustOperationalBalances } from "../lib/operations";
 import { ensureStandardAccountingChart, postJournalEntry } from "../lib/accounting";
 
 const router: IRouter = Router();
+const USED_RETURN_LOCATION_CODE = "B2B_USED_RETURN";
 router.use("/admin/gifting-issues", async (req, res, next) => {
   try {
     const token = req.header("authorization")?.startsWith("Bearer ") ? req.header("authorization")!.slice(7) : undefined;
@@ -46,9 +47,10 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
       quantity: req.body?.quantity,
     }];
     const isLegacySingleLine = !Array.isArray(req.body?.lines);
-    const lines: Array<{ productId: number; quantity: number }> = rawLines.map((line: any) => ({
+    const lines: Array<{ productId: number; quantity: number; stockSource: "normal" | "used_return" }> = rawLines.map((line: any) => ({
       productId: Number(line?.productId),
       quantity: Number(line?.quantity),
+      stockSource: line?.stockSource === "used_return" ? "used_return" : "normal",
     }));
     const category = req.body?.category;
     const idempotencyKey = typeof req.body?.idempotencyKey === "string" ? req.body.idempotencyKey.trim() : "";
@@ -65,6 +67,7 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
       (hasLinePayload && hasCompleteLegacyPair) ||
       lines.some((line) => !Number.isSafeInteger(line.productId) || line.productId <= 0 ||
       !Number.isSafeInteger(line.quantity) || line.quantity <= 0) ||
+      (category !== "TESTER" && lines.some((line) => line.stockSource === "used_return")) ||
       new Set(productIds).size !== productIds.length ||
       !newCategories.has(category) || !idempotencyKey || idempotencyKey.length > 200 ||
       ((category === "DAMAGED" || category === "OTHER") && (!reason || reason.length > 500)) ||
@@ -96,7 +99,8 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
           existing.reason === (reason || null) &&
           (!issueDateText || existing.issueDate.toISOString().slice(0, 10) === issueDate.toISOString().slice(0, 10)) &&
           existingRows.length === canonicalLines.length &&
-          existingRows.every((row, index) => row.productId === canonicalLines[index].productId && row.quantity === canonicalLines[index].quantity);
+          existingRows.every((row, index) => row.productId === canonicalLines[index].productId &&
+            row.quantity === canonicalLines[index].quantity && row.stockSource === canonicalLines[index].stockSource);
         if (!same) throw Object.assign(new Error("Idempotency key was already used with different values"), { status: 409 });
         return existing;
       }
@@ -105,12 +109,27 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
         .orderBy(productsTable.id).for("update");
       if (products.length !== lines.length) throw Object.assign(new Error("Product not found"), { status: 404 });
       const byId = new Map(products.map((product) => [product.id, product]));
+      const [usedLocation] = canonicalLines.some((line) => line.stockSource === "used_return")
+        ? await tx.select().from(inventoryLocationsTable)
+          .where(eq(inventoryLocationsTable.code, USED_RETURN_LOCATION_CODE)).limit(1)
+        : [];
+      if (canonicalLines.some((line) => line.stockSource === "used_return") && !usedLocation) {
+        throw Object.assign(new Error("Used-return inventory location is not configured"), { status: 409 });
+      }
+      const usedBalances = usedLocation
+        ? await tx.select().from(inventoryBalancesTable)
+          .where(and(eq(inventoryBalancesTable.locationId, usedLocation.id), inArray(inventoryBalancesTable.productId, sortedIds)))
+          .for("update")
+        : [];
+      const usedByProduct = new Map(usedBalances.map((balance) => [balance.productId, balance]));
       const pricedLines = canonicalLines.map((line) => {
         const product = byId.get(line.productId)!;
-        if (product.stockQuantity < line.quantity) throw Object.assign(new Error(`Insufficient stock for product ${line.productId}: ${product.stockQuantity} available`), { status: 409 });
-        const unitCost = Number(product.averageCost);
+        const usedBalance = usedByProduct.get(line.productId);
+        const available = line.stockSource === "used_return" ? (usedBalance?.available ?? 0) : product.stockQuantity;
+        if (available < line.quantity) throw Object.assign(new Error(`Insufficient ${line.stockSource === "used_return" ? "used-return" : "normal"} stock for product ${line.productId}: ${available} available`), { status: 409 });
+        const unitCost = Number(line.stockSource === "used_return" ? (usedBalance?.averageCost ?? product.averageCost) : product.averageCost);
         if (!Number.isFinite(unitCost) || unitCost <= 0) throw Object.assign(new Error("Every product must have a positive average cost before it can be issued"), { status: 409 });
-        return { line, product, totalCost: (unitCost * line.quantity).toFixed(4) };
+        return { line, product, usedBalance, totalCost: (unitCost * line.quantity).toFixed(4) };
       });
       const combinedCost = pricedLines.reduce((sum: number, item: { totalCost: string }) => sum + Number(item.totalCost), 0).toFixed(4);
       // A batch has one operational identity.  Keep the legacy row identity for
@@ -120,25 +139,32 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
       const movementSourceId = isLegacySingleLine ? undefined : idempotencyKey;
       const inserted = [];
       for (const [index, item] of pricedLines.entries()) {
-        const { line, product, totalCost } = item;
+        const { line, product, usedBalance, totalCost } = item;
         const [issue] = await tx.insert(giftingIssuesTable).values({
           recipientName, city, country, category, occasion, reason: reason || null,
           comment: reason || "", productId: product.id,
           barcode: product.barcode ?? product.sku ?? String(product.id),
           descriptionSnapshot: product.nameAr || product.nameEn,
-          quantity: line.quantity, totalCost, issueDate,
+          quantity: line.quantity, stockSource: line.stockSource, totalCost, issueDate,
           dedupeKey: isLegacySingleLine ? legacyOperationKey : (index === 0 ? operationKey : `manual:${idempotencyKey}:line:${product.id}`),
           idempotencyKey: index === 0 ? idempotencyKey : null, createdBy: actorId,
         }).returning();
         inserted.push(issue);
-        const quantityAfter = product.stockQuantity - line.quantity;
-        await adjustOperationalBalances(tx, product.id, -line.quantity, product.averageCost, product.stockQuantity);
-        await tx.update(productsTable).set({ stockQuantity: quantityAfter }).where(eq(productsTable.id, product.id));
+        const quantityBefore = line.stockSource === "used_return" ? (usedBalance?.available ?? 0) : product.stockQuantity;
+        const quantityAfter = quantityBefore - line.quantity;
+        if (line.stockSource === "used_return") {
+          await tx.update(inventoryBalancesTable).set({ available: quantityAfter, updatedAt: new Date() })
+            .where(eq(inventoryBalancesTable.id, usedBalance!.id));
+        } else {
+          await adjustOperationalBalances(tx, product.id, -line.quantity, product.averageCost, product.stockQuantity);
+          await tx.update(productsTable).set({ stockQuantity: quantityAfter }).where(eq(productsTable.id, product.id));
+        }
         await tx.insert(inventoryMovementsTable).values({
           productId: product.id, movementType: "decrease", quantityChange: -line.quantity,
-          quantityBefore: product.stockQuantity, quantityAfter,
+          quantityBefore, quantityAfter,
           reason: `Product movement ${category}`, unitCost: product.averageCost, totalCost,
-          sourceType: movementSourceType, sourceId: isLegacySingleLine ? String(issue.id) : movementSourceId,
+          sourceType: line.stockSource === "used_return" ? "b2b_tester_used_return" : movementSourceType,
+          sourceId: isLegacySingleLine ? String(issue.id) : movementSourceId,
           eventKey: isLegacySingleLine ? `gifting:${idempotencyKey}` : `gifting:${idempotencyKey}:${product.id}`, performedBy: actorId,
         });
       }
@@ -152,6 +178,113 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
       return inserted[0];
     });
     return res.status(201).json(result);
+  } catch (error) {
+    const status = typeof (error as any)?.status === "number" ? (error as any).status : undefined;
+    if (status) return res.status(status).json({ error: (error as Error).message });
+    return next(error);
+  }
+});
+router.get("/admin/gifting-issues/tester-availability", permit("inventory", "view"), async (req, res, next) => {
+  try {
+    const productId = Number(req.query.productId);
+    if (!Number.isSafeInteger(productId) || productId <= 0) return res.status(400).json({ error: "Valid productId is required" });
+    const [product] = await db.select({ stockQuantity: productsTable.stockQuantity }).from(productsTable)
+      .where(eq(productsTable.id, productId)).limit(1);
+    if (!product) return res.status(404).json({ error: "Product not found" });
+    const [used] = await db.select({ available: inventoryBalancesTable.available })
+      .from(inventoryBalancesTable)
+      .innerJoin(inventoryLocationsTable, eq(inventoryBalancesTable.locationId, inventoryLocationsTable.id))
+      .where(and(eq(inventoryBalancesTable.productId, productId), eq(inventoryLocationsTable.code, USED_RETURN_LOCATION_CODE)))
+      .limit(1);
+    const usedReturnAvailable = used?.available ?? 0;
+    return res.json({
+      productId,
+      normalAvailable: product.stockQuantity,
+      usedReturnAvailable,
+      totalAvailable: product.stockQuantity + usedReturnAvailable,
+    });
+  } catch (error) { return next(error); }
+});
+router.post("/admin/gifting-issues/:id/return", permit("inventory", "edit"), async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const quantity = Number(req.body?.quantity);
+    const condition = req.body?.condition;
+    if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(quantity) || quantity <= 0 ||
+      (condition !== "new" && condition !== "used")) {
+      return res.status(400).json({ error: "Valid quantity and return condition are required" });
+    }
+    await ensureStandardAccountingChart();
+    const actorId = res.locals.admin.id as number;
+    const updated = await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from ${giftingIssuesTable} where ${giftingIssuesTable.id} = ${id} for update`);
+      const [issue] = await tx.select().from(giftingIssuesTable)
+        .where(and(eq(giftingIssuesTable.id, id), isNull(giftingIssuesTable.voidedAt))).limit(1);
+      if (!issue) throw Object.assign(new Error("Gifting issue not found"), { status: 404 });
+      if (issue.category !== "B2B_EVALUATION") throw Object.assign(new Error("Only B2B evaluation issues can be returned"), { status: 409 });
+      if (issue.returnCondition && issue.returnCondition !== condition && issue.returnedQuantity > 0) {
+        throw Object.assign(new Error("A partially returned issue must keep the same return condition"), { status: 409 });
+      }
+      const outstanding = issue.quantity - issue.returnedQuantity;
+      if (quantity > outstanding) throw Object.assign(new Error(`Return exceeds outstanding quantity: ${outstanding} available`), { status: 409 });
+      const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, issue.productId)).for("update").limit(1);
+      if (!product) throw Object.assign(new Error("Product not found"), { status: 404 });
+      const unitCost = Number(issue.totalCost) / issue.quantity;
+      const returnCost = (unitCost * quantity).toFixed(4);
+      let quantityBefore: number;
+      let quantityAfter: number;
+      if (condition === "new") {
+        quantityBefore = product.stockQuantity;
+        quantityAfter = quantityBefore + quantity;
+        await adjustOperationalBalances(tx, product.id, quantity, unitCost, product.stockQuantity);
+        await tx.update(productsTable).set({ stockQuantity: quantityAfter }).where(eq(productsTable.id, product.id));
+      } else {
+        let [usedLocation] = await tx.select().from(inventoryLocationsTable)
+          .where(eq(inventoryLocationsTable.code, USED_RETURN_LOCATION_CODE)).for("update").limit(1);
+        if (!usedLocation) {
+          [usedLocation] = await tx.insert(inventoryLocationsTable).values({
+            name: "B2B Used Returns", code: USED_RETURN_LOCATION_CODE, type: "virtual", isDefault: false, active: true,
+          }).returning();
+        }
+        let [balance] = await tx.select().from(inventoryBalancesTable)
+          .where(and(eq(inventoryBalancesTable.productId, product.id), eq(inventoryBalancesTable.locationId, usedLocation.id)))
+          .for("update").limit(1);
+        if (!balance) {
+          [balance] = await tx.insert(inventoryBalancesTable).values({
+            productId: product.id, locationId: usedLocation.id, available: 0, averageCost: unitCost.toFixed(4),
+          }).returning();
+        }
+        quantityBefore = balance.available;
+        quantityAfter = quantityBefore + quantity;
+        const newAverageCost = quantityAfter > 0
+          ? (((Number(balance.averageCost) * quantityBefore) + (unitCost * quantity)) / quantityAfter).toFixed(4)
+          : unitCost.toFixed(4);
+        await tx.update(inventoryBalancesTable).set({ available: quantityAfter, averageCost: newAverageCost, updatedAt: new Date() })
+          .where(eq(inventoryBalancesTable.id, balance.id));
+      }
+      const returnedQuantity = issue.returnedQuantity + quantity;
+      await tx.insert(inventoryMovementsTable).values({
+        productId: product.id, movementType: "increase", quantityChange: quantity,
+        quantityBefore, quantityAfter, reason: `B2B evaluation return (${condition})`,
+        unitCost: unitCost.toFixed(4), totalCost: returnCost,
+        sourceType: condition === "new" ? "b2b_return_new" : "b2b_return_used",
+        sourceId: String(issue.id), eventKey: `b2b:return:${issue.id}:${returnedQuantity}`,
+        performedBy: actorId,
+      });
+      await postJournalEntry({
+        entryDate: new Date().toISOString().slice(0, 10),
+        description: `B2B evaluation return #${issue.id} (${condition})`,
+        createdBy: actorId, sourceType: "b2b_evaluation_return", sourceId: `${issue.id}:${returnedQuantity}`,
+        lines: [{ accountCode: "1140", debit: returnCost }, { accountCode: "6160", credit: returnCost }],
+      }, tx);
+      const [result] = await tx.update(giftingIssuesTable).set({
+        returnedQuantity,
+        returnCondition: condition,
+        returnedAt: returnedQuantity === issue.quantity ? new Date() : null,
+      }).where(eq(giftingIssuesTable.id, issue.id)).returning();
+      return result;
+    });
+    return res.json(updated);
   } catch (error) {
     const status = typeof (error as any)?.status === "number" ? (error as any).status : undefined;
     if (status) return res.status(status).json({ error: (error as Error).message });
@@ -200,6 +333,9 @@ router.patch("/admin/gifting-issues/:id", permit("inventory", "edit"), async (re
       const [issue] = await tx.select().from(giftingIssuesTable)
         .where(and(eq(giftingIssuesTable.id, id), isNull(giftingIssuesTable.voidedAt))).limit(1);
       if (!issue) return undefined;
+      if (quantity !== undefined && issue.category === "B2B_EVALUATION" && issue.returnedQuantity > 0) {
+        throw Object.assign(new Error("Quantity cannot be edited after a B2B return"), { status: 409 });
+      }
 
       const quantityDelta = quantity === undefined ? 0 : quantity - issue.quantity;
       if (quantityDelta !== 0) {
@@ -268,6 +404,7 @@ router.delete("/admin/gifting-issues/:id", permit("inventory", "edit"), async (r
       const [issue] = await tx.select().from(giftingIssuesTable).where(eq(giftingIssuesTable.id, id)).limit(1);
       if (!issue) throw Object.assign(new Error("Gifting issue not found"), { status: 404 });
       if (issue.voidedAt) return;
+      if (issue.returnedQuantity > 0) throw Object.assign(new Error("A partially or fully returned B2B issue cannot be voided"), { status: 409 });
       const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, issue.productId)).for("update").limit(1);
       if (!product) throw Object.assign(new Error("Product not found"), { status: 404 });
       const reversalCost = Number(issue.totalCost).toFixed(4);

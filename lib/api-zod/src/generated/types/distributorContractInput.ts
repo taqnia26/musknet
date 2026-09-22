@@ -5,14 +5,14 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { DistributorContractInputContractType } from './distributorContractInputContractType';
 
 export interface DistributorContractInput {
   /** @nullable */
   contractNumber?: string | null;
   /** @nullable */
   distributorId?: number | null;
-  /** @minLength 1 */
-  contractType: string;
+  contractType: DistributorContractInputContractType;
   /** @nullable */
   contractDate?: Date | null;
   /** @nullable */

@@ -5,10 +5,12 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { GiftingIssueLineInputStockSource } from './giftingIssueLineInputStockSource';
 
 export interface GiftingIssueLineInput {
   /** @minimum 1 */
   productId: number;
   /** @minimum 1 */
   quantity: number;
+  stockSource?: GiftingIssueLineInputStockSource;
 }

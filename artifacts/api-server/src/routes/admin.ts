@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { and, count, desc, eq, gte, ilike, inArray, lt, lte, or, sql, sum } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
 import * as Api from "@workspace/api-zod";
@@ -655,6 +655,287 @@ router.get("/admin/analytics/dashboard", permit("dashboard", "view"), route(asyn
       source: row.source,
       visits: Number(row.visits ?? 0),
     })),
+  }));
+}));
+
+router.get("/admin/analytics/revenue", permit("dashboard", "view"), route(async (req, res) => {
+  const rawRangeDays = Array.isArray(req.query.rangeDays) ? req.query.rangeDays[0] : req.query.rangeDays;
+  const query = parse(Api.GetAdminRevenueAnalyticsQueryParams, {
+    ...req.query,
+    rangeDays: rawRangeDays === undefined ? undefined : Number(rawRangeDays),
+  }, res);
+  if (!query) return;
+
+  const rangeDays = query.rangeDays ?? 30;
+  const riyadhDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Riyadh",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const shiftDate = (date: string, days: number) => {
+    const shifted = new Date(`${date}T00:00:00Z`);
+    shifted.setUTCDate(shifted.getUTCDate() + days);
+    return shifted.toISOString().slice(0, 10);
+  };
+  const currentFrom = shiftDate(riyadhDate, -(rangeDays - 1));
+  const currentTo = shiftDate(riyadhDate, 1);
+  const previousFrom = shiftDate(currentFrom, -rangeDays);
+  const previousTo = currentFrom;
+  const rangeStart = new Date(`${previousFrom}T00:00:00+03:00`);
+  const rangeEnd = new Date(`${currentTo}T00:00:00+03:00`);
+  const onlineDay = sql<string>`to_char(date_trunc('day', ${ordersTable.createdAt} AT TIME ZONE 'Asia/Riyadh'), 'YYYY-MM-DD')`;
+  const companyDay = sql<string>`to_char(date_trunc('day', ${invoicesTable.issueDatetime} AT TIME ZONE 'Asia/Riyadh'), 'YYYY-MM-DD')`;
+
+  const [onlineRows, companyRows] = await Promise.all([
+    db.select({
+      date: onlineDay,
+      revenue: sum(ordersTable.total),
+      transactions: count(),
+    })
+      .from(ordersTable)
+      .leftJoin(invoicesTable, eq(invoicesTable.orderId, ordersTable.id))
+      .where(and(
+        eq(ordersTable.paymentStatus, "paid"),
+        sql`${ordersTable.status} <> 'cancelled'`,
+        isNull(invoicesTable.distributorId),
+        gte(ordersTable.createdAt, rangeStart),
+        lt(ordersTable.createdAt, rangeEnd),
+      ))
+      .groupBy(onlineDay)
+      .orderBy(onlineDay),
+    db.select({
+      date: companyDay,
+      companyId: wholesaleDistributorsTable.id,
+      companyName: wholesaleDistributorsTable.companyName,
+      revenue: sum(invoicesTable.totalAmount),
+      transactions: count(),
+    })
+      .from(invoicesTable)
+      .innerJoin(wholesaleDistributorsTable, eq(invoicesTable.distributorId, wholesaleDistributorsTable.id))
+      .where(and(
+        isNotNull(invoicesTable.distributorId),
+        gte(invoicesTable.issueDatetime, rangeStart),
+        lt(invoicesTable.issueDatetime, rangeEnd),
+      ))
+      .groupBy(companyDay, wholesaleDistributorsTable.id, wholesaleDistributorsTable.companyName)
+      .orderBy(companyDay),
+  ]);
+
+  const onlineByDate = new Map(onlineRows.map((row) => [row.date, {
+    revenue: Number(row.revenue ?? 0),
+    transactions: Number(row.transactions ?? 0),
+  }]));
+  const companyByDate = new Map<string, { revenue: number; transactions: number }>();
+  for (const row of companyRows) {
+    const current = companyByDate.get(row.date) ?? { revenue: 0, transactions: 0 };
+    current.revenue += Number(row.revenue ?? 0);
+    current.transactions += Number(row.transactions ?? 0);
+    companyByDate.set(row.date, current);
+  }
+
+  const summarize = (from: string, to: string) => {
+    let onlineRevenue = 0;
+    let companyRevenue = 0;
+    let onlineOrders = 0;
+    let companyInvoices = 0;
+    const companyIds = new Set<number>();
+    for (const row of onlineRows) {
+      if (row.date >= from && row.date < to) {
+        onlineRevenue += Number(row.revenue ?? 0);
+        onlineOrders += Number(row.transactions ?? 0);
+      }
+    }
+    for (const row of companyRows) {
+      if (row.date >= from && row.date < to) {
+        companyRevenue += Number(row.revenue ?? 0);
+        companyInvoices += Number(row.transactions ?? 0);
+        companyIds.add(row.companyId);
+      }
+    }
+    return {
+      onlineRevenue,
+      companyRevenue,
+      totalRevenue: onlineRevenue + companyRevenue,
+      onlineOrders,
+      companyInvoices,
+      activeCompanies: companyIds.size,
+      changePct: 0,
+    };
+  };
+  const summary = summarize(currentFrom, currentTo);
+  const previousSummary = summarize(previousFrom, previousTo);
+  const percentChange = (current: number, previous: number) =>
+    previous === 0 ? (current > 0 ? 100 : 0) : ((current - previous) / previous) * 100;
+  summary.changePct = percentChange(summary.totalRevenue, previousSummary.totalRevenue);
+  previousSummary.changePct = 0;
+
+  const trend = Array.from({ length: rangeDays }, (_, index) => {
+    const date = shiftDate(currentFrom, index);
+    const onlineRevenue = onlineByDate.get(date)?.revenue ?? 0;
+    const companyRevenue = companyByDate.get(date)?.revenue ?? 0;
+    return { date, onlineRevenue, companyRevenue, totalRevenue: onlineRevenue + companyRevenue };
+  });
+
+  const companyTotals = new Map<number, {
+    companyName: string;
+    revenue: number;
+    previousRevenue: number;
+    invoices: number;
+  }>();
+  for (const row of companyRows) {
+    const metric = companyTotals.get(row.companyId) ?? {
+      companyName: row.companyName,
+      revenue: 0,
+      previousRevenue: 0,
+      invoices: 0,
+    };
+    if (row.date >= currentFrom && row.date < currentTo) {
+      metric.revenue += Number(row.revenue ?? 0);
+      metric.invoices += Number(row.transactions ?? 0);
+    } else if (row.date >= previousFrom && row.date < previousTo) {
+      metric.previousRevenue += Number(row.revenue ?? 0);
+    }
+    companyTotals.set(row.companyId, metric);
+  }
+  const byCompany = Array.from(companyTotals.entries())
+    .filter(([, metric]) => metric.revenue > 0 || metric.previousRevenue > 0)
+    .map(([companyId, metric]) => ({
+      companyId,
+      companyName: metric.companyName,
+      revenue: metric.revenue,
+      previousRevenue: metric.previousRevenue,
+      invoices: metric.invoices,
+      sharePct: summary.companyRevenue > 0 ? (metric.revenue / summary.companyRevenue) * 100 : 0,
+      changePct: percentChange(metric.revenue, metric.previousRevenue),
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  const shipmentRows = await db.select({
+    id: shipmentsTable.id,
+    channel: shipmentsTable.channel,
+    orderId: shipmentsTable.orderId,
+    invoiceId: shipmentsTable.invoiceId,
+    status: shipmentsTable.status,
+    shippedAt: shipmentsTable.shippedAt,
+  })
+    .from(shipmentsTable)
+    .where(and(
+      inArray(shipmentsTable.channel, ["online", "b2b"]),
+      gte(shipmentsTable.createdAt, new Date(`${currentFrom}T00:00:00+03:00`)),
+      lt(shipmentsTable.createdAt, new Date(`${currentTo}T00:00:00+03:00`)),
+    ));
+  const onlineOrderIds = Array.from(new Set(shipmentRows
+    .filter((shipment) => shipment.channel === "online" && shipment.orderId != null)
+    .map((shipment) => shipment.orderId as number)));
+  const companyInvoiceIds = Array.from(new Set(shipmentRows
+    .filter((shipment) => shipment.channel === "b2b" && shipment.invoiceId != null)
+    .map((shipment) => shipment.invoiceId as number)));
+
+  const [onlineAmounts, onlineQuantities, companyAmounts, companyQuantities, companyPayments] = await Promise.all([
+    onlineOrderIds.length > 0
+      ? db.select({
+        id: ordersTable.id,
+        total: ordersTable.total,
+        paymentStatus: ordersTable.paymentStatus,
+      }).from(ordersTable).where(inArray(ordersTable.id, onlineOrderIds))
+      : Promise.resolve([]),
+    onlineOrderIds.length > 0
+      ? db.select({
+        sourceId: orderItemsTable.orderId,
+        quantity: sum(orderItemsTable.quantity),
+      }).from(orderItemsTable)
+        .where(inArray(orderItemsTable.orderId, onlineOrderIds))
+        .groupBy(orderItemsTable.orderId)
+      : Promise.resolve([]),
+    companyInvoiceIds.length > 0
+      ? db.select({
+        id: invoicesTable.id,
+        total: invoicesTable.totalAmount,
+      }).from(invoicesTable).where(inArray(invoicesTable.id, companyInvoiceIds))
+      : Promise.resolve([]),
+    companyInvoiceIds.length > 0
+      ? db.select({
+        sourceId: invoiceItemsTable.invoiceId,
+        quantity: sum(invoiceItemsTable.quantity),
+      }).from(invoiceItemsTable)
+        .where(inArray(invoiceItemsTable.invoiceId, companyInvoiceIds))
+        .groupBy(invoiceItemsTable.invoiceId)
+      : Promise.resolve([]),
+    companyInvoiceIds.length > 0
+      ? db.select({
+        sourceId: receivablePaymentsTable.invoiceId,
+        paid: sum(receivablePaymentsTable.amount),
+      }).from(receivablePaymentsTable)
+        .where(inArray(receivablePaymentsTable.invoiceId, companyInvoiceIds))
+        .groupBy(receivablePaymentsTable.invoiceId)
+      : Promise.resolve([]),
+  ]);
+  const onlineAmountMap = new Map(onlineAmounts.map((row) => [row.id, row]));
+  const onlineQuantityMap = new Map(onlineQuantities.map((row) => [row.sourceId, Number(row.quantity ?? 0)]));
+  const companyAmountMap = new Map(companyAmounts.map((row) => [row.id, Number(row.total)]));
+  const companyQuantityMap = new Map(companyQuantities.map((row) => [row.sourceId, Number(row.quantity ?? 0)]));
+  const companyPaymentMap = new Map(companyPayments.map((row) => [row.sourceId, Number(row.paid ?? 0)]));
+
+  type ShippingMetric = {
+    shipmentCount: number;
+    shippedCount: number;
+    quantity: number;
+    amountRequired: number;
+    amountPaid: number;
+    outstandingAmount: number;
+  };
+  const emptyShippingMetric = (): ShippingMetric => ({
+    shipmentCount: 0,
+    shippedCount: 0,
+    quantity: 0,
+    amountRequired: 0,
+    amountPaid: 0,
+    outstandingAmount: 0,
+  });
+  const shippingOnline = emptyShippingMetric();
+  const shippingCompanies = emptyShippingMetric();
+  const shippedStatuses = new Set(["in_transit", "delivered"]);
+  for (const shipment of shipmentRows) {
+    const target = shipment.channel === "online" ? shippingOnline : shippingCompanies;
+    target.shipmentCount += 1;
+    if (shipment.shippedAt != null || shippedStatuses.has(shipment.status)) target.shippedCount += 1;
+    if (shipment.channel === "online" && shipment.orderId != null) {
+      const order = onlineAmountMap.get(shipment.orderId);
+      const required = Number(order?.total ?? 0);
+      const paid = order?.paymentStatus === "paid" ? required : 0;
+      target.quantity += onlineQuantityMap.get(shipment.orderId) ?? 0;
+      target.amountRequired += required;
+      target.amountPaid += paid;
+      target.outstandingAmount += Math.max(0, required - paid);
+    } else if (shipment.channel === "b2b" && shipment.invoiceId != null) {
+      const required = companyAmountMap.get(shipment.invoiceId) ?? 0;
+      const paid = Math.min(required, companyPaymentMap.get(shipment.invoiceId) ?? 0);
+      target.quantity += companyQuantityMap.get(shipment.invoiceId) ?? 0;
+      target.amountRequired += required;
+      target.amountPaid += paid;
+      target.outstandingAmount += Math.max(0, required - paid);
+    }
+  }
+  const shippingTotal = (Object.keys(shippingOnline) as Array<keyof ShippingMetric>).reduce((metric, key) => {
+    metric[key] = shippingOnline[key] + shippingCompanies[key];
+    return metric;
+  }, emptyShippingMetric());
+
+  res.json(Api.GetAdminRevenueAnalyticsResponse.parse({
+    rangeDays,
+    currency: "SAR",
+    period: { from: currentFrom, to: shiftDate(currentTo, -1) },
+    previousPeriod: { from: previousFrom, to: shiftDate(previousTo, -1) },
+    summary,
+    previousSummary,
+    trend,
+    byCompany,
+    shipping: {
+      total: shippingTotal,
+      online: shippingOnline,
+      companies: shippingCompanies,
+    },
   }));
 }));
 

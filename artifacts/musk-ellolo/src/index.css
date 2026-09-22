@@ -382,6 +382,11 @@ html.dark.admin-route {
     font-weight: 700;
   }
 
+  /* Keep all admin table headings visually aligned in both RTL and LTR. */
+  .admin-theme table thead th {
+    text-align: center !important;
+  }
+
   /* Portals (dialogs, selects, popovers) live outside .admin-theme. Keep their
      variables contextual while the admin route is mounted, without touching store pages. */
   html.admin-route {
@@ -511,4 +516,11 @@ html.dark.admin-route {
   .admin-route ::-webkit-scrollbar-button {
     display: none;
   }
+}
+
+.admin-theme[data-mask-numeric="true"] input[type="number"]:not(:focus),
+.admin-theme[data-mask-numeric="true"] input[type="date"]:not(:focus),
+.admin-theme[data-mask-numeric="true"] input[type="datetime-local"]:not(:focus),
+.admin-theme[data-mask-numeric="true"] input[type="tel"]:not(:focus) {
+  -webkit-text-security: disc;
 }

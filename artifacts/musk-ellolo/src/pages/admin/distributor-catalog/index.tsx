@@ -126,7 +126,7 @@ export default function AdminDistributorCatalog() {
               <TableHead>حالة الظهور</TableHead>
               <TableHead>الاسم المخصص (للموزعين)</TableHead>
               <TableHead>الصورة المخصصة</TableHead>
-              <TableHead className="w-[150px] text-left">الإجراءات</TableHead>
+              <TableHead className="w-[150px]">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -135,13 +135,13 @@ export default function AdminDistributorCatalog() {
               
               return (
                 <TableRow key={item.id}>
-                  <TableCell className="font-medium">
+                  <TableCell className="text-center font-medium">
                     {item.nameAr}
                     <div className="text-xs text-muted-foreground mt-1" dir="ltr">{item.nameEn}</div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {isEditing ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         <Switch 
                           checked={editValues?.showOnDistributors} 
                           onCheckedChange={(c) => setEditValues(prev => prev ? {...prev, showOnDistributors: c} : null)}
@@ -159,13 +159,13 @@ export default function AdminDistributorCatalog() {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {isEditing ? (
                       <Input 
                         value={editValues?.distributorNameOverride} 
                         onChange={(e) => setEditValues(prev => prev ? {...prev, distributorNameOverride: e.target.value} : null)}
                         placeholder="اترك فارغاً لاستخدام الاسم الأساسي"
-                        className="h-8"
+                        className="h-8 text-center"
                       />
                     ) : (
                       <span className={item.distributorNameOverride ? "text-primary font-medium" : "text-muted-foreground"}>
@@ -173,9 +173,9 @@ export default function AdminDistributorCatalog() {
                       </span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-center">
                     {isEditing ? (
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         <ImageIcon className="h-4 w-4 text-muted-foreground" />
                         <Input 
                           value={editValues?.distributorImageOverride} 

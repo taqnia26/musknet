@@ -673,6 +673,22 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/AdminAnalyticsDashboard" }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/analytics/revenue:
+    get:
+      operationId: getAdminRevenueAnalytics
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - in: query
+          name: rangeDays
+          schema: { type: number, enum: [7, 30, 90, 365], default: 30 }
+      responses:
+        "200":
+          description: Online and company revenue analytics
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminRevenueAnalytics" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /analytics/page-view:
     post:
       operationId: trackPageView
@@ -1589,6 +1605,18 @@ paths:
         "201": { description: Product movement created, content: { application/json: { schema: { $ref: "#/components/schemas/GiftingIssue" } } } }
         "400": { $ref: "#/components/responses/BadRequest" }
         "409": { description: Insufficient stock or idempotency conflict }
+  /admin/gifting-issues/tester-availability:
+    get:
+      operationId: getAdminTesterAvailability
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - { in: query, name: productId, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }
+      responses:
+        "200":
+          description: Tester stock availability
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/TesterStockAvailability" } }
   /admin/gifting-issues/{id}:
     get:
       operationId: getAdminGiftingIssue
@@ -1622,6 +1650,25 @@ paths:
       responses:
         "204": { description: Product movement voided and inventory/accounting effects reversed }
         "404": { description: Not found }
+  /admin/gifting-issues/{id}/return:
+    post:
+      operationId: returnAdminB2BEvaluation
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: number, multipleOf: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: "#/components/schemas/B2BEvaluationReturnInput" } }
+      responses:
+        "200":
+          description: Returned B2B evaluation stock
+          content:
+            application/json: { schema: { $ref: "#/components/schemas/GiftingIssue" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { description: Not found }
+        "409": { description: Return exceeds outstanding quantity }
   /influencer/auth/login:
     post:
       operationId: influencerLogin
@@ -2772,6 +2819,75 @@ components:
             properties:
               source: { type: string, enum: [direct, search, social, referral] }
               visits: { type: number }
+    AdminRevenueAnalytics:
+      type: object
+      required: [rangeDays, currency, period, previousPeriod, summary, previousSummary, trend, byCompany, shipping]
+      properties:
+        rangeDays: { type: number }
+        currency: { type: string, enum: [SAR] }
+        period: { $ref: "#/components/schemas/AnalyticsDatePeriod" }
+        previousPeriod: { $ref: "#/components/schemas/AnalyticsDatePeriod" }
+        summary: { $ref: "#/components/schemas/RevenueAnalyticsSummary" }
+        previousSummary: { $ref: "#/components/schemas/RevenueAnalyticsSummary" }
+        trend:
+          type: array
+          items: { $ref: "#/components/schemas/RevenueTrendPoint" }
+        byCompany:
+          type: array
+          items: { $ref: "#/components/schemas/CompanyRevenueMetric" }
+        shipping:
+          type: object
+          required: [total, online, companies]
+          properties:
+            total: { $ref: "#/components/schemas/ShippingFinancialMetric" }
+            online: { $ref: "#/components/schemas/ShippingFinancialMetric" }
+            companies: { $ref: "#/components/schemas/ShippingFinancialMetric" }
+    AnalyticsDatePeriod:
+      type: object
+      required: [from, to]
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+    RevenueAnalyticsSummary:
+      type: object
+      required: [onlineRevenue, companyRevenue, totalRevenue, onlineOrders, companyInvoices, activeCompanies, changePct]
+      properties:
+        onlineRevenue: { type: number }
+        companyRevenue: { type: number }
+        totalRevenue: { type: number }
+        onlineOrders: { type: number }
+        companyInvoices: { type: number }
+        activeCompanies: { type: number }
+        changePct: { type: number }
+    RevenueTrendPoint:
+      type: object
+      required: [date, onlineRevenue, companyRevenue, totalRevenue]
+      properties:
+        date: { type: string, format: date }
+        onlineRevenue: { type: number }
+        companyRevenue: { type: number }
+        totalRevenue: { type: number }
+    CompanyRevenueMetric:
+      type: object
+      required: [companyId, companyName, revenue, previousRevenue, invoices, sharePct, changePct]
+      properties:
+        companyId: { type: number }
+        companyName: { type: string }
+        revenue: { type: number }
+        previousRevenue: { type: number }
+        invoices: { type: number }
+        sharePct: { type: number }
+        changePct: { type: number }
+    ShippingFinancialMetric:
+      type: object
+      required: [shipmentCount, shippedCount, quantity, amountRequired, amountPaid, outstandingAmount]
+      properties:
+        shipmentCount: { type: number }
+        shippedCount: { type: number }
+        quantity: { type: number }
+        amountRequired: { type: number }
+        amountPaid: { type: number }
+        outstandingAmount: { type: number }
     TrackPageViewInput:
       type: object
       required: [sessionId, path]
@@ -2801,7 +2917,16 @@ components:
         id: { type: number }
         contractNumber: { type: string }
         distributorId: { type: [number, "null"] }
-        contractType: { type: string }
+        contractType:
+          type: string
+          enum:
+            - موزع
+            - امتياز
+            - وكالة
+            - عقد توريد أجل المملكة العربية السعودية
+            - عقد توريد نقد المملكة العربية السعودية
+            - عقد توريد أجل دول الخليج
+            - عقد توريد نقد دول الخليج
         status: { type: string, enum: [draft, seller_signed, sent, final, cancelled] }
         contractDate: { type: [string, "null"], format: date-time }
         hijriDateStr: { type: [string, "null"] }
@@ -2856,7 +2981,16 @@ components:
       properties:
         contractNumber: { type: [string, "null"] }
         distributorId: { type: [number, "null"] }
-        contractType: { type: string, minLength: 1 }
+        contractType:
+          type: string
+          enum:
+            - موزع
+            - امتياز
+            - وكالة
+            - عقد توريد أجل المملكة العربية السعودية
+            - عقد توريد نقد المملكة العربية السعودية
+            - عقد توريد أجل دول الخليج
+            - عقد توريد نقد دول الخليج
         contractDate: { type: [string, "null"], format: date-time }
         hijriDateStr: { type: [string, "null"] }
         gregorianDateStr: { type: [string, "null"] }
@@ -4063,7 +4197,7 @@ components:
         quantitySold: { type: number, multipleOf: 1, minimum: 0, default: 0 }
     GiftingIssue:
       type: object
-      required: [id, category, comment, productId, barcode, descriptionSnapshot, quantity, totalCost, issueDate, dedupeKey, importedAt]
+      required: [id, category, comment, productId, barcode, descriptionSnapshot, quantity, stockSource, returnedQuantity, totalCost, issueDate, dedupeKey, importedAt]
       properties:
         id: { type: number, multipleOf: 1 }
         recipientName: { type: [string, "null"] }
@@ -4078,6 +4212,10 @@ components:
         barcode: { type: string }
         descriptionSnapshot: { type: string }
         quantity: { type: number, multipleOf: 1, minimum: 1 }
+        stockSource: { type: string, enum: [normal, used_return] }
+        returnedQuantity: { type: number, multipleOf: 1, minimum: 0 }
+        returnCondition: { type: [string, "null"], enum: [new, used, null] }
+        returnedAt: { type: [string, "null"], format: date-time }
         totalCost: { type: string }
         issueDate: { type: string, format: date-time }
         sourceFilename: { type: [string, "null"] }
@@ -4095,6 +4233,7 @@ components:
       properties:
         productId: { type: number, multipleOf: 1, minimum: 1 }
         quantity: { type: number, multipleOf: 1, minimum: 1 }
+        stockSource: { type: string, enum: [normal, used_return], default: normal }
     GiftingIssueInput:
       allOf:
         - type: object
@@ -4130,6 +4269,20 @@ components:
         country: { type: ["string", "null"], maxLength: 120 }
         occasion: { type: ["string", "null"], maxLength: 500 }
         reason: { type: ["string", "null"], maxLength: 500 }
+    TesterStockAvailability:
+      type: object
+      required: [productId, normalAvailable, usedReturnAvailable, totalAvailable]
+      properties:
+        productId: { type: number, multipleOf: 1 }
+        normalAvailable: { type: number, multipleOf: 1, minimum: 0 }
+        usedReturnAvailable: { type: number, multipleOf: 1, minimum: 0 }
+        totalAvailable: { type: number, multipleOf: 1, minimum: 0 }
+    B2BEvaluationReturnInput:
+      type: object
+      required: [quantity, condition]
+      properties:
+        quantity: { type: number, multipleOf: 1, minimum: 1 }
+        condition: { type: string, enum: [new, used] }
     InfluencerLogin:
       type: object
       required: [email, password]

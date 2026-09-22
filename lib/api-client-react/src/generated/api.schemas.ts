@@ -746,6 +746,72 @@ export interface AdminAnalyticsDashboard {
   trafficSources: AdminAnalyticsDashboardTrafficSourcesItem[];
 }
 
+export type AdminRevenueAnalyticsCurrency = typeof AdminRevenueAnalyticsCurrency[keyof typeof AdminRevenueAnalyticsCurrency];
+
+
+export const AdminRevenueAnalyticsCurrency = {
+  SAR: 'SAR',
+} as const;
+
+export interface ShippingFinancialMetric {
+  shipmentCount: number;
+  shippedCount: number;
+  quantity: number;
+  amountRequired: number;
+  amountPaid: number;
+  outstandingAmount: number;
+}
+
+export type AdminRevenueAnalyticsShipping = {
+  total: ShippingFinancialMetric;
+  online: ShippingFinancialMetric;
+  companies: ShippingFinancialMetric;
+};
+
+export interface AnalyticsDatePeriod {
+  from: string;
+  to: string;
+}
+
+export interface RevenueAnalyticsSummary {
+  onlineRevenue: number;
+  companyRevenue: number;
+  totalRevenue: number;
+  onlineOrders: number;
+  companyInvoices: number;
+  activeCompanies: number;
+  changePct: number;
+}
+
+export interface RevenueTrendPoint {
+  date: string;
+  onlineRevenue: number;
+  companyRevenue: number;
+  totalRevenue: number;
+}
+
+export interface CompanyRevenueMetric {
+  companyId: number;
+  companyName: string;
+  revenue: number;
+  previousRevenue: number;
+  invoices: number;
+  sharePct: number;
+  changePct: number;
+}
+
+export interface AdminRevenueAnalytics {
+  rangeDays: number;
+  currency: AdminRevenueAnalyticsCurrency;
+  period: AnalyticsDatePeriod;
+  previousPeriod: AnalyticsDatePeriod;
+  summary: RevenueAnalyticsSummary;
+  previousSummary: RevenueAnalyticsSummary;
+  trend: RevenueTrendPoint[];
+  byCompany: CompanyRevenueMetric[];
+  shipping: AdminRevenueAnalyticsShipping;
+}
+
 export interface TrackPageViewInput {
   /**
      * @minLength 8
@@ -795,6 +861,19 @@ export interface AdminIntegrationInput {
   apiBaseUrl?: string | null;
 }
 
+export type DistributorContractContractType = typeof DistributorContractContractType[keyof typeof DistributorContractContractType];
+
+
+export const DistributorContractContractType = {
+  موزع: 'موزع',
+  امتياز: 'امتياز',
+  وكالة: 'وكالة',
+  عقد_توريد_أجل_المملكة_العربية_السعودية: 'عقد توريد أجل المملكة العربية السعودية',
+  عقد_توريد_نقد_المملكة_العربية_السعودية: 'عقد توريد نقد المملكة العربية السعودية',
+  عقد_توريد_أجل_دول_الخليج: 'عقد توريد أجل دول الخليج',
+  عقد_توريد_نقد_دول_الخليج: 'عقد توريد نقد دول الخليج',
+} as const;
+
 export type DistributorContractStatus = typeof DistributorContractStatus[keyof typeof DistributorContractStatus];
 
 
@@ -811,7 +890,7 @@ export interface DistributorContract {
   contractNumber: string;
   /** @nullable */
   distributorId?: number | null;
-  contractType: string;
+  contractType: DistributorContractContractType;
   status: DistributorContractStatus;
   /** @nullable */
   contractDate?: string | null;
@@ -888,13 +967,25 @@ export interface DistributorContract {
   updatedAt: string;
 }
 
+export type DistributorContractInputContractType = typeof DistributorContractInputContractType[keyof typeof DistributorContractInputContractType];
+
+
+export const DistributorContractInputContractType = {
+  موزع: 'موزع',
+  امتياز: 'امتياز',
+  وكالة: 'وكالة',
+  عقد_توريد_أجل_المملكة_العربية_السعودية: 'عقد توريد أجل المملكة العربية السعودية',
+  عقد_توريد_نقد_المملكة_العربية_السعودية: 'عقد توريد نقد المملكة العربية السعودية',
+  عقد_توريد_أجل_دول_الخليج: 'عقد توريد أجل دول الخليج',
+  عقد_توريد_نقد_دول_الخليج: 'عقد توريد نقد دول الخليج',
+} as const;
+
 export interface DistributorContractInput {
   /** @nullable */
   contractNumber?: string | null;
   /** @nullable */
   distributorId?: number | null;
-  /** @minLength 1 */
-  contractType: string;
+  contractType: DistributorContractInputContractType;
   /** @nullable */
   contractDate?: string | null;
   /** @nullable */
@@ -2872,6 +2963,25 @@ export interface ExhibitionProductInput {
   quantitySold?: number;
 }
 
+export type GiftingIssueStockSource = typeof GiftingIssueStockSource[keyof typeof GiftingIssueStockSource];
+
+
+export const GiftingIssueStockSource = {
+  normal: 'normal',
+  used_return: 'used_return',
+} as const;
+
+/**
+ * @nullable
+ */
+export type GiftingIssueReturnCondition = typeof GiftingIssueReturnCondition[keyof typeof GiftingIssueReturnCondition] | null;
+
+
+export const GiftingIssueReturnCondition = {
+  new: 'new',
+  used: 'used',
+} as const;
+
 export type GiftingIssueCategory = typeof GiftingIssueCategory[keyof typeof GiftingIssueCategory];
 
 
@@ -2910,6 +3020,13 @@ export interface GiftingIssue {
   descriptionSnapshot: string;
   /** @minimum 1 */
   quantity: number;
+  stockSource: GiftingIssueStockSource;
+  /** @minimum 0 */
+  returnedQuantity: number;
+  /** @nullable */
+  returnCondition?: GiftingIssueReturnCondition;
+  /** @nullable */
+  returnedAt?: string | null;
   totalCost: string;
   issueDate: string;
   /** @nullable */
@@ -2924,11 +3041,20 @@ export interface GiftingIssue {
   importedAt: string;
 }
 
+export type GiftingIssueLineInputStockSource = typeof GiftingIssueLineInputStockSource[keyof typeof GiftingIssueLineInputStockSource];
+
+
+export const GiftingIssueLineInputStockSource = {
+  normal: 'normal',
+  used_return: 'used_return',
+} as const;
+
 export interface GiftingIssueLineInput {
   /** @minimum 1 */
   productId: number;
   /** @minimum 1 */
   quantity: number;
+  stockSource?: GiftingIssueLineInputStockSource;
 }
 
 export type GiftingIssueInputCategory = typeof GiftingIssueInputCategory[keyof typeof GiftingIssueInputCategory];
@@ -3012,6 +3138,30 @@ export interface GiftingIssueUpdate {
      * @nullable
      */
   reason?: string | null;
+}
+
+export interface TesterStockAvailability {
+  productId: number;
+  /** @minimum 0 */
+  normalAvailable: number;
+  /** @minimum 0 */
+  usedReturnAvailable: number;
+  /** @minimum 0 */
+  totalAvailable: number;
+}
+
+export type B2BEvaluationReturnInputCondition = typeof B2BEvaluationReturnInputCondition[keyof typeof B2BEvaluationReturnInputCondition];
+
+
+export const B2BEvaluationReturnInputCondition = {
+  new: 'new',
+  used: 'used',
+} as const;
+
+export interface B2BEvaluationReturnInput {
+  /** @minimum 1 */
+  quantity: number;
+  condition: B2BEvaluationReturnInputCondition;
 }
 
 export interface InfluencerLogin {
@@ -3430,6 +3580,20 @@ export const GetAdminAnalyticsDashboardRangeDays = {
   NUMBER_90: 90,
 } as const;
 
+export type GetAdminRevenueAnalyticsParams = {
+rangeDays?: GetAdminRevenueAnalyticsRangeDays;
+};
+
+export type GetAdminRevenueAnalyticsRangeDays = typeof GetAdminRevenueAnalyticsRangeDays[keyof typeof GetAdminRevenueAnalyticsRangeDays];
+
+
+export const GetAdminRevenueAnalyticsRangeDays = {
+  NUMBER_7: 7,
+  NUMBER_30: 30,
+  NUMBER_90: 90,
+  NUMBER_365: 365,
+} as const;
+
 export type AdminListProductsParams = {
 search?: AdminSearchParameter;
 status?: AdminStatusParameter;
@@ -3619,6 +3783,13 @@ export type GetAdminGiftingIssues200Summary = {
 export type GetAdminGiftingIssues200 = {
   rows: GiftingIssue[];
   summary: GetAdminGiftingIssues200Summary;
+};
+
+export type GetAdminTesterAvailabilityParams = {
+/**
+ * @minimum 1
+ */
+productId: number;
 };
 
 export type InfluencerDashboardParams = {

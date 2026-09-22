@@ -1,4 +1,5 @@
-import { integer, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { check, integer, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { productsTable } from "./products";
@@ -8,6 +9,8 @@ export const giftingCategoryEnum = pgEnum("gifting_issue_category", [
   "VIP", "Sample", "Damage", "Marketing", "Tester",
   "B2B_EVALUATION", "TESTER", "VIP_GIFT", "INFLUENCERS", "DAMAGED", "OTHER",
 ]);
+export const b2bStockSourceEnum = pgEnum("b2b_stock_source", ["normal", "used_return"]);
+export const b2bReturnConditionEnum = pgEnum("b2b_return_condition", ["new", "used"]);
 
 export const giftingIssuesTable = pgTable("gifting_issues", {
   id: serial("id").primaryKey(),
@@ -23,6 +26,10 @@ export const giftingIssuesTable = pgTable("gifting_issues", {
   barcode: text("barcode").notNull(),
   descriptionSnapshot: text("description_snapshot").notNull(),
   quantity: integer("quantity").notNull(),
+  stockSource: b2bStockSourceEnum("stock_source").notNull().default("normal"),
+  returnedQuantity: integer("returned_quantity").notNull().default(0),
+  returnCondition: b2bReturnConditionEnum("return_condition"),
+  returnedAt: timestamp("returned_at", { withTimezone: true }),
   totalCost: numeric("total_cost", { precision: 18, scale: 8 }).notNull(),
   issueDate: timestamp("issue_date", { withTimezone: true }).notNull().defaultNow(),
   sourceFilename: text("source_filename"),
@@ -41,6 +48,7 @@ export const giftingIssuesTable = pgTable("gifting_issues", {
   uniqueIndex("gifting_issues_dedupe_key_unique").on(table.dedupeKey),
   uniqueIndex("gifting_issues_row_fingerprint_unique").on(table.rowFingerprint),
   uniqueIndex("gifting_issues_idempotency_key_unique").on(table.idempotencyKey),
+  check("gifting_issues_returned_quantity_valid", sql`${table.returnedQuantity} >= 0 and ${table.returnedQuantity} <= ${table.quantity}`),
 ]);
 
 export const insertGiftingIssueSchema = createInsertSchema(giftingIssuesTable).omit({ id: true, importedAt: true, voidedAt: true, voidedBy: true });

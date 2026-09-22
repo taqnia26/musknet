@@ -3,6 +3,7 @@ import { Route, Switch, useLocation } from 'wouter';
 import { AdminLayout } from '@/components/admin/admin-layout';
 import AdminLogin from '@/pages/admin/login';
 import AdminDashboard from '@/pages/admin/dashboard';
+import AdminRevenueAnalytics from '@/pages/admin/revenue-analytics';
 import AdminProducts from '@/pages/admin/products';
 import AdminCategories from '@/pages/admin/categories';
 import AdminOrders from '@/pages/admin/orders';
@@ -62,6 +63,7 @@ export default function AdminRoutes() {
         <Route path="/admin/sales/companies" component={AdminInvoices} />
         <Route path="/admin/sales/exhibitions" component={AdminExhibitions} />
         <Route path="/admin/marketing/coupons" component={AdminCoupons} />
+        <Route path="/admin/revenue-analytics" component={AdminRevenueAnalytics} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin/categories" component={AdminCategories} />
