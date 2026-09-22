@@ -375,7 +375,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             </SheetContent>
           </Sheet>
 
-          <div className="hidden min-w-[150px] flex-col items-center justify-center gap-0.5 lg:flex">
+          <div className="hidden min-w-[190px] items-center justify-start gap-3 lg:flex">
             <img
               src="/site-assets/musk-ellolo-mark-black.png"
               alt=""
@@ -386,7 +386,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
               alt=""
               className="hidden h-9 w-9 shrink-0 object-contain dark:block"
             />
-            <span className="whitespace-nowrap text-center text-[11px] font-semibold leading-tight tracking-wide text-foreground/90">{t('نظام إدارة مسك اللولو', 'Musk Ellolo System')}</span>
+            <span className="whitespace-nowrap text-[13px] font-semibold leading-tight tracking-wide text-muted-foreground">{t('نظام إدارة مسك اللولو', 'Musk Ellolo System')}</span>
           </div>
         </div>
 
