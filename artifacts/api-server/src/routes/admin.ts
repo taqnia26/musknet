@@ -189,10 +189,10 @@ const shippingStatusLabels: Record<string, { labelAr: string; labelEn: string }>
   cancelled: { labelAr: "ملغاة", labelEn: "Cancelled" },
 };
 
-async function canUseShipping(res: Response, channel: "online" | "b2b", action: "view" | "edit") {
+async function canUseShipping(res: Response, _channel: "online" | "b2b", action: "view" | "edit") {
   const user = res.locals.admin as typeof adminUsersTable.$inferSelect;
   res.locals.permissions = await (await publicAdmin(user)).permissions;
-  return allowed(res, channel === "online" ? "orders" : "invoices", action);
+  return allowed(res, "shipping", action);
 }
 
 async function shippingRows(channel: "online" | "b2b") {

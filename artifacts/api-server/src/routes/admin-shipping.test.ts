@@ -21,28 +21,28 @@ const suffix = Date.now();
 const base = 1_820_000_000 + (suffix % 20_000_000);
 const ids = { admin: base, viewer: base + 1, customer: base + 2, order: base + 3, address: base + 4, distributor: base + 5, invoice: base + 6, missingShipmentOrder: base + 7 };
 let adminToken: string;
-let ordersViewerToken: string;
+let shippingViewerToken: string;
 
 const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 beforeAll(async () => {
   await db.insert(adminPermissionsTable).values(
-    ["orders", "invoices"].flatMap((module) => ["view", "edit"].map((action) => ({ module, action }))),
+    ["view", "edit"].map((action) => ({ module: "shipping", action })),
   ).onConflictDoNothing();
   await db.insert(adminUsersTable).values([
     { id: ids.admin, email: `shipping-admin-${suffix}@example.com`, name: "Shipping Admin", passwordHash: await hashAdminPassword("shipping-password") },
-    { id: ids.viewer, email: `shipping-viewer-${suffix}@example.com`, name: "Orders Viewer", passwordHash: await hashAdminPassword("shipping-password") },
+    { id: ids.viewer, email: `shipping-viewer-${suffix}@example.com`, name: "Shipping Viewer", passwordHash: await hashAdminPassword("shipping-password") },
   ]);
-  const permissions = await db.select().from(adminPermissionsTable).where(inArray(adminPermissionsTable.module, ["orders", "invoices"]));
+  const permissions = await db.select().from(adminPermissionsTable).where(eq(adminPermissionsTable.module, "shipping"));
   await db.insert(adminUserPermissionsTable).values(
     permissions.map((permission) => ({ adminUserId: ids.admin, permissionId: permission.id })),
   );
   await db.insert(adminUserPermissionsTable).values(
-    permissions.filter((permission) => permission.module === "orders" && permission.action === "view")
+    permissions.filter((permission) => permission.action === "view")
       .map((permission) => ({ adminUserId: ids.viewer, permissionId: permission.id })),
   );
   adminToken = await createAdminSession(ids.admin);
-  ordersViewerToken = await createAdminSession(ids.viewer);
+  shippingViewerToken = await createAdminSession(ids.viewer);
 
   await db.insert(customersTable).values({ id: ids.customer, phone: `9665${String(suffix).slice(-8)}`, name: "Shipping Customer" });
   await db.insert(ordersTable).values({
@@ -122,10 +122,10 @@ describe.sequential("admin shipping dashboards", () => {
   });
 
   it("enforces channel permissions and rejects edits for a view-only user", async () => {
-    await request(app).get("/api/admin/shipping?channel=online").set(auth(ordersViewerToken)).expect(200);
-    await request(app).get("/api/admin/shipping?channel=b2b").set(auth(ordersViewerToken)).expect(403);
+    await request(app).get("/api/admin/shipping?channel=online").set(auth(shippingViewerToken)).expect(200);
+    await request(app).get("/api/admin/shipping?channel=b2b").set(auth(shippingViewerToken)).expect(200);
     const online = await db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.orderId, ids.order)).limit(1);
-    await request(app).patch(`/api/admin/shipping/${online[0].id}`).set(auth(ordersViewerToken))
+    await request(app).patch(`/api/admin/shipping/${online[0].id}`).set(auth(shippingViewerToken))
       .send({ status: "delivered" }).expect(403);
   });
 

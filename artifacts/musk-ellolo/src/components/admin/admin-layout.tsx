@@ -178,17 +178,24 @@ export const isAdminNavActive = (href: string, location: string) =>
 export const visibleAdminNavChildren = (item: any, user: any) =>
   item.children?.filter((child: any) => {
     if (child.superAdminOnly && !user.isSuperAdmin) return false;
-    if (child.module && child.module !== 'dashboard' && !hasPermission(user, child.module, 'view')) return false;
+    const module = child.module ?? item.module;
+    if (module && !hasPermission(user, module, 'view')) return false;
     return true;
   }) ?? [];
 
+export const isAdminNavItemVisible = (item: any, user: any) => {
+  if (item.superAdminOnly && !user.isSuperAdmin) return false;
+  if (item.direct) {
+    return !item.module || hasPermission(user, item.module, 'view');
+  }
+  return visibleAdminNavChildren(item, user).length > 0;
+};
 function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any, location: string, lang: string, setOpen?: (open: boolean) => void }) {
   const [isOpen, setIsOpen] = useState(
     item.children?.some((child: any) => isAdminNavActive(child.href, location))
   );
 
-  if (item.superAdminOnly && !user.isSuperAdmin) return null;
-  if (item.module && item.module !== 'dashboard' && !hasPermission(user, item.module, 'view')) return null;
+  if (!isAdminNavItemVisible(item, user)) return null;
 
   if (item.direct) {
     const isActive = isAdminNavActive(item.href, location);
