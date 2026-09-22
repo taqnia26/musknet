@@ -338,6 +338,10 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
+
+
+
 export const getListCategoriesUrl = () => {
 
 
@@ -15573,5 +15577,10 @@ export function useListInventoryAlerts<TData = Awaited<ReturnType<typeof listInv
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
 
 

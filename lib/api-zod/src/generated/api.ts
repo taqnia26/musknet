@@ -6933,3 +6933,5 @@ export const ListInventoryAlertsResponseItem = zod.object({
   "status": zod.enum(['out', 'low', 'ok'])
 })
 export const ListInventoryAlertsResponse = zod.array(ListInventoryAlertsResponseItem)
+
+
