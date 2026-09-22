@@ -2375,7 +2375,8 @@ router.get("/admin/inventory", permit("inventory", "view"), route(async (req, re
     categoryId: productsTable.categoryId, categoryNameAr: categoriesTable.nameAr, categoryNameEn: categoriesTable.nameEn,
     stockQuantity: productsTable.stockQuantity, reorderPoint: productsTable.reorderPoint,
     targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
-  }).from(productsTable).innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id)));
+  }).from(productsTable).innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
+    .where(eq(productsTable.isActive, true)));
   rows = searchFilter(rows, query.search, ["nameAr", "nameEn", "sku"]);
   if (query.categoryId) rows = rows.filter((row) => row.categoryId === query.categoryId);
   const enriched = rows.map((row) => ({
@@ -2803,9 +2804,48 @@ router.post("/admin/inventory/:id/adjust", permit("inventory", "edit"), route(as
   await handleInventoryAdjustment(params, body, res, Api.AdminAdjustInventoryResponse);
 }));
 router.patch("/admin/inventory/:id", permit("inventory", "edit"), route(async (req, res) => {
-  const params = parse(Api.AdminUpdateInventoryParams, req.params, res);
-  const body = parse(Api.AdminUpdateInventoryBody, req.body, res); if (!params || !body) return;
-  await handleInventoryAdjustment(params, body, res, Api.AdminUpdateInventoryResponse);
+  const params = parse(Api.AdminUpdateInventoryProductParams, req.params, res);
+  const body = parse(Api.AdminUpdateInventoryProductBody, req.body, res); if (!params || !body) return;
+  const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, body.categoryId)).limit(1);
+  if (!category) { res.status(400).json({ error: "Category not found" }); return; }
+  const [duplicate] = await db.select({ id: productsTable.id }).from(productsTable)
+    .where(and(eq(productsTable.sku, body.sku.trim()), sql`${productsTable.id} <> ${params.id}`)).limit(1);
+  if (duplicate) { res.status(409).json({ error: "A product with this SKU already exists" }); return; }
+  const [updated] = await db.update(productsTable).set({
+    nameAr: body.nameAr.trim(),
+    nameEn: body.nameEn.trim(),
+    sku: body.sku.trim(),
+    barcode: body.barcode?.trim() || null,
+    operationalType: body.operationalType,
+    unitOfMeasure: body.unitOfMeasure.trim(),
+    preferredSupplier: body.preferredSupplier?.trim() || null,
+    sellable: body.sellable,
+    categoryId: body.categoryId,
+    price: body.price,
+    reorderPoint: body.reorderPoint,
+    targetStockQuantity: body.targetStockQuantity,
+  }).where(and(eq(productsTable.id, params.id), eq(productsTable.isActive, true))).returning();
+  if (!updated) { res.status(404).json({ error: "Inventory product not found" }); return; }
+  res.json(Api.AdminUpdateInventoryProductResponse.parse({
+    ...updated,
+    averageCost: Number(updated.averageCost),
+    categoryNameAr: category.nameAr,
+    categoryNameEn: category.nameEn,
+    inventoryValue: updated.stockQuantity * Number(updated.averageCost),
+    stockStatus: updated.stockQuantity === 0 ? "out" : updated.stockQuantity <= updated.reorderPoint ? "low" : "in_stock",
+  }));
+}));
+router.delete("/admin/inventory/:id", permit("inventory", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminDeleteInventoryProductParams, req.params, res); if (!params) return;
+  const [product] = await db.select({ id: productsTable.id, stockQuantity: productsTable.stockQuantity })
+    .from(productsTable).where(and(eq(productsTable.id, params.id), eq(productsTable.isActive, true))).limit(1);
+  if (!product) { res.status(404).json({ error: "Inventory product not found" }); return; }
+  if (product.stockQuantity !== 0) {
+    res.status(409).json({ error: "Inventory must be zero before deleting this product" }); return;
+  }
+  await db.update(productsTable).set({ isActive: false, sellable: false })
+    .where(eq(productsTable.id, params.id));
+  res.sendStatus(204);
 }));
 
 router.get("/admin/distributors", permit("distributors", "view"), route(async (req, res) => {

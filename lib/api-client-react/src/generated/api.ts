@@ -55,6 +55,7 @@ import type {
   AdminInventoryMovement,
   AdminInventoryOverview,
   AdminInventoryProductInput,
+  AdminInventoryProductUpdate,
   AdminInvoice,
   AdminInvoiceUpdate,
   AdminJournalEntry,
@@ -7746,7 +7747,7 @@ export const getAdminListInventoryMovementsUrl = (id: number,) => {
 
 
 
-  return `/api/admin/inventory/${id}`
+  return `/api/admin/inventory/${id}/movements`
 }
 
 export const adminListInventoryMovements = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<AdminInventoryMovement[]> => {
@@ -7766,7 +7767,7 @@ export const adminListInventoryMovements = async (id: number, options?: Paramete
 
 export const getAdminListInventoryMovementsQueryKey = (id: number,) => {
     return [
-    `/api/admin/inventory/${id}`
+    `/api/admin/inventory/${id}/movements`
     ] as const;
     }
 
@@ -7812,7 +7813,7 @@ export function useAdminListInventoryMovements<TData = Awaited<ReturnType<typeof
 
 
 
-export const getAdminUpdateInventoryUrl = (id: number,) => {
+export const getAdminUpdateInventoryProductUrl = (id: number,) => {
 
 
 
@@ -7820,18 +7821,15 @@ export const getAdminUpdateInventoryUrl = (id: number,) => {
   return `/api/admin/inventory/${id}`
 }
 
-/**
- * @deprecated
- */
-export const adminUpdateInventory = async (id: number,
-    adminInventoryAdjustment: AdminInventoryAdjustment, options?: Parameters<typeof customFetch>[1]): Promise<AdminInventoryAdjustmentResult> => {
+export const adminUpdateInventoryProduct = async (id: number,
+    adminInventoryProductUpdate: AdminInventoryProductUpdate, options?: Parameters<typeof customFetch>[1]): Promise<AdminInventoryItem> => {
 
-  return customFetch<AdminInventoryAdjustmentResult>(getAdminUpdateInventoryUrl(id),
+  return customFetch<AdminInventoryItem>(getAdminUpdateInventoryProductUrl(id),
   {
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(adminInventoryAdjustment)
+    body: JSON.stringify(adminInventoryProductUpdate)
   }
 );}
 
@@ -7839,11 +7837,11 @@ export const adminUpdateInventory = async (id: number,
 
 
 
-export const getAdminUpdateInventoryMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInventory>>, TError,{id: number;data: BodyType<AdminInventoryAdjustment>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInventory>>, TError,{id: number;data: BodyType<AdminInventoryAdjustment>}, TContext> => {
+export const getAdminUpdateInventoryProductMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInventoryProduct>>, TError,{id: number;data: BodyType<AdminInventoryProductUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInventoryProduct>>, TError,{id: number;data: BodyType<AdminInventoryProductUpdate>}, TContext> => {
 
-const mutationKey = ['adminUpdateInventory'];
+const mutationKey = ['adminUpdateInventoryProduct'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -7853,10 +7851,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateInventory>>, {id: number;data: BodyType<AdminInventoryAdjustment>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateInventoryProduct>>, {id: number;data: BodyType<AdminInventoryProductUpdate>}> = (props) => {
           const {id,data} = props ?? {};
 
-          return  adminUpdateInventory(id,data,requestOptions)
+          return  adminUpdateInventoryProduct(id,data,requestOptions)
         }
 
 
@@ -7866,22 +7864,84 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type AdminUpdateInventoryMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateInventory>>>
-    export type AdminUpdateInventoryMutationBody = BodyType<AdminInventoryAdjustment>
-    export type AdminUpdateInventoryMutationError = ErrorType<unknown>
+    export type AdminUpdateInventoryProductMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateInventoryProduct>>>
+    export type AdminUpdateInventoryProductMutationBody = BodyType<AdminInventoryProductUpdate>
+    export type AdminUpdateInventoryProductMutationError = ErrorType<unknown>
 
-    /**
- * @deprecated
- */
-export const useAdminUpdateInventory = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInventory>>, TError,{id: number;data: BodyType<AdminInventoryAdjustment>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    export const useAdminUpdateInventoryProduct = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateInventoryProduct>>, TError,{id: number;data: BodyType<AdminInventoryProductUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof adminUpdateInventory>>,
+        Awaited<ReturnType<typeof adminUpdateInventoryProduct>>,
         TError,
-        {id: number;data: BodyType<AdminInventoryAdjustment>},
+        {id: number;data: BodyType<AdminInventoryProductUpdate>},
         TContext
       > => {
-      return useMutation(getAdminUpdateInventoryMutationOptions(options));
+      return useMutation(getAdminUpdateInventoryProductMutationOptions(options));
+    }
+
+export const getAdminDeleteInventoryProductUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/inventory/${id}`
+}
+
+export const adminDeleteInventoryProduct = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteInventoryProductUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteInventoryProductMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteInventoryProduct>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteInventoryProduct>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminDeleteInventoryProduct'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteInventoryProduct>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteInventoryProduct(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteInventoryProductMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteInventoryProduct>>>
+
+    export type AdminDeleteInventoryProductMutationError = ErrorType<void>
+
+    export const useAdminDeleteInventoryProduct = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteInventoryProduct>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteInventoryProduct>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminDeleteInventoryProductMutationOptions(options));
     }
 
 export const getAdminAdjustInventoryUrl = (id: number,) => {

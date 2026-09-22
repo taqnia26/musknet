@@ -2432,6 +2432,40 @@ export interface AdminInventoryProductInput {
   targetStockQuantity: number;
 }
 
+export type AdminInventoryProductUpdateOperationalType = typeof AdminInventoryProductUpdateOperationalType[keyof typeof AdminInventoryProductUpdateOperationalType];
+
+
+export const AdminInventoryProductUpdateOperationalType = {
+  finished_good: 'finished_good',
+  raw_material: 'raw_material',
+  packaging: 'packaging',
+} as const;
+
+export interface AdminInventoryProductUpdate {
+  /** @minLength 1 */
+  nameAr: string;
+  /** @minLength 1 */
+  nameEn: string;
+  /** @minLength 1 */
+  sku: string;
+  /** @nullable */
+  barcode?: string | null;
+  operationalType: AdminInventoryProductUpdateOperationalType;
+  /** @minLength 1 */
+  unitOfMeasure: string;
+  /** @nullable */
+  preferredSupplier?: string | null;
+  sellable: boolean;
+  /** @minimum 1 */
+  categoryId: number;
+  /** @minimum 0 */
+  price: number;
+  /** @minimum 0 */
+  reorderPoint: number;
+  /** @minimum 0 */
+  targetStockQuantity: number;
+}
+
 export type AdminInventoryAdjustmentOperation = typeof AdminInventoryAdjustmentOperation[keyof typeof AdminInventoryAdjustmentOperation];
 
 
@@ -4182,3 +4216,4 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
+

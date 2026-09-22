@@ -67,6 +67,8 @@ export * from './adminInventoryMovementMovementType';
 export * from './adminInventoryOverview';
 export * from './adminInventoryProductInput';
 export * from './adminInventoryProductInputOperationalType';
+export * from './adminInventoryProductUpdate';
+export * from './adminInventoryProductUpdateOperationalType';
 export * from './adminInventorySummary';
 export * from './adminInvoice';
 export * from './adminInvoiceItem';

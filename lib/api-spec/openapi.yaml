@@ -1195,21 +1195,29 @@ paths:
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryProductInput" } } } }
       responses: { "201": { description: Created inventory product, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryItem" } } } } }
-  /admin/inventory/{id}:
+  /admin/inventory/{id}/movements:
     get:
       operationId: adminListInventoryMovements
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       responses: { "200": { description: Inventory movements, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminInventoryMovement" } } } } } }
+  /admin/inventory/{id}:
     patch:
-      operationId: adminUpdateInventory
+      operationId: adminUpdateInventoryProduct
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
-      deprecated: true
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
-      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryAdjustment" } } } }
-      responses: { "200": { description: Inventory adjustment, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryAdjustmentResult" } } } } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryProductUpdate" } } } }
+      responses: { "200": { description: Updated inventory product, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInventoryItem" } } } } }
+    delete:
+      operationId: adminDeleteInventoryProduct
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "204": { description: Inventory product deactivated }
+        "409": { description: Product still has stock and cannot be deactivated }
   /admin/inventory/{id}/adjust:
     post:
       operationId: adminAdjustInventory
@@ -3911,6 +3919,22 @@ components:
         price: { type: number, minimum: 0 }
         openingQuantity: { type: number, minimum: 0, multipleOf: 1 }
         openingUnitCost: { type: number, minimum: 0 }
+        reorderPoint: { type: number, minimum: 0, multipleOf: 1 }
+        targetStockQuantity: { type: number, minimum: 0, multipleOf: 1 }
+    AdminInventoryProductUpdate:
+      type: object
+      required: [nameAr, nameEn, sku, categoryId, operationalType, unitOfMeasure, sellable, price, reorderPoint, targetStockQuantity]
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        sku: { type: string, minLength: 1 }
+        barcode: { type: [string, "null"] }
+        operationalType: { type: string, enum: [finished_good, raw_material, packaging] }
+        unitOfMeasure: { type: string, minLength: 1 }
+        preferredSupplier: { type: [string, "null"] }
+        sellable: { type: boolean }
+        categoryId: { type: number, minimum: 1, multipleOf: 1 }
+        price: { type: number, minimum: 0 }
         reorderPoint: { type: number, minimum: 0, multipleOf: 1 }
         targetStockQuantity: { type: number, minimum: 0, multipleOf: 1 }
     AdminInventoryAdjustment:
