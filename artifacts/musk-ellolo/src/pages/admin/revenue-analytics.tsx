@@ -144,7 +144,7 @@ export default function AdminRevenueAnalytics() {
             {t('لوحة الإيرادات التفصيلية', 'Detailed Revenue Dashboard')}
           </h1>
           <p className="text-[13.5px] text-muted-foreground">
-            {t('عرض تفصيلي لأداء الإيرادات وتوزيعها بين الأفراد والشركات.', 'Detailed view of revenue performance and breakdown between individuals and companies.')}
+            {t('عرض تفصيلي لأداء الإيرادات وتوزيعها بين الموقع الإلكتروني والشركات.', 'Detailed view of revenue performance and breakdown between online and companies.')}
           </p>
           <p className="text-xs text-muted-foreground" data-testid="text-revenue-period">
             {formatDateLabel(data.period.from, lang)} – {formatDateLabel(data.period.to, lang)}
@@ -190,7 +190,7 @@ export default function AdminRevenueAnalytics() {
         <div className="flex flex-col gap-1">
           <strong className="text-foreground">{t('دليل الإيرادات:', 'Revenue Guide:')}</strong>
           <span>
-            {t('إيرادات الأفراد تعني الطلبات المدفوعة غير الملغاة والتي لم يتم ربطها بفاتورة شركة، بينما إيرادات الشركات تعني الفواتير المصدرة المرتبطة بالشركات بغض النظر عن حالة دفعها.', 'Online revenue means paid non-cancelled orders not attributed to a company invoice, while company revenue means issued invoices linked to companies regardless of payment status.')}
+            {t('إيرادات الموقع الإلكتروني تعني الطلبات المدفوعة غير الملغاة والتي لم يتم ربطها بفاتورة شركة، بينما إيرادات الشركات تعني الفواتير المصدرة المرتبطة بالشركات بغض النظر عن حالة دفعها.', 'Online revenue means paid non-cancelled orders not attributed to a company invoice, while company revenue means issued invoices linked to companies regardless of payment status.')}
           </span>
         </div>
       </div>
@@ -221,7 +221,7 @@ export default function AdminRevenueAnalytics() {
           <div className="absolute top-0 left-0 w-full h-1 bg-blue-500/80" />
           <CardContent className="p-5 flex flex-col justify-between h-full min-h-[140px]">
             <div className="flex justify-between items-start mb-4">
-              <div className="text-[13px] font-medium text-muted-foreground">{t('إيرادات الأفراد', 'Online Revenue')}</div>
+              <div className="text-[13px] font-medium text-muted-foreground">{t('إيرادات الموقع الإلكتروني', 'Online Revenue')}</div>
               <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-blue-500/10 text-blue-500">
                 <ShoppingCart className="h-4 w-4" />
               </div>
@@ -229,7 +229,7 @@ export default function AdminRevenueAnalytics() {
             <div className="flex flex-col gap-1 mt-auto">
               <div className="text-2xl font-bold text-foreground" dir="ltr">{money(data.summary.onlineRevenue)}</div>
               <div className="text-[13px] text-muted-foreground mt-1 flex items-center gap-1.5">
-                <span className="font-semibold text-foreground">{formatNumber(data.summary.onlineOrders)}</span> {t('طلب أفراد', 'Online orders')}
+                <span className="font-semibold text-foreground">{formatNumber(data.summary.onlineOrders)}</span> {t('طلب من الموقع الإلكتروني', 'Online orders')}
               </div>
             </div>
           </CardContent>
@@ -268,7 +268,7 @@ export default function AdminRevenueAnalytics() {
             <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-[12px] font-medium">
               <span className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-sm bg-blue-500" />
-                <span className="text-muted-foreground">{t('الأفراد', 'Online')}</span>
+                <span className="text-muted-foreground">{t('الموقع الإلكتروني', 'Online')}</span>
               </span>
               <span className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-sm bg-purple-500" />
@@ -315,7 +315,7 @@ export default function AdminRevenueAnalytics() {
                 />
                 <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--border))', strokeDasharray: '4 4' }} />
                 
-                <Area type="monotone" dataKey="onlineRevenue" name={t('الأفراد', 'Online')} stroke="#3b82f6" strokeWidth={2} fill="url(#colorOnline)" />
+                <Area type="monotone" dataKey="onlineRevenue" name={t('الموقع الإلكتروني', 'Online')} stroke="#3b82f6" strokeWidth={2} fill="url(#colorOnline)" />
                 <Area type="monotone" dataKey="companyRevenue" name={t('شركات', 'Companies')} stroke="#a855f7" strokeWidth={2} fill="url(#colorCompany)" />
                 <Line type="monotone" dataKey="totalRevenue" name={t('الإجمالي', 'Total')} stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "hsl(var(--primary))", stroke: "hsl(var(--background))", strokeWidth: 2 }} />
               </ComposedChart>
@@ -377,7 +377,7 @@ export default function AdminRevenueAnalytics() {
         {[
           {
             id: 'online',
-            title: t('حركة منتجات الأفراد', 'Online Product Movement'),
+            title: t('حركة منتجات الموقع الإلكتروني', 'Online Product Movement'),
             icon: <ShoppingCart className="h-4 w-4 text-blue-500" />,
             rows: data.productMovements.online,
           },
@@ -459,7 +459,7 @@ export default function AdminRevenueAnalytics() {
                   { id: 'total', label: t('الإجمالي', 'Total'), icon: <Layers className="h-4 w-4 text-primary" />, data: data.shipping.total },
                   { id: 'domestic', label: t('شحن داخلي', 'Domestic Shipping'), icon: <Truck className="h-4 w-4 text-emerald-500" />, data: data.shipping.domestic },
                   { id: 'international', label: t('شحن دولي', 'International Shipping'), icon: <Truck className="h-4 w-4 text-orange-500" />, data: data.shipping.international },
-                  { id: 'online', label: t('الأفراد', 'Online'), icon: <ShoppingCart className="h-4 w-4 text-blue-500" />, data: data.shipping.online },
+                  { id: 'online', label: t('الموقع الإلكتروني', 'Online'), icon: <ShoppingCart className="h-4 w-4 text-blue-500" />, data: data.shipping.online },
                   { id: 'companies', label: t('شركات', 'Companies'), icon: <Building2 className="h-4 w-4 text-purple-500" />, data: data.shipping.companies }
                 ].map(row => (
                   <tr key={row.id} className="hover:bg-muted/20 transition-colors" data-testid={`row-shipping-${row.id}`}>

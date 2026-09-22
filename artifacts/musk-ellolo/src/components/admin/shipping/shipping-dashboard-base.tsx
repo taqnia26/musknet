@@ -339,7 +339,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
   }
 
   const isB2B = channel === 'b2b';
-  const pageTitle = isB2B ? t('شحنات B2B', 'B2B Shipments') : t('شحنات الأفراد', 'Individual Shipments');
+  const pageTitle = isB2B ? t('شحنات B2B', 'B2B Shipments') : t('شحنات الموقع الإلكتروني', 'Online Shipments');
   const sourceLabel = isB2B ? t('رقم الفاتورة', 'Invoice No.') : t('رقم الطلب', 'Order No.');
 
   const totalPages = data ? Math.ceil(data.total / pageSize) : 1;
@@ -367,7 +367,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                   <DialogDescription>
                     {isB2B 
                       ? t('تسجيل بيانات شحن لفاتورة B2B', 'Register shipping data for B2B invoice')
-                      : t('تسجيل بيانات شحن لطلب متجر', 'Register shipping data for online order')}
+                      : t('تسجيل بيانات شحن لطلب من الموقع الإلكتروني', 'Register shipping data for online order')}
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...registerForm}>

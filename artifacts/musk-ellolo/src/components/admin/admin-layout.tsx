@@ -92,7 +92,7 @@ export const navStructure = [
   {
     labelEn: 'Sales', labelAr: 'المبيعات', icon: Banknote,
     children: [
-      { href: '/admin/sales/online', labelEn: 'Individual Sales', labelAr: 'مبيعات الأفراد', module: 'orders' },
+      { href: '/admin/sales/online', labelEn: 'Online Sales', labelAr: 'مبيعات الموقع الإلكتروني', module: 'orders' },
       { href: '/admin/sales/companies', labelEn: 'Company Sales', labelAr: 'مبيعات الشركات', module: 'invoices' },
       { href: '/admin/sales/exhibitions', labelEn: 'Exhibition Sales', labelAr: 'مبيعات المعارض', module: 'exhibitions' },
     ]
@@ -116,7 +116,7 @@ export const navStructure = [
   {
     labelEn: 'Shipping', labelAr: 'الشحن', icon: Truck,
     children: [
-      { href: '/admin/shipping/online', labelEn: 'Individual Shipments', labelAr: 'شحنات الأفراد', module: 'orders' },
+      { href: '/admin/shipping/online', labelEn: 'Online Shipments', labelAr: 'شحنات الموقع الإلكتروني', module: 'orders' },
       { href: '/admin/shipping/b2b', labelEn: 'B2B Shipments', labelAr: 'شحنات B2B', module: 'invoices' },
     ]
   },
