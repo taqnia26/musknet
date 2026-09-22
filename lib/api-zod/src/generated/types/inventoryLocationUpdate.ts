@@ -5,15 +5,16 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
-import type { InventoryLocationInputType } from './inventoryLocationInputType';
+import type { InventoryLocationUpdateType } from './inventoryLocationUpdateType';
 
-export interface InventoryLocationInput {
+export interface InventoryLocationUpdate {
   name: string;
   code: string;
   managerName: string;
   /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
   email: string;
   phone: string;
-  type?: InventoryLocationInputType;
-  isDefault?: boolean;
+  type: InventoryLocationUpdateType;
+  isDefault: boolean;
+  active: boolean;
 }

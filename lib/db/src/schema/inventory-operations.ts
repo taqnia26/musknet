@@ -23,6 +23,7 @@ export const inventoryPurchaseOrderLinesTable = pgTable("inventory_purchase_orde
 
 export const inventoryLocationsTable = pgTable("inventory_locations", {
   id: serial("id").primaryKey(), name: text("name").notNull(), code: text("code").notNull(),
+  managerName: text("manager_name"), email: text("email"), phone: text("phone"),
   type: inventoryLocationTypeEnum("type").notNull().default("warehouse"), isDefault: boolean("is_default").notNull().default(false),
   active: boolean("active").notNull().default(true), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("inventory_locations_code_unique").on(t.code)]);

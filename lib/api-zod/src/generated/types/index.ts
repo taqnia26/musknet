@@ -245,6 +245,8 @@ export * from './inventoryLocation';
 export * from './inventoryLocationInput';
 export * from './inventoryLocationInputType';
 export * from './inventoryLocationType';
+export * from './inventoryLocationUpdate';
+export * from './inventoryLocationUpdateType';
 export * from './inventoryMovementPage';
 export * from './inventoryPurchaseOrder';
 export * from './inventoryPurchaseOrderInput';

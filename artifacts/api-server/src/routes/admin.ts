@@ -2229,8 +2229,60 @@ router.get("/admin/inventory/locations", permit("inventory", "view"), route(asyn
   res.json(await listInventoryLocations());
 }));
 router.post("/admin/inventory/locations", permit("inventory", "edit"), route(async (req, res) => {
-  const [location] = await db.insert(inventoryLocationsTable).values({ name: req.body.name, code: req.body.code, type: req.body.type ?? "warehouse", isDefault: Boolean(req.body.isDefault) }).returning();
+  const location = await db.transaction(async (tx) => {
+    if (req.body.isDefault) await tx.update(inventoryLocationsTable).set({ isDefault: false });
+    const [created] = await tx.insert(inventoryLocationsTable).values({
+      name: String(req.body.name).trim(),
+      code: String(req.body.code).trim(),
+      managerName: String(req.body.managerName).trim(),
+      email: String(req.body.email).trim().toLowerCase(),
+      phone: String(req.body.phone).trim(),
+      type: req.body.type ?? "warehouse",
+      isDefault: Boolean(req.body.isDefault),
+    }).returning();
+    return created;
+  });
   res.status(201).json(location);
+}));
+router.patch("/admin/inventory/locations/:id", permit("inventory", "edit"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  const [existing] = await db.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Inventory location not found" }); return; }
+  if (existing.isDefault && !req.body.isDefault) {
+    res.status(409).json({ error: "Choose another default location before removing the current default" });
+    return;
+  }
+  const location = await db.transaction(async (tx) => {
+    if (req.body.isDefault) await tx.update(inventoryLocationsTable).set({ isDefault: false });
+    const [updated] = await tx.update(inventoryLocationsTable).set({
+      name: String(req.body.name).trim(),
+      code: String(req.body.code).trim(),
+      managerName: String(req.body.managerName).trim(),
+      email: String(req.body.email).trim().toLowerCase(),
+      phone: String(req.body.phone).trim(),
+      type: req.body.type,
+      isDefault: Boolean(req.body.isDefault),
+      active: Boolean(req.body.active),
+    }).where(eq(inventoryLocationsTable.id, id)).returning();
+    return updated;
+  });
+  res.json(location);
+}));
+router.delete("/admin/inventory/locations/:id", permit("inventory", "edit"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  const [existing] = await db.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Inventory location not found" }); return; }
+  if (existing.isDefault) { res.status(409).json({ error: "The default inventory location cannot be deleted" }); return; }
+  try {
+    await db.delete(inventoryLocationsTable).where(eq(inventoryLocationsTable.id, id));
+    res.status(204).send();
+  } catch (error) {
+    if ((error as { code?: string }).code === "23503") {
+      res.status(409).json({ error: "This location is linked to inventory operations and cannot be deleted" });
+      return;
+    }
+    throw error;
+  }
 }));
 router.get("/admin/inventory/balances", permit("inventory", "view"), route(async (req, res) => {
   const locationId = req.query.locationId ? Number(req.query.locationId) : undefined;

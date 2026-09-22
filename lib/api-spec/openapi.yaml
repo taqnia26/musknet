@@ -1853,6 +1853,20 @@ paths:
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryLocationInput" } } } }
       responses: { "201": { description: Location created, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryLocation" } } } } }
+  /admin/inventory/locations/{id}:
+    patch:
+      operationId: updateInventoryLocation
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryLocationUpdate" } } } }
+      responses: { "200": { description: Location updated, content: { application/json: { schema: { $ref: "#/components/schemas/InventoryLocation" } } } } }
+    delete:
+      operationId: deleteInventoryLocation
+      tags: [Admin Inventory]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
+      responses: { "204": { description: Unused non-default location deleted } }
   /admin/inventory/balances:
     get:
       operationId: listInventoryBalances
@@ -2125,22 +2139,40 @@ components:
   schemas:
     InventoryLocation:
       type: object
-      required: [id, name, code, type, isDefault, active]
+      required: [id, name, code, managerName, email, phone, type, isDefault, active]
       properties:
         id: { type: number, multipleOf: 1 }
         name: { type: string }
         code: { type: string }
+        managerName: { type: [string, "null"] }
+        email: { type: [string, "null"] }
+        phone: { type: [string, "null"] }
         type: { type: string, enum: [warehouse, store, virtual] }
         isDefault: { type: boolean }
         active: { type: boolean }
     InventoryLocationInput:
       type: object
-      required: [name, code]
+      required: [name, code, managerName, email, phone]
       properties:
         name: { type: string }
         code: { type: string }
+        managerName: { type: string }
+        email: { type: string, pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$" }
+        phone: { type: string }
         type: { type: string, enum: [warehouse, store, virtual] }
         isDefault: { type: boolean }
+    InventoryLocationUpdate:
+      type: object
+      required: [name, code, managerName, email, phone, type, isDefault, active]
+      properties:
+        name: { type: string }
+        code: { type: string }
+        managerName: { type: string }
+        email: { type: string, pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$" }
+        phone: { type: string }
+        type: { type: string, enum: [warehouse, store, virtual] }
+        isDefault: { type: boolean }
+        active: { type: boolean }
     InventoryBalance:
       type: object
       required: [id, productId, locationId, available, reserved, incoming, averageCost]

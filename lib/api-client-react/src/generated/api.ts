@@ -155,6 +155,7 @@ import type {
   InventoryCycleCountInput,
   InventoryLocation,
   InventoryLocationInput,
+  InventoryLocationUpdate,
   InventoryMovementPage,
   InventoryPurchaseOrder,
   InventoryPurchaseOrderInput,
@@ -13145,6 +13146,137 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateInventoryLocationMutationOptions(options));
+    }
+
+export const getUpdateInventoryLocationUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/inventory/locations/${id}`
+}
+
+export const updateInventoryLocation = async (id: number,
+    inventoryLocationUpdate: InventoryLocationUpdate, options?: Parameters<typeof customFetch>[1]): Promise<InventoryLocation> => {
+
+  return customFetch<InventoryLocation>(getUpdateInventoryLocationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inventoryLocationUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateInventoryLocationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInventoryLocation>>, TError,{id: number;data: BodyType<InventoryLocationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInventoryLocation>>, TError,{id: number;data: BodyType<InventoryLocationUpdate>}, TContext> => {
+
+const mutationKey = ['updateInventoryLocation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInventoryLocation>>, {id: number;data: BodyType<InventoryLocationUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInventoryLocation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInventoryLocationMutationResult = NonNullable<Awaited<ReturnType<typeof updateInventoryLocation>>>
+    export type UpdateInventoryLocationMutationBody = BodyType<InventoryLocationUpdate>
+    export type UpdateInventoryLocationMutationError = ErrorType<unknown>
+
+    export const useUpdateInventoryLocation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInventoryLocation>>, TError,{id: number;data: BodyType<InventoryLocationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInventoryLocation>>,
+        TError,
+        {id: number;data: BodyType<InventoryLocationUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateInventoryLocationMutationOptions(options));
+    }
+
+export const getDeleteInventoryLocationUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/inventory/locations/${id}`
+}
+
+export const deleteInventoryLocation = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteInventoryLocationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteInventoryLocationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInventoryLocation>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInventoryLocation>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteInventoryLocation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInventoryLocation>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteInventoryLocation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInventoryLocationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInventoryLocation>>>
+
+    export type DeleteInventoryLocationMutationError = ErrorType<unknown>
+
+    export const useDeleteInventoryLocation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInventoryLocation>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInventoryLocation>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteInventoryLocationMutationOptions(options));
     }
 
 export const getListInventoryBalancesUrl = (params?: ListInventoryBalancesParams,) => {

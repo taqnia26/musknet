@@ -5820,9 +5820,15 @@ export const GetOwnerOpeningBalanceReconciliationResponse = zod.object({
 export const ListInventoryLocationsResponse = zod.unknown()
 
 
+export const createInventoryLocationBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+
 export const CreateInventoryLocationBody = zod.object({
   "name": zod.string(),
   "code": zod.string(),
+  "managerName": zod.string(),
+  "email": zod.string().regex(createInventoryLocationBodyEmailRegExp),
+  "phone": zod.string(),
   "type": zod.enum(['warehouse', 'store', 'virtual']).optional(),
   "isDefault": zod.boolean().optional()
 })
@@ -5835,10 +5841,63 @@ export const CreateInventoryLocationResponse = zod.object({
   "id": zod.number().multipleOf(createInventoryLocationResponseIdMultipleOf),
   "name": zod.string(),
   "code": zod.string(),
+  "managerName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
   "type": zod.enum(['warehouse', 'store', 'virtual']),
   "isDefault": zod.boolean(),
   "active": zod.boolean()
 })
+
+
+export const updateInventoryLocationPathIdMultipleOf = 1;
+
+
+
+export const UpdateInventoryLocationParams = zod.object({
+  "id": zod.coerce.number().multipleOf(updateInventoryLocationPathIdMultipleOf)
+})
+
+export const updateInventoryLocationBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+
+export const UpdateInventoryLocationBody = zod.object({
+  "name": zod.string(),
+  "code": zod.string(),
+  "managerName": zod.string(),
+  "email": zod.string().regex(updateInventoryLocationBodyEmailRegExp),
+  "phone": zod.string(),
+  "type": zod.enum(['warehouse', 'store', 'virtual']),
+  "isDefault": zod.boolean(),
+  "active": zod.boolean()
+})
+
+export const updateInventoryLocationResponseIdMultipleOf = 1;
+
+
+
+export const UpdateInventoryLocationResponse = zod.object({
+  "id": zod.number().multipleOf(updateInventoryLocationResponseIdMultipleOf),
+  "name": zod.string(),
+  "code": zod.string(),
+  "managerName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "type": zod.enum(['warehouse', 'store', 'virtual']),
+  "isDefault": zod.boolean(),
+  "active": zod.boolean()
+})
+
+
+export const deleteInventoryLocationPathIdMultipleOf = 1;
+
+
+
+export const DeleteInventoryLocationParams = zod.object({
+  "id": zod.coerce.number().multipleOf(deleteInventoryLocationPathIdMultipleOf)
+})
+
+export const DeleteInventoryLocationResponse = zod.void()
 
 
 export const listInventoryBalancesQueryLocationIdMultipleOf = 1;

@@ -18,6 +18,12 @@ export interface InventoryLocation {
   id: number;
   name: string;
   code: string;
+  /** @nullable */
+  managerName: string | null;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  phone: string | null;
   type: InventoryLocationType;
   isDefault: boolean;
   active: boolean;
@@ -35,8 +41,33 @@ export const InventoryLocationInputType = {
 export interface InventoryLocationInput {
   name: string;
   code: string;
+  managerName: string;
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
+  phone: string;
   type?: InventoryLocationInputType;
   isDefault?: boolean;
+}
+
+export type InventoryLocationUpdateType = typeof InventoryLocationUpdateType[keyof typeof InventoryLocationUpdateType];
+
+
+export const InventoryLocationUpdateType = {
+  warehouse: 'warehouse',
+  store: 'store',
+  virtual: 'virtual',
+} as const;
+
+export interface InventoryLocationUpdate {
+  name: string;
+  code: string;
+  managerName: string;
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
+  phone: string;
+  type: InventoryLocationUpdateType;
+  isDefault: boolean;
+  active: boolean;
 }
 
 export interface InventoryBalance {

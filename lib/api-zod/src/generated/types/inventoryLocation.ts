@@ -11,6 +11,12 @@ export interface InventoryLocation {
   id: number;
   name: string;
   code: string;
+  /** @nullable */
+  managerName: string | null;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  phone: string | null;
   type: InventoryLocationType;
   isDefault: boolean;
   active: boolean;
