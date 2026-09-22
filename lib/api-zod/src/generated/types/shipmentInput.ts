@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ShipmentInputChannel } from './shipmentInputChannel';
+import type { ShipmentInputShippingScope } from './shipmentInputShippingScope';
 import type { ShipmentInputStatus } from './shipmentInputStatus';
 
 export interface ShipmentInput {
   channel: ShipmentInputChannel;
+  shippingScope?: ShipmentInputShippingScope;
   sourceId: number;
   /** @minLength 1 */
   destinationCity: string;

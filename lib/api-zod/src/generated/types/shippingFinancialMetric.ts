@@ -13,4 +13,7 @@ export interface ShippingFinancialMetric {
   amountRequired: number;
   amountPaid: number;
   outstandingAmount: number;
+  actualCost: number;
+  collectedCost: number;
+  netCost: number;
 }

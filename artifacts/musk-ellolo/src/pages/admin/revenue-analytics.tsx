@@ -372,6 +372,60 @@ export default function AdminRevenueAnalytics() {
         </CardContent>
       </Card>
 
+      {/* Product movement by sales channel */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {[
+          {
+            id: 'online',
+            title: t('حركة منتجات الأونلاين', 'Online Product Movement'),
+            icon: <ShoppingCart className="h-4 w-4 text-blue-500" />,
+            rows: data.productMovements.online,
+          },
+          {
+            id: 'companies',
+            title: t('حركة منتجات الشركات', 'Company Product Movement'),
+            icon: <Building2 className="h-4 w-4 text-purple-500" />,
+            rows: data.productMovements.companies,
+          },
+        ].map((section) => (
+          <Card key={section.id} className="overflow-hidden rounded-xl border border-border bg-card shadow-sm" data-testid={`card-product-movement-${section.id}`}>
+            <CardHeader className="border-b border-border/50 bg-muted/20 px-6 py-4">
+              <CardTitle className="flex items-center gap-2 text-[15px] font-bold">
+                {section.icon}
+                {section.title}
+              </CardTitle>
+            </CardHeader>
+            <div className="max-h-[420px] overflow-auto">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10 border-b border-border/60 bg-muted">
+                  <tr>
+                    <th className="px-4 py-3">{t('المنتج', 'Product')}</th>
+                    <th className="px-4 py-3">{t('الرمز', 'SKU')}</th>
+                    <th className="px-4 py-3">{t('الحركة', 'Movement')}</th>
+                    <th className="px-4 py-3">{t('الطلبات / الفواتير', 'Orders / Invoices')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {section.rows.length ? section.rows.map((row) => (
+                    <tr key={row.productId} className="hover:bg-muted/20">
+                      <td className="px-4 py-3 font-medium">
+                        {lang === 'ar' ? row.nameAr : row.nameEn}
+                        <div className="mt-0.5 text-xs text-muted-foreground">{lang === 'ar' ? row.nameEn : row.nameAr}</div>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{row.sku || '—'}</td>
+                      <td className="px-4 py-3 text-lg font-bold text-primary">{formatNumber(row.quantity)}</td>
+                      <td className="px-4 py-3">{formatNumber(row.transactions)}</td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={4} className="px-4 py-10 text-center text-muted-foreground">{t('لا توجد حركة منتجات في هذه الفترة', 'No product movement in this period')}</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        ))}
+      </div>
+
       {/* Shipping Financials Section */}
       <Card className="border border-border shadow-sm bg-card rounded-xl overflow-hidden" data-testid="card-shipping-financials">
         <CardHeader className="border-b border-border/50 py-4 px-6 bg-muted/20">
@@ -395,24 +449,16 @@ export default function AdminRevenueAnalytics() {
                 <th className="px-6 py-3.5 font-semibold">{t('القطاع', 'Category')}</th>
                 <th className="px-6 py-3.5 font-semibold text-center">{t('الشحنات (المرسلة / الإجمالي)', 'Shipments (Shipped / Total)')}</th>
                 <th className="px-6 py-3.5 font-semibold text-center">{t('الكمية', 'Quantity')}</th>
-                <th className="px-6 py-3.5 font-semibold" dir={lang === 'ar' ? 'rtl' : 'ltr'}>{t('المبلغ المطلوب', 'Amount Required')}</th>
-                <th className="px-6 py-3.5 font-semibold" dir={lang === 'ar' ? 'rtl' : 'ltr'}>{t('المبلغ المدفوع', 'Amount Paid')}</th>
-                <th className="px-6 py-3.5 font-semibold" dir={lang === 'ar' ? 'rtl' : 'ltr'}>{t('المبلغ المتبقي', 'Outstanding')}</th>
+                <th className="px-6 py-3.5 font-semibold">{t('تكلفة الناقل', 'Carrier Cost')}</th>
+                <th className="px-6 py-3.5 font-semibold">{t('المحصل من العميل', 'Collected')}</th>
+                <th className="px-6 py-3.5 font-semibold">{t('صافي تكلفة الشركة', 'Net Company Cost')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
-              {(!data.shipping || (data.shipping.total.shipmentCount === 0 && data.shipping.total.amountRequired === 0)) ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground text-[13.5px]" data-testid="empty-shipping-financials">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Package className="h-8 w-8 text-muted-foreground/50" />
-                      <p>{t('لا توجد بيانات شحن مالية في هذه الفترة', 'No shipping financial data in this period')}</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                [
+              {[
                   { id: 'total', label: t('الإجمالي', 'Total'), icon: <Layers className="h-4 w-4 text-primary" />, data: data.shipping.total },
+                  { id: 'domestic', label: t('شحن داخلي', 'Domestic Shipping'), icon: <Truck className="h-4 w-4 text-emerald-500" />, data: data.shipping.domestic },
+                  { id: 'international', label: t('شحن خارجي', 'International Shipping'), icon: <Truck className="h-4 w-4 text-orange-500" />, data: data.shipping.international },
                   { id: 'online', label: t('إلكترونية', 'Online'), icon: <ShoppingCart className="h-4 w-4 text-blue-500" />, data: data.shipping.online },
                   { id: 'companies', label: t('شركات', 'Companies'), icon: <Building2 className="h-4 w-4 text-purple-500" />, data: data.shipping.companies }
                 ].map(row => (
@@ -434,17 +480,16 @@ export default function AdminRevenueAnalytics() {
                       {formatNumber(row.data.quantity)}
                     </td>
                     <td className="px-6 py-4 font-medium text-[13.5px] text-foreground" dir="ltr">
-                      {money(row.data.amountRequired)}
+                      {money(row.data.actualCost)}
                     </td>
                     <td className="px-6 py-4 font-medium text-[13.5px] text-emerald-600 dark:text-emerald-500" dir="ltr">
-                      {money(row.data.amountPaid)}
+                      {money(row.data.collectedCost)}
                     </td>
-                    <td className={`px-6 py-4 font-bold text-[13.5px] ${row.data.outstandingAmount > 0 ? 'text-destructive' : 'text-muted-foreground'}`} dir="ltr">
-                      {money(row.data.outstandingAmount)}
+                    <td className={`px-6 py-4 font-bold text-[13.5px] ${row.data.netCost > 0 ? 'text-destructive' : 'text-emerald-600'}`} dir="ltr">
+                      {money(row.data.netCost)}
                     </td>
                   </tr>
-                ))
-              )}
+                ))}
             </tbody>
           </table>
         </div>

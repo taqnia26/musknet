@@ -8,11 +8,13 @@
 import type { ShipmentChannel } from './shipmentChannel';
 import type { ShipmentEvent } from './shipmentEvent';
 import type { ShipmentIntegrationStatus } from './shipmentIntegrationStatus';
+import type { ShipmentShippingScope } from './shipmentShippingScope';
 import type { ShipmentStatus } from './shipmentStatus';
 
 export interface Shipment {
   id: number;
   channel: ShipmentChannel;
+  shippingScope: ShipmentShippingScope;
   /** @nullable */
   orderId: number | null;
   /** @nullable */

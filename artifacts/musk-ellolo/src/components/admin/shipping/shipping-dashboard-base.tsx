@@ -117,6 +117,7 @@ const formatMoney = (amount: number, lang: string) => {
 
 // Form Schemas
 const shipmentUpdateSchema = z.object({
+  shippingScope: z.enum(['domestic', 'international']),
   destinationCity: z.string().min(1, 'City is required'),
   destinationAddress: z.string().nullable().optional(),
   carrier: z.string().nullable().optional(),
@@ -132,6 +133,7 @@ const shipmentUpdateSchema = z.object({
 type ShipmentUpdateValues = z.infer<typeof shipmentUpdateSchema>;
 
 const shipmentInputSchema = z.object({
+  shippingScope: z.enum(['domestic', 'international']).default('domestic'),
   sourceId: z.coerce.number().min(1, 'Source ID (Order/Invoice) is required'),
   destinationCity: z.string().min(1, 'City is required'),
   destinationAddress: z.string().nullable().optional(),
@@ -234,7 +236,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
           description: t('تم تسجيل الشحنة', 'Shipment has been registered'),
         });
         setRegisterOpen(false);
-        registerForm.reset({ status: 'pending' });
+        registerForm.reset({ status: 'pending', shippingScope: 'domestic' });
         queryClient.invalidateQueries({ queryKey: getGetAdminShippingDashboardQueryKey() });
       },
       onError: (err) => {
@@ -283,7 +285,8 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
   const registerForm = useForm<ShipmentInputValues>({
     resolver: zodResolver(shipmentInputSchema),
     defaultValues: {
-      status: 'pending'
+      status: 'pending',
+      shippingScope: 'domestic',
     }
   });
 
@@ -291,6 +294,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
   const handleEditClick = (shipment: Shipment) => {
     setSelectedShipment(shipment);
     editForm.reset({
+      shippingScope: shipment.shippingScope,
       destinationCity: shipment.destinationCity,
       destinationAddress: shipment.destinationAddress,
       carrier: shipment.carrier,
@@ -447,6 +451,24 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                           <FormControl>
                             <Input {...field} value={field.value || ''} />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={registerForm.control}
+                      name="shippingScope"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{t('نطاق الشحن', 'Shipping Scope')}</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              <SelectItem value="domestic">{t('داخلي', 'Domestic')}</SelectItem>
+                              <SelectItem value="international">{t('خارجي', 'International')}</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -863,6 +885,9 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                             <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                             {shipment.destinationCity}
                           </div>
+                          <Badge variant="outline" className="mt-1 text-[10px]">
+                            {shipment.shippingScope === 'international' ? t('خارجي', 'International') : t('داخلي', 'Domestic')}
+                          </Badge>
                           {shipment.destinationAddress && (
                             <div className="text-xs text-muted-foreground mt-0.5 max-w-[200px] truncate" title={shipment.destinationAddress}>
                               {shipment.destinationAddress}
@@ -1053,6 +1078,24 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                   )}
                 />
               </div>
+
+              <FormField
+                control={editForm.control}
+                name="shippingScope"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('نطاق الشحن', 'Shipping Scope')}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        <SelectItem value="domestic">{t('داخلي', 'Domestic')}</SelectItem>
+                        <SelectItem value="international">{t('خارجي', 'International')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField

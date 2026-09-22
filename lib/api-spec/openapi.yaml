@@ -2841,7 +2841,7 @@ components:
               visits: { type: number }
     AdminRevenueAnalytics:
       type: object
-      required: [rangeDays, currency, period, previousPeriod, summary, previousSummary, trend, byCompany, shipping]
+      required: [rangeDays, currency, period, previousPeriod, summary, previousSummary, trend, byCompany, productMovements, shipping]
       properties:
         rangeDays: { type: number }
         currency: { type: string, enum: [SAR] }
@@ -2855,13 +2855,21 @@ components:
         byCompany:
           type: array
           items: { $ref: "#/components/schemas/CompanyRevenueMetric" }
+        productMovements:
+          type: object
+          required: [online, companies]
+          properties:
+            online: { type: array, items: { $ref: "#/components/schemas/ProductMovementMetric" } }
+            companies: { type: array, items: { $ref: "#/components/schemas/ProductMovementMetric" } }
         shipping:
           type: object
-          required: [total, online, companies]
+          required: [total, online, companies, domestic, international]
           properties:
             total: { $ref: "#/components/schemas/ShippingFinancialMetric" }
             online: { $ref: "#/components/schemas/ShippingFinancialMetric" }
             companies: { $ref: "#/components/schemas/ShippingFinancialMetric" }
+            domestic: { $ref: "#/components/schemas/ShippingFinancialMetric" }
+            international: { $ref: "#/components/schemas/ShippingFinancialMetric" }
     AnalyticsDatePeriod:
       type: object
       required: [from, to]
@@ -2898,9 +2906,19 @@ components:
         invoices: { type: number }
         sharePct: { type: number }
         changePct: { type: number }
+    ProductMovementMetric:
+      type: object
+      required: [productId, nameAr, nameEn, sku, quantity, transactions]
+      properties:
+        productId: { type: number }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        sku: { type: [string, "null"] }
+        quantity: { type: number }
+        transactions: { type: number }
     ShippingFinancialMetric:
       type: object
-      required: [shipmentCount, shippedCount, quantity, amountRequired, amountPaid, outstandingAmount]
+      required: [shipmentCount, shippedCount, quantity, amountRequired, amountPaid, outstandingAmount, actualCost, collectedCost, netCost]
       properties:
         shipmentCount: { type: number }
         shippedCount: { type: number }
@@ -2908,6 +2926,9 @@ components:
         amountRequired: { type: number }
         amountPaid: { type: number }
         outstandingAmount: { type: number }
+        actualCost: { type: number }
+        collectedCost: { type: number }
+        netCost: { type: number }
     TrackPageViewInput:
       type: object
       required: [sessionId, path]
@@ -3409,10 +3430,11 @@ components:
             coupon: { oneOf: [{ $ref: "#/components/schemas/AdminOrderCoupon" }, { type: "null" }] }
     Shipment:
       type: object
-      required: [id, channel, orderId, invoiceId, referenceNumber, partyName, destinationCity, destinationAddress, carrier, serviceMethod, trackingNumber, carrierShipmentId, labelUrl, status, integrationStatus, integrationError, integrationAttempts, lastIntegrationAttemptAt, actualCost, collectedCost, shippedAt, deliveredAt, events, createdAt, updatedAt]
+      required: [id, channel, shippingScope, orderId, invoiceId, referenceNumber, partyName, destinationCity, destinationAddress, carrier, serviceMethod, trackingNumber, carrierShipmentId, labelUrl, status, integrationStatus, integrationError, integrationAttempts, lastIntegrationAttemptAt, actualCost, collectedCost, shippedAt, deliveredAt, events, createdAt, updatedAt]
       properties:
         id: { type: number }
         channel: { type: string, enum: [online, b2b] }
+        shippingScope: { type: string, enum: [domestic, international] }
         orderId: { type: [number, "null"] }
         invoiceId: { type: [number, "null"] }
         referenceNumber: { type: string }
@@ -3441,6 +3463,7 @@ components:
       required: [channel, sourceId, destinationCity]
       properties:
         channel: { type: string, enum: [online, b2b] }
+        shippingScope: { type: string, enum: [domestic, international], default: domestic }
         sourceId: { type: number }
         destinationCity: { type: string, minLength: 1 }
         destinationAddress: { type: [string, "null"] }
@@ -3455,6 +3478,7 @@ components:
     ShipmentUpdate:
       type: object
       properties:
+        shippingScope: { type: string, enum: [domestic, international] }
         destinationCity: { type: string, minLength: 1 }
         destinationAddress: { type: [string, "null"] }
         carrier: { type: [string, "null"] }

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminRevenueAnalyticsCurrency } from './adminRevenueAnalyticsCurrency';
+import type { AdminRevenueAnalyticsProductMovements } from './adminRevenueAnalyticsProductMovements';
 import type { AdminRevenueAnalyticsShipping } from './adminRevenueAnalyticsShipping';
 import type { AnalyticsDatePeriod } from './analyticsDatePeriod';
 import type { CompanyRevenueMetric } from './companyRevenueMetric';
@@ -21,5 +22,6 @@ export interface AdminRevenueAnalytics {
   previousSummary: RevenueAnalyticsSummary;
   trend: RevenueTrendPoint[];
   byCompany: CompanyRevenueMetric[];
+  productMovements: AdminRevenueAnalyticsProductMovements;
   shipping: AdminRevenueAnalyticsShipping;
 }

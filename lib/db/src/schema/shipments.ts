@@ -7,6 +7,7 @@ import { invoicesTable } from "./invoices";
 export const shipmentsTable = pgTable("shipments", {
   id: serial("id").primaryKey(),
   channel: text("channel").notNull(),
+  shippingScope: text("shipping_scope").notNull().default("domestic"),
   orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "cascade" }),
   invoiceId: integer("invoice_id").references(() => invoicesTable.id, { onDelete: "cascade" }),
   destinationCity: text("destination_city").notNull(),

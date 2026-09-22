@@ -11,4 +11,6 @@ export type AdminRevenueAnalyticsShipping = {
   total: ShippingFinancialMetric;
   online: ShippingFinancialMetric;
   companies: ShippingFinancialMetric;
+  domestic: ShippingFinancialMetric;
+  international: ShippingFinancialMetric;
 };

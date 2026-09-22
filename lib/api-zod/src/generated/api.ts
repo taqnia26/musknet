@@ -1621,6 +1621,24 @@ export const GetAdminRevenueAnalyticsResponse = zod.object({
   "sharePct": zod.number(),
   "changePct": zod.number()
 })),
+  "productMovements": zod.object({
+  "online": zod.array(zod.object({
+  "productId": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number(),
+  "transactions": zod.number()
+})),
+  "companies": zod.array(zod.object({
+  "productId": zod.number(),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number(),
+  "transactions": zod.number()
+}))
+}),
   "shipping": zod.object({
   "total": zod.object({
   "shipmentCount": zod.number(),
@@ -1628,7 +1646,10 @@ export const GetAdminRevenueAnalyticsResponse = zod.object({
   "quantity": zod.number(),
   "amountRequired": zod.number(),
   "amountPaid": zod.number(),
-  "outstandingAmount": zod.number()
+  "outstandingAmount": zod.number(),
+  "actualCost": zod.number(),
+  "collectedCost": zod.number(),
+  "netCost": zod.number()
 }),
   "online": zod.object({
   "shipmentCount": zod.number(),
@@ -1636,7 +1657,10 @@ export const GetAdminRevenueAnalyticsResponse = zod.object({
   "quantity": zod.number(),
   "amountRequired": zod.number(),
   "amountPaid": zod.number(),
-  "outstandingAmount": zod.number()
+  "outstandingAmount": zod.number(),
+  "actualCost": zod.number(),
+  "collectedCost": zod.number(),
+  "netCost": zod.number()
 }),
   "companies": zod.object({
   "shipmentCount": zod.number(),
@@ -1644,7 +1668,32 @@ export const GetAdminRevenueAnalyticsResponse = zod.object({
   "quantity": zod.number(),
   "amountRequired": zod.number(),
   "amountPaid": zod.number(),
-  "outstandingAmount": zod.number()
+  "outstandingAmount": zod.number(),
+  "actualCost": zod.number(),
+  "collectedCost": zod.number(),
+  "netCost": zod.number()
+}),
+  "domestic": zod.object({
+  "shipmentCount": zod.number(),
+  "shippedCount": zod.number(),
+  "quantity": zod.number(),
+  "amountRequired": zod.number(),
+  "amountPaid": zod.number(),
+  "outstandingAmount": zod.number(),
+  "actualCost": zod.number(),
+  "collectedCost": zod.number(),
+  "netCost": zod.number()
+}),
+  "international": zod.object({
+  "shipmentCount": zod.number(),
+  "shippedCount": zod.number(),
+  "quantity": zod.number(),
+  "amountRequired": zod.number(),
+  "amountPaid": zod.number(),
+  "outstandingAmount": zod.number(),
+  "actualCost": zod.number(),
+  "collectedCost": zod.number(),
+  "netCost": zod.number()
 })
 })
 })
@@ -2466,6 +2515,7 @@ export const GetAdminShippingDashboardResponse = zod.object({
   "items": zod.array(zod.object({
   "id": zod.number(),
   "channel": zod.enum(['online', 'b2b']),
+  "shippingScope": zod.enum(['domestic', 'international']),
   "orderId": zod.number().nullable(),
   "invoiceId": zod.number().nullable(),
   "referenceNumber": zod.string(),
@@ -2507,11 +2557,12 @@ export const GetAdminShippingDashboardResponse = zod.object({
 /**
  * @summary Register a shipment for an eligible order or B2B invoice
  */
-
+export const adminCreateShipmentBodyShippingScopeDefault = `domestic`;
 
 
 export const AdminCreateShipmentBody = zod.object({
   "channel": zod.enum(['online', 'b2b']),
+  "shippingScope": zod.enum(['domestic', 'international']).default(adminCreateShipmentBodyShippingScopeDefault),
   "sourceId": zod.number(),
   "destinationCity": zod.string().min(1),
   "destinationAddress": zod.string().nullish(),
@@ -2528,6 +2579,7 @@ export const AdminCreateShipmentBody = zod.object({
 export const AdminCreateShipmentResponse = zod.object({
   "id": zod.number(),
   "channel": zod.enum(['online', 'b2b']),
+  "shippingScope": zod.enum(['domestic', 'international']),
   "orderId": zod.number().nullable(),
   "invoiceId": zod.number().nullable(),
   "referenceNumber": zod.string(),
@@ -2573,6 +2625,7 @@ export const AdminUpdateShipmentParams = zod.object({
 
 
 export const AdminUpdateShipmentBody = zod.object({
+  "shippingScope": zod.enum(['domestic', 'international']).optional(),
   "destinationCity": zod.string().min(1).optional(),
   "destinationAddress": zod.string().nullish(),
   "carrier": zod.string().nullish(),
@@ -2588,6 +2641,7 @@ export const AdminUpdateShipmentBody = zod.object({
 export const AdminUpdateShipmentResponse = zod.object({
   "id": zod.number(),
   "channel": zod.enum(['online', 'b2b']),
+  "shippingScope": zod.enum(['domestic', 'international']),
   "orderId": zod.number().nullable(),
   "invoiceId": zod.number().nullable(),
   "referenceNumber": zod.string(),
@@ -2641,6 +2695,7 @@ export const AdminCreateShippingLabelBody = zod.object({
 export const AdminCreateShippingLabelResponse = zod.object({
   "id": zod.number(),
   "channel": zod.enum(['online', 'b2b']),
+  "shippingScope": zod.enum(['domestic', 'international']),
   "orderId": zod.number().nullable(),
   "invoiceId": zod.number().nullable(),
   "referenceNumber": zod.string(),

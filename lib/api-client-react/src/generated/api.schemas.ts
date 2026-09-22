@@ -753,6 +753,21 @@ export const AdminRevenueAnalyticsCurrency = {
   SAR: 'SAR',
 } as const;
 
+export interface ProductMovementMetric {
+  productId: number;
+  nameAr: string;
+  nameEn: string;
+  /** @nullable */
+  sku: string | null;
+  quantity: number;
+  transactions: number;
+}
+
+export type AdminRevenueAnalyticsProductMovements = {
+  online: ProductMovementMetric[];
+  companies: ProductMovementMetric[];
+};
+
 export interface ShippingFinancialMetric {
   shipmentCount: number;
   shippedCount: number;
@@ -760,12 +775,17 @@ export interface ShippingFinancialMetric {
   amountRequired: number;
   amountPaid: number;
   outstandingAmount: number;
+  actualCost: number;
+  collectedCost: number;
+  netCost: number;
 }
 
 export type AdminRevenueAnalyticsShipping = {
   total: ShippingFinancialMetric;
   online: ShippingFinancialMetric;
   companies: ShippingFinancialMetric;
+  domestic: ShippingFinancialMetric;
+  international: ShippingFinancialMetric;
 };
 
 export interface AnalyticsDatePeriod {
@@ -809,6 +829,7 @@ export interface AdminRevenueAnalytics {
   previousSummary: RevenueAnalyticsSummary;
   trend: RevenueTrendPoint[];
   byCompany: CompanyRevenueMetric[];
+  productMovements: AdminRevenueAnalyticsProductMovements;
   shipping: AdminRevenueAnalyticsShipping;
 }
 
@@ -1597,6 +1618,14 @@ export const ShipmentChannel = {
   b2b: 'b2b',
 } as const;
 
+export type ShipmentShippingScope = typeof ShipmentShippingScope[keyof typeof ShipmentShippingScope];
+
+
+export const ShipmentShippingScope = {
+  domestic: 'domestic',
+  international: 'international',
+} as const;
+
 export type ShipmentStatus = typeof ShipmentStatus[keyof typeof ShipmentStatus];
 
 
@@ -1643,6 +1672,7 @@ export interface ShipmentEvent {
 export interface Shipment {
   id: number;
   channel: ShipmentChannel;
+  shippingScope: ShipmentShippingScope;
   /** @nullable */
   orderId: number | null;
   /** @nullable */
@@ -1690,6 +1720,14 @@ export const ShipmentInputChannel = {
   b2b: 'b2b',
 } as const;
 
+export type ShipmentInputShippingScope = typeof ShipmentInputShippingScope[keyof typeof ShipmentInputShippingScope];
+
+
+export const ShipmentInputShippingScope = {
+  domestic: 'domestic',
+  international: 'international',
+} as const;
+
 export type ShipmentInputStatus = typeof ShipmentInputStatus[keyof typeof ShipmentInputStatus];
 
 
@@ -1704,6 +1742,7 @@ export const ShipmentInputStatus = {
 
 export interface ShipmentInput {
   channel: ShipmentInputChannel;
+  shippingScope?: ShipmentInputShippingScope;
   sourceId: number;
   /** @minLength 1 */
   destinationCity: string;
@@ -1726,6 +1765,14 @@ export interface ShipmentInput {
   deliveredAt?: string | null;
 }
 
+export type ShipmentUpdateShippingScope = typeof ShipmentUpdateShippingScope[keyof typeof ShipmentUpdateShippingScope];
+
+
+export const ShipmentUpdateShippingScope = {
+  domestic: 'domestic',
+  international: 'international',
+} as const;
+
 export type ShipmentUpdateStatus = typeof ShipmentUpdateStatus[keyof typeof ShipmentUpdateStatus];
 
 
@@ -1739,6 +1786,7 @@ export const ShipmentUpdateStatus = {
 } as const;
 
 export interface ShipmentUpdate {
+  shippingScope?: ShipmentUpdateShippingScope;
   /** @minLength 1 */
   destinationCity?: string;
   /** @nullable */

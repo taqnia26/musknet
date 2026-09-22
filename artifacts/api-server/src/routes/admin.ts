@@ -811,6 +811,56 @@ router.get("/admin/analytics/revenue", permit("dashboard", "view"), route(async 
     }))
     .sort((a, b) => b.revenue - a.revenue);
 
+  const [onlineProductRows, companyProductRows] = await Promise.all([
+    db.select({
+      productId: productsTable.id,
+      nameAr: productsTable.nameAr,
+      nameEn: productsTable.nameEn,
+      sku: productsTable.sku,
+      quantity: sum(orderItemsTable.quantity),
+      transactions: sql<number>`count(distinct ${orderItemsTable.orderId})`,
+    })
+      .from(orderItemsTable)
+      .innerJoin(ordersTable, eq(orderItemsTable.orderId, ordersTable.id))
+      .innerJoin(productsTable, eq(orderItemsTable.productId, productsTable.id))
+      .leftJoin(invoicesTable, eq(invoicesTable.orderId, ordersTable.id))
+      .where(and(
+        eq(ordersTable.paymentStatus, "paid"),
+        sql`${ordersTable.status} <> 'cancelled'`,
+        isNull(invoicesTable.distributorId),
+        gte(ordersTable.createdAt, new Date(`${currentFrom}T00:00:00+03:00`)),
+        lt(ordersTable.createdAt, new Date(`${currentTo}T00:00:00+03:00`)),
+      ))
+      .groupBy(productsTable.id, productsTable.nameAr, productsTable.nameEn, productsTable.sku)
+      .orderBy(desc(sum(orderItemsTable.quantity))),
+    db.select({
+      productId: productsTable.id,
+      nameAr: productsTable.nameAr,
+      nameEn: productsTable.nameEn,
+      sku: productsTable.sku,
+      quantity: sum(invoiceItemsTable.quantity),
+      transactions: sql<number>`count(distinct ${invoiceItemsTable.invoiceId})`,
+    })
+      .from(invoiceItemsTable)
+      .innerJoin(invoicesTable, eq(invoiceItemsTable.invoiceId, invoicesTable.id))
+      .innerJoin(productsTable, eq(invoiceItemsTable.productId, productsTable.id))
+      .where(and(
+        isNotNull(invoicesTable.distributorId),
+        gte(invoicesTable.issueDatetime, new Date(`${currentFrom}T00:00:00+03:00`)),
+        lt(invoicesTable.issueDatetime, new Date(`${currentTo}T00:00:00+03:00`)),
+      ))
+      .groupBy(productsTable.id, productsTable.nameAr, productsTable.nameEn, productsTable.sku)
+      .orderBy(desc(sum(invoiceItemsTable.quantity))),
+  ]);
+  const productMetric = (row: typeof onlineProductRows[number]) => ({
+    productId: row.productId,
+    nameAr: row.nameAr,
+    nameEn: row.nameEn,
+    sku: row.sku,
+    quantity: Number(row.quantity ?? 0),
+    transactions: Number(row.transactions ?? 0),
+  });
+
   const shipmentRows = await db.select({
     id: shipmentsTable.id,
     channel: shipmentsTable.channel,
@@ -818,6 +868,9 @@ router.get("/admin/analytics/revenue", permit("dashboard", "view"), route(async 
     invoiceId: shipmentsTable.invoiceId,
     status: shipmentsTable.status,
     shippedAt: shipmentsTable.shippedAt,
+    shippingScope: shipmentsTable.shippingScope,
+    actualCost: shipmentsTable.actualCost,
+    collectedCost: shipmentsTable.collectedCost,
   })
     .from(shipmentsTable)
     .where(and(
@@ -884,6 +937,9 @@ router.get("/admin/analytics/revenue", permit("dashboard", "view"), route(async 
     amountRequired: number;
     amountPaid: number;
     outstandingAmount: number;
+    actualCost: number;
+    collectedCost: number;
+    netCost: number;
   };
   const emptyShippingMetric = (): ShippingMetric => ({
     shipmentCount: 0,
@@ -892,29 +948,48 @@ router.get("/admin/analytics/revenue", permit("dashboard", "view"), route(async 
     amountRequired: 0,
     amountPaid: 0,
     outstandingAmount: 0,
+    actualCost: 0,
+    collectedCost: 0,
+    netCost: 0,
   });
   const shippingOnline = emptyShippingMetric();
   const shippingCompanies = emptyShippingMetric();
+  const shippingDomestic = emptyShippingMetric();
+  const shippingInternational = emptyShippingMetric();
   const shippedStatuses = new Set(["in_transit", "delivered"]);
   for (const shipment of shipmentRows) {
     const target = shipment.channel === "online" ? shippingOnline : shippingCompanies;
-    target.shipmentCount += 1;
-    if (shipment.shippedAt != null || shippedStatuses.has(shipment.status)) target.shippedCount += 1;
+    const scopeTarget = shipment.shippingScope === "international" ? shippingInternational : shippingDomestic;
+    for (const metric of [target, scopeTarget]) {
+      metric.shipmentCount += 1;
+      if (shipment.shippedAt != null || shippedStatuses.has(shipment.status)) metric.shippedCount += 1;
+      metric.actualCost += Number(shipment.actualCost ?? 0);
+      metric.collectedCost += Number(shipment.collectedCost ?? 0);
+      metric.netCost += Number(shipment.actualCost ?? 0) - Number(shipment.collectedCost ?? 0);
+    }
     if (shipment.channel === "online" && shipment.orderId != null) {
       const order = onlineAmountMap.get(shipment.orderId);
       const required = Number(order?.total ?? 0);
       const paid = order?.paymentStatus === "paid" ? required : 0;
       target.quantity += onlineQuantityMap.get(shipment.orderId) ?? 0;
+      scopeTarget.quantity += onlineQuantityMap.get(shipment.orderId) ?? 0;
       target.amountRequired += required;
       target.amountPaid += paid;
       target.outstandingAmount += Math.max(0, required - paid);
+      scopeTarget.amountRequired += required;
+      scopeTarget.amountPaid += paid;
+      scopeTarget.outstandingAmount += Math.max(0, required - paid);
     } else if (shipment.channel === "b2b" && shipment.invoiceId != null) {
       const required = companyAmountMap.get(shipment.invoiceId) ?? 0;
       const paid = Math.min(required, companyPaymentMap.get(shipment.invoiceId) ?? 0);
       target.quantity += companyQuantityMap.get(shipment.invoiceId) ?? 0;
+      scopeTarget.quantity += companyQuantityMap.get(shipment.invoiceId) ?? 0;
       target.amountRequired += required;
       target.amountPaid += paid;
       target.outstandingAmount += Math.max(0, required - paid);
+      scopeTarget.amountRequired += required;
+      scopeTarget.amountPaid += paid;
+      scopeTarget.outstandingAmount += Math.max(0, required - paid);
     }
   }
   const shippingTotal = (Object.keys(shippingOnline) as Array<keyof ShippingMetric>).reduce((metric, key) => {
@@ -931,10 +1006,16 @@ router.get("/admin/analytics/revenue", permit("dashboard", "view"), route(async 
     previousSummary,
     trend,
     byCompany,
+    productMovements: {
+      online: onlineProductRows.map(productMetric),
+      companies: companyProductRows.map(productMetric),
+    },
     shipping: {
       total: shippingTotal,
       online: shippingOnline,
       companies: shippingCompanies,
+      domestic: shippingDomestic,
+      international: shippingInternational,
     },
   }));
 }));

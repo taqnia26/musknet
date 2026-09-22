@@ -5,9 +5,11 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { ShipmentUpdateShippingScope } from './shipmentUpdateShippingScope';
 import type { ShipmentUpdateStatus } from './shipmentUpdateStatus';
 
 export interface ShipmentUpdate {
+  shippingScope?: ShipmentUpdateShippingScope;
   /** @minLength 1 */
   destinationCity?: string;
   /** @nullable */
