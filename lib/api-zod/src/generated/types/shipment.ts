@@ -25,6 +25,20 @@ export interface Shipment {
   /** @nullable */
   destinationAddress: string | null;
   /** @nullable */
+  nationalAddressShortCode: string | null;
+  /** @nullable */
+  destinationCountry: string | null;
+  /** @nullable */
+  destinationDistrict: string | null;
+  /** @nullable */
+  destinationStreet: string | null;
+  /** @nullable */
+  destinationBuildingNumber: string | null;
+  /** @nullable */
+  destinationPostalCode: string | null;
+  /** @nullable */
+  destinationAdditionalDetails: string | null;
+  /** @nullable */
   carrier: string | null;
   /** @nullable */
   serviceMethod: string | null;

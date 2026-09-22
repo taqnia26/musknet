@@ -1607,6 +1607,96 @@ export interface AdminInvoiceUpdate {
   buyerAddress?: string | null;
 }
 
+export type ContractFileUploadRequestMimeType = typeof ContractFileUploadRequestMimeType[keyof typeof ContractFileUploadRequestMimeType];
+
+
+export const ContractFileUploadRequestMimeType = {
+  'application/pdf': 'application/pdf',
+  'application/msword': 'application/msword',
+  'application/vndopenxmlformats-officedocumentwordprocessingmldocument': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+} as const;
+
+export interface ContractFileUploadRequest {
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  fileName: string;
+  mimeType: ContractFileUploadRequestMimeType;
+  /**
+     * @minimum 1
+     * @maximum 26214400
+     */
+  sizeBytes: number;
+}
+
+export type UploadedContractFileInputOwnerType = typeof UploadedContractFileInputOwnerType[keyof typeof UploadedContractFileInputOwnerType];
+
+
+export const UploadedContractFileInputOwnerType = {
+  distributor: 'distributor',
+  customer: 'customer',
+  influencer: 'influencer',
+  employee: 'employee',
+} as const;
+
+export type UploadedContractFileInputMimeType = typeof UploadedContractFileInputMimeType[keyof typeof UploadedContractFileInputMimeType];
+
+
+export const UploadedContractFileInputMimeType = {
+  'application/pdf': 'application/pdf',
+  'application/msword': 'application/msword',
+  'application/vndopenxmlformats-officedocumentwordprocessingmldocument': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+} as const;
+
+export interface UploadedContractFileInput {
+  ownerType: UploadedContractFileInputOwnerType;
+  /** @minimum 1 */
+  ownerId: number;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  fileName: string;
+  /** @pattern ^/objects/uploads/contracts/files/[A-Za-z0-9-]+$ */
+  objectPath: string;
+  mimeType: UploadedContractFileInputMimeType;
+  /**
+     * @minimum 1
+     * @maximum 26214400
+     */
+  sizeBytes: number;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  notes?: string | null;
+}
+
+export type UploadedContractFileOwnerType = typeof UploadedContractFileOwnerType[keyof typeof UploadedContractFileOwnerType];
+
+
+export const UploadedContractFileOwnerType = {
+  distributor: 'distributor',
+  customer: 'customer',
+  influencer: 'influencer',
+  employee: 'employee',
+} as const;
+
+export interface UploadedContractFile {
+  id: number;
+  ownerType: UploadedContractFileOwnerType;
+  ownerId: number;
+  ownerName: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  /** @nullable */
+  notes: string | null;
+  uploadedBy: number;
+  uploadedAt: string;
+}
+
 export type ReceivablePaymentInputPaymentMethod = typeof ReceivablePaymentInputPaymentMethod[keyof typeof ReceivablePaymentInputPaymentMethod];
 
 
@@ -1743,6 +1833,20 @@ export interface Shipment {
   /** @nullable */
   destinationAddress: string | null;
   /** @nullable */
+  nationalAddressShortCode: string | null;
+  /** @nullable */
+  destinationCountry: string | null;
+  /** @nullable */
+  destinationDistrict: string | null;
+  /** @nullable */
+  destinationStreet: string | null;
+  /** @nullable */
+  destinationBuildingNumber: string | null;
+  /** @nullable */
+  destinationPostalCode: string | null;
+  /** @nullable */
+  destinationAdditionalDetails: string | null;
+  /** @nullable */
   carrier: string | null;
   /** @nullable */
   serviceMethod: string | null;
@@ -1808,6 +1912,42 @@ export interface ShipmentInput {
   destinationCity: string;
   /** @nullable */
   destinationAddress?: string | null;
+  /**
+     * @minLength 4
+     * @maxLength 12
+     * @nullable
+     */
+  nationalAddressShortCode?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  destinationCountry?: string | null;
+  /**
+     * @maxLength 150
+     * @nullable
+     */
+  destinationDistrict?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  destinationStreet?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  destinationBuildingNumber?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  destinationPostalCode?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  destinationAdditionalDetails?: string | null;
   /** @nullable */
   carrier?: string | null;
   /** @nullable */
@@ -1851,6 +1991,42 @@ export interface ShipmentUpdate {
   destinationCity?: string;
   /** @nullable */
   destinationAddress?: string | null;
+  /**
+     * @minLength 4
+     * @maxLength 12
+     * @nullable
+     */
+  nationalAddressShortCode?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  destinationCountry?: string | null;
+  /**
+     * @maxLength 150
+     * @nullable
+     */
+  destinationDistrict?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  destinationStreet?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  destinationBuildingNumber?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  destinationPostalCode?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  destinationAdditionalDetails?: string | null;
   /** @nullable */
   carrier?: string | null;
   /** @nullable */

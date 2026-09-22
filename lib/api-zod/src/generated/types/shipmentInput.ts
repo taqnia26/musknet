@@ -17,6 +17,42 @@ export interface ShipmentInput {
   destinationCity: string;
   /** @nullable */
   destinationAddress?: string | null;
+  /**
+     * @minLength 4
+     * @maxLength 12
+     * @nullable
+     */
+  nationalAddressShortCode?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  destinationCountry?: string | null;
+  /**
+     * @maxLength 150
+     * @nullable
+     */
+  destinationDistrict?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  destinationStreet?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  destinationBuildingNumber?: string | null;
+  /**
+     * @maxLength 20
+     * @nullable
+     */
+  destinationPostalCode?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  destinationAdditionalDetails?: string | null;
   /** @nullable */
   carrier?: string | null;
   /** @nullable */

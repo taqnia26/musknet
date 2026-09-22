@@ -18,3 +18,4 @@
 - [Baileys bundle runtime](baileys-bundle-runtime.md) — an esbuild success can still hide Baileys runtime imports; keep protobufjs directly resolvable by the server.
 - [Baileys restart-required pairing](baileys-restart-required-pairing.md) — status 515 is a normal pairing restart; persist updated credentials before reconnecting.
 - [Historical shipping scope](historical-shipping-scope.md) — legacy shipments default to domestic because geography was not previously stored; correct exceptions explicitly.
+- [Scrollable flex dialogs](scrollable-flex-dialogs.md) — prefer a native overflow region when Radix ScrollArea expands its viewport to content height inside flex dialogs.

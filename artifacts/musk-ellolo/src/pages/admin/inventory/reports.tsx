@@ -13,9 +13,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { BarChart3, AlertCircle, Clock, CheckSquare, Scale, Search, FileText } from 'lucide-react';
+import { BarChart3, AlertCircle, Clock, CheckSquare, Scale, Search, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
+import { Button } from '@/components/ui/button';
 
 export default function AdminInventoryReports() {
   const { t } = useLanguage();
@@ -36,16 +37,56 @@ export default function AdminInventoryReports() {
   const agingData = agingQuery.data;
   const reconciliationData = reconciliationQuery.data;
 
+  const activeReportRows = activeTab === 'valuation'
+    ? valuationData ?? []
+    : activeTab === 'aging'
+      ? agingData ?? []
+      : activeTab === 'audit'
+        ? auditData?.items ?? []
+        : reconciliationData
+          ? [reconciliationData]
+          : [];
+
+  const downloadActiveReport = () => {
+    if (activeReportRows.length === 0) return;
+    const flattened = activeReportRows.map((row) => Object.fromEntries(
+      Object.entries(row).map(([key, value]) => [
+        key,
+        value !== null && typeof value === 'object' ? JSON.stringify(value) : value,
+      ]),
+    ));
+    const headers = Array.from(new Set(flattened.flatMap((row) => Object.keys(row))));
+    const escape = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`;
+    const csv = [
+      headers.map(escape).join(','),
+      ...flattened.map((row) => headers.map((header) => escape(row[header])).join(',')),
+    ].join('\n');
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `inventory-${activeTab}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <BarChart3 className="h-7 w-7 text-primary" />
-          {t('تقارير المخزون', 'Inventory Reports')}
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          {t('تحليلات مالية وعملياتية دقيقة للأرصدة والحركات', 'Precise financial and operational analytics for balances and movements')}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <BarChart3 className="h-7 w-7 text-primary" />
+            {t('تقارير المخزون', 'Inventory Reports')}
+          </h1>
+          <p className="mt-1 text-muted-foreground">
+            {t('تحليلات مالية وعملياتية دقيقة للأرصدة والحركات', 'Precise financial and operational analytics for balances and movements')}
+          </p>
+        </div>
+        <Button variant="outline" className="gap-2" disabled={activeReportRows.length === 0} onClick={downloadActiveReport}>
+          <Download className="h-4 w-4" />
+          {t('تنزيل التقرير', 'Download report')}
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

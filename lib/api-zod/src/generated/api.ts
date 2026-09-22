@@ -1319,6 +1319,88 @@ export const AdminGetContractPdfParams = zod.object({
 export const AdminGetContractPdfResponse = zod.unknown()
 
 
+export const AdminListContractFilesResponseItem = zod.object({
+  "id": zod.number(),
+  "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
+  "ownerId": zod.number(),
+  "ownerName": zod.string(),
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "sizeBytes": zod.number(),
+  "notes": zod.string().nullable(),
+  "uploadedBy": zod.number(),
+  "uploadedAt": zod.coerce.date()
+})
+export const AdminListContractFilesResponse = zod.array(AdminListContractFilesResponseItem)
+
+
+export const adminCreateContractFileBodyOwnerIdMultipleOf = 1;
+
+export const adminCreateContractFileBodyFileNameMax = 255;
+
+export const adminCreateContractFileBodyObjectPathRegExp = new RegExp('^/objects/uploads/contracts/files/[A-Za-z0-9-]+$');
+export const adminCreateContractFileBodySizeBytesMax = 26214400;
+
+export const adminCreateContractFileBodyNotesMax = 1000;
+
+
+
+export const AdminCreateContractFileBody = zod.object({
+  "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
+  "ownerId": zod.number().min(1).multipleOf(adminCreateContractFileBodyOwnerIdMultipleOf),
+  "fileName": zod.string().min(1).max(adminCreateContractFileBodyFileNameMax),
+  "objectPath": zod.string().regex(adminCreateContractFileBodyObjectPathRegExp),
+  "mimeType": zod.enum(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']),
+  "sizeBytes": zod.number().min(1).max(adminCreateContractFileBodySizeBytesMax),
+  "notes": zod.string().max(adminCreateContractFileBodyNotesMax).nullish()
+})
+
+export const AdminCreateContractFileResponse = zod.object({
+  "id": zod.number(),
+  "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
+  "ownerId": zod.number(),
+  "ownerName": zod.string(),
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "sizeBytes": zod.number(),
+  "notes": zod.string().nullable(),
+  "uploadedBy": zod.number(),
+  "uploadedAt": zod.coerce.date()
+})
+
+
+export const adminRequestContractFileUploadBodyFileNameMax = 255;
+
+export const adminRequestContractFileUploadBodySizeBytesMax = 26214400;
+
+
+
+export const AdminRequestContractFileUploadBody = zod.object({
+  "fileName": zod.string().min(1).max(adminRequestContractFileUploadBodyFileNameMax),
+  "mimeType": zod.enum(['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']),
+  "sizeBytes": zod.number().min(1).max(adminRequestContractFileUploadBodySizeBytesMax)
+})
+
+export const AdminRequestContractFileUploadResponse = zod.object({
+  "uploadUrl": zod.string(),
+  "objectPath": zod.string()
+})
+
+
+export const AdminDownloadContractFileParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDownloadContractFileResponse = zod.unknown()
+
+
+export const AdminDeleteContractFileParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDeleteContractFileResponse = zod.void()
+
+
 export const AdminListSiteContentResponseItem = zod.object({
   "id": zod.number(),
   "key": zod.string(),
@@ -2564,6 +2646,13 @@ export const GetAdminShippingDashboardResponse = zod.object({
   "partyName": zod.string(),
   "destinationCity": zod.string(),
   "destinationAddress": zod.string().nullable(),
+  "nationalAddressShortCode": zod.string().nullable(),
+  "destinationCountry": zod.string().nullable(),
+  "destinationDistrict": zod.string().nullable(),
+  "destinationStreet": zod.string().nullable(),
+  "destinationBuildingNumber": zod.string().nullable(),
+  "destinationPostalCode": zod.string().nullable(),
+  "destinationAdditionalDetails": zod.string().nullable(),
   "carrier": zod.string().nullable(),
   "serviceMethod": zod.string().nullable(),
   "trackingNumber": zod.string().nullable(),
@@ -2600,6 +2689,21 @@ export const GetAdminShippingDashboardResponse = zod.object({
  * @summary Register a shipment for an eligible order or B2B invoice
  */
 export const adminCreateShipmentBodyShippingScopeDefault = `domestic`;
+export const adminCreateShipmentBodyNationalAddressShortCodeMin = 4;
+export const adminCreateShipmentBodyNationalAddressShortCodeMax = 12;
+
+export const adminCreateShipmentBodyDestinationCountryMax = 100;
+
+export const adminCreateShipmentBodyDestinationDistrictMax = 150;
+
+export const adminCreateShipmentBodyDestinationStreetMax = 200;
+
+export const adminCreateShipmentBodyDestinationBuildingNumberMax = 20;
+
+export const adminCreateShipmentBodyDestinationPostalCodeMax = 20;
+
+export const adminCreateShipmentBodyDestinationAdditionalDetailsMax = 500;
+
 
 
 export const AdminCreateShipmentBody = zod.object({
@@ -2608,6 +2712,13 @@ export const AdminCreateShipmentBody = zod.object({
   "sourceId": zod.number(),
   "destinationCity": zod.string().min(1),
   "destinationAddress": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().min(adminCreateShipmentBodyNationalAddressShortCodeMin).max(adminCreateShipmentBodyNationalAddressShortCodeMax).nullish(),
+  "destinationCountry": zod.string().max(adminCreateShipmentBodyDestinationCountryMax).nullish(),
+  "destinationDistrict": zod.string().max(adminCreateShipmentBodyDestinationDistrictMax).nullish(),
+  "destinationStreet": zod.string().max(adminCreateShipmentBodyDestinationStreetMax).nullish(),
+  "destinationBuildingNumber": zod.string().max(adminCreateShipmentBodyDestinationBuildingNumberMax).nullish(),
+  "destinationPostalCode": zod.string().max(adminCreateShipmentBodyDestinationPostalCodeMax).nullish(),
+  "destinationAdditionalDetails": zod.string().max(adminCreateShipmentBodyDestinationAdditionalDetailsMax).nullish(),
   "carrier": zod.string().nullish(),
   "serviceMethod": zod.string().nullish(),
   "trackingNumber": zod.string().nullish(),
@@ -2628,6 +2739,13 @@ export const AdminCreateShipmentResponse = zod.object({
   "partyName": zod.string(),
   "destinationCity": zod.string(),
   "destinationAddress": zod.string().nullable(),
+  "nationalAddressShortCode": zod.string().nullable(),
+  "destinationCountry": zod.string().nullable(),
+  "destinationDistrict": zod.string().nullable(),
+  "destinationStreet": zod.string().nullable(),
+  "destinationBuildingNumber": zod.string().nullable(),
+  "destinationPostalCode": zod.string().nullable(),
+  "destinationAdditionalDetails": zod.string().nullable(),
   "carrier": zod.string().nullable(),
   "serviceMethod": zod.string().nullable(),
   "trackingNumber": zod.string().nullable(),
@@ -2664,12 +2782,34 @@ export const AdminUpdateShipmentParams = zod.object({
 })
 
 
+export const adminUpdateShipmentBodyNationalAddressShortCodeMin = 4;
+export const adminUpdateShipmentBodyNationalAddressShortCodeMax = 12;
+
+export const adminUpdateShipmentBodyDestinationCountryMax = 100;
+
+export const adminUpdateShipmentBodyDestinationDistrictMax = 150;
+
+export const adminUpdateShipmentBodyDestinationStreetMax = 200;
+
+export const adminUpdateShipmentBodyDestinationBuildingNumberMax = 20;
+
+export const adminUpdateShipmentBodyDestinationPostalCodeMax = 20;
+
+export const adminUpdateShipmentBodyDestinationAdditionalDetailsMax = 500;
+
 
 
 export const AdminUpdateShipmentBody = zod.object({
   "shippingScope": zod.enum(['domestic', 'international']).optional(),
   "destinationCity": zod.string().min(1).optional(),
   "destinationAddress": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().min(adminUpdateShipmentBodyNationalAddressShortCodeMin).max(adminUpdateShipmentBodyNationalAddressShortCodeMax).nullish(),
+  "destinationCountry": zod.string().max(adminUpdateShipmentBodyDestinationCountryMax).nullish(),
+  "destinationDistrict": zod.string().max(adminUpdateShipmentBodyDestinationDistrictMax).nullish(),
+  "destinationStreet": zod.string().max(adminUpdateShipmentBodyDestinationStreetMax).nullish(),
+  "destinationBuildingNumber": zod.string().max(adminUpdateShipmentBodyDestinationBuildingNumberMax).nullish(),
+  "destinationPostalCode": zod.string().max(adminUpdateShipmentBodyDestinationPostalCodeMax).nullish(),
+  "destinationAdditionalDetails": zod.string().max(adminUpdateShipmentBodyDestinationAdditionalDetailsMax).nullish(),
   "carrier": zod.string().nullish(),
   "serviceMethod": zod.string().nullish(),
   "trackingNumber": zod.string().nullish(),
@@ -2690,6 +2830,13 @@ export const AdminUpdateShipmentResponse = zod.object({
   "partyName": zod.string(),
   "destinationCity": zod.string(),
   "destinationAddress": zod.string().nullable(),
+  "nationalAddressShortCode": zod.string().nullable(),
+  "destinationCountry": zod.string().nullable(),
+  "destinationDistrict": zod.string().nullable(),
+  "destinationStreet": zod.string().nullable(),
+  "destinationBuildingNumber": zod.string().nullable(),
+  "destinationPostalCode": zod.string().nullable(),
+  "destinationAdditionalDetails": zod.string().nullable(),
   "carrier": zod.string().nullable(),
   "serviceMethod": zod.string().nullable(),
   "trackingNumber": zod.string().nullable(),
@@ -2744,6 +2891,13 @@ export const AdminCreateShippingLabelResponse = zod.object({
   "partyName": zod.string(),
   "destinationCity": zod.string(),
   "destinationAddress": zod.string().nullable(),
+  "nationalAddressShortCode": zod.string().nullable(),
+  "destinationCountry": zod.string().nullable(),
+  "destinationDistrict": zod.string().nullable(),
+  "destinationStreet": zod.string().nullable(),
+  "destinationBuildingNumber": zod.string().nullable(),
+  "destinationPostalCode": zod.string().nullable(),
+  "destinationAdditionalDetails": zod.string().nullable(),
   "carrier": zod.string().nullable(),
   "serviceMethod": zod.string().nullable(),
   "trackingNumber": zod.string().nullable(),

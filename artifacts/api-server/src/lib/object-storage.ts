@@ -111,6 +111,11 @@ export class ObjectStorageService {
     stream.setMaxListeners(20);
     stream.pipe(response);
   }
+
+  async deleteObject(objectPath: string) {
+    const file = await this.getObjectFile(objectPath);
+    await file.delete();
+  }
 }
 
 export class ObjectStorageConfigurationError extends Error {

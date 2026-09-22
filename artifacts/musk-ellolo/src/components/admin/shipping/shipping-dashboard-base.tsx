@@ -23,7 +23,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -116,28 +115,22 @@ const formatMoney = (amount: number, lang: string) => {
 };
 
 // Form Schemas
-const shipmentUpdateSchema = z.object({
-  shippingScope: z.enum(['domestic', 'international']),
-  destinationCity: z.string().min(1, 'City is required'),
-  destinationAddress: z.string().nullable().optional(),
-  carrier: z.string().nullable().optional(),
-  serviceMethod: z.string().nullable().optional(),
-  trackingNumber: z.string().nullable().optional(),
-  status: z.enum(['pending', 'ready', 'in_transit', 'delivered', 'returned', 'cancelled']),
-  actualCost: z.coerce.number().min(0).nullable().optional(),
-  collectedCost: z.coerce.number().min(0).nullable().optional(),
-  shippedAt: z.string().nullable().optional(),
-  deliveredAt: z.string().nullable().optional(),
-});
+const shipmentAddressSchema = {
+  nationalAddressShortCode: z.string().nullable().optional(),
+  destinationCountry: z.string().nullable().optional(),
+  destinationDistrict: z.string().nullable().optional(),
+  destinationStreet: z.string().nullable().optional(),
+  destinationBuildingNumber: z.string().nullable().optional(),
+  destinationPostalCode: z.string().nullable().optional(),
+  destinationAdditionalDetails: z.string().nullable().optional(),
+};
 
-type ShipmentUpdateValues = z.infer<typeof shipmentUpdateSchema>;
-
-const shipmentInputSchema = z.object({
+const baseShipmentSchemaObj = z.object({
   shippingScope: z.enum(['domestic', 'international']).default('domestic'),
-  sourceId: z.coerce.number().min(1, 'Source ID (Order/Invoice) is required'),
-  destinationCity: z.string().min(1, 'City is required'),
+  destinationCity: z.string().nullable().optional(),
   destinationAddress: z.string().nullable().optional(),
-  carrier: z.string().nullable().optional(),
+  carrierSelection: z.enum(['storage_station', 'other']).default('storage_station'),
+  customCarrier: z.string().nullable().optional(),
   serviceMethod: z.string().nullable().optional(),
   trackingNumber: z.string().nullable().optional(),
   status: z.enum(['pending', 'ready', 'in_transit', 'delivered', 'returned', 'cancelled']).default('pending'),
@@ -145,11 +138,446 @@ const shipmentInputSchema = z.object({
   collectedCost: z.coerce.number().min(0).nullable().optional(),
   shippedAt: z.string().nullable().optional(),
   deliveredAt: z.string().nullable().optional(),
+  ...shipmentAddressSchema,
 });
+
+const refineShipmentSchema = (val: any, ctx: z.RefinementCtx) => {
+  if (val.shippingScope === 'domestic') {
+    if (!val.nationalAddressShortCode || val.nationalAddressShortCode.trim() === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required for domestic', path: ['nationalAddressShortCode'] });
+    }
+  } else if (val.shippingScope === 'international') {
+    if (!val.destinationCity || val.destinationCity.trim() === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'City is required', path: ['destinationCity'] });
+    }
+    if (!val.destinationCountry || val.destinationCountry.trim() === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Country is required', path: ['destinationCountry'] });
+    }
+    if (!val.destinationDistrict || val.destinationDistrict.trim() === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'District is required', path: ['destinationDistrict'] });
+    }
+    if (!val.destinationStreet || val.destinationStreet.trim() === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Street is required', path: ['destinationStreet'] });
+    }
+    if (!val.destinationBuildingNumber || val.destinationBuildingNumber.trim() === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Building number is required', path: ['destinationBuildingNumber'] });
+    }
+    if (!val.destinationPostalCode || val.destinationPostalCode.trim() === '') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Postal code is required', path: ['destinationPostalCode'] });
+    }
+  }
+
+  if (val.carrierSelection === 'other' && (!val.customCarrier || val.customCarrier.trim() === '')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Carrier name is required', path: ['customCarrier'] });
+  }
+};
+
+const shipmentUpdateSchema = baseShipmentSchemaObj.superRefine(refineShipmentSchema);
+
+type ShipmentUpdateValues = z.infer<typeof shipmentUpdateSchema>;
+
+const shipmentInputSchema = baseShipmentSchemaObj.extend({
+  sourceId: z.coerce.number().min(1, 'Source ID (Order/Invoice) is required'),
+}).superRefine(refineShipmentSchema);
 
 type ShipmentInputValues = z.infer<typeof shipmentInputSchema>;
 
+function mapFormValuesToShipmentData(values: ShipmentInputValues | ShipmentUpdateValues) {
+  const carrier = values.carrierSelection === 'storage_station' ? 'Storage Station' : values.customCarrier;
+  return {
+    shippingScope: values.shippingScope,
+    destinationCity: values.shippingScope === 'domestic'
+      ? 'المملكة العربية السعودية'
+      : values.destinationCity?.trim() || '',
+    destinationAddress: values.destinationAddress,
+    carrier,
+    serviceMethod: values.serviceMethod,
+    trackingNumber: values.trackingNumber,
+    status: values.status,
+    actualCost: values.actualCost,
+    collectedCost: values.collectedCost,
+    shippedAt: values.shippedAt,
+    deliveredAt: values.deliveredAt,
+    nationalAddressShortCode: values.shippingScope === 'domestic' ? values.nationalAddressShortCode : null,
+    destinationCountry: values.shippingScope === 'international' ? values.destinationCountry : null,
+    destinationDistrict: values.shippingScope === 'international' ? values.destinationDistrict : null,
+    destinationStreet: values.shippingScope === 'international' ? values.destinationStreet : null,
+    destinationBuildingNumber: values.shippingScope === 'international' ? values.destinationBuildingNumber : null,
+    destinationPostalCode: values.shippingScope === 'international' ? values.destinationPostalCode : null,
+    destinationAdditionalDetails: values.shippingScope === 'international' ? values.destinationAdditionalDetails : null,
+  };
+}
+
 // Components
+import { UseFormReturn } from 'react-hook-form';
+
+function ShipmentFormFields({ 
+  form, 
+  t, 
+  isCreate = false, 
+  sourceLabel = '' 
+}: { 
+  form: UseFormReturn<any>; 
+  t: any; 
+  isCreate?: boolean; 
+  sourceLabel?: string; 
+}) {
+  const shippingScope = form.watch('shippingScope');
+  const carrierSelection = form.watch('carrierSelection');
+
+  return (
+    <div className="space-y-6 px-1">
+      {/* Basic Info */}
+      <div className="space-y-4">
+         <h3 className="font-semibold text-lg">{t('المعلومات الأساسية', 'Basic Info')}</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           {isCreate && (
+             <FormField
+                control={form.control}
+                name="sourceId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{sourceLabel} (ID)</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+           )}
+           
+           <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('الحالة', 'Status')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('اختر الحالة', 'Select status')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="pending">{t('قيد الانتظار', 'Pending')}</SelectItem>
+                      <SelectItem value="ready">{t('جاهز للشحن', 'Ready')}</SelectItem>
+                      <SelectItem value="in_transit">{t('في الطريق', 'In Transit')}</SelectItem>
+                      <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
+                      <SelectItem value="returned">{t('مرتجع', 'Returned')}</SelectItem>
+                      <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+         </div>
+      </div>
+      
+      <Separator />
+
+      {/* Carrier Info */}
+      <div className="space-y-4">
+         <h3 className="font-semibold text-lg">{t('معلومات الناقل', 'Carrier Info')}</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="carrierSelection"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('الناقل', 'Carrier')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={t('اختر الناقل', 'Select carrier')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="storage_station">{t('محطة التخزين', 'Storage Station')}</SelectItem>
+                      <SelectItem value="other">{t('أخرى', 'Other')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {carrierSelection === 'other' && (
+              <FormField
+                control={form.control}
+                name="customCarrier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('اسم الناقل', 'Carrier Name')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} placeholder={t('أدخل اسم الناقل', 'Enter carrier name')} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            
+            <FormField
+              control={form.control}
+              name="trackingNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('رقم التتبع', 'Tracking No.')}</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="serviceMethod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('نوع الخدمة', 'Service Method')}</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+         </div>
+      </div>
+      
+      <Separator />
+
+      {/* Address Info */}
+      <div className="space-y-4">
+         <h3 className="font-semibold text-lg">{t('معلومات العنوان', 'Address Info')}</h3>
+         
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="shippingScope"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('نطاق الشحن', 'Shipping Scope')}</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="domestic">{t('داخلي', 'Domestic')}</SelectItem>
+                      <SelectItem value="international">{t('خارجي', 'International')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {shippingScope === 'international' && (
+              <FormField
+                control={form.control}
+                name="destinationCity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('المدينة', 'City')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+         </div>
+
+         {shippingScope === 'domestic' && (
+           <FormField
+              control={form.control}
+              name="nationalAddressShortCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('الرمز القصير للعنوان الوطني', 'National Address Short Code')}</FormLabel>
+                  <FormControl>
+                    <Input {...field} value={field.value || ''} placeholder="Ex: RRRD2929" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+         )}
+
+         {shippingScope === 'international' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="destinationCountry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('الدولة', 'Country')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="destinationDistrict"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('الحي', 'District')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="destinationStreet"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('الشارع', 'Street')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="destinationBuildingNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('رقم المبنى', 'Building Number')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="destinationPostalCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('الرمز البريدي', 'Postal Code')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="destinationAdditionalDetails"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('تفاصيل إضافية', 'Additional Details')}</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+         )}
+         
+         <FormField
+            control={form.control}
+            name="destinationAddress"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('العنوان تفصيلاً (اختياري)', 'Full Address (Optional)')}</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value || ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+      </div>
+
+      <Separator />
+
+      {/* Dates */}
+      <div className="space-y-4">
+         <h3 className="font-semibold text-lg">{t('التواريخ', 'Dates')}</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="shippedAt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('تاريخ الشحن', 'Shipped At')}</FormLabel>
+                  <FormControl>
+                    <Input type="datetime-local" {...field} value={field.value || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="deliveredAt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('تاريخ التوصيل', 'Delivered At')}</FormLabel>
+                  <FormControl>
+                    <Input type="datetime-local" {...field} value={field.value || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+         </div>
+      </div>
+
+      <Separator />
+
+      {/* Financials */}
+      <div className="space-y-4">
+         <h3 className="font-semibold text-lg">{t('التكاليف', 'Costs')}</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="actualCost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('التكلفة الفعلية', 'Actual Cost')} (SAR)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} value={field.value || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="collectedCost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('المبلغ المحصل من العميل', 'Collected Cost')} (SAR)</FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" {...field} value={field.value || ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+         </div>
+      </div>
+    </div>
+  );
+}
+
 export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel }) {
   const { lang, t } = useLanguage();
   const queryClient = useQueryClient();
@@ -236,7 +664,12 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
           description: t('تم تسجيل الشحنة', 'Shipment has been registered'),
         });
         setRegisterOpen(false);
-        registerForm.reset({ status: 'pending', shippingScope: 'domestic' });
+        registerForm.reset({
+          status: 'pending',
+          shippingScope: 'domestic',
+          carrierSelection: 'storage_station',
+          destinationCity: '',
+        });
         queryClient.invalidateQueries({ queryKey: getGetAdminShippingDashboardQueryKey() });
       },
       onError: (err) => {
@@ -287,17 +720,25 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
     defaultValues: {
       status: 'pending',
       shippingScope: 'domestic',
+      carrierSelection: 'storage_station',
+      destinationCity: '',
     }
   });
 
   // Handlers
   const handleEditClick = (shipment: Shipment) => {
     setSelectedShipment(shipment);
+    
+    const isStorageStation = shipment.carrier === 'Storage Station';
+    const carrierSelection = isStorageStation ? 'storage_station' : (shipment.carrier ? 'other' : 'storage_station');
+    const customCarrier = !isStorageStation && shipment.carrier ? shipment.carrier : undefined;
+    
     editForm.reset({
-      shippingScope: shipment.shippingScope,
-      destinationCity: shipment.destinationCity,
+      shippingScope: shipment.shippingScope || 'domestic',
+      destinationCity: shipment.destinationCity || '',
       destinationAddress: shipment.destinationAddress,
-      carrier: shipment.carrier,
+      carrierSelection,
+      customCarrier,
       serviceMethod: shipment.serviceMethod,
       trackingNumber: shipment.trackingNumber,
       status: shipment.status,
@@ -305,6 +746,13 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
       collectedCost: shipment.collectedCost,
       shippedAt: shipment.shippedAt ? shipment.shippedAt.substring(0, 16) : undefined,
       deliveredAt: shipment.deliveredAt ? shipment.deliveredAt.substring(0, 16) : undefined,
+      nationalAddressShortCode: shipment.nationalAddressShortCode,
+      destinationCountry: shipment.destinationCountry,
+      destinationDistrict: shipment.destinationDistrict,
+      destinationStreet: shipment.destinationStreet,
+      destinationBuildingNumber: shipment.destinationBuildingNumber,
+      destinationPostalCode: shipment.destinationPostalCode,
+      destinationAdditionalDetails: shipment.destinationAdditionalDetails,
     });
     setEditOpen(true);
   };
@@ -312,16 +760,21 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
   const onEditSubmit = (values: ShipmentUpdateValues) => {
     if (!selectedShipment) return;
     
+    const mappedData = mapFormValuesToShipmentData(values);
+    
     updateShipment.mutate({
       id: selectedShipment.id,
-      data: values
+      data: mappedData
     });
   };
 
   const onRegisterSubmit = (values: ShipmentInputValues) => {
+    const mappedData = mapFormValuesToShipmentData(values);
+    
     createShipment.mutate({
       data: {
-        ...values,
+        ...mappedData,
+        sourceId: values.sourceId,
         channel: channel as any
       }
     });
@@ -361,8 +814,8 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                   {t('تسجيل شحنة جديدة', 'Register New Shipment')}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
+              <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden flex flex-col max-h-[85vh]">
+                <DialogHeader className="px-6 py-4 border-b">
                   <DialogTitle>{t('تسجيل شحنة', 'Register Shipment')}</DialogTitle>
                   <DialogDescription>
                     {isB2B 
@@ -371,175 +824,20 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...registerForm}>
-                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="sourceId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{sourceLabel} (ID)</FormLabel>
-                            <FormControl>
-                              <Input type="number" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="status"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('الحالة', 'Status')}</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder={t('اختر الحالة', 'Select status')} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="pending">{t('قيد الانتظار', 'Pending')}</SelectItem>
-                                <SelectItem value="ready">{t('جاهز للشحن', 'Ready')}</SelectItem>
-                                <SelectItem value="in_transit">{t('في الطريق', 'In Transit')}</SelectItem>
-                                <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
-                                <SelectItem value="returned">{t('مرتجع', 'Returned')}</SelectItem>
-                                <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+                      <ShipmentFormFields form={registerForm} t={t} isCreate={true} sourceLabel={sourceLabel} />
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="destinationCity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('المدينة', 'City')}</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="carrier"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('شركة الشحن', 'Carrier')}</FormLabel>
-                            <FormControl>
-                              <Input {...field} value={field.value || ''} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    <div className="shrink-0 border-t bg-muted/30 px-6 py-4">
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setRegisterOpen(false)}>
+                          {t('إلغاء', 'Cancel')}
+                        </Button>
+                        <Button type="submit" disabled={createShipment.isPending}>
+                          {createShipment.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : t('تسجيل', 'Register')}
+                        </Button>
+                      </DialogFooter>
                     </div>
-
-                    <FormField
-                      control={registerForm.control}
-                      name="destinationAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t('العنوان تفصيلاً', 'Full Address')}</FormLabel>
-                          <FormControl>
-                            <Input {...field} value={field.value || ''} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={registerForm.control}
-                      name="shippingScope"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>{t('نطاق الشحن', 'Shipping Scope')}</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              <SelectItem value="domestic">{t('داخلي', 'Domestic')}</SelectItem>
-                              <SelectItem value="international">{t('خارجي', 'International')}</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="trackingNumber"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('رقم التتبع', 'Tracking No.')}</FormLabel>
-                            <FormControl>
-                              <Input {...field} value={field.value || ''} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="serviceMethod"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('نوع الخدمة', 'Service Method')}</FormLabel>
-                            <FormControl>
-                              <Input {...field} value={field.value || ''} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={registerForm.control}
-                        name="actualCost"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('التكلفة الفعلية', 'Actual Cost')} (SAR)</FormLabel>
-                            <FormControl>
-                              <Input type="number" step="0.01" {...field} value={field.value || ''} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={registerForm.control}
-                        name="collectedCost"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>{t('المبلغ المحصل من العميل', 'Collected Cost')} (SAR)</FormLabel>
-                            <FormControl>
-                              <Input type="number" step="0.01" {...field} value={field.value || ''} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setRegisterOpen(false)}>
-                        {t('إلغاء', 'Cancel')}
-                      </Button>
-                      <Button type="submit" disabled={createShipment.isPending}>
-                        {createShipment.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : t('تسجيل', 'Register')}
-                      </Button>
-                    </DialogFooter>
                   </form>
                 </Form>
               </DialogContent>
@@ -1027,171 +1325,28 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden flex flex-col max-h-[85vh]">
+          <DialogHeader className="px-6 py-4 border-b">
             <DialogTitle>{t('تحديث بيانات الشحن', 'Update Shipping Data')}</DialogTitle>
             <DialogDescription>
               {selectedShipment?.referenceNumber} - {selectedShipment?.partyName}
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
-            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('الحالة', 'Status')}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={t('اختر الحالة', 'Select status')} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="pending">{t('قيد الانتظار', 'Pending')}</SelectItem>
-                          <SelectItem value="ready">{t('جاهز للشحن', 'Ready')}</SelectItem>
-                          <SelectItem value="in_transit">{t('في الطريق', 'In Transit')}</SelectItem>
-                          <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
-                          <SelectItem value="returned">{t('مرتجع', 'Returned')}</SelectItem>
-                          <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={editForm.control}
-                  name="carrier"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('شركة الشحن', 'Carrier')}</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+                <ShipmentFormFields form={editForm} t={t} isCreate={false} />
               </div>
-
-              <FormField
-                control={editForm.control}
-                name="shippingScope"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('نطاق الشحن', 'Shipping Scope')}</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value="domestic">{t('داخلي', 'Domestic')}</SelectItem>
-                        <SelectItem value="international">{t('خارجي', 'International')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={editForm.control}
-                  name="trackingNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('رقم التتبع', 'Tracking No.')}</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="serviceMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('نوع الخدمة', 'Service Method')}</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="shrink-0 border-t bg-muted/30 px-6 py-4">
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
+                    {t('إلغاء', 'Cancel')}
+                  </Button>
+                  <Button type="submit" disabled={updateShipment.isPending}>
+                    {updateShipment.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : t('حفظ التغييرات', 'Save Changes')}
+                  </Button>
+                </DialogFooter>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/20">
-                <FormField
-                  control={editForm.control}
-                  name="actualCost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-destructive font-medium">{t('التكلفة الفعلية (فاتورة الناقل)', 'Actual Cost (Carrier Invoice)')}</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="collectedCost"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-success font-medium">{t('المحصل من العميل', 'Collected from Customer')}</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                 <FormField
-                  control={editForm.control}
-                  name="destinationCity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('المدينة', 'City')}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="shippedAt"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('تاريخ الشحن', 'Shipped At')}</FormLabel>
-                      <FormControl>
-                        <Input type="datetime-local" {...field} value={field.value || ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
-                  {t('إلغاء', 'Cancel')}
-                </Button>
-                <Button type="submit" disabled={updateShipment.isPending}>
-                  {updateShipment.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : t('حفظ التغييرات', 'Save Changes')}
-                </Button>
-              </DialogFooter>
             </form>
           </Form>
         </DialogContent>

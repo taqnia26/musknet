@@ -267,6 +267,20 @@
       "when": 1790071761456,
       "tag": "0037_fearless_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1790072632000,
+      "tag": "0038_chubby_jamie_braddock",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1790073712610,
+      "tag": "0039_mature_wallow",
+      "breakpoints": true
     }
   ]
 }

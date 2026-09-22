@@ -38,6 +38,8 @@ import {
   journalEntriesTable,
   journalEntryLinesTable,
   distributorContractsTable,
+  uploadedContractFilesTable,
+  influencersTable,
   siteContentTable,
   ownerCredentialsTable,
   ownerUsersTable,
@@ -503,6 +505,102 @@ router.get("/admin/contracts/:id/pdf", permit("contracts", "view"), route(async 
   const url = `${process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`}/api/public/contracts/by-token/${row.signingTokenHash ?? row.id}`;
   const pdf = await createContractPdf(row, url);
   res.type("application/pdf").setHeader("Content-Disposition", `inline; filename="${row.contractNumber}.pdf"`).send(pdf);
+}));
+
+const contractFileMimeTypes = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
+async function contractFileOwner(ownerType: string, ownerId: number) {
+  if (ownerType === "distributor") {
+    const [row] = await db.select({ name: wholesaleDistributorsTable.companyName }).from(wholesaleDistributorsTable)
+      .where(eq(wholesaleDistributorsTable.id, ownerId)).limit(1);
+    return row?.name;
+  }
+  if (ownerType === "customer") {
+    const [row] = await db.select({ name: customersTable.name }).from(customersTable)
+      .where(eq(customersTable.id, ownerId)).limit(1);
+    return row?.name;
+  }
+  if (ownerType === "influencer") {
+    const [row] = await db.select({ name: influencersTable.name }).from(influencersTable)
+      .where(eq(influencersTable.id, ownerId)).limit(1);
+    return row?.name;
+  }
+  if (ownerType === "employee") {
+    const [row] = await db.select({ name: employeesTable.name }).from(employeesTable)
+      .where(eq(employeesTable.id, ownerId)).limit(1);
+    return row?.name;
+  }
+  return undefined;
+}
+
+router.get("/admin/contract-files", permit("contracts", "view"), route(async (_req, res) => {
+  const rows = await db.select({
+    id: uploadedContractFilesTable.id,
+    ownerType: uploadedContractFilesTable.ownerType,
+    ownerId: uploadedContractFilesTable.ownerId,
+    ownerName: uploadedContractFilesTable.ownerName,
+    fileName: uploadedContractFilesTable.fileName,
+    mimeType: uploadedContractFilesTable.mimeType,
+    sizeBytes: uploadedContractFilesTable.sizeBytes,
+    notes: uploadedContractFilesTable.notes,
+    uploadedBy: uploadedContractFilesTable.uploadedBy,
+    uploadedAt: uploadedContractFilesTable.uploadedAt,
+  }).from(uploadedContractFilesTable).orderBy(desc(uploadedContractFilesTable.uploadedAt));
+  res.json(Api.AdminListContractFilesResponse.parse(rows));
+}));
+
+router.post("/admin/contract-files/upload-url", permit("contracts", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminRequestContractFileUploadBody, req.body, res); if (!body) return;
+  const extension = body.fileName.toLowerCase().split(".").pop();
+  if (!contractFileMimeTypes.has(body.mimeType) || !extension || !["pdf", "doc", "docx"].includes(extension)) {
+    res.status(400).json({ error: "Only PDF, DOC, and DOCX contract files are allowed" }); return;
+  }
+  const upload = await objectStorage.createPrivateUpload("uploads/contracts/files");
+  res.json(Api.AdminRequestContractFileUploadResponse.parse(upload));
+}));
+
+router.post("/admin/contract-files", permit("contracts", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateContractFileBody, req.body, res); if (!body) return;
+  const ownerName = await contractFileOwner(body.ownerType, body.ownerId);
+  if (!ownerName) { res.status(400).json({ error: "Contract owner not found" }); return; }
+  const metadata = await objectStorage.getObjectMetadata(body.objectPath);
+  if (!metadata.contentType || !contractFileMimeTypes.has(metadata.contentType) || metadata.size < 1 || metadata.size > 25 * 1024 * 1024) {
+    res.status(400).json({ error: "Uploaded file must be PDF, DOC, or DOCX and no larger than 25 MB" }); return;
+  }
+  const [row] = await db.insert(uploadedContractFilesTable).values({
+    ...body,
+    ownerName,
+    mimeType: metadata.contentType,
+    sizeBytes: metadata.size,
+    notes: body.notes?.trim() || null,
+    uploadedBy: res.locals.admin.id,
+  }).returning();
+  const { objectPath: _objectPath, ...publicRow } = row;
+  res.status(201).json(Api.AdminCreateContractFileResponse.parse(publicRow));
+}));
+
+router.get("/admin/contract-files/:id/download", permit("contracts", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminDownloadContractFileParams, req.params, res); if (!params) return;
+  const [row] = await db.select().from(uploadedContractFilesTable)
+    .where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Contract file not found" }); return; }
+  const file = await objectStorage.getObjectFile(row.objectPath);
+  const safeAsciiName = row.fileName.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_");
+  res.setHeader("Content-Disposition", `attachment; filename="${safeAsciiName}"; filename*=UTF-8''${encodeURIComponent(row.fileName)}`);
+  res.setHeader("Cache-Control", "private, no-store");
+  await objectStorage.pipeObject(file, res);
+}));
+
+router.delete("/admin/contract-files/:id", permit("contracts", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminDeleteContractFileParams, req.params, res); if (!params) return;
+  const [row] = await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).returning();
+  if (!row) { res.status(404).json({ error: "Contract file not found" }); return; }
+  await objectStorage.deleteObject(row.objectPath).catch(() => undefined);
+  res.sendStatus(204);
 }));
 
 router.get("/admin/site-content", permit("site-content", "view"), route(async (_req, res) => {
@@ -1606,9 +1704,33 @@ router.post("/admin/shipping", permit("shipping", "edit"), route(async (req, res
     ? (await db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.orderId, body.sourceId)).limit(1))[0]
     : (await db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.invoiceId, body.sourceId)).limit(1))[0];
   if (existing) { res.status(409).json({ error: "A shipment is already registered for this source" }); return; }
+  const carrier = body.carrier?.trim();
+  if (!carrier) { res.status(400).json({ error: "Shipping carrier is required" }); return; }
+  if (body.shippingScope === "domestic" && !body.nationalAddressShortCode?.trim()) {
+    res.status(400).json({ error: "National address short code is required for domestic shipping" }); return;
+  }
+  if (body.shippingScope === "international" && [
+    body.destinationCountry,
+    body.destinationCity,
+    body.destinationDistrict,
+    body.destinationStreet,
+    body.destinationBuildingNumber,
+    body.destinationPostalCode,
+  ].some((value) => !value?.trim())) {
+    res.status(400).json({ error: "Complete international destination address is required" }); return;
+  }
   const { sourceId, ...values } = body;
   const [created] = await db.insert(shipmentsTable).values({
     ...values,
+    carrier,
+    ...(body.shippingScope === "domestic" ? {
+      destinationCountry: null,
+      destinationDistrict: null,
+      destinationStreet: null,
+      destinationBuildingNumber: null,
+      destinationPostalCode: null,
+      destinationAdditionalDetails: null,
+    } : { nationalAddressShortCode: null }),
     orderId: body.channel === "online" ? sourceId : null,
     invoiceId: body.channel === "b2b" ? sourceId : null,
   }).returning();
@@ -1629,6 +1751,22 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
   if (!(await canUseShipping(res, channel, "edit"))) {
     res.status(403).json({ error: "Insufficient permission" }); return;
   }
+  const next = { ...existing, ...body };
+  const carrier = next.carrier?.trim();
+  if (!carrier) { res.status(400).json({ error: "Shipping carrier is required" }); return; }
+  if (next.shippingScope === "domestic" && !next.nationalAddressShortCode?.trim()) {
+    res.status(400).json({ error: "National address short code is required for domestic shipping" }); return;
+  }
+  if (next.shippingScope === "international" && [
+    next.destinationCountry,
+    next.destinationCity,
+    next.destinationDistrict,
+    next.destinationStreet,
+    next.destinationBuildingNumber,
+    next.destinationPostalCode,
+  ].some((value) => !value?.trim())) {
+    res.status(400).json({ error: "Complete international destination address is required" }); return;
+  }
   if (body.status !== undefined) {
     try {
       assertShippingStatusTransition(existing.status, body.status);
@@ -1641,7 +1779,18 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
     }
   }
   await db.transaction(async (tx) => {
-    await tx.update(shipmentsTable).set(body).where(eq(shipmentsTable.id, params.id));
+    await tx.update(shipmentsTable).set({
+      ...body,
+      carrier,
+      ...(next.shippingScope === "domestic" ? {
+        destinationCountry: null,
+        destinationDistrict: null,
+        destinationStreet: null,
+        destinationBuildingNumber: null,
+        destinationPostalCode: null,
+        destinationAdditionalDetails: null,
+      } : { nationalAddressShortCode: null }),
+    }).where(eq(shipmentsTable.id, params.id));
     if (channel === "online" && existing.orderId && body.trackingNumber !== undefined) {
       await tx.update(ordersTable)
         .set({ trackingNumber: body.trackingNumber })

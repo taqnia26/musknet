@@ -97,6 +97,7 @@ import type {
   Category,
   CheckoutQuote,
   CheckoutQuoteInput,
+  ContractFileUploadRequest,
   ContractSendResponse,
   ContractSignatureInput,
   ContractSignatureUpload,
@@ -229,7 +230,9 @@ import type {
   TesterStockAvailability,
   TrackPageViewInput,
   TrialBalance,
-  UnauthorizedResponse
+  UnauthorizedResponse,
+  UploadedContractFile,
+  UploadedContractFileInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3517,6 +3520,343 @@ export function useAdminGetContractPdf<TData = Awaited<ReturnType<typeof adminGe
 
 
 
+
+export const getAdminListContractFilesUrl = () => {
+
+
+
+
+  return `/api/admin/contract-files`
+}
+
+export const adminListContractFiles = async ( options?: Parameters<typeof customFetch>[1]): Promise<UploadedContractFile[]> => {
+
+  return customFetch<UploadedContractFile[]>(getAdminListContractFilesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListContractFilesQueryKey = () => {
+    return [
+    `/api/admin/contract-files`
+    ] as const;
+    }
+
+
+export const getAdminListContractFilesQueryOptions = <TData = Awaited<ReturnType<typeof adminListContractFiles>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListContractFiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListContractFilesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListContractFiles>>> = ({ signal }) => adminListContractFiles({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListContractFiles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListContractFilesQueryResult = NonNullable<Awaited<ReturnType<typeof adminListContractFiles>>>
+export type AdminListContractFilesQueryError = ErrorType<unknown>
+
+
+
+export function useAdminListContractFiles<TData = Awaited<ReturnType<typeof adminListContractFiles>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListContractFiles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListContractFilesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminCreateContractFileUrl = () => {
+
+
+
+
+  return `/api/admin/contract-files`
+}
+
+export const adminCreateContractFile = async (uploadedContractFileInput: UploadedContractFileInput, options?: Parameters<typeof customFetch>[1]): Promise<UploadedContractFile> => {
+
+  return customFetch<UploadedContractFile>(getAdminCreateContractFileUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(uploadedContractFileInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateContractFileMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateContractFile>>, TError,{data: BodyType<UploadedContractFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateContractFile>>, TError,{data: BodyType<UploadedContractFileInput>}, TContext> => {
+
+const mutationKey = ['adminCreateContractFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateContractFile>>, {data: BodyType<UploadedContractFileInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateContractFile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateContractFileMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateContractFile>>>
+    export type AdminCreateContractFileMutationBody = BodyType<UploadedContractFileInput>
+    export type AdminCreateContractFileMutationError = ErrorType<BadRequestResponse>
+
+    export const useAdminCreateContractFile = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateContractFile>>, TError,{data: BodyType<UploadedContractFileInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateContractFile>>,
+        TError,
+        {data: BodyType<UploadedContractFileInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateContractFileMutationOptions(options));
+    }
+
+export const getAdminRequestContractFileUploadUrl = () => {
+
+
+
+
+  return `/api/admin/contract-files/upload-url`
+}
+
+export const adminRequestContractFileUpload = async (contractFileUploadRequest: ContractFileUploadRequest, options?: Parameters<typeof customFetch>[1]): Promise<ContractSignatureUpload> => {
+
+  return customFetch<ContractSignatureUpload>(getAdminRequestContractFileUploadUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(contractFileUploadRequest)
+  }
+);}
+
+
+
+
+
+export const getAdminRequestContractFileUploadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRequestContractFileUpload>>, TError,{data: BodyType<ContractFileUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRequestContractFileUpload>>, TError,{data: BodyType<ContractFileUploadRequest>}, TContext> => {
+
+const mutationKey = ['adminRequestContractFileUpload'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRequestContractFileUpload>>, {data: BodyType<ContractFileUploadRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminRequestContractFileUpload(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRequestContractFileUploadMutationResult = NonNullable<Awaited<ReturnType<typeof adminRequestContractFileUpload>>>
+    export type AdminRequestContractFileUploadMutationBody = BodyType<ContractFileUploadRequest>
+    export type AdminRequestContractFileUploadMutationError = ErrorType<unknown>
+
+    export const useAdminRequestContractFileUpload = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRequestContractFileUpload>>, TError,{data: BodyType<ContractFileUploadRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRequestContractFileUpload>>,
+        TError,
+        {data: BodyType<ContractFileUploadRequest>},
+        TContext
+      > => {
+      return useMutation(getAdminRequestContractFileUploadMutationOptions(options));
+    }
+
+export const getAdminDownloadContractFileUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contract-files/${id}/download`
+}
+
+export const adminDownloadContractFile = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getAdminDownloadContractFileUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDownloadContractFileQueryKey = (id: number,) => {
+    return [
+    `/api/admin/contract-files/${id}/download`
+    ] as const;
+    }
+
+
+export const getAdminDownloadContractFileQueryOptions = <TData = Awaited<ReturnType<typeof adminDownloadContractFile>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminDownloadContractFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminDownloadContractFileQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminDownloadContractFile>>> = ({ signal }) => adminDownloadContractFile(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminDownloadContractFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminDownloadContractFileQueryResult = NonNullable<Awaited<ReturnType<typeof adminDownloadContractFile>>>
+export type AdminDownloadContractFileQueryError = ErrorType<unknown>
+
+
+
+export function useAdminDownloadContractFile<TData = Awaited<ReturnType<typeof adminDownloadContractFile>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminDownloadContractFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminDownloadContractFileQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminDeleteContractFileUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contract-files/${id}`
+}
+
+export const adminDeleteContractFile = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteContractFileUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteContractFileMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContractFile>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContractFile>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminDeleteContractFile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteContractFile>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminDeleteContractFile(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteContractFileMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteContractFile>>>
+
+    export type AdminDeleteContractFileMutationError = ErrorType<unknown>
+
+    export const useAdminDeleteContractFile = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContractFile>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteContractFile>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminDeleteContractFileMutationOptions(options));
+    }
 
 export const getAdminListSiteContentUrl = () => {
 

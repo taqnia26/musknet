@@ -48,6 +48,7 @@ export * from "./accounting";
 export * from "./admin-integrations";
 export * from "./analytics";
 export * from "./distributor-contracts";
+export * from "./uploaded-contract-files";
 export * from "./site-content";
 export * from "./gifting-issues";
 export * from "./influencers";

@@ -608,6 +608,41 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       responses: { "200": { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
+  /admin/contract-files:
+    get:
+      operationId: adminListContractFiles
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Uploaded contract files, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/UploadedContractFile" } } } } } }
+    post:
+      operationId: adminCreateContractFile
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/UploadedContractFileInput" } } } }
+      responses:
+        "201": { description: Contract file saved, content: { application/json: { schema: { $ref: "#/components/schemas/UploadedContractFile" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /admin/contract-files/upload-url:
+    post:
+      operationId: adminRequestContractFileUpload
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ContractFileUploadRequest" } } } }
+      responses: { "200": { description: Presigned upload, content: { application/json: { schema: { $ref: "#/components/schemas/ContractSignatureUpload" } } } } }
+  /admin/contract-files/{id}/download:
+    get:
+      operationId: adminDownloadContractFile
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Original contract file, content: { application/octet-stream: { schema: { type: string, format: binary } } } } }
+  /admin/contract-files/{id}:
+    delete:
+      operationId: adminDeleteContractFile
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "204": { description: Contract file record deleted } }
   /admin/site-content:
     get:
       operationId: adminListSiteContent
@@ -3426,6 +3461,42 @@ components:
         buyerTaxNumber: { type: [string, "null"], maxLength: 30 }
         buyerCommercialRegistrationNumber: { type: [string, "null"], maxLength: 30 }
         buyerAddress: { type: [string, "null"], maxLength: 500 }
+    ContractFileUploadRequest:
+      type: object
+      required: [fileName, mimeType, sizeBytes]
+      properties:
+        fileName: { type: string, minLength: 1, maxLength: 255 }
+        mimeType:
+          type: string
+          enum: [application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document]
+        sizeBytes: { type: number, minimum: 1, maximum: 26214400 }
+    UploadedContractFileInput:
+      type: object
+      required: [ownerType, ownerId, fileName, objectPath, mimeType, sizeBytes]
+      properties:
+        ownerType: { type: string, enum: [distributor, customer, influencer, employee] }
+        ownerId: { type: number, minimum: 1, multipleOf: 1 }
+        fileName: { type: string, minLength: 1, maxLength: 255 }
+        objectPath: { type: string, pattern: "^/objects/uploads/contracts/files/[A-Za-z0-9-]+$" }
+        mimeType:
+          type: string
+          enum: [application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document]
+        sizeBytes: { type: number, minimum: 1, maximum: 26214400 }
+        notes: { type: [string, "null"], maxLength: 1000 }
+    UploadedContractFile:
+      type: object
+      required: [id, ownerType, ownerId, ownerName, fileName, mimeType, sizeBytes, notes, uploadedBy, uploadedAt]
+      properties:
+        id: { type: number }
+        ownerType: { type: string, enum: [distributor, customer, influencer, employee] }
+        ownerId: { type: number }
+        ownerName: { type: string }
+        fileName: { type: string }
+        mimeType: { type: string }
+        sizeBytes: { type: number }
+        notes: { type: [string, "null"] }
+        uploadedBy: { type: number }
+        uploadedAt: { type: string, format: date-time }
     ReceivablePaymentInput:
       type: object
       required: [paymentKey, paymentDate, amount, paymentMethod]
@@ -3494,7 +3565,7 @@ components:
             coupon: { oneOf: [{ $ref: "#/components/schemas/AdminOrderCoupon" }, { type: "null" }] }
     Shipment:
       type: object
-      required: [id, channel, shippingScope, orderId, invoiceId, referenceNumber, partyName, destinationCity, destinationAddress, carrier, serviceMethod, trackingNumber, carrierShipmentId, labelUrl, status, integrationStatus, integrationError, integrationAttempts, lastIntegrationAttemptAt, actualCost, collectedCost, shippedAt, deliveredAt, events, createdAt, updatedAt]
+      required: [id, channel, shippingScope, orderId, invoiceId, referenceNumber, partyName, destinationCity, destinationAddress, nationalAddressShortCode, destinationCountry, destinationDistrict, destinationStreet, destinationBuildingNumber, destinationPostalCode, destinationAdditionalDetails, carrier, serviceMethod, trackingNumber, carrierShipmentId, labelUrl, status, integrationStatus, integrationError, integrationAttempts, lastIntegrationAttemptAt, actualCost, collectedCost, shippedAt, deliveredAt, events, createdAt, updatedAt]
       properties:
         id: { type: number }
         channel: { type: string, enum: [online, b2b] }
@@ -3505,6 +3576,13 @@ components:
         partyName: { type: string }
         destinationCity: { type: string }
         destinationAddress: { type: [string, "null"] }
+        nationalAddressShortCode: { type: [string, "null"] }
+        destinationCountry: { type: [string, "null"] }
+        destinationDistrict: { type: [string, "null"] }
+        destinationStreet: { type: [string, "null"] }
+        destinationBuildingNumber: { type: [string, "null"] }
+        destinationPostalCode: { type: [string, "null"] }
+        destinationAdditionalDetails: { type: [string, "null"] }
         carrier: { type: [string, "null"] }
         serviceMethod: { type: [string, "null"] }
         trackingNumber: { type: [string, "null"] }
@@ -3531,6 +3609,13 @@ components:
         sourceId: { type: number }
         destinationCity: { type: string, minLength: 1 }
         destinationAddress: { type: [string, "null"] }
+        nationalAddressShortCode: { type: [string, "null"], minLength: 4, maxLength: 12 }
+        destinationCountry: { type: [string, "null"], maxLength: 100 }
+        destinationDistrict: { type: [string, "null"], maxLength: 150 }
+        destinationStreet: { type: [string, "null"], maxLength: 200 }
+        destinationBuildingNumber: { type: [string, "null"], maxLength: 20 }
+        destinationPostalCode: { type: [string, "null"], maxLength: 20 }
+        destinationAdditionalDetails: { type: [string, "null"], maxLength: 500 }
         carrier: { type: [string, "null"] }
         serviceMethod: { type: [string, "null"] }
         trackingNumber: { type: [string, "null"] }
@@ -3545,6 +3630,13 @@ components:
         shippingScope: { type: string, enum: [domestic, international] }
         destinationCity: { type: string, minLength: 1 }
         destinationAddress: { type: [string, "null"] }
+        nationalAddressShortCode: { type: [string, "null"], minLength: 4, maxLength: 12 }
+        destinationCountry: { type: [string, "null"], maxLength: 100 }
+        destinationDistrict: { type: [string, "null"], maxLength: 150 }
+        destinationStreet: { type: [string, "null"], maxLength: 200 }
+        destinationBuildingNumber: { type: [string, "null"], maxLength: 20 }
+        destinationPostalCode: { type: [string, "null"], maxLength: 20 }
+        destinationAdditionalDetails: { type: [string, "null"], maxLength: 500 }
         carrier: { type: [string, "null"] }
         serviceMethod: { type: [string, "null"] }
         trackingNumber: { type: [string, "null"] }
