@@ -11,6 +11,7 @@
     "test:api:raw": "pnpm --filter @workspace/api-server run test",
     "test:e2e": "sh scripts/run-browser-e2e.sh",
     "test:e2e:accounting": "sh scripts/run-accounting-e2e.sh",
+    "test:e2e:invoices": "sh scripts/run-invoices-e2e.sh",
     "test:e2e:home-video": "sh scripts/run-browser-e2e.sh tests/e2e/home-video.spec.ts",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

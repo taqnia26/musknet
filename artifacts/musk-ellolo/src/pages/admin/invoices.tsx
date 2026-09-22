@@ -35,10 +35,18 @@ import { hasPermission } from '@/lib/permissions';
 import { CreateDistributorInvoiceDialog } from '@/components/admin/create-distributor-invoice-dialog';
 import { useToast } from '@/hooks/use-toast';
 
-function InvoiceTemplate({ invoice, qrUrl }: { invoice: AdminInvoice; qrUrl: string | null }) {
+function InvoiceTemplate({
+  invoice,
+  qrUrl,
+  onQrLoad,
+}: {
+  invoice: AdminInvoice;
+  qrUrl: string | null;
+  onQrLoad?: () => void;
+}) {
   const { t, lang } = useLanguage();
   return (
-    <div id="invoice-print-area" className="bg-white text-black p-6 sm:p-10 rounded-xl shadow-lg border border-gray-100 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div id="invoice-print-area" data-testid="invoice-template" className="bg-white text-black p-6 sm:p-10 rounded-xl shadow-lg border border-gray-100 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <style>{`
         @media print {
           body, html { height: auto !important; overflow: visible !important; }
@@ -135,7 +143,7 @@ function InvoiceTemplate({ invoice, qrUrl }: { invoice: AdminInvoice; qrUrl: str
       <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-6">
         <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
           {qrUrl ? (
-            <img src={qrUrl} alt="ZATCA QR" className="w-full h-full object-contain" />
+            <img src={qrUrl} alt="ZATCA QR" data-testid="invoice-qr" onLoad={onQrLoad} className="w-full h-full object-contain" />
           ) : (
             <div className="animate-pulse w-full h-full bg-gray-100 rounded-lg"></div>
           )}
@@ -196,10 +204,12 @@ function InvoicePreviewDialog({
   );
 
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [qrReady, setQrReady] = useState(false);
   const hasPrinted = useRef(false);
 
   useEffect(() => {
     hasPrinted.current = false;
+    setQrReady(false);
   }, [invoice?.id, open, printOnReady]);
 
   useEffect(() => {
@@ -212,11 +222,11 @@ function InvoicePreviewDialog({
   }, [qrBlob]);
 
   useEffect(() => {
-    if (!open || !printOnReady || !qrUrl || hasPrinted.current) return;
+    if (!open || !printOnReady || !qrReady || hasPrinted.current) return;
     hasPrinted.current = true;
-    const timer = window.setTimeout(() => window.print(), 100);
+    const timer = window.setTimeout(() => window.print(), 0);
     return () => window.clearTimeout(timer);
-  }, [open, printOnReady, qrUrl]);
+  }, [open, printOnReady, qrReady]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -232,7 +242,7 @@ function InvoicePreviewDialog({
           </div>
         </div>
         <div className="p-4 sm:p-8 overflow-y-auto flex-1 print:p-0 print:overflow-visible print:block">
-          {invoice && <InvoiceTemplate invoice={invoice} qrUrl={qrUrl} />}
+          {invoice && <InvoiceTemplate invoice={invoice} qrUrl={qrUrl} onQrLoad={() => setQrReady(true)} />}
         </div>
       </DialogContent>
     </Dialog>
@@ -303,7 +313,7 @@ function EditInvoiceDialog({
         <div className="grid gap-4 py-4">
           <div className="space-y-2">
             <Label>{t('اسم المشتري', 'Buyer Name')}</Label>
-            <Input value={buyerName} onChange={e => setBuyerName(e.target.value)} />
+            <Input data-testid="invoice-edit-buyer-name" value={buyerName} onChange={e => setBuyerName(e.target.value)} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -317,11 +327,11 @@ function EditInvoiceDialog({
           </div>
           <div className="space-y-2">
             <Label>{t('عنوان المشتري', 'Buyer Address')}</Label>
-            <Input value={buyerAddress} onChange={e => setBuyerAddress(e.target.value)} />
+            <Input data-testid="invoice-edit-buyer-address" value={buyerAddress} onChange={e => setBuyerAddress(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>{t('تاريخ الاستحقاق', 'Due Date')}</Label>
-            <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+            <Input data-testid="invoice-edit-due-date" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
@@ -347,14 +357,21 @@ function EmailInvoiceDialog({
 }) {
   const { t, lang } = useLanguage();
   const [email, setEmail] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) setEmail('');
+    if (open) {
+      setEmail('');
+      setError(null);
+    }
   }, [open]);
 
-  const handleSend = () => {
-    if (!invoice || !email.trim()) return;
-    
+  const buildDraftHref = () => {
+    if (!invoice) return null;
+    const recipient = email.trim();
+    if (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+      return null;
+    }
     const subject = `${t('فاتورة ضريبية', 'Tax Invoice')} - ${invoice.invoiceNumber} - Musk Ellolo`;
     const body = `${t('مرحباً،', 'Hello,')}
     
@@ -367,7 +384,16 @@ ${t('الرصيد المستحق:', 'Amount Due:')} ${invoice.outstandingAmount.
 ${t('مع التحية،', 'Best regards,')}
 Musk Ellolo
 `;
-    window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    return `mailto:${recipient}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleSend = () => {
+    const draftHref = buildDraftHref();
+    if (!draftHref) {
+      setError(t('أدخل عنوان بريد إلكتروني صالحاً', 'Enter a valid email address'));
+      return;
+    }
+    window.location.href = draftHref;
     onOpenChange(false);
   };
 
@@ -382,18 +408,23 @@ Musk Ellolo
             <Label>{t('البريد الإلكتروني للمستلم', 'Recipient Email')}</Label>
             <Input 
               type="email" 
+              data-testid="invoice-email-recipient"
               placeholder="client@example.com" 
               value={email} 
-              onChange={e => setEmail(e.target.value)} 
+              onChange={e => {
+                setEmail(e.target.value);
+                setError(null);
+              }}
             />
           </div>
+          {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
           <p className="text-sm text-muted-foreground leading-relaxed">
             {t('سيتم فتح تطبيق البريد الإلكتروني الخاص بك مع رسالة مجهزة تحتوي على تفاصيل الفاتورة الرئيسية.', 'Your default email client will open with a drafted message containing the key invoice details.')}
           </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>{t('إلغاء', 'Cancel')}</Button>
-          <Button onClick={handleSend} disabled={!email.trim()}>{t('تجهيز الرسالة', 'Draft Email')}</Button>
+          <Button data-testid="button-draft-invoice-email" data-mailto={buildDraftHref() ?? undefined} onClick={handleSend} disabled={!email.trim()}>{t('تجهيز الرسالة', 'Draft Email')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -650,7 +681,7 @@ export default function AdminInvoices() {
               <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground">{t('لا توجد فواتير مطابقة', 'No invoices found')}</TableCell></TableRow>
             ) : (
               invoices?.map((invoice) => (
-                <TableRow key={invoice.id} className="group hover:bg-muted/10 transition-colors">
+                <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                   <TableCell>{invoice.orderNumber ?? <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell>{invoice.distributorName ?? <span className="text-muted-foreground">-</span>}</TableCell>
@@ -662,7 +693,7 @@ export default function AdminInvoices() {
                   <TableCell className="text-center whitespace-nowrap">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
+                        <Button data-testid={`invoice-actions-${invoice.id}`} variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>

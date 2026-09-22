@@ -19,3 +19,4 @@
 - [Baileys restart-required pairing](baileys-restart-required-pairing.md) — status 515 is a normal pairing restart; persist updated credentials before reconnecting.
 - [Historical shipping scope](historical-shipping-scope.md) — legacy shipments default to domestic because geography was not previously stored; correct exceptions explicitly.
 - [Scrollable flex dialogs](scrollable-flex-dialogs.md) — prefer a native overflow region when Radix ScrollArea expands its viewport to content height inside flex dialogs.
+- [External protocol browser tests](external-protocol-browser-tests.md) — verify computed mailto-style URLs in-page; headless Chromium may not navigate to external protocols.
