@@ -401,12 +401,12 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Left side (RTL end): Date & User Actions */}
-        <div className="flex items-center justify-end gap-1">
-          <div className="hidden xl:flex items-center gap-4 text-[11px] font-medium text-muted-foreground mr-4 rtl:mr-0 rtl:ml-4">
+        <div className="flex items-center justify-end">
+          <div className="hidden xl:flex items-center text-[11px] font-medium text-muted-foreground">
             <span className="truncate">{date}</span>
-            <div className="h-3 w-px bg-border/60"></div>
           </div>
-          <div className="flex items-center" data-tour="admin-tools">
+          <div className="mx-3 hidden h-4 w-px shrink-0 bg-muted-foreground/30 xl:block" aria-hidden="true"></div>
+          <div className="flex items-center gap-1.5" data-tour="admin-tools">
             <Button
               variant="ghost"
               size="icon"
