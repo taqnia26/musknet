@@ -101,7 +101,6 @@ function InvoiceTemplate({
             {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</dd></div>
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
-            <div className="flex items-baseline justify-between gap-3 rounded-sm border border-stone-200 bg-stone-200/20 px-3 py-2.5"><dt className="font-semibold text-[#292728]">{t('المبلغ المستحق', 'Amount Due')}</dt><dd className="font-mono font-semibold text-[#292728]"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></dd></div>
           </dl>
         </div>
       </div>
@@ -114,7 +113,6 @@ function InvoiceTemplate({
               <th className="text-start py-3 px-4 sm:px-6 font-bold text-gray-900">{t('المنتج', 'Product')}</th>
               <th className="text-center py-3 px-3 sm:px-4 font-bold text-gray-900">{t('الكمية', 'Qty')}</th>
               <th className="text-end py-3 px-3 sm:px-4 font-bold text-gray-900">{t('سعر الوحدة', 'Unit Price')}</th>
-              <th className="text-end py-3 px-4 sm:px-6 font-bold text-gray-900">{t('المجموع', 'Total')}</th>
             </tr>
           </thead>
            <tbody data-testid="invoice-table-body" className="divide-y divide-gray-100 bg-white">
@@ -124,12 +122,11 @@ function InvoiceTemplate({
                   <td className="py-3 px-4 sm:px-6 font-medium text-gray-900">{item.productName}</td>
                   <td className="py-3 px-3 sm:px-4 text-center text-gray-600">{item.quantity}</td>
                   <td className="py-3 px-3 sm:px-4 text-end text-gray-600 font-mono"><Money value={item.unitPrice} lang={lang} fractionDigits={2} /></td>
-                  <td className="py-3 px-4 sm:px-6 text-end font-mono font-bold text-gray-900"><Money value={item.totalAmount} lang={lang} fractionDigits={2} /></td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500">{t('لا توجد منتجات', 'No items')}</td>
+                <td colSpan={3} className="py-8 text-center text-gray-500">{t('لا توجد منتجات', 'No items')}</td>
               </tr>
             )}
           </tbody>
@@ -162,27 +159,28 @@ function InvoiceTemplate({
             <span>{t('الخصم', 'Discount')}</span>
             <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
           </div>
-           <div data-testid="invoice-total-card" className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
-            <span className="text-[#292728]">{t('الإجمالي', 'Total')}</span>
-            <span className="font-mono text-[#292728]"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></span>
-          </div>
-          
-          {(invoice.paidAmount > 0 || invoice.outstandingAmount > 0) && (
+           {invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount && (
             <div className="pt-2 space-y-2 px-2 text-xs sm:text-sm">
               <div className="flex justify-between text-stone-600 font-medium">
                 <span>{t('المبلغ المدفوع', 'Amount Paid')}</span>
                 <span className="font-mono"><Money value={invoice.paidAmount} lang={lang} fractionDigits={2} /></span>
               </div>
-              <div className="flex justify-between text-stone-700 font-semibold">
-                <span>{t('الرصيد المستحق', 'Amount Due')}</span>
-                <span className="font-mono"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></span>
-              </div>
+               {invoice.outstandingAmount > 0 && invoice.outstandingAmount < invoice.totalAmount && (
+                 <div className="flex justify-between text-stone-700 font-semibold">
+                   <span>{t('الرصيد المستحق', 'Amount Due')}</span>
+                   <span className="font-mono"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></span>
+                 </div>
+               )}
             </div>
           )}
+           <div data-testid="invoice-total-card" className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
+             <span className="text-[#292728]">{t('الإجمالي', 'Total')}</span>
+             <span className="font-mono text-[#292728]"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></span>
+           </div>
         </div>
       </div>
       <footer className="invoice-footer" data-testid="invoice-footer">
-        <img src={`${import.meta.env.BASE_URL}site-assets/invoice-footer.jpg`} alt={t('شعار مسك اللولو الصغير وموقع muskellolo.com', 'Musk Ellolo small logo and muskellolo.com')} className="w-full h-auto" />
+        <img src={`${import.meta.env.BASE_URL}site-assets/invoice-footer.jpg?v=logo-site-only`} alt={t('شعار مسك اللولو الصغير وموقع muskellolo.com', 'Musk Ellolo small logo and muskellolo.com')} className="w-full h-auto" />
       </footer>
     </div>
   );

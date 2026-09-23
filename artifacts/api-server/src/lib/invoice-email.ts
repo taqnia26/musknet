@@ -73,7 +73,7 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   document.fillColor("#292728").fontSize(12).text(invoice.sellerName, 42, 173, { width: 244, height: 35 });
   document.fillColor("#78716c").font("Helvetica").fontSize(9).text(`VAT Number: ${invoice.sellerVatNumber}`, 42, 213, { width: 244 });
 
-  document.roundedRect(42, 239, 244, 127, 5).fill("#f5f5f4");
+  document.roundedRect(42, 239, 244, 100, 5).fill("#f5f5f4");
   document.fillColor("#57534e").font("Helvetica-Bold").fontSize(9);
   document.text("Invoice No.", 56, 251);
   document.text("Issue Date", 56, 278);
@@ -82,11 +82,6 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   const issueDate = invoice.issueDatetime.toISOString().slice(0, 10);
   document.text(issueDate, 152, 278, { width: 120, align: "right" });
   document.text(invoice.dueDate || "-", 152, 305, { width: 120, align: "right" });
-  document.roundedRect(52, 328, 224, 30, 3).fillOpacity(0.2).fill("#a8a29e").fillOpacity(1);
-  document.fillColor("#292728").font("Helvetica-Bold").fontSize(9).text("Amount Due", 62, 338);
-  // Keep the symbol in its own slot so right-aligned numbers never cover it.
-  drawRiyalSymbol(document, 140, 337, 14);
-  document.text(money(invoice.outstandingAmount), 158, 338, { width: 108, align: "right" });
 
   document.fillColor("#57534e").font("Helvetica-Bold").fontSize(9).text("BILL TO", 310, 152);
   document.fillColor("#292728").fontSize(14).text(invoice.buyerName || "-", 310, 173, { width: 243, height: 36 });
@@ -95,24 +90,21 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   const buyerMeta = [invoice.buyerTaxNumber && `VAT: ${invoice.buyerTaxNumber}`, invoice.buyerCommercialRegistrationNumber && `CR: ${invoice.buyerCommercialRegistrationNumber}`].filter(Boolean).join("  |  ");
   if (buyerMeta) document.text(buyerMeta, 310, 265, { width: 243, height: 30 });
   if (invoice.orderNumber) document.text(`Order No.: ${invoice.orderNumber}`, 310, 310, { width: 243 });
-  document.moveTo(42, 378).lineTo(right, 378).strokeColor("#e7e5e4").stroke();
+  document.moveTo(42, 353).lineTo(right, 353).strokeColor("#e7e5e4").stroke();
 
-  let y = 390;
+  let y = 365;
   document.roundedRect(42, y, 511, 26, 4).fill("#f5f5f4");
   document.fillColor("#111827").font("Helvetica-Bold").fontSize(9);
   document.text("Product", 54, y + 9, { width: 230 });
   document.text("Qty", 300, y + 9, { width: 45, align: "center" });
-  document.text("Unit Price", 360, y + 9, { width: 75, align: "right" });
-  document.text("Total", 450, y + 9, { width: 90, align: "right" });
+  document.text("Unit Price", 450, y + 9, { width: 90, align: "right" });
   y += 31;
   for (const item of invoice.items) {
     if (y > 665) { document.addPage(); y = 50; }
     document.fillColor("#111827").font("Helvetica").fontSize(9).text(item.productName, 54, y + 7, { width: 230 });
     document.fillColor("#4b5563").text(String(item.quantity), 300, y + 7, { width: 45, align: "center" });
     drawRiyalSymbol(document, 347, y + 7, 10);
-    document.text(money(item.unitPrice), 360, y + 7, { width: 75, align: "right" });
-    drawRiyalSymbol(document, 437, y + 7, 10);
-    document.fillColor("#111827").font("Helvetica-Bold").text(money(item.totalAmount), 450, y + 7, { width: 90, align: "right" });
+    document.text(money(item.unitPrice), 450, y + 7, { width: 90, align: "right" });
     document.moveTo(42, y + 25).lineTo(right, y + 25).strokeColor("#e5e7eb").stroke();
     y += 29;
   }
@@ -120,7 +112,13 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   y += 18;
   const totalRows: Array<[string, number]> = [["Subtotal", invoice.subtotal], ["VAT (15%)", invoice.vatAmount]];
   if ((invoice.shippingAmount ?? 0) > 0) totalRows.push(["Shipping", invoice.shippingAmount!]);
-  totalRows.push(["Discount", -(invoice.discountAmount ?? 0)], ["Amount Paid", invoice.paidAmount], ["Amount Due", invoice.outstandingAmount]);
+  totalRows.push(["Discount", -(invoice.discountAmount ?? 0)]);
+  if (invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount) {
+    totalRows.push(["Amount Paid", invoice.paidAmount]);
+    if (invoice.outstandingAmount > 0 && invoice.outstandingAmount < invoice.totalAmount) {
+      totalRows.push(["Amount Due", invoice.outstandingAmount]);
+    }
+  }
   if (Math.max(y, 535) + totalRows.length * 23 + 42 > 738) {
     document.addPage();
     y = 52;
