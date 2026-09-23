@@ -815,8 +815,8 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden flex flex-col max-h-[85vh]">
-                <DialogHeader className="px-6 py-4 border-b">
-                  <DialogTitle>{t('تسجيل شحنة', 'Register Shipment')}</DialogTitle>
+                <DialogHeader className="ps-6 pe-16 py-4 border-b">
+                  <DialogTitle className="px-0 leading-snug">{t('تسجيل شحنة', 'Register Shipment')}</DialogTitle>
                   <DialogDescription>
                     {isB2B 
                       ? t('تسجيل بيانات شحن لفاتورة B2B', 'Register shipping data for B2B invoice')
@@ -1326,8 +1326,8 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden flex flex-col max-h-[85vh]">
-          <DialogHeader className="px-6 py-4 border-b">
-            <DialogTitle>{t('تحديث بيانات الشحن', 'Update Shipping Data')}</DialogTitle>
+          <DialogHeader className="ps-6 pe-16 py-4 border-b">
+            <DialogTitle className="px-0 leading-snug">{t('تحديث بيانات الشحن', 'Update Shipping Data')}</DialogTitle>
             <DialogDescription>
               {selectedShipment?.referenceNumber} - {selectedShipment?.partyName}
             </DialogDescription>
