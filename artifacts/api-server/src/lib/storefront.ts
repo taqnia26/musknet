@@ -331,7 +331,7 @@ async function seedCatalog() {
       nameEn,
       slug,
     })))
-    .onConflictDoNothing({ target: categoriesTable.slug });
+    .onConflictDoNothing();
 
   const categoryRows = await db.select().from(categoriesTable);
   const categoryIds = new Map(categoryRows.map((category) => [category.slug, category.id]));
@@ -358,7 +358,7 @@ async function seedCatalog() {
       isFeatured: product.isFeatured,
       isBestseller: product.isBestseller,
     })))
-    .onConflictDoNothing({ target: productsTable.slug });
+    .onConflictDoNothing();
 
   await db
     .insert(couponsTable)
@@ -370,7 +370,7 @@ async function seedCatalog() {
       expiresAt: null,
       isActive: true,
     })
-    .onConflictDoNothing({ target: couponsTable.code });
+    .onConflictDoNothing();
 }
 
 async function ensureCatalogSeeded() {
