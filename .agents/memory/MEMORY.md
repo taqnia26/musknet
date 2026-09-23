@@ -22,3 +22,4 @@
 - [External protocol browser tests](external-protocol-browser-tests.md) — verify computed mailto-style URLs in-page; headless Chromium may not navigate to external protocols.
 - [Object storage abort signals](object-storage-abort-signals.md) — browser automation can report ERR_ABORTED after a signed upload or delete already completed successfully.
 - [Transactional email credentials](transactional-email-credentials.md) — connector setup may not attach; keep a secret-based provider fallback without persisting credentials.
+- [Salla one-time import](salla-one-time-import.md) — import products and orders into local storage, then allow disconnecting Salla without breaking the storefront.
