@@ -17,6 +17,7 @@ import {
   UserRound, Activity, BarChart3, Check, Sparkles, Globe, Minus
 } from 'lucide-react';
 import { Money } from '@/components/money';
+import { formatInteger } from '@/lib/formatters';
 
 const money = (value: unknown, lang: 'ar' | 'en' = 'en') => <Money value={Number(value ?? 0)} lang={lang} fractionDigits={2} />;
 const text = (value: unknown, fallback = '—') => value === undefined || value === null ? fallback : String(value);
@@ -239,7 +240,7 @@ function Dashboard() {
     const previous = new Map((data.previousSeries ?? []).map((point: any) => [Math.round((dayKey(point.day) - previousStart) / 86400000), Number(point.sales ?? 0)]));
     const points = Math.max(1, Math.round((dayKey(data.range.to) - currentStart) / 86400000) + 1);
     return Array.from({ length: points }, (_, index) => ({
-      day: new Date(currentStart + index * 86400000).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' }),
+      day: new Date(currentStart + index * 86400000).toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { month: 'short', day: 'numeric' }),
       currentSales: current.get(index) ?? 0,
       previousSales: previous.get(index) ?? 0,
     }));
@@ -452,19 +453,19 @@ function Dashboard() {
           />
           <MetricCard
             title={t('الطلبات المدفوعة', 'Paid Orders')}
-            value={text(summary.attributedPaidOrders, '0')}
+            value={formatInteger(summary.attributedPaidOrders, lang)}
             icon={ShoppingBag}
             change={changes.attributedPaidOrders}
-            changeValue={(value: number) => Number(value).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+            changeValue={(value: number) => formatInteger(value, lang)}
             t={t}
             testId="metric-orders"
           />
           <MetricCard
             title={t('الزيارات', 'Link Visits')}
-            value={text(summary.visits, '0')}
+            value={formatInteger(summary.visits, lang)}
             icon={Eye}
             change={changes.visits}
-            changeValue={(value: number) => Number(value).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US')}
+            changeValue={(value: number) => formatInteger(value, lang)}
             t={t}
             testId="metric-visits"
           />
@@ -532,7 +533,7 @@ function Dashboard() {
                       className="text-stone-500"
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(value) => `${value.toLocaleString()}`}
+                      tickFormatter={(value) => formatInteger(value, lang)}
                     />
                     <Tooltip
                        formatter={(value: number, name: string) => [money(value, lang), name === 'currentSales' ? t('الفترة الحالية', 'Current period') : t('الفترة السابقة', 'Previous period')]}
@@ -593,7 +594,7 @@ function Dashboard() {
                         </p>
                       </div>
                       <div className="text-end">
-                        <p className="text-lg font-bold text-stone-900 dark:text-white">{text(code.attributedUses, '0')}</p>
+                        <p className="text-lg font-bold text-stone-900 dark:text-white">{formatInteger(code.attributedUses, lang)}</p>
                         <p className="text-[10px] font-bold uppercase text-stone-400">{t('استخدام', 'Uses')}</p>
                       </div>
                     </div>
@@ -623,7 +624,7 @@ function Dashboard() {
                         <div>
                           <p className="font-bold text-sm text-stone-900 dark:text-white" dir="ltr">#{order.orderNumber}</p>
                           <p className="text-xs font-medium text-stone-500">
-                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' }) : ''}
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { month: 'short', day: 'numeric' }) : ''}
                           </p>
                         </div>
                       </div>

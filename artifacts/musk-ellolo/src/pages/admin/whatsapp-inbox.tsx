@@ -187,7 +187,7 @@ export default function AdminWhatsAppInbox() {
     const groups: { dateStr: string; messages: Message[] }[] = [];
     let currentDateStr = "";
     messages.forEach((msg) => {
-      const dateStr = new Date(msg.timestamp).toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", {
+      const dateStr = new Date(msg.timestamp).toLocaleDateString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -276,7 +276,7 @@ export default function AdminWhatsAppInbox() {
   };
 
   const formatTime = (isoString: string) => {
-    return new Date(isoString).toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-US", {
+    return new Date(isoString).toLocaleTimeString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-US", {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -287,7 +287,7 @@ export default function AdminWhatsAppInbox() {
     if (new Date().toDateString() === d.toDateString()) {
       return formatTime(isoString);
     }
-    return d.toLocaleDateString(lang === "ar" ? "ar-SA" : "en-US", { month: "short", day: "numeric" });
+    return d.toLocaleDateString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-US", { month: "short", day: "numeric" });
   };
 
   if (loading) {

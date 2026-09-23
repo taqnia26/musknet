@@ -34,7 +34,7 @@ export function Money({
 }) {
   const formatted = fractionDigits === undefined
     ? formatCurrency(value, lang)
-    : new Intl.NumberFormat(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', {
+    : new Intl.NumberFormat('en-US', {
         minimumFractionDigits: fractionDigits,
         maximumFractionDigits: fractionDigits,
       }).format(Number(value ?? 0));

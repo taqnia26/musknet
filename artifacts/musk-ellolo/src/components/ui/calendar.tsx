@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { DayButton, DayPicker, getDefaultClassNames } from 'react-day-picker';
+import { DayButton, DayPicker, getDefaultClassNames, type DateLib, type DateLibOptions } from 'react-day-picker';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { toLatinDigits } from '@/lib/formatters';
 import {
   ChevronDownIcon,
   ChevronLeftIcon,
@@ -35,8 +36,12 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       formatters={{
-        formatMonthDropdown: (date) =>
-          date.toLocaleString('default', { month: 'short' }),
+        formatCaption: (date: Date, _options?: DateLibOptions, dateLib?: DateLib) =>
+          toLatinDigits(dateLib?.formatMonthYear(date) ?? date.toLocaleString('default', { month: 'long', year: 'numeric' })),
+        formatDay: (date) => String(date.getDate()),
+        formatMonthDropdown: (date: Date, dateLib?: DateLib) =>
+          toLatinDigits(dateLib?.format(date, 'MMM') ?? date.toLocaleString('default', { month: 'short' })),
+        formatYearDropdown: (date) => String(date.getFullYear()),
         ...formatters,
       }}
       classNames={{
@@ -189,7 +194,7 @@ function CalendarDayButton({
       ref={ref}
       variant="ghost"
       size="icon"
-      data-day={day.date.toLocaleDateString()}
+      data-day={day.date.toLocaleDateString('en-US')}
       data-selected-single={
         modifiers.selected &&
         !modifiers.range_start &&

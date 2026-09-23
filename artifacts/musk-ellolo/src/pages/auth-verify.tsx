@@ -72,7 +72,7 @@ export default function VerifyOtp() {
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold mb-3">{t('رمز التحقق', 'Verification Code')}</h1>
           <p className="text-muted-foreground text-sm">
-            {t('أدخل الرمز المكون من ٤ أرقام المرسل إلى', 'Enter the 4-digit code sent to')} <br/>
+            {t('أدخل الرمز المكون من 4 أرقام المرسل إلى', 'Enter the 4-digit code sent to')} <br/>
             <span className="font-bold text-foreground inline-block mt-1" dir="ltr">+966 {phone}</span>
           </p>
         </div>

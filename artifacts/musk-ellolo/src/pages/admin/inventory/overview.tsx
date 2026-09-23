@@ -1,5 +1,6 @@
 import { useLanguage } from '@/hooks/use-language';
 import { Money } from '@/components/money';
+import { formatInteger } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAdminListInventory, useListInventoryAlerts, useListInventoryLocations, type InventoryLocation } from '@workspace/api-client-react';
 import { Boxes, CircleDollarSign, AlertTriangle, XCircle, MapPin } from 'lucide-react';
@@ -27,10 +28,10 @@ export default function AdminInventoryOverview() {
   );
 
   const cards = [
-    { title: t('إجمالي الوحدات', 'Total units'), value: summary.totalUnits.toLocaleString(), icon: Boxes, color: 'text-blue-500' },
+    { title: t('إجمالي الوحدات', 'Total units'), value: formatInteger(summary.totalUnits, lang), icon: Boxes, color: 'text-blue-500' },
     { title: t('قيمة المخزون', 'Inventory value'), value: <Money value={summary.totalValue} lang={lang} />, icon: CircleDollarSign, color: 'text-green-500' },
-    { title: t('تنبيهات المخزون', 'Inventory alerts'), value: alerts.length.toLocaleString(), icon: AlertTriangle, color: 'text-amber-500' },
-    { title: t('المواقع النشطة', 'Active locations'), value: locations.filter(l => l.active).length.toLocaleString(), icon: MapPin, color: 'text-purple-500' },
+    { title: t('تنبيهات المخزون', 'Inventory alerts'), value: formatInteger(alerts.length, lang), icon: AlertTriangle, color: 'text-amber-500' },
+    { title: t('المواقع النشطة', 'Active locations'), value: formatInteger(locations.filter(l => l.active).length, lang), icon: MapPin, color: 'text-purple-500' },
   ];
 
   return (
@@ -91,10 +92,10 @@ export default function AdminInventoryOverview() {
                   <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
                     <div className={`w-2 h-2 mt-1.5 rounded-full shrink-0 ${alert.status === 'out' ? 'bg-destructive' : 'bg-amber-500'}`} />
                     <div>
-                      <p className="text-sm font-medium">Product #{alert.productId}</p>
+                      <p className="text-sm font-medium">Product #{formatInteger(alert.productId, lang)}</p>
                       <div className="flex gap-4 mt-1 text-xs text-muted-foreground">
-                        <span>{t('المتوفر:', 'Available:')} <b className="text-foreground">{alert.available}</b></span>
-                        <span>{t('الحد:', 'Point:')} {alert.reorderPoint}</span>
+                        <span>{t('المتوفر:', 'Available:')} <b className="text-foreground">{formatInteger(alert.available, lang)}</b></span>
+                        <span>{t('الحد:', 'Point:')} {formatInteger(alert.reorderPoint, lang)}</span>
                       </div>
                     </div>
                   </div>

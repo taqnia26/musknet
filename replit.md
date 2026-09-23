@@ -37,6 +37,7 @@ Arabic-first luxury fragrance storefront for Musk Ellolo, with a public product 
 ## Product
 
 - Bilingual RTL/LTR browsing for perfumes and hair mists.
+- All customer-facing and admin numbers use English digits (0–9) in either interface language; amounts and counts use English number separators. Keep Arabic labels and month names localized, and use the shared number formatters for new UI.
 - Product details, cart, discount-code validation, delivery quote, checkout, phone OTP, orders, profile, and saved addresses.
 
 ## User preferences

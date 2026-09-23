@@ -27,7 +27,7 @@ export default function OwnerCredentialsSettings() {
     event.preventDefault();
     setMessage(null);
     if (password.length < 8 || password !== confirmation) {
-      setMessage({ ok: false, text: t('تأكد من أن كلمة المرور ٨ أحرف على الأقل وأن التأكيد مطابق.', 'Use at least 8 characters and make sure confirmation matches.') });
+      setMessage({ ok: false, text: t('تأكد من أن كلمة المرور 8 أحرف على الأقل وأن التأكيد مطابق.', 'Use at least 8 characters and make sure confirmation matches.') });
       return;
     }
     update.mutate({ data: { email: currentEmail, password, passwordConfirmation: confirmation } }, {

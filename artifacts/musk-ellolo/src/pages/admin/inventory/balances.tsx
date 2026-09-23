@@ -291,7 +291,7 @@ export function RowActions({
                 ) : (
                   movements.map(m => (
                     <TableRow key={m.id}>
-                      <TableCell className="whitespace-nowrap">{new Date(m.createdAt).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-US')}</TableCell>
+                      <TableCell className="whitespace-nowrap">{new Date(m.createdAt).toLocaleString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US')}</TableCell>
                       <TableCell>
                         <Badge variant={m.movementType === 'increase' ? 'default' : m.movementType === 'decrease' ? 'destructive' : 'secondary'}>
                           {m.movementType}

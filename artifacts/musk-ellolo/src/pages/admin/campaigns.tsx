@@ -19,6 +19,7 @@ import {
 import { CalendarDays, DollarSign, Download, Edit2, Megaphone, PauseCircle, Plus, ShoppingCart, TicketCheck, MoreHorizontal } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { Money } from '@/components/money';
+import { formatInteger } from '@/lib/formatters';
 import { useToast } from '@/hooks/use-toast';
 import { hasPermission } from '@/lib/permissions';
 import { Badge } from '@/components/ui/badge';
@@ -174,8 +175,7 @@ export default function AdminCampaigns() {
     storefront: t('المتجر', 'Storefront'),
     other: t('أخرى', 'Other'),
   };
-  const locale = lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US';
-  const formatNumber = (value: number) => new Intl.NumberFormat(locale).format(value);
+  const formatNumber = (value: number) => formatInteger(value, lang);
   const formatCurrency = (value: number) => <Money value={value} lang={lang} />;
   const resultByCampaign = new Map(results?.campaigns.map((campaign) => [campaign.id, campaign]));
 

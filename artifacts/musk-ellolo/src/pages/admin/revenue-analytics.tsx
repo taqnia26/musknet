@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { formatInteger, formatPercent } from '@/lib/formatters';
+import { formatCompact as compactNumber, formatInteger, formatPercent } from '@/lib/formatters';
 import { Money } from '@/components/money';
 import {
   XAxis, YAxis, CartesianGrid,
@@ -54,9 +54,8 @@ export default function AdminRevenueAnalytics() {
     }
   };
 
-  const locale = lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US';
   const money = (val: number) => <Money value={val} lang={lang} />;
-  const formatCompact = (val: number) => new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(val);
+  const formatCompact = (val: number) => compactNumber(val, lang);
   const formatNumber = (val: number) => formatInteger(val, lang);
 
   if (isLoading) {

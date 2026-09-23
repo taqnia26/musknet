@@ -279,7 +279,7 @@ export default function AdminWalletBilling() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="taxNumber">{t('الرقم الضريبي', 'Tax Number')}</Label>
-                  <Input id="taxNumber" pattern="[0-9]{15}" value={formData.taxNumber} onChange={e => setFormData({...formData, taxNumber: e.target.value})} />
+                  <Input id="taxNumber" inputMode="numeric" pattern="[0-9]{15}" value={formData.taxNumber} onChange={e => setFormData({...formData, taxNumber: e.target.value})} />
                 </div>
               </div>
             )}
@@ -323,7 +323,7 @@ export default function AdminWalletBilling() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="accountNumber">{t('رقم الحساب', 'Account Number')}</Label>
-                   <Input id="accountNumber" dir="ltr" className="text-left" pattern="[0-9]{6,24}" value={formData.accountNumber} onChange={e => setFormData({...formData, accountNumber: e.target.value})} />
+                   <Input id="accountNumber" inputMode="numeric" dir="ltr" className="text-left" pattern="[0-9]{6,24}" value={formData.accountNumber} onChange={e => setFormData({...formData, accountNumber: e.target.value})} />
                 </div>
               </div>
             )}

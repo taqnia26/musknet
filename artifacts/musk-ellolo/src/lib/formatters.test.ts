@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCurrency, formatInteger, formatPercent } from './formatters';
+import { formatCompact, formatCurrency, formatInteger, formatPercent, toLatinDigits } from './formatters';
 
 describe('admin display formatters', () => {
   it('formats counts without decimal tails', () => {
@@ -14,5 +14,14 @@ describe('admin display formatters', () => {
   });
   it('renders null values as zero', () => {
     expect(formatInteger(null)).toBe('0');
+  });
+  it('always uses English digits in Arabic counts, money and percentages', () => {
+    expect(formatInteger(1234, 'ar')).toBe('1,234');
+    expect(formatCurrency(1234.5, 'ar')).toBe('1,234.5');
+    expect(formatPercent(12.5, 'ar')).toBe('12.5%');
+    expect(formatCompact(1200, 'ar')).not.toMatch(/[٠-٩۰-۹٫٬]/);
+  });
+  it('normalizes Arabic and Persian keyboard digits without changing other text', () => {
+    expect(toLatinDigits('سعر ٣٩٩٫٥٠ و ۴۲')).toBe('سعر 399٫50 و 42');
   });
 });
