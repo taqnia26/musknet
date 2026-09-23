@@ -391,7 +391,7 @@ describe.sequential("admin route authorization", () => {
         .send({ name: "product.jpg", contentType: "image/jpeg", size: 1024 })
         .expect(503);
 
-      expect(response.body).toEqual({ error: "Product image storage is not configured" });
+      expect(response.body).toEqual({ error: "تخزين الملفات غير مهيأ على الخادم. يرجى التأكد من إعداد App Storage في بيئة التشغيل." });
       expect(fetchSpy).not.toHaveBeenCalled();
     } finally {
       fetchSpy.mockRestore();

@@ -28,7 +28,7 @@ import AdminHR from '@/pages/admin/hr';
 import AdminFinance from '@/pages/admin/finance';
 import AdminManufacturing from '@/pages/admin/manufacturing';
 import AdminExhibitions from '@/pages/admin/exhibitions';
-import AdminInvoices from '@/pages/admin/invoices';
+import AdminInvoices, { AdminOnlineInvoices, AdminExhibitionInvoices } from '@/pages/admin/invoices';
 import AdminChatbot from '@/pages/admin/chatbot';
 import AdminWhatsAppInbox from '@/pages/admin/whatsapp-inbox';
 import { AdminWhatsAppSettings, AdminWhatsAppTemplates } from '@/pages/admin/whatsapp-placeholders';
@@ -59,9 +59,9 @@ export default function AdminRoutes() {
       <Switch>
         <Route path="/admin/customers/individuals" component={AdminCustomers} />
         <Route path="/admin/customers/companies" component={AdminDistributors} />
-        <Route path="/admin/sales/online" component={AdminOrders} />
+        <Route path="/admin/sales/online" component={AdminOnlineInvoices} />
         <Route path="/admin/sales/companies" component={AdminInvoices} />
-        <Route path="/admin/sales/exhibitions" component={AdminExhibitions} />
+        <Route path="/admin/sales/exhibitions" component={AdminExhibitionInvoices} />
         <Route path="/admin/marketing/coupons" component={AdminCoupons} />
         <Route path="/admin/revenue-analytics" component={AdminRevenueAnalytics} />
         <Route path="/admin" component={AdminDashboard} />

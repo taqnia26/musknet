@@ -1506,7 +1506,11 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     .leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
     .where(and(
       isNull(invoicesTable.archivedAt),
-      query.channel === "companies" ? sql`${invoicesTable.distributorId} is not null` : undefined,
+      query.channel === "companies"
+        ? sql`${invoicesTable.distributorId} is not null`
+        : query.channel === "online"
+          ? and(isNull(invoicesTable.distributorId), sql`${invoicesTable.orderId} is not null`)
+          : undefined,
       search ? or(
         ilike(invoicesTable.invoiceNumber, `%${search}%`),
         ilike(invoicesTable.sellerName, `%${search}%`),

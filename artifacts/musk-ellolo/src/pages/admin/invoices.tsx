@@ -603,7 +603,7 @@ function RecordPaymentDialog({
   );
 }
 
-export default function AdminInvoices() {
+function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'online' }) {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
   const [receivableStatus, setReceivableStatus] = useState<'all' | 'open' | 'overdue' | 'paid'>('all');
@@ -620,7 +620,7 @@ export default function AdminInvoices() {
 
   const { data: invoices, isLoading, isError } = useAdminListInvoices({
     search: search || undefined,
-    channel: 'companies',
+    channel,
     receivableStatus,
   });
   
@@ -634,10 +634,12 @@ export default function AdminInvoices() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('طلبات الشركات', 'Company Orders')}</h1>
-          <p className="text-muted-foreground mt-1">{t('إدارة فواتير وطلبات الشركات والموزعين', 'Manage company and distributor orders and invoices')}</p>
+          <h1 className="text-3xl font-bold tracking-tight">{channel === 'online' ? t('فواتير الأفراد', 'Individual Invoices') : t('فواتير الشركات', 'Company Invoices')}</h1>
+          <p className="text-muted-foreground mt-1">{channel === 'online'
+            ? t('عرض فواتير الطلبات المدفوعة عبر الموقع الإلكتروني فقط', 'Online order invoices only')
+            : t('إدارة فواتير الشركات والموزعين فقط', 'Manage distributor invoices only')}</p>
         </div>
-        {hasPermission(currentUser, 'invoices', 'edit') && <CreateDistributorInvoiceDialog />}
+        {channel === 'companies' && hasPermission(currentUser, 'invoices', 'edit') && <CreateDistributorInvoiceDialog />}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -682,13 +684,13 @@ export default function AdminInvoices() {
             <TableRow>
               <TableHead>{t('رقم الفاتورة', 'Invoice #')}</TableHead>
               <TableHead>{t('رقم الطلب', 'Order ID')}</TableHead>
-              <TableHead>{t('الموزع', 'Distributor')}</TableHead>
+              <TableHead>{channel === 'online' ? t('المشتري', 'Buyer') : t('الموزع', 'Distributor')}</TableHead>
               <TableHead>{t('الاستحقاق', 'Due date')}</TableHead>
               <TableHead className="text-end font-bold">{t('الإجمالي', 'Total')}</TableHead>
               <TableHead className="text-end">{t('المدفوع', 'Paid')}</TableHead>
               <TableHead className="text-end">{t('المستحق', 'Outstanding')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>
-              <TableHead className="w-[80px] text-center"></TableHead>
+              <TableHead className="w-[80px] text-center">{t('الإجراءات', 'Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -703,7 +705,7 @@ export default function AdminInvoices() {
                 <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                   <TableCell>{invoice.orderNumber ?? <span className="text-muted-foreground">-</span>}</TableCell>
-                  <TableCell>{invoice.distributorName ?? <span className="text-muted-foreground">-</span>}</TableCell>
+                  <TableCell>{channel === 'online' ? (invoice.buyerName ?? '-') : (invoice.distributorName ?? <span className="text-muted-foreground">-</span>)}</TableCell>
                   <TableCell className={invoice.dueDate && invoice.outstandingAmount > 0 && invoice.dueDate < new Date().toISOString().slice(0, 10) ? 'font-semibold text-destructive' : ''}>{invoice.dueDate ?? '-'}</TableCell>
                   <TableCell className="text-end font-semibold text-primary">{invoice.totalAmount.toFixed(2)}</TableCell>
                   <TableCell className="text-end text-emerald-600">{invoice.paidAmount.toFixed(2)}</TableCell>
@@ -757,7 +759,7 @@ export default function AdminInvoices() {
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setArchiveInvoice(invoice)}>
                               <Archive className="h-4 w-4 mr-2 rtl:ml-2 rtl:mr-0" />
-                              {t('أرشفة', 'Archive')}
+                               {t('حذف من القائمة (أرشفة)', 'Remove from list (archive)')}
                             </DropdownMenuItem>
                           </>
                         )}
@@ -786,6 +788,48 @@ export default function AdminInvoices() {
       <EmailInvoiceDialog invoice={emailInvoice} open={!!emailInvoice} onOpenChange={(open) => !open && setEmailInvoice(null)} />
       <RecordPaymentDialog invoice={paymentInvoice} open={!!paymentInvoice} onOpenChange={(open) => !open && setPaymentInvoice(null)} />
       <ArchiveInvoiceDialog invoice={archiveInvoice} open={!!archiveInvoice} onOpenChange={(open) => !open && setArchiveInvoice(null)} />
+    </div>
+  );
+}
+
+export default function AdminInvoices() {
+  return <InvoiceList channel="companies" />;
+}
+
+export function AdminOnlineInvoices() {
+  return <InvoiceList channel="online" />;
+}
+
+/** Exhibition sales have no invoice relation yet. Keep this view explicit rather than
+ * presenting unrelated invoices or the exhibition-management screen. */
+export function AdminExhibitionInvoices() {
+  const { t } = useLanguage();
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">{t('فواتير المعارض', 'Exhibition Invoices')}</h1>
+        <p className="text-muted-foreground mt-1">{t('لا توجد علاقة فواتير للمعارض حالياً', 'Exhibitions do not have an invoice relation yet')}</p>
+      </div>
+      <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
+        <Table className="min-w-[700px]">
+          <TableHeader className="bg-muted/30">
+            <TableRow>
+              <TableHead>{t('رقم الفاتورة', 'Invoice #')}</TableHead>
+              <TableHead>{t('المعرض', 'Exhibition')}</TableHead>
+              <TableHead>{t('التاريخ', 'Date')}</TableHead>
+              <TableHead>{t('الإجمالي', 'Total')}</TableHead>
+              <TableHead className="w-[80px] text-center">{t('إجراءات', 'Actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow>
+              <TableCell colSpan={5} className="py-16 text-center text-muted-foreground">
+                {t('لا توجد فواتير للمعارض لعدم وجود علاقة فواتير مسجلة. استخدم إدارة المعارض لإدارة المعارض والكميات.', 'No exhibition invoices are available because exhibitions have no invoice relation. Use Exhibition Management to manage exhibitions and quantities.')}
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

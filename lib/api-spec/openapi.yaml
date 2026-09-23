@@ -868,7 +868,7 @@ paths:
         - name: channel
           in: query
           required: false
-          schema: { type: string, enum: [all, companies], default: all }
+          schema: { type: string, enum: [all, companies, online], default: all }
         - name: receivableStatus
           in: query
           required: false

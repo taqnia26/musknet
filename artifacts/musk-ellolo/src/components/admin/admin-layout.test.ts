@@ -19,11 +19,20 @@ describe('admin commercial navigation', () => {
       ['Companies', 'الشركات'],
     ]);
     expect(group('Sales').children?.map(({ labelEn, labelAr }) => [labelEn, labelAr])).toEqual([
-      ['Online Sales', 'مبيعات الموقع الإلكتروني'],
+      ['Individual Sales', 'مبيعات الأفراد'],
       ['Company Sales', 'مبيعات الشركات'],
       ['Exhibition Sales', 'مبيعات المعارض'],
     ]);
     expect(group('Marketing').children?.map(({ labelEn }) => labelEn)).toEqual(['Campaigns', 'Coupons']);
+  });
+
+  it('keeps order navigation on the order management screen', () => {
+    expect(group('Orders').children?.map((item: any) => item.href)).toEqual(['/admin/orders', '/admin/orders']);
+    expect(group('Sales').children?.map((item: any) => item.href)).toEqual([
+      '/admin/sales/online',
+      '/admin/sales/companies',
+      '/admin/sales/exhibitions',
+    ]);
   });
 
   it('shows only permitted children and allows a group to remain visible for any permitted child', () => {
@@ -32,7 +41,7 @@ describe('admin commercial navigation', () => {
     expect(visibleAdminNavChildren(group('Customers'), user(['distributors:view'])).map((item: any) => item.labelEn))
       .toEqual(['Companies']);
     expect(visibleAdminNavChildren(group('Sales'), user(['invoices:view'])).map((item: any) => item.labelEn))
-      .toEqual(['Company Sales']);
+      .toEqual(['Individual Sales', 'Company Sales', 'Exhibition Sales']);
   });
 
   it('marks direct and nested commercial routes active without activating siblings', () => {

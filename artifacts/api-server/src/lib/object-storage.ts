@@ -120,7 +120,7 @@ export class ObjectStorageService {
 
 export class ObjectStorageConfigurationError extends Error {
   constructor() {
-    super("Product image storage is not configured");
+    super("تخزين الملفات غير مهيأ على الخادم. يرجى التأكد من إعداد App Storage في بيئة التشغيل.");
     this.name = "ObjectStorageConfigurationError";
   }
 }

@@ -2381,7 +2381,7 @@ export const adminListInvoicesQueryReceivableStatusDefault = `all`;
 
 export const AdminListInvoicesQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "channel": zod.enum(['all', 'companies']).default(adminListInvoicesQueryChannelDefault),
+  "channel": zod.enum(['all', 'companies', 'online']).default(adminListInvoicesQueryChannelDefault),
   "receivableStatus": zod.enum(['all', 'open', 'overdue', 'paid']).default(adminListInvoicesQueryReceivableStatusDefault)
 })
 

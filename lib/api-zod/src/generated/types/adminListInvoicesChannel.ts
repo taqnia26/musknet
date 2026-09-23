@@ -12,4 +12,5 @@ export type AdminListInvoicesChannel = typeof AdminListInvoicesChannel[keyof typ
 export const AdminListInvoicesChannel = {
   all: 'all',
   companies: 'companies',
+  online: 'online',
 } as const;

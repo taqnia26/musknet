@@ -69,16 +69,16 @@ export const navStructure = [
   {
     labelEn: 'Orders', labelAr: 'الطلبات', icon: ShoppingCart,
     children: [
-      { href: '/admin/sales/online', labelEn: 'Individual Orders', labelAr: 'طلبات الأفراد', module: 'orders' },
-      { href: '/admin/sales/companies', labelEn: 'Company Orders', labelAr: 'طلبات الشركات', module: 'invoices' },
+      { href: '/admin/orders', labelEn: 'Individual Orders', labelAr: 'طلبات الأفراد', module: 'orders' },
+      { href: '/admin/orders', labelEn: 'Company Orders', labelAr: 'طلبات الشركات', module: 'orders' },
     ]
   },
   {
     labelEn: 'Sales', labelAr: 'المبيعات', icon: Banknote,
     children: [
-      { href: '/admin/sales/online', labelEn: 'Individual Sales', labelAr: 'مبيعات الأفراد', module: 'orders' },
+      { href: '/admin/sales/online', labelEn: 'Individual Sales', labelAr: 'مبيعات الأفراد', module: 'invoices' },
       { href: '/admin/sales/companies', labelEn: 'Company Sales', labelAr: 'مبيعات الشركات', module: 'invoices' },
-      { href: '/admin/sales/exhibitions', labelEn: 'Exhibition Sales', labelAr: 'مبيعات المعارض', module: 'exhibitions' },
+      { href: '/admin/sales/exhibitions', labelEn: 'Exhibition Sales', labelAr: 'مبيعات المعارض', module: 'invoices' },
     ]
   },
   {

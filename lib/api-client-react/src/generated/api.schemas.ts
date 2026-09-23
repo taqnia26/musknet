@@ -3989,6 +3989,7 @@ export type AdminListInvoicesChannel = typeof AdminListInvoicesChannel[keyof typ
 export const AdminListInvoicesChannel = {
   all: 'all',
   companies: 'companies',
+  online: 'online',
 } as const;
 
 export type AdminListInvoicesReceivableStatus = typeof AdminListInvoicesReceivableStatus[keyof typeof AdminListInvoicesReceivableStatus];
