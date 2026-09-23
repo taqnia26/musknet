@@ -323,6 +323,7 @@ export function toProduct(product: ProductSeed) {
 let catalogSeedPromise: Promise<void> | null = null;
 
 async function seedCatalog() {
+  if ((await db.select({ id: categoriesTable.id }).from(categoriesTable).limit(1)).length) return;
   await db
     .insert(categoriesTable)
     .values(categorySeeds.map(({ id, nameAr, nameEn, slug }) => ({
