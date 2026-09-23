@@ -11,6 +11,8 @@ export const whatsappAuthStateTable = pgTable("whatsapp_auth_state", {
 export const whatsappChatsTable = pgTable("whatsapp_chats", {
   jid: text("jid").primaryKey(),
   name: text("name").notNull(),
+  nameSource: text("name_source").notNull().default("message"),
+  manualName: text("manual_name"),
   phone: text("phone").notNull(),
   unread: integer("unread").notNull().default(0),
   lastMessage: text("last_message"),

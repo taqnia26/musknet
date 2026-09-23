@@ -1,6 +1,6 @@
 import { Router, type Request } from "express";
 import { adminFromToken, ensureAdminSeeded, publicAdmin } from "../lib/admin-auth";
-import { listWhatsappChats, listWhatsappMessages, whatsappManager } from "../lib/whatsapp";
+import { listWhatsappChats, listWhatsappMessages, renameWhatsappChat, trustedWhatsappName, whatsappManager } from "../lib/whatsapp";
 
 const router = Router();
 const bearer = (req: Request) => {
@@ -38,6 +38,18 @@ router.post("/admin/whatsapp/disconnect", permit("edit"), async (_req, res, next
 });
 router.get("/admin/whatsapp/chats", permit("view"), async (_req, res, next) => {
   try { res.json(await listWhatsappChats()); } catch (error) { next(error); }
+});
+router.patch("/admin/whatsapp/chats/:jid", permit("edit"), async (req, res, next) => {
+  try {
+    const name = req.body?.name;
+    if (typeof name !== "string" || (name.trim() && !trustedWhatsappName(name))) {
+      res.status(400).json({ error: "Enter a valid contact name (up to 120 characters), or leave it blank to remove the label" }); return;
+    }
+    const jid = Array.isArray(req.params.jid) ? req.params.jid[0] : req.params.jid;
+    const chat = await renameWhatsappChat(jid, name.trim().replace(/\s+/g, " "));
+    if (!chat) { res.status(404).json({ error: "Conversation not found" }); return; }
+    res.json((await listWhatsappChats()).find((row) => row.jid === jid));
+  } catch (error) { next(error); }
 });
 router.get("/admin/whatsapp/chats/:jid/messages", permit("view"), async (req, res, next) => {
   try {

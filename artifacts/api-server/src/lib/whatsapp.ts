@@ -5,9 +5,9 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import QRCode from "qrcode";
 import pino from "pino";
-import { asc, desc, eq, ne } from "drizzle-orm";
+import { asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import {
-  db, whatsappAuthStateTable, whatsappChatsTable, whatsappMessagesTable,
+  customersTable, db, whatsappAuthStateTable, whatsappChatsTable, whatsappMessagesTable,
 } from "@workspace/db";
 import { logger } from "./logger";
 import { sendWhatsappDisconnectAlert } from "./whatsapp-alert";
@@ -85,6 +85,50 @@ export const whatsappText = (message: proto.IMessage | null | undefined): string
   if (message.stickerMessage) return "🏷️ ملصق";
   return "رسالة غير نصية";
 };
+
+// LID is a private WhatsApp identity, not a telephone number.
+export const phoneFromWhatsappJid = (jid: string): string =>
+  /^(?:[1-9]\d{6,14})@(s\.whatsapp\.net|c\.us)$/.test(jid) ? jid.split("@")[0] : "";
+
+export const trustedWhatsappName = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  const name = value.trim().replace(/\s+/g, " ");
+  if (!name || name.length > 120 || /@(?:lid|s\.whatsapp\.net|c\.us|g\.us)\b/i.test(name)) return "";
+  if (!/[\p{L}]/u.test(name) || /[\x00-\x1f\x7f]/.test(name)) return "";
+  return name;
+};
+
+export async function renameWhatsappChat(jid: string, name: string) {
+  const [chat] = await db.update(whatsappChatsTable).set({ manualName: name || null, updatedAt: new Date() })
+    .where(eq(whatsappChatsTable.jid, jid)).returning();
+  return chat ?? null;
+}
+
+export async function resolvedWhatsappChats() {
+  const chats = await db.select().from(whatsappChatsTable)
+    .orderBy(desc(whatsappChatsTable.lastMessageAt), asc(whatsappChatsTable.name));
+  const phones = [...new Set(chats.map(({ jid }) => phoneFromWhatsappJid(jid)).filter(Boolean))];
+  const customers = phones.length ? await db.select({ phone: customersTable.phone, name: customersTable.name })
+    .from(customersTable)
+    .where(inArray(sql<string>`regexp_replace(translate(${customersTable.phone}, '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789'), '[^0-9]', '', 'g')`, phones)) : [];
+  const matches = new Map<string, string[]>();
+  for (const customer of customers) {
+    const digits = customer.phone.replace(/[٠-٩۰-۹]/g, (digit) =>
+      String("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹".indexOf(digit) % 10)).replace(/\D/g, "");
+    matches.set(digits, [...(matches.get(digits) ?? []), trustedWhatsappName(customer.name)]);
+  }
+  return chats.map((chat) => {
+    const phone = phoneFromWhatsappJid(chat.jid);
+    const customerNames = matches.get(phone);
+    const customerName = customerNames?.length === 1 ? customerNames[0] : "";
+    return {
+      ...chat,
+      phone,
+      name: trustedWhatsappName(chat.manualName) || customerName || trustedWhatsappName(chat.name),
+      manualName: chat.manualName,
+    };
+  });
+}
 
 type ConnectionStatus = "disconnected" | "connecting" | "qr" | "completing" | "connected";
 export class WhatsAppManager {
@@ -307,20 +351,42 @@ export class WhatsAppManager {
         }
       }
     });
-    socket.ev.on("messaging-history.set", async ({ chats, messages }) => {
-      for (const chat of chats) await this.upsertChat(chat.id!, chat.name ?? chat.id!, chat.id!, chat.unreadCount ?? 0, undefined, undefined);
-      await this.ingest(messages);
+    socket.ev.on("contacts.upsert", (contacts) => {
+      void Promise.all(contacts.map((contact) => this.upsertChat(contact.id, contact.name || contact.verifiedName || contact.notify, "contact")))
+        .catch(() => logger.warn("Could not import WhatsApp contacts"));
+    });
+    socket.ev.on("contacts.update", (contacts) => {
+      void Promise.all(contacts.map((contact) => this.upsertChat(contact.id, contact.name || contact.verifiedName || contact.notify, "contact")))
+        .catch(() => logger.warn("Could not update WhatsApp contacts"));
+    });
+    socket.ev.on("messaging-history.set", async ({ chats, contacts, messages }) => {
+      for (const contact of contacts ?? []) await this.upsertChat(contact.id, contact.name || contact.verifiedName || contact.notify, "contact");
+      for (const chat of chats) if (chat.id) await this.upsertChat(chat.id, chat.name, "chat", chat.unreadCount);
+      await this.ingest(messages, true);
     });
     socket.ev.on("messages.upsert", async ({ messages }) => this.ingest(messages));
   }
 
-  private async upsertChat(jid: string, name: string, phone: string, unread = 0, lastMessage?: string, at?: Date) {
-    if (!jid || jid.endsWith("@g.us") || jid === "status@broadcast") return;
-    await db.insert(whatsappChatsTable).values({ jid, name, phone: phone.replace(/@.*/, ""), unread, lastMessage, lastMessageAt: at })
-      .onConflictDoUpdate({ target: whatsappChatsTable.jid, set: { name, phone: phone.replace(/@.*/, ""), unread, ...(lastMessage !== undefined ? { lastMessage, lastMessageAt: at } : {}), updatedAt: new Date() } });
+  private async upsertChat(jid: string | undefined | null, candidate?: string | null, source: "message" | "chat" | "contact" = "message", unread?: number | null) {
+    if (!jid || (!jid.endsWith("@s.whatsapp.net") && !jid.endsWith("@c.us") && !jid.endsWith("@lid"))) return;
+    const name = trustedWhatsappName(candidate);
+    const replaceName = source === "contact" ? sql`true` : sql`(
+      ${whatsappChatsTable.name} = '' OR ${whatsappChatsTable.name} = ${whatsappChatsTable.phone}
+      OR ${whatsappChatsTable.name} = ${whatsappChatsTable.jid}
+      OR ${whatsappChatsTable.nameSource} = 'message' ${source === "message" ? sql`` : sql`OR ${whatsappChatsTable.nameSource} = 'chat'`}
+    )`;
+    await db.insert(whatsappChatsTable).values({ jid, name, nameSource: name ? source : "message", phone: phoneFromWhatsappJid(jid), unread: unread ?? 0 })
+      .onConflictDoUpdate({ target: whatsappChatsTable.jid, set: {
+        name: name ? sql`CASE WHEN ${replaceName} THEN ${name} ELSE ${whatsappChatsTable.name} END` : whatsappChatsTable.name,
+        // A missing sender name never clears a previously known contact name.
+        nameSource: name ? sql`CASE WHEN ${replaceName} THEN ${source} ELSE ${whatsappChatsTable.nameSource} END` : whatsappChatsTable.nameSource,
+        phone: phoneFromWhatsappJid(jid),
+        ...(unread != null ? { unread } : {}),
+        updatedAt: new Date(),
+      } });
   }
 
-  private async ingest(messages: proto.IWebMessageInfo[]) {
+  private async ingest(messages: proto.IWebMessageInfo[], historical = false) {
     for (const item of messages) {
       const key = item.key;
       if (!key) continue;
@@ -329,8 +395,13 @@ export class WhatsAppManager {
       if (!jid || !id || jid.endsWith("@g.us") || jid === "status@broadcast") continue;
       const text = whatsappText(item.message);
       const date = new Date(Number(item.messageTimestamp ?? Math.floor(Date.now() / 1000)) * 1000);
-      await this.upsertChat(jid, item.pushName ?? jid.split("@")[0], jid, key.fromMe ? 0 : 1, text, date);
-      await db.insert(whatsappMessagesTable).values({ id, chatJid: jid, text, fromMe: Boolean(key.fromMe), timestamp: date, status: item.status === 4 ? "read" : "sent" }).onConflictDoNothing();
+      await this.upsertChat(jid, key.fromMe ? null : item.pushName);
+      const inserted = await db.insert(whatsappMessagesTable).values({ id, chatJid: jid, text, fromMe: Boolean(key.fromMe), timestamp: date, status: item.status === 4 ? "read" : "sent" }).onConflictDoNothing().returning({ id: whatsappMessagesTable.id });
+      if (inserted.length) await db.update(whatsappChatsTable).set({
+        lastMessage: sql`CASE WHEN ${whatsappChatsTable.lastMessageAt} IS NULL OR ${whatsappChatsTable.lastMessageAt} <= ${date} THEN ${text} ELSE ${whatsappChatsTable.lastMessage} END`,
+        lastMessageAt: sql`GREATEST(COALESCE(${whatsappChatsTable.lastMessageAt}, ${date}), ${date})`,
+        ...(!historical && !key.fromMe ? { unread: sql`${whatsappChatsTable.unread} + 1` } : {}),
+      }).where(eq(whatsappChatsTable.jid, jid));
     }
   }
 
@@ -365,5 +436,5 @@ export class WhatsAppManager {
 }
 
 export const whatsappManager = new WhatsAppManager();
-export async function listWhatsappChats() { return db.select().from(whatsappChatsTable).orderBy(desc(whatsappChatsTable.lastMessageAt), asc(whatsappChatsTable.name)); }
+export const listWhatsappChats = resolvedWhatsappChats;
 export async function listWhatsappMessages(jid: string) { return db.select().from(whatsappMessagesTable).where(eq(whatsappMessagesTable.chatJid, jid)).orderBy(asc(whatsappMessagesTable.timestamp)).limit(500); }
