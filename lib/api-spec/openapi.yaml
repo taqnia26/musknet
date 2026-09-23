@@ -3285,7 +3285,7 @@ components:
         distributorImageOverride: { type: [string, "null"] }
     AdminProduct:
       type: object
-      required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, isActive, isFeatured, isBestseller, createdAt, updatedAt]
+      required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, averageCost, sku, barcode, sellable, isActive, isFeatured, isBestseller, showOnDistributors, weightKg, costPrice, discountPrice, discountEndsOn, mpn, brand, subtitleAr, promotionalTitleAr, maxPerCustomer, requiresShipping, allowOrderAttachment, allowCustomerNote, taxable, registrationNumber, tags, seoTitleAr, seoDescriptionAr, createdAt, updatedAt]
       properties:
         id: { type: number }
         nameAr: { type: string }
@@ -3295,6 +3295,23 @@ components:
         slug: { type: string }
         price: { type: number }
         compareAtPrice: { type: [number, "null"] }
+        weightKg: { type: number, minimum: 0, default: 0 }
+        costPrice: { type: number, minimum: 0, default: 0 }
+        discountPrice: { type: [number, "null"], minimum: 0 }
+        discountEndsOn: { type: [string, "null"], pattern: '^\d{4}-\d{2}-\d{2}$' }
+        mpn: { type: [string, "null"], maxLength: 100 }
+        brand: { type: [string, "null"], maxLength: 100 }
+        subtitleAr: { type: [string, "null"], maxLength: 35 }
+        promotionalTitleAr: { type: [string, "null"], maxLength: 25 }
+        maxPerCustomer: { type: [number, "null"], minimum: 1, multipleOf: 1 }
+        requiresShipping: { type: boolean, default: true }
+        allowOrderAttachment: { type: boolean, default: false }
+        allowCustomerNote: { type: boolean, default: false }
+        taxable: { type: boolean, default: true }
+        registrationNumber: { type: [string, "null"], maxLength: 100 }
+        tags: { type: array, items: { type: string, minLength: 1, maxLength: 50 }, maxItems: 50, default: [] }
+        seoTitleAr: { type: [string, "null"], maxLength: 255 }
+        seoDescriptionAr: { type: [string, "null"], maxLength: 500 }
         categoryId: { type: number }
         images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
         notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
@@ -3302,6 +3319,9 @@ components:
         reorderPoint: { type: number }
         targetStockQuantity: { type: number }
         sku: { type: [string, "null"] }
+        barcode: { type: [string, "null"], maxLength: 100 }
+        averageCost: { type: string }
+        sellable: { type: boolean }
         isActive: { type: boolean }
         isFeatured: { type: boolean }
         isBestseller: { type: boolean }
@@ -3341,6 +3361,23 @@ components:
         slug: { type: string, minLength: 1 }
         price: { type: number, minimum: 0 }
         compareAtPrice: { type: [number, "null"] }
+        weightKg: { type: number, minimum: 0, default: 0 }
+        costPrice: { type: number, minimum: 0, default: 0 }
+        discountPrice: { type: [number, "null"], minimum: 0 }
+        discountEndsOn: { type: [string, "null"], pattern: '^\d{4}-\d{2}-\d{2}$' }
+        mpn: { type: [string, "null"], maxLength: 100 }
+        brand: { type: [string, "null"], maxLength: 100 }
+        subtitleAr: { type: [string, "null"], maxLength: 35 }
+        promotionalTitleAr: { type: [string, "null"], maxLength: 25 }
+        maxPerCustomer: { type: [number, "null"], minimum: 1, multipleOf: 1 }
+        requiresShipping: { type: boolean, default: true }
+        allowOrderAttachment: { type: boolean, default: false }
+        allowCustomerNote: { type: boolean, default: false }
+        taxable: { type: boolean, default: true }
+        registrationNumber: { type: [string, "null"], maxLength: 100 }
+        tags: { type: array, items: { type: string, minLength: 1, maxLength: 50 }, maxItems: 50, default: [] }
+        seoTitleAr: { type: [string, "null"], maxLength: 255 }
+        seoDescriptionAr: { type: [string, "null"], maxLength: 500 }
         categoryId: { type: number }
         images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
         notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
@@ -3348,9 +3385,11 @@ components:
         reorderPoint: { type: number, minimum: 0, multipleOf: 1, default: 5 }
         targetStockQuantity: { type: number, minimum: 0, multipleOf: 1, default: 20 }
         sku: { type: [string, "null"] }
+        barcode: { type: [string, "null"], maxLength: 100 }
         isActive: { type: boolean }
         isFeatured: { type: boolean }
         isBestseller: { type: boolean }
+        sellable: { type: boolean }
         showOnDistributors: { type: boolean }
         distributorNameOverride: { type: [string, "null"] }
         distributorImageOverride: { type: [string, "null"] }
@@ -3368,14 +3407,33 @@ components:
         reorderPoint: { type: number, minimum: 0, multipleOf: 1 }
         targetStockQuantity: { type: number, minimum: 0, multipleOf: 1 }
         sku: { type: [string, "null"] }
+        barcode: { type: [string, "null"], maxLength: 100 }
         isActive: { type: boolean }
         isFeatured: { type: boolean }
         isBestseller: { type: boolean }
+        sellable: { type: boolean }
         showOnDistributors: { type: boolean }
         distributorNameOverride: { type: [string, "null"] }
         distributorImageOverride: { type: [string, "null"] }
         images: { type: array, items: { $ref: "#/components/schemas/AdminProductImage" } }
         notes: { type: array, items: { $ref: "#/components/schemas/FragranceNote" } }
+        weightKg: { type: number, minimum: 0 }
+        costPrice: { type: number, minimum: 0 }
+        discountPrice: { type: [number, "null"], minimum: 0 }
+        discountEndsOn: { type: [string, "null"], pattern: '^\d{4}-\d{2}-\d{2}$' }
+        mpn: { type: [string, "null"], maxLength: 100 }
+        brand: { type: [string, "null"], maxLength: 100 }
+        subtitleAr: { type: [string, "null"], maxLength: 35 }
+        promotionalTitleAr: { type: [string, "null"], maxLength: 25 }
+        maxPerCustomer: { type: [number, "null"], minimum: 1, multipleOf: 1 }
+        requiresShipping: { type: boolean }
+        allowOrderAttachment: { type: boolean }
+        allowCustomerNote: { type: boolean }
+        taxable: { type: boolean }
+        registrationNumber: { type: [string, "null"], maxLength: 100 }
+        tags: { type: array, items: { type: string, minLength: 1, maxLength: 50 }, maxItems: 50 }
+        seoTitleAr: { type: [string, "null"], maxLength: 255 }
+        seoDescriptionAr: { type: [string, "null"], maxLength: 500 }
     AdminCategory:
       type: object
       required: [id, nameAr, nameEn, slug, isActive, createdAt]

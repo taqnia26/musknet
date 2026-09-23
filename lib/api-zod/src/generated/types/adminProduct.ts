@@ -18,6 +18,70 @@ export interface AdminProduct {
   price: number;
   /** @nullable */
   compareAtPrice?: number | null;
+  /** @minimum 0 */
+  weightKg: number;
+  /** @minimum 0 */
+  costPrice: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  discountPrice: number | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  discountEndsOn: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  mpn: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  brand: string | null;
+  /**
+     * @maxLength 35
+     * @nullable
+     */
+  subtitleAr: string | null;
+  /**
+     * @maxLength 25
+     * @nullable
+     */
+  promotionalTitleAr: string | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  maxPerCustomer: number | null;
+  requiresShipping: boolean;
+  allowOrderAttachment: boolean;
+  allowCustomerNote: boolean;
+  taxable: boolean;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  registrationNumber: string | null;
+  /**
+     * @maxItems 50
+     * @items.minLength 1
+     * @items.maxLength 50
+     */
+  tags: string[];
+  /**
+     * @maxLength 255
+     * @nullable
+     */
+  seoTitleAr: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  seoDescriptionAr: string | null;
   categoryId: number;
   images: AdminProductImage[];
   notes: FragranceNote[];
@@ -25,11 +89,18 @@ export interface AdminProduct {
   reorderPoint: number;
   targetStockQuantity: number;
   /** @nullable */
-  sku?: string | null;
+  sku: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  barcode: string | null;
+  averageCost: string;
+  sellable: boolean;
   isActive: boolean;
   isFeatured: boolean;
   isBestseller: boolean;
-  showOnDistributors?: boolean;
+  showOnDistributors: boolean;
   /** @nullable */
   distributorNameOverride?: string | null;
   /** @nullable */

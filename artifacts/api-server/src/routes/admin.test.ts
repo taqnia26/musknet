@@ -238,6 +238,96 @@ describe.sequential("admin route authorization", () => {
     expect(denied.body.error).toMatch(/permission/i);
   });
 
+  it("saves and clears extended product details without changing stock", async () => {
+    const auth = { Authorization: `Bearer ${superToken}` };
+    const details = {
+      descriptionAr: "وصف قابل للبحث للمنتج",
+      barcode: "6287020840098",
+      mpn: "MANUFACTURER-123",
+      brand: "مسك اللولو",
+      weightKg: 0.5,
+      costPrice: 47.5,
+      discountPrice: 80,
+      discountEndsOn: "2026-12-31",
+      subtitleAr: "عنوان فرعي",
+      promotionalTitleAr: "عرض خاص",
+      maxPerCustomer: 2,
+      requiresShipping: false,
+      allowOrderAttachment: true,
+      allowCustomerNote: true,
+      taxable: false,
+      registrationNumber: "CN-2025-136459",
+      tags: ["مسك", "عطر"],
+      seoTitleAr: "عنوان الصفحة",
+      seoDescriptionAr: "وصف الصفحة",
+    };
+    const saved = await request(app).patch(`/api/admin/products/${productId}`)
+      .set(auth).send(details).expect(200);
+    expect(saved.body).toMatchObject({ ...details, stockQuantity: 5, price: 100 });
+    const persisted = await request(app).get(`/api/admin/products/${productId}`).set(auth).expect(200);
+    expect(persisted.body).toMatchObject(details);
+
+    const search = await request(app).get("/api/admin/products")
+      .query({ search: "وصف قابل للبحث" }).set(auth).expect(200);
+    expect(search.body.some((product: { id: number }) => product.id === productId)).toBe(true);
+    const byCategory = await request(app).get("/api/admin/products")
+      .query({ search: "تصنيف اختبار الإدارة" }).set(auth).expect(200);
+    expect(byCategory.body.some((product: { id: number }) => product.id === productId)).toBe(true);
+
+    await request(app).patch(`/api/admin/products/${productId}`)
+      .set(auth).send({ discountPrice: 101 }).expect(400);
+    const cleared = await request(app).patch(`/api/admin/products/${productId}`)
+      .set(auth).send({
+        descriptionAr: "",
+        barcode: null,
+        discountPrice: null,
+        discountEndsOn: null,
+        subtitleAr: null,
+        tags: [],
+      }).expect(200);
+    expect(cleared.body).toMatchObject({
+      descriptionAr: "", barcode: null, discountPrice: null,
+      discountEndsOn: null, subtitleAr: null, tags: [], stockQuantity: 5,
+    });
+  });
+
+  it("creates a product with extended catalog details and safe defaults", async () => {
+    const slug = `admin-catalog-fields-${Date.now()}`;
+    const created = await request(app).post("/api/admin/products")
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({
+        nameAr: "منتج ببيانات تفصيلية",
+        nameEn: "Product with catalog details",
+        slug,
+        price: 209,
+        categoryId,
+        stockQuantity: 0,
+        weightKg: 0.5,
+        costPrice: 100,
+        barcode: "6287020840098",
+        mpn: "MPN-CATALOG-1",
+        maxPerCustomer: 2,
+        tags: ["عطر", "مسك"],
+        seoTitleAr: "عنوان فهرسة المنتج",
+        allowCustomerNote: true,
+      }).expect(201);
+    try {
+      expect(created.body).toMatchObject({
+        slug, price: 209, stockQuantity: 0, weightKg: 0.5, costPrice: 100,
+        barcode: "6287020840098", mpn: "MPN-CATALOG-1",
+        maxPerCustomer: 2, tags: ["عطر", "مسك"],
+        seoTitleAr: "عنوان فهرسة المنتج", allowCustomerNote: true,
+        requiresShipping: true, taxable: true, allowOrderAttachment: false,
+      });
+      const persisted = await db.select().from(productsTable).where(eq(productsTable.id, created.body.id));
+      expect(persisted[0].stockQuantity).toBe(0);
+      expect(persisted[0].averageCost).toBe("0.0000");
+      expect(persisted[0].tags).toEqual(["عطر", "مسك"]);
+    } finally {
+      await db.delete(productsTable).where(eq(productsTable.id, created.body.id));
+    }
+  });
+
   it("creates an unverified customer only with edit permission, without duplicating a phone", async () => {
     if (!viewerToken) {
       const [viewer] = await db.insert(adminUsersTable).values({

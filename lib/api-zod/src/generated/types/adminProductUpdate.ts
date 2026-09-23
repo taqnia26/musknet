@@ -31,9 +31,15 @@ export interface AdminProductUpdate {
   targetStockQuantity?: number;
   /** @nullable */
   sku?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  barcode?: string | null;
   isActive?: boolean;
   isFeatured?: boolean;
   isBestseller?: boolean;
+  sellable?: boolean;
   showOnDistributors?: boolean;
   /** @nullable */
   distributorNameOverride?: string | null;
@@ -41,4 +47,68 @@ export interface AdminProductUpdate {
   distributorImageOverride?: string | null;
   images?: AdminProductImage[];
   notes?: FragranceNote[];
+  /** @minimum 0 */
+  weightKg?: number;
+  /** @minimum 0 */
+  costPrice?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  discountPrice?: number | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  discountEndsOn?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  mpn?: string | null;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  brand?: string | null;
+  /**
+     * @maxLength 35
+     * @nullable
+     */
+  subtitleAr?: string | null;
+  /**
+     * @maxLength 25
+     * @nullable
+     */
+  promotionalTitleAr?: string | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  maxPerCustomer?: number | null;
+  requiresShipping?: boolean;
+  allowOrderAttachment?: boolean;
+  allowCustomerNote?: boolean;
+  taxable?: boolean;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  registrationNumber?: string | null;
+  /**
+     * @maxItems 50
+     * @items.minLength 1
+     * @items.maxLength 50
+     */
+  tags?: string[];
+  /**
+     * @maxLength 255
+     * @nullable
+     */
+  seoTitleAr?: string | null;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  seoDescriptionAr?: string | null;
 }

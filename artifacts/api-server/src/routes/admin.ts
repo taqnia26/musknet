@@ -1220,12 +1220,22 @@ router.get("/admin/products", permit("products", "view"), route(async (req, res)
   if (res.headersSent) return;
   const query = parse(Api.AdminListProductsQueryParams, req.query, res); if (!query) return;
   let rows = await db.select().from(productsTable).orderBy(productsTable.id);
-  rows = statusFilter(searchFilter(rows, query.search, ["nameAr", "nameEn", "slug", "sku"]), query.status);
+  const categories = await db.select({ id: categoriesTable.id, nameAr: categoriesTable.nameAr, nameEn: categoriesTable.nameEn }).from(categoriesTable);
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const searchableRows = rows.map((row) => ({
+    ...row,
+    categoryNameAr: categoryById.get(row.categoryId)?.nameAr ?? "",
+    categoryNameEn: categoryById.get(row.categoryId)?.nameEn ?? "",
+  }));
+  rows = statusFilter(searchFilter(searchableRows, query.search, ["nameAr", "nameEn", "slug", "sku", "barcode", "descriptionAr", "descriptionEn", "categoryNameAr", "categoryNameEn"]), query.status);
   res.json(Api.AdminListProductsResponse.parse(rows));
 }));
 router.post("/admin/products", permit("products", "edit"), route(async (req, res) => {
   if (res.headersSent) return;
   const body = parse(Api.AdminCreateProductBody, req.body, res); if (!body) return;
+  if (body.discountPrice !== null && body.discountPrice !== undefined && body.discountPrice > body.price) {
+    res.status(400).json({ error: "Discount price must not exceed regular price" }); return;
+  }
   const [category] = await db.select({ id: categoriesTable.id })
     .from(categoriesTable)
     .where(eq(categoriesTable.id, body.categoryId))
@@ -1282,6 +1292,11 @@ router.patch("/admin/products/:id", permit("products", "edit"), route(async (req
   if (Object.keys(body).length === 0) {
     res.json(Api.AdminUpdateProductResponse.parse(existingProduct));
     return;
+  }
+  const regularPrice = body.price ?? existingProduct.price;
+  const discountPrice = body.discountPrice === undefined ? existingProduct.discountPrice : body.discountPrice;
+  if (discountPrice !== null && discountPrice !== undefined && discountPrice > regularPrice) {
+    res.status(400).json({ error: "Discount price must not exceed regular price" }); return;
   }
   if (body.categoryId !== undefined) {
     const [category] = await db.select({ id: categoriesTable.id })
