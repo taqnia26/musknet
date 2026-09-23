@@ -119,8 +119,8 @@ export class ObjectStorageService {
 }
 
 export class ObjectStorageConfigurationError extends Error {
-  constructor() {
-    super("تخزين الملفات غير مهيأ على الخادم. يرجى التأكد من إعداد App Storage في بيئة التشغيل.");
+  constructor(message = "تخزين الملفات غير مهيأ على الخادم. يرجى التأكد من إعداد App Storage في بيئة التشغيل.") {
+    super(message);
     this.name = "ObjectStorageConfigurationError";
   }
 }

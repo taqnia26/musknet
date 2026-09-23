@@ -79,7 +79,8 @@ import {
   reverseJournalEntry,
   trialBalance,
 } from "../lib/accounting";
-import { ObjectStorageService } from "../lib/object-storage";
+import { ObjectStorageConfigurationError, ObjectStorageService } from "../lib/object-storage";
+import { InvalidContractFileError, isLocalContractPath, LocalContractStorage } from "../lib/local-contract-storage";
 import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
 import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch, ensureDefaultInventoryLocation, listInventoryLocations, lookupInventoryBarcode, listInventoryBalances, transferInventory, sendInventoryTransfer, receiveInventoryTransfer, inventoryValueReport, inventoryCsv, createInventoryPurchaseOrder, receiveInventoryPurchaseOrder, createCycleCount, approveCycleCount, inventoryReorderSuggestions, inventoryMovementReport, inventoryAgingReport, inventoryValuationReport, inventoryAuditReport, inventoryReconciliationReport, adjustOperationalBalances } from "../lib/operations";
 import { createSmsaShippingLabel } from "../lib/shipping-carriers";
@@ -88,6 +89,7 @@ import { assertShippingStatusTransition, canApplyCarrierShippingStatus, Shipping
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
+const localContracts = new LocalContractStorage();
 const integrationProviderIds = new Set([
   "zatca",
   "moyasar",
@@ -558,18 +560,39 @@ router.get("/admin/contract-files", permit("contracts", "view"), route(async (_r
 router.post("/admin/contract-files/upload-url", permit("contracts", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminRequestContractFileUploadBody, req.body, res); if (!body) return;
   const extension = body.fileName.toLowerCase().split(".").pop();
-  if (!contractFileMimeTypes.has(body.mimeType) || !extension || !["pdf", "doc", "docx"].includes(extension)) {
+  const expectedMime: Record<string, string> = { pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+  if (!contractFileMimeTypes.has(body.mimeType) || !extension || expectedMime[extension] !== body.mimeType) {
     res.status(400).json({ error: "Only PDF, DOC, and DOCX contract files are allowed" }); return;
   }
-  const upload = await objectStorage.createPrivateUpload("uploads/contracts/files");
+  if (!process.env.LOCAL_CONTRACT_STORAGE_DIR && !process.env.PRIVATE_OBJECT_DIR) {
+    throw new ObjectStorageConfigurationError("تخزين العقود غير مهيأ: اضبط LOCAL_CONTRACT_STORAGE_DIR لمجلد دائم، أو PRIVATE_OBJECT_DIR على Replit.");
+  }
+  const upload = process.env.LOCAL_CONTRACT_STORAGE_DIR
+    ? await localContracts.createUpload(body.mimeType, body.sizeBytes)
+    : await objectStorage.createPrivateUpload("uploads/contracts/files");
   res.json(Api.AdminRequestContractFileUploadResponse.parse(upload));
+}));
+
+router.put("/admin/contract-files/uploads/:id", permit("contracts", "edit"), route(async (req, res) => {
+  const id = req.params.id;
+  if (typeof id !== "string") { res.sendStatus(404); return; }
+  try {
+    const uploaded = await localContracts.upload(id, req.header("content-type") ?? "", req);
+    if (!uploaded) { res.status(404).json({ error: "Upload link expired or not found" }); return; }
+    res.sendStatus(204);
+  } catch (error) {
+    if (error instanceof InvalidContractFileError) { res.status(400).json({ error: error.message }); return; }
+    throw error;
+  }
 }));
 
 router.post("/admin/contract-files", permit("contracts", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateContractFileBody, req.body, res); if (!body) return;
   const ownerName = await contractFileOwner(body.ownerType, body.ownerId);
   if (!ownerName) { res.status(400).json({ error: "Contract owner not found" }); return; }
-  const metadata = await objectStorage.getObjectMetadata(body.objectPath);
+  const metadata = isLocalContractPath(body.objectPath)
+    ? await localContracts.getMetadata(body.objectPath)
+    : await objectStorage.getObjectMetadata(body.objectPath);
   if (!metadata.contentType || !contractFileMimeTypes.has(metadata.contentType) || metadata.size < 1 || metadata.size > 25 * 1024 * 1024) {
     res.status(400).json({ error: "Uploaded file must be PDF, DOC, or DOCX and no larger than 25 MB" }); return;
   }
@@ -590,18 +613,23 @@ router.get("/admin/contract-files/:id/download", permit("contracts", "view"), ro
   const [row] = await db.select().from(uploadedContractFilesTable)
     .where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
   if (!row) { res.status(404).json({ error: "Contract file not found" }); return; }
-  const file = await objectStorage.getObjectFile(row.objectPath);
+  const local = isLocalContractPath(row.objectPath);
+  const file = local ? await localContracts.getMetadata(row.objectPath) : await objectStorage.getObjectFile(row.objectPath);
   const safeAsciiName = row.fileName.replace(/[^\x20-\x7E]/g, "_").replace(/["\\]/g, "_");
   res.setHeader("Content-Disposition", `attachment; filename="${safeAsciiName}"; filename*=UTF-8''${encodeURIComponent(row.fileName)}`);
   res.setHeader("Cache-Control", "private, no-store");
-  await objectStorage.pipeObject(file, res);
+  if (local) await localContracts.pipe(file as Awaited<ReturnType<typeof localContracts.getMetadata>>, res);
+  else await objectStorage.pipeObject(file as Awaited<ReturnType<typeof objectStorage.getObjectFile>>, res);
 }));
 
 router.delete("/admin/contract-files/:id", permit("contracts", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDeleteContractFileParams, req.params, res); if (!params) return;
+  const [existing] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Contract file not found" }); return; }
+  if (isLocalContractPath(existing.objectPath)) await localContracts.delete(existing.objectPath);
   const [row] = await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).returning();
   if (!row) { res.status(404).json({ error: "Contract file not found" }); return; }
-  await objectStorage.deleteObject(row.objectPath).catch(() => undefined);
+  if (!isLocalContractPath(row.objectPath)) await objectStorage.deleteObject(row.objectPath).catch(() => undefined);
   res.sendStatus(204);
 }));
 

@@ -1,4 +1,7 @@
 import request from "supertest";
+import { mkdtemp, chmod, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import {
@@ -24,12 +27,14 @@ import {
   productsTable,
   shipmentEventsTable,
   shipmentsTable,
+  uploadedContractFilesTable,
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
 import * as accounting from "../lib/accounting";
 import * as invoiceEmail from "../lib/invoice-email";
 import * as Api from "@workspace/api-zod";
+import { LocalContractStorage } from "../lib/local-contract-storage";
 
 const seedEmail = `route-super-${Date.now()}@example.com`;
 const createdIds: number[] = [];
@@ -229,6 +234,113 @@ describe.sequential("admin route authorization", () => {
       .send({ nameEn: "Forbidden edit" })
       .expect(403);
     expect(denied.body.error).toMatch(/permission/i);
+  });
+
+  it("stores private contracts locally across service instances, validates uploads, and reports configuration errors", async () => {
+    const previousLocal = process.env.LOCAL_CONTRACT_STORAGE_DIR;
+    const previousReplit = process.env.PRIVATE_OBJECT_DIR;
+    const dir = await mkdtemp(path.join(os.tmpdir(), "contract-storage-"));
+    const pdf = Buffer.from("%PDF-1.7\ncontract content\n%%EOF");
+    const headers = { Authorization: `Bearer ${superToken}` };
+    const [contractViewer] = await db.insert(adminUsersTable).values({
+      email: `contract-viewer-${Date.now()}@example.com`,
+      name: "Contract test viewer",
+      passwordHash: await hashAdminPassword("viewer-test-password"),
+    }).returning();
+    createdIds.push(contractViewer.id);
+    const contractViewerToken = await createAdminSession(contractViewer.id);
+    const payload = {
+      ownerType: "customer", ownerId: customerId, fileName: "agreement.pdf",
+      mimeType: "application/pdf", sizeBytes: pdf.length,
+    };
+    let recordId: number | undefined;
+    try {
+      delete process.env.PRIVATE_OBJECT_DIR;
+      delete process.env.LOCAL_CONTRACT_STORAGE_DIR;
+      const missing = await request(app).post("/api/admin/contract-files/upload-url")
+        .set(headers).send(payload).expect(503);
+      expect(missing.body.error).toContain("LOCAL_CONTRACT_STORAGE_DIR");
+      process.env.LOCAL_CONTRACT_STORAGE_DIR = path.join(dir, "missing");
+      await request(app).post("/api/admin/contract-files/upload-url").set(headers).send(payload).expect(503);
+      process.env.LOCAL_CONTRACT_STORAGE_DIR = dir;
+      await chmod(dir, 0o500);
+      await request(app).post("/api/admin/contract-files/upload-url").set(headers).send(payload).expect(503);
+      await chmod(dir, 0o700);
+
+      await request(app).post("/api/admin/contract-files/upload-url").send(payload).expect(401);
+      await request(app).post("/api/admin/contract-files/upload-url")
+        .set("Authorization", `Bearer ${contractViewerToken}`).send(payload).expect(403);
+      const prepared = await request(app).post("/api/admin/contract-files/upload-url")
+        .set(headers).send(payload).expect(200);
+      const { uploadUrl, objectPath } = prepared.body;
+      expect(objectPath).toMatch(/^\/objects\/local\/contracts\//);
+      await request(app).put(uploadUrl).set("Content-Type", "application/pdf").send(pdf).expect(401);
+      await request(app).put(uploadUrl).set("Authorization", `Bearer ${contractViewerToken}`)
+        .set("Content-Type", "application/pdf").send(pdf).expect(403);
+      await request(app).put(uploadUrl).set(headers).set("Content-Type", "application/msword")
+        .send(pdf).expect(400);
+      await request(app).put(uploadUrl).set(headers).set("Content-Type", "application/pdf")
+        .send(Buffer.alloc(pdf.length, 65)).expect(400);
+      await request(app).post("/api/admin/contract-files").set(headers)
+        .send({ ...payload, objectPath }).expect(404);
+      await request(app).put(uploadUrl).set(headers).set("Content-Type", "application/pdf")
+        .send(pdf).expect(204);
+      await request(app).get(`/api/storage${objectPath}`).expect(404);
+      await request(app).get("/api/storage/objects/uploads/contracts/files/legacy").expect(404);
+      const storageAfterRestart = new LocalContractStorage();
+      expect(await storageAfterRestart.getMetadata(objectPath)).toMatchObject({ contentType: "application/pdf", size: pdf.length });
+      await expect(storageAfterRestart.getMetadata("/objects/local/contracts/../../etc/passwd")).rejects.toThrow();
+      await request(app).post("/api/admin/contract-files").set(headers)
+        .send({ ...payload, objectPath: "/objects/local/contracts/../../etc/passwd" }).expect(400);
+      const saved = await request(app).post("/api/admin/contract-files").set(headers)
+        .send({ ...payload, objectPath }).expect(201);
+      recordId = saved.body.id;
+      await request(app).get(`/api/admin/contract-files/${recordId}/download`).expect(401);
+      await request(app).get(`/api/admin/contract-files/${recordId}/download`)
+        .set("Authorization", `Bearer ${contractViewerToken}`).expect(403);
+      const download = await request(app).get(`/api/admin/contract-files/${recordId}/download`)
+        .set(headers).expect(200);
+      expect(download.body).toEqual(pdf);
+      await request(app).delete(`/api/admin/contract-files/${recordId}`).set(headers).expect(204);
+      recordId = undefined;
+      await expect(storageAfterRestart.getMetadata(objectPath)).rejects.toThrow();
+
+      for (const [extension, mimeType, bytes] of [
+        ["doc", "application/msword", Buffer.from("d0cf11e0a1b11ae1", "hex")],
+        ["docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          Buffer.concat([Buffer.from("504b0304", "hex"), Buffer.from("word/document.xml")])],
+      ] as const) {
+        const upload = await request(app).post("/api/admin/contract-files/upload-url").set(headers)
+          .send({ fileName: `agreement.${extension}`, mimeType, sizeBytes: bytes.length }).expect(200);
+        await request(app).put(upload.body.uploadUrl).set(headers).set("Content-Type", mimeType).send(bytes).expect(204);
+        expect((await new LocalContractStorage().getMetadata(upload.body.objectPath)).contentType).toBe(mimeType);
+      }
+      await request(app).post("/api/admin/contract-files/upload-url").set(headers)
+        .send({ ...payload, fileName: "wrong.doc" }).expect(400);
+
+      delete process.env.LOCAL_CONTRACT_STORAGE_DIR;
+      process.env.PRIVATE_OBJECT_DIR = "/test-bucket/private";
+      const sign = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(JSON.stringify({ signed_url: "https://storage.example.test/upload" }), { status: 200 }),
+      );
+      try {
+        const replit = await request(app).post("/api/admin/contract-files/upload-url")
+          .set(headers).send(payload).expect(200);
+        expect(replit.body).toMatchObject({ uploadUrl: "https://storage.example.test/upload" });
+        expect(replit.body.objectPath).toMatch(/^\/objects\/uploads\/contracts\/files\//);
+        expect(sign).toHaveBeenCalledTimes(1);
+      } finally {
+        sign.mockRestore();
+      }
+    } finally {
+      if (recordId) await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, recordId));
+      await chmod(dir, 0o700);
+      await rm(dir, { recursive: true, force: true });
+      if (previousLocal === undefined) delete process.env.LOCAL_CONTRACT_STORAGE_DIR;
+      else process.env.LOCAL_CONTRACT_STORAGE_DIR = previousLocal;
+      if (previousReplit === undefined) delete process.env.PRIVATE_OBJECT_DIR;
+      else process.env.PRIVATE_OBJECT_DIR = previousReplit;
+    }
   });
 
   it("updates a product with a single field", async () => {

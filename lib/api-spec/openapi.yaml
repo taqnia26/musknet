@@ -3538,7 +3538,7 @@ components:
         ownerType: { type: string, enum: [distributor, customer, influencer, employee] }
         ownerId: { type: number, minimum: 1, multipleOf: 1 }
         fileName: { type: string, minLength: 1, maxLength: 255 }
-        objectPath: { type: string, pattern: "^/objects/uploads/contracts/files/[A-Za-z0-9-]+$" }
+        objectPath: { type: string, pattern: "^/objects/(?:uploads/contracts/files|local/contracts)/[A-Za-z0-9-]+$" }
         mimeType:
           type: string
           enum: [application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document]

@@ -1,0 +1,9 @@
+# Contract files on a private server
+
+Set `LOCAL_CONTRACT_STORAGE_DIR` to an **absolute path on a persistent disk** in the API server's environment, for example `/srv/musk-ellolo/contracts`. Create the directory before starting the API and give ownership to the API process user and permission `0700` (`chmod 700 /srv/musk-ellolo/contracts`). Keep the directory outside the web root and do not expose it through Nginx, `express.static`, or a shared volume served as public content. The API checks that it exists and is writable before issuing an upload URL; it does not create it automatically.
+
+Route all `/api/*` requests, including `PUT /api/admin/contract-files/uploads/:id`, to the API server. Keep the reverse proxy request-body limit above 25 MB (for example `client_max_body_size 26m` in Nginx). Authenticated administrators with contracts edit permission may upload; contracts view permission is required to download. The disk files and their `.json` metadata must stay together. Back up **both** this directory and the database, and test restoring both after a restart. Use a persistent mount, not a container's temporary filesystem.
+
+When `LOCAL_CONTRACT_STORAGE_DIR` is set, new contract files go to this directory. Without it, the existing Replit App Storage integration uses `PRIVATE_OBJECT_DIR`. If neither is configured, the contract upload preparation endpoint responds with a configuration error. Other App Storage users, such as product images, still require Replit storage.
+
+Migrating the database alone does **not** copy existing files stored in Replit. Existing contract records retain their original object paths and need access to their Replit storage to download; copying old files to the private server is a separate migration. Do not assume an old contract is present locally simply because its row was imported.

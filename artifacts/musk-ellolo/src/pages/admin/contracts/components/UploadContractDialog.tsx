@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { getAdminToken } from '@/lib/auth-token';
 import { Loader2, UploadCloud, X, File as FileIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -158,10 +159,15 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
 
       // 2. Upload file directly to storage
       uploadStage = 'storage';
-      const putFile = () => fetch(uploadUrl, {
+       const putFile = () => fetch(uploadUrl, {
         method: 'PUT',
         body: file,
-        headers: { 'Content-Type': mimeType },
+         headers: {
+           'Content-Type': mimeType,
+           ...(uploadUrl.startsWith('/api/admin/contract-files/uploads/')
+             ? { Authorization: `Bearer ${getAdminToken() ?? ''}` }
+             : {}),
+         },
       });
       let uploadResponse: Response;
       try {

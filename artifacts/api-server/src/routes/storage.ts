@@ -8,6 +8,11 @@ router.get("/storage/objects/*objectPath", async (req, res) => {
   try {
     const value = req.params.objectPath;
     const relativePath = Array.isArray(value) ? value.join("/") : value;
+    // Contract documents are only served through the permission-checked admin download route.
+    if (relativePath.startsWith("uploads/contracts/files/") || relativePath.startsWith("local/contracts/")) {
+      res.status(404).json({ error: "Object not found" });
+      return;
+    }
     const file = await storage.getObjectFile(`/objects/${relativePath}`);
     await storage.pipeObject(file, res);
   } catch (error) {

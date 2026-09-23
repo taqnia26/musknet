@@ -23,3 +23,4 @@
 - [Object storage abort signals](object-storage-abort-signals.md) — browser automation can report ERR_ABORTED after a signed upload or delete already completed successfully.
 - [Transactional email credentials](transactional-email-credentials.md) — connector setup may not attach; keep a secret-based provider fallback without persisting credentials.
 - [Salla one-time import](salla-one-time-import.md) — import products and orders into local storage, then allow disconnecting Salla without breaking the storefront.
+- [Contract storage provider paths](contract-storage-provider-paths.md) — persist the provider in each contract path so old Replit files are not silently treated as local files.

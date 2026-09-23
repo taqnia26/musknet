@@ -17,7 +17,7 @@ export interface UploadedContractFileInput {
      * @maxLength 255
      */
   fileName: string;
-  /** @pattern ^/objects/uploads/contracts/files/[A-Za-z0-9-]+$ */
+  /** @pattern ^/objects/(?:uploads/contracts/files|local/contracts)/[A-Za-z0-9-]+$ */
   objectPath: string;
   mimeType: UploadedContractFileInputMimeType;
   /**

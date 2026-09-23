@@ -1338,7 +1338,7 @@ export const adminCreateContractFileBodyOwnerIdMultipleOf = 1;
 
 export const adminCreateContractFileBodyFileNameMax = 255;
 
-export const adminCreateContractFileBodyObjectPathRegExp = new RegExp('^/objects/uploads/contracts/files/[A-Za-z0-9-]+$');
+export const adminCreateContractFileBodyObjectPathRegExp = new RegExp('^/objects/(?:uploads/contracts/files|local/contracts)/[A-Za-z0-9-]+$');
 export const adminCreateContractFileBodySizeBytesMax = 26214400;
 
 export const adminCreateContractFileBodyNotesMax = 1000;
