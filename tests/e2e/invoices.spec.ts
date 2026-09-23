@@ -175,6 +175,8 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText(/معاينة الفاتورة|Preview Invoice/, { exact: true }).click();
   const preview = page.getByTestId("invoice-template");
+  await expect(preview).toHaveAttribute("dir", "rtl");
+  await expect(preview).toContainText("فاتورة ضريبية");
   await expect(preview).toContainText("Musk Ellolo Test Seller");
   await expect(preview).toContainText(`Test buyer ${runId}`);
   await expect(preview).toContainText(productName);
@@ -182,6 +184,14 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await expect(preview).toContainText("115.00");
   await expect(page.getByTestId("invoice-qr")).toBeVisible();
   await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
+  await page.getByTestId(`invoice-actions-${invoiceId}`).click();
+  await page.getByText("Preview Invoice", { exact: true }).click();
+  await expect(page.getByTestId("invoice-template")).toHaveAttribute("dir", "ltr");
+  await expect(page.getByTestId("invoice-template")).toContainText("Tax Invoice");
+  await expect(page.getByTestId("invoice-template")).toContainText(productName);
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
 
   let printCalls = 0;
   await page.exposeFunction("recordInvoicePrint", () => { printCalls += 1; });

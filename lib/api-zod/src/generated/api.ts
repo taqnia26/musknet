@@ -2716,7 +2716,7 @@ export const adminListInvoicesQueryReceivableStatusDefault = `all`;
 
 export const AdminListInvoicesQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "channel": zod.enum(['all', 'companies', 'online']).default(adminListInvoicesQueryChannelDefault),
+  "channel": zod.enum(['all', 'companies', 'online', 'exhibitions']).default(adminListInvoicesQueryChannelDefault),
   "receivableStatus": zod.enum(['all', 'open', 'overdue', 'paid']).default(adminListInvoicesQueryReceivableStatusDefault)
 })
 
@@ -2726,6 +2726,8 @@ export const AdminListInvoicesResponseItem = zod.object({
   "orderNumber": zod.string().nullable(),
   "distributorId": zod.number().nullable(),
   "distributorName": zod.string().nullable(),
+  "exhibitionId": zod.number().nullable(),
+  "exhibitionName": zod.string().nullable(),
   "sequenceNumber": zod.number(),
   "invoiceNumber": zod.string(),
   "sellerName": zod.string(),
@@ -2804,6 +2806,100 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "orderNumber": zod.string().nullable(),
   "distributorId": zod.number().nullable(),
   "distributorName": zod.string().nullable(),
+  "exhibitionId": zod.number().nullable(),
+  "exhibitionName": zod.string().nullable(),
+  "sequenceNumber": zod.number(),
+  "invoiceNumber": zod.string(),
+  "sellerName": zod.string(),
+  "issueDatetime": zod.coerce.date(),
+  "dueDate": zod.coerce.date().nullable(),
+  "sellerVatNumber": zod.string(),
+  "buyerName": zod.string().nullable(),
+  "buyerTaxNumber": zod.string().nullable(),
+  "buyerCommercialRegistrationNumber": zod.string().nullable(),
+  "buyerAddress": zod.string().nullable(),
+  "subtotal": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "paidAmount": zod.number(),
+  "outstandingAmount": zod.number(),
+  "paymentStatus": zod.enum(['unpaid', 'partial', 'paid']),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "invoiceId": zod.number(),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number(),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "qrCodeData": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "productId": zod.number(),
+  "productName": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "subtotal": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Issue an exhibition sales invoice
+ */
+export const adminCreateExhibitionInvoiceBodyCreationKeyMin = 16;
+export const adminCreateExhibitionInvoiceBodyCreationKeyMax = 100;
+
+export const adminCreateExhibitionInvoiceBodyExhibitionIdMultipleOf = 1;
+
+export const adminCreateExhibitionInvoiceBodyBuyerNameMax = 200;
+
+export const adminCreateExhibitionInvoiceBodyBuyerAddressMax = 500;
+
+export const adminCreateExhibitionInvoiceBodyBuyerTaxNumberMax = 30;
+
+export const adminCreateExhibitionInvoiceBodyBuyerCommercialRegistrationNumberMax = 30;
+
+export const adminCreateExhibitionInvoiceBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminCreateExhibitionInvoiceBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminCreateExhibitionInvoiceBodyItemsItemUnitPriceExclusiveMin = 0;
+
+export const adminCreateExhibitionInvoiceBodyItemsMax = 100;
+
+
+
+export const AdminCreateExhibitionInvoiceBody = zod.object({
+  "creationKey": zod.string().min(adminCreateExhibitionInvoiceBodyCreationKeyMin).max(adminCreateExhibitionInvoiceBodyCreationKeyMax),
+  "exhibitionId": zod.number().min(1).multipleOf(adminCreateExhibitionInvoiceBodyExhibitionIdMultipleOf),
+  "saleDate": zod.coerce.date(),
+  "buyerName": zod.string().min(1).max(adminCreateExhibitionInvoiceBodyBuyerNameMax),
+  "buyerAddress": zod.string().max(adminCreateExhibitionInvoiceBodyBuyerAddressMax).nullish(),
+  "buyerTaxNumber": zod.string().max(adminCreateExhibitionInvoiceBodyBuyerTaxNumberMax).nullish(),
+  "buyerCommercialRegistrationNumber": zod.string().max(adminCreateExhibitionInvoiceBodyBuyerCommercialRegistrationNumberMax).nullish(),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminCreateExhibitionInvoiceBodyItemsItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(adminCreateExhibitionInvoiceBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().gt(adminCreateExhibitionInvoiceBodyItemsItemUnitPriceExclusiveMin)
+})).min(1).max(adminCreateExhibitionInvoiceBodyItemsMax)
+})
+
+export const AdminCreateExhibitionInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "orderId": zod.number().nullable(),
+  "orderNumber": zod.string().nullable(),
+  "distributorId": zod.number().nullable(),
+  "distributorName": zod.string().nullable(),
+  "exhibitionId": zod.number().nullable(),
+  "exhibitionName": zod.string().nullable(),
   "sequenceNumber": zod.number(),
   "invoiceNumber": zod.string(),
   "sellerName": zod.string(),
@@ -5300,7 +5396,8 @@ export const AdminListExhibitionProductsResponseItem = zod.object({
   "quantitySold": zod.number().min(adminListExhibitionProductsResponseQuantitySoldMin).multipleOf(adminListExhibitionProductsResponseQuantitySoldMultipleOf),
   "productNameAr": zod.string(),
   "productNameEn": zod.string(),
-  "productSku": zod.string().nullable()
+  "productSku": zod.string().nullable(),
+  "productPrice": zod.number()
 })
 export const AdminListExhibitionProductsResponse = zod.array(AdminListExhibitionProductsResponseItem)
 
@@ -5340,7 +5437,8 @@ export const AdminCreateExhibitionProductResponse = zod.object({
   "quantitySold": zod.number().min(adminCreateExhibitionProductResponseQuantitySoldMin).multipleOf(adminCreateExhibitionProductResponseQuantitySoldMultipleOf),
   "productNameAr": zod.string(),
   "productNameEn": zod.string(),
-  "productSku": zod.string().nullable()
+  "productSku": zod.string().nullable(),
+  "productPrice": zod.number()
 })
 
 

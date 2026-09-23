@@ -121,6 +121,7 @@ import type {
   Error,
   Exhibition,
   ExhibitionInput,
+  ExhibitionInvoiceInput,
   ExhibitionProduct,
   ExhibitionProductInput,
   ExhibitionUpdate,
@@ -5953,6 +5954,77 @@ export const useAdminCreateDistributorInvoice = <TError = ErrorType<BadRequestRe
         TContext
       > => {
       return useMutation(getAdminCreateDistributorInvoiceMutationOptions(options));
+    }
+
+export const getAdminCreateExhibitionInvoiceUrl = () => {
+
+
+
+
+  return `/api/admin/invoices/exhibitions`
+}
+
+/**
+ * @summary Issue an exhibition sales invoice
+ */
+export const adminCreateExhibitionInvoice = async (exhibitionInvoiceInput: ExhibitionInvoiceInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoice> => {
+
+  return customFetch<AdminInvoice>(getAdminCreateExhibitionInvoiceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(exhibitionInvoiceInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateExhibitionInvoiceMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateExhibitionInvoice>>, TError,{data: BodyType<ExhibitionInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateExhibitionInvoice>>, TError,{data: BodyType<ExhibitionInvoiceInput>}, TContext> => {
+
+const mutationKey = ['adminCreateExhibitionInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateExhibitionInvoice>>, {data: BodyType<ExhibitionInvoiceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateExhibitionInvoice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateExhibitionInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateExhibitionInvoice>>>
+    export type AdminCreateExhibitionInvoiceMutationBody = BodyType<ExhibitionInvoiceInput>
+    export type AdminCreateExhibitionInvoiceMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>
+
+    /**
+ * @summary Issue an exhibition sales invoice
+ */
+export const useAdminCreateExhibitionInvoice = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateExhibitionInvoice>>, TError,{data: BodyType<ExhibitionInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateExhibitionInvoice>>,
+        TError,
+        {data: BodyType<ExhibitionInvoiceInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateExhibitionInvoiceMutationOptions(options));
     }
 
 export const getAdminUpdateInvoiceUrl = (id: number,) => {

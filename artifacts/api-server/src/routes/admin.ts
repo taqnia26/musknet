@@ -66,7 +66,7 @@ import {
   verifyAdminPassword,
 } from "../lib/admin-auth";
 import { hashOwnerPassword } from "../lib/owner-auth";
-import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
+import { createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
 import {
   AccountingConflictError,
   AccountingNotFoundError,
@@ -149,6 +149,18 @@ export function permit(module: string, action: "view" | "edit" | "delete") {
     next();
    } catch (error) { next(error); }
   };
+}
+
+function permitExhibitionInvoiceRead(_req: Request, res: Response, next: NextFunction) {
+  (async () => {
+    const user = res.locals.admin as typeof adminUsersTable.$inferSelect;
+    res.locals.permissions = (await publicAdmin(user)).permissions;
+    if (!allowed(res, "exhibitions", "view") && !allowed(res, "invoices", "edit")) {
+      res.status(403).json({ error: "Insufficient permission" });
+      return;
+    }
+    next();
+  })().catch(next);
 }
 
 function superOnly(_req: Request, res: Response, next: NextFunction) {
@@ -1544,6 +1556,8 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     orderNumber: ordersTable.orderNumber,
     distributorId: invoicesTable.distributorId,
     distributorName: invoicesTable.buyerName,
+    exhibitionId: invoicesTable.exhibitionId,
+    exhibitionName: exhibitionsTable.name,
     sequenceNumber: invoicesTable.sequenceNumber,
     invoiceNumber: invoicesTable.invoiceNumber,
     sellerName: invoicesTable.sellerName,
@@ -1561,13 +1575,14 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     createdAt: invoicesTable.createdAt,
   }).from(invoicesTable)
     .leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
+    .leftJoin(exhibitionsTable, eq(invoicesTable.exhibitionId, exhibitionsTable.id))
     .where(and(
       isNull(invoicesTable.archivedAt),
       query.channel === "companies"
-        ? sql`${invoicesTable.distributorId} is not null`
+        ? and(isNotNull(invoicesTable.distributorId), isNull(invoicesTable.exhibitionId))
         : query.channel === "online"
-          ? and(isNull(invoicesTable.distributorId), sql`${invoicesTable.orderId} is not null`)
-          : undefined,
+          ? and(isNull(invoicesTable.distributorId), isNull(invoicesTable.exhibitionId), isNotNull(invoicesTable.orderId))
+          : query.channel === "exhibitions" ? isNotNull(invoicesTable.exhibitionId) : undefined,
       search ? or(
         ilike(invoicesTable.invoiceNumber, `%${search}%`),
         ilike(invoicesTable.sellerName, `%${search}%`),
@@ -1576,6 +1591,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
         ilike(invoicesTable.buyerTaxNumber, `%${search}%`),
         ilike(invoicesTable.buyerCommercialRegistrationNumber, `%${search}%`),
         ilike(ordersTable.orderNumber, `%${search}%`),
+        ilike(exhibitionsTable.name, `%${search}%`),
       ) : undefined,
     ))
     .orderBy(desc(invoicesTable.sequenceNumber));
@@ -1613,6 +1629,18 @@ router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res
     if (error instanceof DistributorInvoiceConflictError) {
       res.status(409).json({ error: error.message }); return;
     }
+    throw error;
+  }
+}));
+
+router.post("/admin/invoices/exhibitions", permit("invoices", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateExhibitionInvoiceBody, req.body, res); if (!body) return;
+  try {
+    const invoice = await createExhibitionInvoice({ ...body, saleDate: isoDate(body.saleDate) }, res.locals.admin.id);
+    res.status(201).json(Api.AdminCreateExhibitionInvoiceResponse.parse(invoice));
+  } catch (error) {
+    if (error instanceof DistributorInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
+    if (error instanceof DistributorInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
     throw error;
   }
 }));
@@ -3531,7 +3559,7 @@ router.delete("/admin/manufacturing/batches/:id", permit("manufacturing", "delet
   res.sendStatus(204);
 }));
 
-router.get("/admin/exhibitions", permit("exhibitions", "view"), route(async (_req, res) => {
+router.get("/admin/exhibitions", permitExhibitionInvoiceRead, route(async (_req, res) => {
   const rows = await db.select().from(exhibitionsTable).orderBy(sql`${exhibitionsTable.startDate} desc`, exhibitionsTable.id);
   parsedJson(Api.AdminListExhibitionsResponse, rows, res);
 }));
@@ -3560,13 +3588,15 @@ router.patch("/admin/exhibitions/:id", permit("exhibitions", "edit"), route(asyn
 }));
 router.delete("/admin/exhibitions/:id", permit("exhibitions", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDeleteExhibitionParams, req.params, res); if (!params) return;
+  const [invoiced] = await db.select({ id: invoicesTable.id }).from(invoicesTable).where(eq(invoicesTable.exhibitionId, params.id)).limit(1);
+  if (invoiced) { res.status(409).json({ error: "Exhibition has invoices" }); return; }
   const [dependent] = await db.select({ id: exhibitionProductsTable.id }).from(exhibitionProductsTable).where(eq(exhibitionProductsTable.exhibitionId, params.id)).limit(1);
   if (dependent) { res.status(409).json({ error: "Exhibition has allocated products" }); return; }
   const [row] = await db.delete(exhibitionsTable).where(eq(exhibitionsTable.id, params.id)).returning({ id: exhibitionsTable.id });
   if (!row) { res.status(404).json({ error: "Exhibition not found" }); return; }
   res.sendStatus(204);
 }));
-router.get("/admin/exhibitions/:id/products", permit("exhibitions", "view"), route(async (req, res) => {
+router.get("/admin/exhibitions/:id/products", permitExhibitionInvoiceRead, route(async (req, res) => {
   const params = parse(Api.AdminListExhibitionProductsParams, req.params, res); if (!params) return;
   const [exhibition] = await db.select({ id: exhibitionsTable.id }).from(exhibitionsTable).where(eq(exhibitionsTable.id, params.id)).limit(1);
   if (!exhibition) { res.status(404).json({ error: "Exhibition not found" }); return; }
@@ -3574,7 +3604,7 @@ router.get("/admin/exhibitions/:id/products", permit("exhibitions", "view"), rou
     id: exhibitionProductsTable.id, exhibitionId: exhibitionProductsTable.exhibitionId,
     productId: exhibitionProductsTable.productId, quantityAllocated: exhibitionProductsTable.quantityAllocated,
     quantitySold: exhibitionProductsTable.quantitySold, productNameAr: productsTable.nameAr,
-    productNameEn: productsTable.nameEn, productSku: productsTable.sku,
+    productNameEn: productsTable.nameEn, productSku: productsTable.sku, productPrice: productsTable.price,
   }).from(exhibitionProductsTable).innerJoin(productsTable, eq(exhibitionProductsTable.productId, productsTable.id))
     .where(eq(exhibitionProductsTable.exhibitionId, params.id)).orderBy(exhibitionProductsTable.id);
   parsedJson(Api.AdminListExhibitionProductsResponse, rows, res);
@@ -3585,7 +3615,7 @@ router.post("/admin/exhibitions/:id/products", permit("exhibitions", "edit"), ro
   if (body.quantitySold > body.quantityAllocated) { res.status(400).json({ error: "Quantity sold cannot exceed quantity allocated" }); return; }
   const [[exhibition], [product]] = await Promise.all([
     db.select({ id: exhibitionsTable.id }).from(exhibitionsTable).where(eq(exhibitionsTable.id, params.id)).limit(1),
-    db.select({ id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn, sku: productsTable.sku })
+    db.select({ id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn, sku: productsTable.sku, price: productsTable.price })
       .from(productsTable).where(eq(productsTable.id, body.productId)).limit(1),
   ]);
   if (!exhibition) { res.status(404).json({ error: "Exhibition not found" }); return; }
@@ -3595,7 +3625,7 @@ router.post("/admin/exhibitions/:id/products", permit("exhibitions", "edit"), ro
   )).limit(1);
   if (duplicate) { res.status(409).json({ error: "Product is already allocated to exhibition" }); return; }
   const [row] = await db.insert(exhibitionProductsTable).values({ ...body, exhibitionId: params.id }).returning();
-  const response = { ...row, productNameAr: product.nameAr, productNameEn: product.nameEn, productSku: product.sku };
+  const response = { ...row, productNameAr: product.nameAr, productNameEn: product.nameEn, productSku: product.sku, productPrice: product.price };
   parsedJson(Api.AdminCreateExhibitionProductResponse, response, res, 201);
 }));
 

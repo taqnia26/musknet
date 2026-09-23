@@ -36,6 +36,7 @@ import {
 import { format } from 'date-fns';
 import { hasPermission } from '@/lib/permissions';
 import { CreateDistributorInvoiceDialog } from '@/components/admin/create-distributor-invoice-dialog';
+import { CreateExhibitionInvoiceDialog } from '@/components/admin/create-exhibition-invoice-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 function InvoiceTemplate({
@@ -90,6 +91,7 @@ function InvoiceTemplate({
         <div className="rounded-md border border-stone-200 bg-stone-100 p-4 sm:p-5">
           <dl className="space-y-3 text-sm">
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
+            {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</dd></div>
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
             <div className="flex items-baseline justify-between gap-3 rounded-sm border border-stone-200 bg-stone-200/20 px-3 py-2.5"><dt className="font-semibold text-[#292728]">{t('المبلغ المستحق', 'Amount Due')}</dt><dd className="font-mono font-semibold text-[#292728]">{invoice.outstandingAmount.toFixed(2)} {t('ر.س', 'SAR')}</dd></div>
@@ -785,16 +787,21 @@ export function AdminOnlineInvoices() {
   return <InvoiceList channel="online" />;
 }
 
-/** Exhibition sales have no invoice relation yet. Keep this view explicit rather than
- * presenting unrelated invoices or the exhibition-management screen. */
 export function AdminExhibitionInvoices() {
   const { t } = useLanguage();
+  const [search, setSearch] = useState('');
+  const [preview, setPreview] = useState<AdminInvoice | null>(null);
+  const [print, setPrint] = useState(false);
+  const { data: user } = useGetAdminMe();
+  const { data: invoices, isLoading, isError } = useAdminListInvoices({ channel: 'exhibitions', search: search || undefined });
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('فواتير المعارض', 'Exhibition Invoices')}</h1>
-        <p className="text-muted-foreground mt-1">{t('لا توجد علاقة فواتير للمعارض حالياً', 'Exhibitions do not have an invoice relation yet')}</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div><h1 className="text-3xl font-bold tracking-tight">{t('فواتير المعارض', 'Exhibition Invoices')}</h1>
+          <p className="text-muted-foreground mt-1">{t('إصدار وعرض مبيعات المعارض', 'Issue and view exhibition sales')}</p></div>
+        {hasPermission(user, 'invoices', 'edit') && <CreateExhibitionInvoiceDialog />}
       </div>
+      <div className="relative max-w-md"><Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="ps-9" aria-label={t('بحث الفواتير', 'Search invoices')} placeholder={t('ابحث برقم الفاتورة أو المعرض أو المشتري', 'Search by invoice, exhibition or buyer')} value={search} onChange={e => setSearch(e.target.value)} /></div>
       <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
         <Table className="min-w-[700px]">
           <TableHeader className="bg-muted/30">
@@ -802,19 +809,30 @@ export function AdminExhibitionInvoices() {
               <TableHead>{t('رقم الفاتورة', 'Invoice #')}</TableHead>
               <TableHead>{t('المعرض', 'Exhibition')}</TableHead>
               <TableHead>{t('التاريخ', 'Date')}</TableHead>
+              <TableHead>{t('المشتري', 'Buyer')}</TableHead>
               <TableHead>{t('الإجمالي', 'Total')}</TableHead>
               <TableHead className="w-[80px] text-center">{t('إجراءات', 'Actions')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow>
-              <TableCell colSpan={5} className="py-16 text-center text-muted-foreground">
-                {t('لا توجد فواتير للمعارض لعدم وجود علاقة فواتير مسجلة. استخدم إدارة المعارض لإدارة المعارض والكميات.', 'No exhibition invoices are available because exhibitions have no invoice relation. Use Exhibition Management to manage exhibitions and quantities.')}
-              </TableCell>
-            </TableRow>
+            {isLoading ? <TableRow><TableCell colSpan={6} className="py-12 text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> :
+              isError ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-destructive">{t('تعذر تحميل الفواتير', 'Could not load invoices')}</TableCell></TableRow> :
+              !invoices?.length ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">{t('لا توجد فواتير مطابقة', 'No invoices found')}</TableCell></TableRow> :
+              invoices.map(invoice => <TableRow key={invoice.id} data-testid={`exhibition-invoice-${invoice.id}`}>
+                <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                <TableCell>{invoice.exhibitionName}</TableCell>
+                <TableCell>{invoice.issueDatetime.slice(0, 10)}</TableCell>
+                <TableCell>{invoice.buyerName}</TableCell>
+                <TableCell>{invoice.totalAmount.toFixed(2)} SAR</TableCell>
+                <TableCell><div className="flex justify-center gap-1">
+                  <Button size="icon" variant="ghost" aria-label={t('معاينة الفاتورة', 'Preview invoice')} onClick={() => { setPrint(false); setPreview(invoice); }}><Eye className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" aria-label={t('طباعة الفاتورة', 'Print invoice')} onClick={() => { setPrint(true); setPreview(invoice); }}><Printer className="h-4 w-4" /></Button>
+                </div></TableCell>
+              </TableRow>)}
           </TableBody>
         </Table>
       </div>
+      <InvoicePreviewDialog invoice={preview} open={!!preview} printOnReady={print} onOpenChange={open => { if (!open) { setPreview(null); setPrint(false); } }} />
     </div>
   );
 }

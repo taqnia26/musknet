@@ -868,7 +868,7 @@ paths:
         - name: channel
           in: query
           required: false
-          schema: { type: string, enum: [all, companies, online], default: all }
+          schema: { type: string, enum: [all, companies, online, exhibitions], default: all }
         - name: receivableStatus
           in: query
           required: false
@@ -891,6 +891,18 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Distributor or product is unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/exhibitions:
+    post:
+      operationId: adminCreateExhibitionInvoice
+      summary: Issue an exhibition sales invoice
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ExhibitionInvoiceInput" } } } }
+      responses:
+        "201": { description: Exhibition invoice, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInvoice" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Allocation or stock conflict, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/invoices/{id}:
     patch:
       operationId: adminUpdateInvoice
@@ -3508,13 +3520,15 @@ components:
         adminNotes: { type: [string, "null"] }
     AdminInvoice:
       type: object
-      required: [id, orderId, orderNumber, distributorId, distributorName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
+      required: [id, orderId, orderNumber, distributorId, distributorName, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
       properties:
         id: { type: number }
         orderId: { type: [number, "null"] }
         orderNumber: { type: [string, "null"] }
         distributorId: { type: [number, "null"] }
         distributorName: { type: [string, "null"] }
+        exhibitionId: { type: [number, "null"] }
+        exhibitionName: { type: [string, "null"] }
         sequenceNumber: { type: number }
         invoiceNumber: { type: string }
         sellerName: { type: string }
@@ -3562,6 +3576,23 @@ components:
         creationKey: { type: string, minLength: 16, maxLength: 100 }
         distributorId: { type: number, minimum: 1, multipleOf: 1 }
         dueDate: { type: string, format: date }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/DistributorInvoiceLineInput" }
+    ExhibitionInvoiceInput:
+      type: object
+      required: [creationKey, exhibitionId, saleDate, buyerName, paymentMethod, items]
+      properties:
+        creationKey: { type: string, minLength: 16, maxLength: 100 }
+        exhibitionId: { type: number, minimum: 1, multipleOf: 1 }
+        saleDate: { type: string, format: date }
+        buyerName: { type: string, minLength: 1, maxLength: 200 }
+        buyerAddress: { type: [string, "null"], maxLength: 500 }
+        buyerTaxNumber: { type: [string, "null"], maxLength: 30 }
+        buyerCommercialRegistrationNumber: { type: [string, "null"], maxLength: 30 }
+        paymentMethod: { type: string, enum: [cash, bank_transfer] }
         items:
           type: array
           minItems: 1
@@ -4539,7 +4570,7 @@ components:
       allOf: [{ $ref: "#/components/schemas/ExhibitionInput" }]
     ExhibitionProduct:
       type: object
-      required: [id, exhibitionId, productId, quantityAllocated, quantitySold, productNameAr, productNameEn, productSku]
+      required: [id, exhibitionId, productId, quantityAllocated, quantitySold, productNameAr, productNameEn, productSku, productPrice]
       properties:
         id: { type: number }
         exhibitionId: { type: number }
@@ -4549,6 +4580,7 @@ components:
         productNameAr: { type: string }
         productNameEn: { type: string }
         productSku: { type: [string, "null"] }
+        productPrice: { type: number }
     ExhibitionProductInput:
       type: object
       required: [productId, quantityAllocated]

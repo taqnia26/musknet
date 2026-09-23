@@ -176,6 +176,8 @@ export * from './error';
 export * from './exhibition';
 export * from './exhibitionInput';
 export * from './exhibitionInputStatus';
+export * from './exhibitionInvoiceInput';
+export * from './exhibitionInvoiceInputPaymentMethod';
 export * from './exhibitionProduct';
 export * from './exhibitionProductInput';
 export * from './exhibitionStatus';

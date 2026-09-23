@@ -18,4 +18,5 @@ export interface ExhibitionProduct {
   productNameEn: string;
   /** @nullable */
   productSku: string | null;
+  productPrice: number;
 }

@@ -1,14 +1,17 @@
-import { date, doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { check, date, doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { ordersTable } from "./orders";
 import { wholesaleDistributorsTable } from "./wholesale-distributors";
 import { productsTable } from "./products";
+import { exhibitionsTable } from "./exhibitions";
 
 export const taxInvoicesTable = pgTable("tax_invoices", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "restrict" }),
   distributorId: integer("distributor_id").references(() => wholesaleDistributorsTable.id, { onDelete: "restrict" }),
+  exhibitionId: integer("exhibition_id").references(() => exhibitionsTable.id, { onDelete: "restrict" }),
   creationKey: text("creation_key"),
   sequenceNumber: integer("sequence_number").notNull(),
   invoiceNumber: text("invoice_number").notNull(),
@@ -28,6 +31,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   archivedByAdminId: integer("archived_by_admin_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
+  check("invoice_single_channel", sql`(case when ${table.orderId} is not null then 1 else 0 end + case when ${table.distributorId} is not null then 1 else 0 end + case when ${table.exhibitionId} is not null then 1 else 0 end) = 1`),
   uniqueIndex("invoices_order_id_unique").on(table.orderId),
   uniqueIndex("invoices_sequence_number_unique").on(table.sequenceNumber),
   uniqueIndex("invoices_invoice_number_unique").on(table.invoiceNumber),

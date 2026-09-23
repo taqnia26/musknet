@@ -27,3 +27,4 @@
 - [SQL export encoding](sql-export-encoding.md) — single-column base64 results from executeSql may be quoted and line-wrapped; normalize the result before decoding.
 - [Shopper phone identity](shopper-phone-identity.md) — avoid changing OTP phone normalization without a legacy-account migration; formatted historical numbers may have separate identities.
 - [Catalog settings boundary](catalog-settings-boundary.md) — saved product options are not checkout rules until pricing, tax, shipping, and order flows are updated together.
+- [Posted journal test cleanup](posted-journal-test-cleanup.md) — disable immutability triggers before fixture deletion, re-enable only after commit.

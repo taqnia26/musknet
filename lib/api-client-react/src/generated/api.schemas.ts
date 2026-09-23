@@ -1745,6 +1745,10 @@ export interface AdminInvoice {
   distributorId: number | null;
   /** @nullable */
   distributorName: string | null;
+  /** @nullable */
+  exhibitionId: number | null;
+  /** @nullable */
+  exhibitionName: string | null;
   sequenceNumber: number;
   invoiceNumber: string;
   sellerName: string;
@@ -1790,6 +1794,51 @@ export interface DistributorInvoiceInput {
   /** @minimum 1 */
   distributorId: number;
   dueDate: string;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  items: DistributorInvoiceLineInput[];
+}
+
+export type ExhibitionInvoiceInputPaymentMethod = typeof ExhibitionInvoiceInputPaymentMethod[keyof typeof ExhibitionInvoiceInputPaymentMethod];
+
+
+export const ExhibitionInvoiceInputPaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+} as const;
+
+export interface ExhibitionInvoiceInput {
+  /**
+     * @minLength 16
+     * @maxLength 100
+     */
+  creationKey: string;
+  /** @minimum 1 */
+  exhibitionId: number;
+  saleDate: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  buyerName: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  buyerAddress?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  buyerTaxNumber?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  buyerCommercialRegistrationNumber?: string | null;
+  paymentMethod: ExhibitionInvoiceInputPaymentMethod;
   /**
      * @minItems 1
      * @maxItems 100
@@ -3536,6 +3585,7 @@ export interface ExhibitionProduct {
   productNameEn: string;
   /** @nullable */
   productSku: string | null;
+  productPrice: number;
 }
 
 export interface ExhibitionProductInput {
@@ -4219,6 +4269,7 @@ export const AdminListInvoicesChannel = {
   all: 'all',
   companies: 'companies',
   online: 'online',
+  exhibitions: 'exhibitions',
 } as const;
 
 export type AdminListInvoicesReceivableStatus = typeof AdminListInvoicesReceivableStatus[keyof typeof AdminListInvoicesReceivableStatus];

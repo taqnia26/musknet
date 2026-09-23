@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db, adminUsersTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable } from "@workspace/db";
+import { db, adminUsersTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 import { adjustOperationalBalances } from "./operations";
@@ -9,12 +9,111 @@ const INVOICE_NUMBER_LOCK = 7_521_010_001;
 const money = (value: number) => value.toFixed(2);
 const cents = (value: number) => Math.round((value + Number.EPSILON) * 100);
 const fromCents = (value: number) => value / 100;
+const stableJson = (value: unknown): string => JSON.stringify(value, (_key, item) =>
+  item && typeof item === "object" && !Array.isArray(item)
+    ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b)))
+    : item);
 
 const dateOnly = (value: string | Date) => value instanceof Date ? value.toISOString().slice(0, 10) : value;
 export class DistributorInvoiceValidationError extends Error {}
 export class DistributorInvoiceConflictError extends Error {}
 
 export class ReceivablePaymentNotFoundError extends Error {}
+export async function createExhibitionInvoice(
+  input: { creationKey: string; exhibitionId: number; saleDate: string; buyerName: string; buyerAddress?: string | null; buyerTaxNumber?: string | null; buyerCommercialRegistrationNumber?: string | null; paymentMethod: "cash" | "bank_transfer"; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  actorId: number,
+  environment: NodeJS.ProcessEnv = process.env,
+) {
+  if (!input.buyerName.trim() || !input.items.length || new Set(input.items.map(i => i.productId)).size !== input.items.length ||
+    input.items.some(i => !Number.isSafeInteger(i.quantity) || i.quantity < 1 || !Number.isFinite(i.unitPrice) || i.unitPrice <= 0 || cents(i.unitPrice) / 100 !== i.unitPrice) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(input.saleDate) || Number.isNaN(Date.parse(`${input.saleDate}T12:00:00Z`))) {
+    throw new DistributorInvoiceValidationError("Enter a valid buyer, sale date, unique products, quantities and prices (two decimals)");
+  }
+  await ensureStandardAccountingChart();
+  return db.transaction(async tx => {
+    // Serialize creation keys before taking any inventory locks. The same key must
+    // never be re-used to issue a different sale.
+    await tx.execute(sql`select pg_advisory_xact_lock(7521, hashtext(${input.creationKey}))`);
+    const [previous] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
+    if (previous) {
+      if (previous.exhibitionId !== input.exhibitionId) throw new DistributorInvoiceConflictError("Creation key already used");
+      const [event] = await tx.select().from(operationEventsTable).where(eq(operationEventsTable.eventKey, `exhibition-invoice:${previous.id}`)).limit(1);
+      const previousItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, previous.id)).orderBy(invoiceItemsTable.id);
+      if (stableJson(event?.payload && (event.payload as { request?: unknown }).request) !== stableJson(input)) throw new DistributorInvoiceConflictError("Creation key already used for different details");
+      const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, previous.id));
+      const [exhibition] = await tx.select({ name: exhibitionsTable.name }).from(exhibitionsTable).where(eq(exhibitionsTable.id, input.exhibitionId));
+      return { ...previous, orderNumber: null, distributorName: null, exhibitionName: exhibition.name, paidAmount: previous.totalAmount, outstandingAmount: 0, paymentStatus: "paid" as const, payments, items: previousItems };
+    }
+    await tx.execute(sql`select id from ${exhibitionsTable} where ${exhibitionsTable.id} = ${input.exhibitionId} for update`);
+    const [exhibition] = await tx.select().from(exhibitionsTable).where(eq(exhibitionsTable.id, input.exhibitionId));
+    if (!exhibition) throw new DistributorInvoiceValidationError("Exhibition not found");
+    if (exhibition.status === "cancelled" || input.saleDate < exhibition.startDate || input.saleDate > exhibition.endDate)
+      throw new DistributorInvoiceConflictError("Sale date must be within a non-cancelled exhibition");
+    for (const id of input.items.map(i => i.productId).sort((a, b) => a - b)) {
+      await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${id} for update`);
+    }
+    const lines = [];
+    let totalCost = 0;
+    for (const item of input.items) {
+      const [allocation] = await tx.select().from(exhibitionProductsTable).where(and(eq(exhibitionProductsTable.exhibitionId, input.exhibitionId), eq(exhibitionProductsTable.productId, item.productId)));
+      const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, item.productId));
+      if (!allocation || !product || !product.isActive) throw new DistributorInvoiceConflictError(`Product ${item.productId} is not available at this exhibition`);
+      if (allocation.quantityAllocated - allocation.quantitySold < item.quantity) throw new DistributorInvoiceConflictError(`Insufficient exhibition allocation for ${product.nameAr}`);
+      if (product.stockQuantity < item.quantity) throw new DistributorInvoiceConflictError(`Insufficient stock for ${product.nameAr}`);
+      const subtotalCents = cents(item.unitPrice) * item.quantity;
+      const vatCents = Math.round(subtotalCents * 0.15);
+      lines.push({ productId: item.productId, productName: product.nameAr || product.nameEn, sku: product.sku, quantity: item.quantity, unitPrice: item.unitPrice,
+        subtotal: fromCents(subtotalCents), vatAmount: fromCents(vatCents), totalAmount: fromCents(subtotalCents + vatCents),
+        stockBefore: product.stockQuantity, unitCost: product.averageCost, allocationId: allocation.id, soldBefore: allocation.quantitySold });
+      totalCost += Number(product.averageCost) * item.quantity;
+    }
+    const subtotal = fromCents(lines.reduce((sum, line) => sum + cents(line.subtotal), 0));
+    const vatAmount = fromCents(lines.reduce((sum, line) => sum + cents(line.vatAmount), 0));
+    const totalAmount = fromCents(cents(subtotal) + cents(vatAmount));
+    const configuration = zatcaSellerConfiguration(environment);
+    const issuedAt = new Date(`${input.saleDate}T12:00:00.000Z`);
+    await tx.execute(sql`select pg_advisory_xact_lock(${INVOICE_NUMBER_LOCK})`);
+    const [{ next }] = await tx.select({ next: sql<number>`coalesce(max(${invoicesTable.sequenceNumber}), 0) + 1` }).from(invoicesTable);
+    const sequenceNumber = Number(next);
+    const invoiceNumber = `INV-${String(sequenceNumber).padStart(6, "0")}`;
+    const [invoice] = await tx.insert(invoicesTable).values({
+      exhibitionId: exhibition.id, creationKey: input.creationKey, sequenceNumber, invoiceNumber,
+      sellerName: configuration.sellerName, sellerVatNumber: configuration.vatRegistrationNumber, issueDatetime: issuedAt,
+      buyerName: input.buyerName.trim(), buyerAddress: input.buyerAddress?.trim() || null, buyerTaxNumber: input.buyerTaxNumber?.trim() || null,
+      buyerCommercialRegistrationNumber: input.buyerCommercialRegistrationNumber?.trim() || null,
+      subtotal, vatAmount, totalAmount,
+      qrCodeData: zatcaPhaseOneBase64({ ...configuration, timestamp: issuedAt.toISOString(), invoiceTotal: money(totalAmount), vatTotal: money(vatAmount) }),
+    }).returning();
+    const items = await tx.insert(invoiceItemsTable).values(lines.map(({ stockBefore, unitCost, allocationId, soldBefore, ...line }) => ({ ...line, invoiceId: invoice.id }))).returning();
+    for (const line of lines) {
+      await tx.update(exhibitionProductsTable).set({ quantitySold: line.soldBefore + line.quantity }).where(eq(exhibitionProductsTable.id, line.allocationId));
+      await adjustOperationalBalances(tx, line.productId, -line.quantity, line.unitCost, line.stockBefore);
+      await tx.update(productsTable).set({ stockQuantity: line.stockBefore - line.quantity }).where(eq(productsTable.id, line.productId));
+      await tx.insert(inventoryMovementsTable).values({
+        productId: line.productId, movementType: "decrease", quantityChange: -line.quantity,
+        quantityBefore: line.stockBefore, quantityAfter: line.stockBefore - line.quantity,
+        reason: `Exhibition invoice ${invoiceNumber}`, unitCost: line.unitCost,
+        totalCost: (Number(line.unitCost) * line.quantity).toFixed(4),
+        sourceType: "exhibition_invoice", sourceId: String(invoice.id), eventKey: `exhibition-invoice:${invoice.id}:${line.productId}`, performedBy: actorId,
+      });
+    }
+    const [payment] = await tx.insert(receivablePaymentsTable).values({
+      invoiceId: invoice.id, paymentKey: `exhibition:${input.creationKey}`, paymentDate: input.saleDate,
+      amount: totalAmount, paymentMethod: input.paymentMethod, createdBy: actorId,
+    }).returning();
+    await postJournalEntry({ entryDate: input.saleDate, description: `Exhibition sale ${invoiceNumber}`, createdBy: actorId,
+      sourceType: "exhibition_invoice", sourceId: String(invoice.id),
+      lines: [{ accountCode: input.paymentMethod === "cash" ? "1110" : "1120", debit: totalAmount },
+        { accountCode: "4100", credit: subtotal }, { accountCode: "2120", credit: vatAmount }] }, tx);
+    if (totalCost > 0) await postJournalEntry({ entryDate: input.saleDate, description: `Cost of exhibition sale ${invoiceNumber}`,
+      createdBy: actorId, sourceType: "exhibition_invoice_cogs", sourceId: String(invoice.id),
+      lines: [{ accountCode: "5100", debit: totalCost }, { accountCode: "1140", credit: totalCost }] }, tx);
+    await tx.insert(operationEventsTable).values({ eventKey: `exhibition-invoice:${invoice.id}`, kind: "sale_fulfillment", status: "posted",
+      sourceType: "exhibition_invoice", sourceId: String(invoice.id), actorId, payload: { request: input } });
+    return { ...invoice, orderNumber: null, distributorName: null, exhibitionName: exhibition.name, paidAmount: totalAmount, outstandingAmount: 0, paymentStatus: "paid" as const, payments: [payment], items };
+  });
+}
+
 export async function createDistributorInvoice(
   input: { creationKey: string; distributorId: number; dueDate?: string | Date; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
@@ -37,7 +136,7 @@ export async function createDistributorInvoice(
       const previousItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, previous.id)).orderBy(invoiceItemsTable.id);
       const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, previous.id)).orderBy(receivablePaymentsTable.paymentDate);
       const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
-      return { ...previous, orderNumber: null, distributorName: previous.buyerName, paidAmount, outstandingAmount: fromCents(cents(previous.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: previousItems };
+      return { ...previous, orderNumber: null, distributorName: previous.buyerName, exhibitionName: null, paidAmount, outstandingAmount: fromCents(cents(previous.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: previousItems };
     }
     const [distributor] = await tx.select().from(wholesaleDistributorsTable)
       .where(eq(wholesaleDistributorsTable.id, input.distributorId)).limit(1);
@@ -87,7 +186,7 @@ export async function createDistributorInvoice(
       const afterLockItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, afterLock.id)).orderBy(invoiceItemsTable.id);
       const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, afterLock.id)).orderBy(receivablePaymentsTable.paymentDate);
       const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
-      return { ...afterLock, orderNumber: null, distributorName: afterLock.buyerName, paidAmount, outstandingAmount: fromCents(cents(afterLock.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: afterLockItems };
+      return { ...afterLock, orderNumber: null, distributorName: afterLock.buyerName, exhibitionName: null, paidAmount, outstandingAmount: fromCents(cents(afterLock.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: afterLockItems };
     }
     const configuration = zatcaSellerConfiguration(environment);
     const issueDatetime = new Date();
@@ -179,7 +278,7 @@ export async function createDistributorInvoice(
         ],
       }, tx);
     }
-    return { ...invoice, orderNumber: null, distributorName: distributor.companyName, paidAmount: 0, outstandingAmount: invoice.totalAmount, paymentStatus: "unpaid" as const, payments: [], items: createdItems };
+    return { ...invoice, orderNumber: null, distributorName: distributor.companyName, exhibitionName: null, paidAmount: 0, outstandingAmount: invoice.totalAmount, paymentStatus: "unpaid" as const, payments: [], items: createdItems };
   });
 }
 

@@ -13,4 +13,5 @@ export const AdminListInvoicesChannel = {
   all: 'all',
   companies: 'companies',
   online: 'online',
+  exhibitions: 'exhibitions',
 } as const;

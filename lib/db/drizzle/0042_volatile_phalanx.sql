@@ -1,0 +1,3 @@
+ALTER TABLE "tax_invoices" ADD COLUMN "exhibition_id" integer;--> statement-breakpoint
+ALTER TABLE "tax_invoices" ADD CONSTRAINT "tax_invoices_exhibition_id_exhibitions_id_fk" FOREIGN KEY ("exhibition_id") REFERENCES "public"."exhibitions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tax_invoices" ADD CONSTRAINT "invoice_single_channel" CHECK ((case when "tax_invoices"."order_id" is not null then 1 else 0 end + case when "tax_invoices"."distributor_id" is not null then 1 else 0 end + case when "tax_invoices"."exhibition_id" is not null then 1 else 0 end) = 1);

@@ -19,6 +19,10 @@ export interface AdminInvoice {
   distributorId: number | null;
   /** @nullable */
   distributorName: string | null;
+  /** @nullable */
+  exhibitionId: number | null;
+  /** @nullable */
+  exhibitionName: string | null;
   sequenceNumber: number;
   invoiceNumber: string;
   sellerName: string;
