@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   customersTable,
@@ -30,10 +30,20 @@ const phones: string[] = [];
 const movementReasons: string[] = [];
 const productSnapshots = new Map<number, { stockQuantity: number; price: number }>();
 const balanceSnapshots = new Map<number, Array<typeof inventoryBalancesTable.$inferSelect>>();
+let originalCatalogStock: Array<{ id: number; stockQuantity: number }> = [];
 
 beforeAll(async () => {
   process.env.ADMIN_EMAIL = `storefront-accounting-${Date.now()}@example.com`;
   process.env.ADMIN_PASSWORD = "storefront-accounting-password";
+  originalCatalogStock = await db.select({ id: productsTable.id, stockQuantity: productsTable.stockQuantity })
+    .from(productsTable).where(inArray(productsTable.id, [1, 2, 3, 4]));
+  await db.update(productsTable).set({ stockQuantity: 100 }).where(inArray(productsTable.id, [1, 2, 3, 4]));
+});
+
+afterAll(async () => {
+  for (const product of originalCatalogStock) {
+    await db.update(productsTable).set({ stockQuantity: product.stockQuantity }).where(eq(productsTable.id, product.id));
+  }
 });
 
 async function createUser(suffix: string) {
@@ -118,6 +128,8 @@ describe.sequential("persistent storefront carts and orders", () => {
     });
     movementReasons.push(`Order ${order!.orderNumber}`);
 
+    expect(order?.orderNumber).toMatch(/^L-[0-9]+$/);
+    expect((await getOrder(owner.id, order!.orderNumber))?.orderNumber).toBe(order!.orderNumber);
     expect(order?.items).toHaveLength(1);
     const [addressSnapshot] = await db
       .select()
@@ -136,6 +148,29 @@ describe.sequential("persistent storefront carts and orders", () => {
     expect((await getOrders(owner.id)).map(({ orderNumber }) => orderNumber)).toContain(order!.orderNumber);
     expect(await getOrder(other.id, order!.orderNumber)).toBeNull();
     expect(await getOrders(other.id)).toEqual([]);
+  });
+
+  it("allocates distinct numeric order references for concurrent customers", async () => {
+    const first = await createUser("7");
+    const second = await createUser("8");
+    const [product] = await db.select({
+      stockQuantity: productsTable.stockQuantity, price: productsTable.price,
+    }).from(productsTable).where(eq(productsTable.id, 2));
+    productSnapshots.set(2, product);
+    balanceSnapshots.set(2, await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, 2)));
+    await Promise.all([addToCart(first.id, 2, 1), addToCart(second.id, 2, 1)]);
+    const details = {
+      address: { label: "Home", city: "Riyadh", district: "Olaya", street: "Main", buildingNo: "10", additionalInfo: null, isDefault: false },
+      shippingMethod: "standard", paymentMethod: "card",
+    };
+    const [one, two] = await Promise.all([
+      createOrderForUser(first.id, details),
+      createOrderForUser(second.id, details),
+    ]);
+    expect(one?.orderNumber).toMatch(/^L-[0-9]+$/);
+    expect(two?.orderNumber).toMatch(/^L-[0-9]+$/);
+    expect(one?.orderNumber).not.toBe(two?.orderNumber);
+    movementReasons.push(`Order ${one!.orderNumber}`, `Order ${two!.orderNumber}`);
   });
 
   it("uses the shared atomic transition for a trusted storefront payment completion", async () => {

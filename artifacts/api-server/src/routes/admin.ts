@@ -84,6 +84,7 @@ import { InvalidContractFileError, isLocalContractPath, LocalContractStorage } f
 import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
 import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch, ensureDefaultInventoryLocation, listInventoryLocations, lookupInventoryBarcode, listInventoryBalances, transferInventory, sendInventoryTransfer, receiveInventoryTransfer, inventoryValueReport, inventoryCsv, createInventoryPurchaseOrder, receiveInventoryPurchaseOrder, createCycleCount, approveCycleCount, inventoryReorderSuggestions, inventoryMovementReport, inventoryAgingReport, inventoryValuationReport, inventoryAuditReport, inventoryReconciliationReport, adjustOperationalBalances } from "../lib/operations";
 import { createSmsaShippingLabel } from "../lib/shipping-carriers";
+import { nextIndividualOrderNumber } from "../lib/order-numbers";
 import { createInvoicePdf, sendInvoiceEmail } from "../lib/invoice-email";
 import { assertShippingStatusTransition, canApplyCarrierShippingStatus, ShippingStatusTransitionError } from "../lib/shipping-status";
 
@@ -1402,7 +1403,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       );
       const tax = Math.round(subtotal * 0.15 * 100) / 100;
       const total = Math.round((subtotal + shippingCost + tax) * 100) / 100;
-      const orderNumber = `ME-${randomBytes(5).toString("hex").toUpperCase()}`;
+      const orderNumber = await nextIndividualOrderNumber(tx);
       const [created] = await tx.insert(ordersTable).values({
         userId: body.userId,
         orderNumber,

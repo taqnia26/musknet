@@ -848,7 +848,7 @@ function TesterSourceSelector({ productId, value, onChange, quantity, onSplit, l
           <SelectItem value="normal">
             {lang === 'ar' ? 'المخزون الرئيسي (جديد)' : 'Main stock (new)'} — {isLoading ? '…' : formatInteger(data?.normalAvailable ?? 0, lang)}
           </SelectItem>
-          <SelectItem value="used_return" disabled={!data}>
+          <SelectItem value="used_return" disabled={!data || openedAvailable <= 0}>
             {lang === 'ar' ? 'مخزون تيستر مفتوح' : 'Opened tester stock'} — {isLoading ? '…' : formatInteger(openedAvailable, lang)}
           </SelectItem>
         </SelectContent>

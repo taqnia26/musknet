@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   addressesTable,
@@ -24,6 +24,7 @@ import { ensureAdminSeeded } from "./admin-auth";
 import { postFulfillmentCogs, updateOrderAndIssueInvoice } from "./invoices";
 import { adjustOperationalBalances } from "./operations";
 import { ensureStandardAccountingChart } from "./accounting";
+import { nextIndividualOrderNumber } from "./order-numbers";
 
 type ProductSeed = {
   id: number;
@@ -856,7 +857,7 @@ export async function createOrderForUser(
     const net = Math.max(0, subtotal - coupon.discount);
     const tax = Math.round(net * 0.15 * 100) / 100;
     const total = Math.round((net + shippingCost + tax) * 100) / 100;
-    const orderNumber = `ME-${randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase()}`;
+    const orderNumber = await nextIndividualOrderNumber(tx);
     const [created] = await tx.insert(ordersTable).values({
       userId,
       orderNumber,

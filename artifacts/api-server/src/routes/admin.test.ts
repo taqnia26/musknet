@@ -523,6 +523,17 @@ describe.sequential("admin route authorization", () => {
       .expect(201);
 
     createdAdminOrderId = response.body.id;
+    expect(response.body.orderNumber).toMatch(/^L-[0-9]+$/);
+    const listedOrder = await request(app).get("/api/admin/orders")
+      .query({ search: response.body.orderNumber })
+      .set("Authorization", `Bearer ${superToken}`).expect(200);
+    expect(listedOrder.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: createdAdminOrderId, orderNumber: response.body.orderNumber }),
+    ]));
+    const legacyOrder = await request(app).get("/api/admin/orders")
+      .query({ search: "ADMIN-TEST-" })
+      .set("Authorization", `Bearer ${superToken}`).expect(200);
+    expect(legacyOrder.body.some((row: { id: number }) => row.id === orderId)).toBe(true);
     expect(response.body).toMatchObject({
       userId: customerId,
       subtotal: 200,

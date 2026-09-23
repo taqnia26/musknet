@@ -194,7 +194,7 @@ export async function createDistributorInvoice(
       next: sql<number>`coalesce(max(${invoicesTable.sequenceNumber}), 0) + 1`,
     }).from(invoicesTable);
     const sequenceNumber = Number(next);
-    const invoiceNumber = `INV-${String(sequenceNumber).padStart(6, "0")}`;
+    const invoiceNumber = `LC-${String(sequenceNumber).padStart(6, "0")}`;
     const qrCodeData = zatcaPhaseOneBase64({
       ...configuration,
       timestamp: issueDatetime.toISOString(),

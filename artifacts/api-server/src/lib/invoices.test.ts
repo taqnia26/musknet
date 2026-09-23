@@ -138,6 +138,7 @@ describe.sequential("atomic invoice issuance", () => {
     const sequences = rows.map((row) => row.sequenceNumber).sort((a, b) => a - b);
     expect(sequences).toEqual([sequences[0], sequences[0] + 1, sequences[0] + 2]);
     expect(new Set(rows.map((row) => row.invoiceNumber)).size).toBe(3);
+    expect(rows.every((row) => /^INV-[0-9]+$/.test(row.invoiceNumber))).toBe(true);
   });
 });
 
@@ -182,6 +183,10 @@ describe.sequential("distributor invoice issuance", () => {
       }, actorId, env),
     ]);
     expect(retriedInvoice.id).toBe(invoice.id);
+    expect(invoice.invoiceNumber).toMatch(/^LC-[0-9]+$/);
+    expect(retriedInvoice.invoiceNumber).toBe(invoice.invoiceNumber);
+    const [persisted] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+    expect(persisted.invoiceNumber).toBe(invoice.invoiceNumber);
     successfulInvoiceId = invoice.id;
     expect(invoice.subtotal).toBe(59.97);
     expect(invoice.vatAmount).toBe(9);
@@ -218,6 +223,23 @@ describe.sequential("distributor invoice issuance", () => {
       expect.objectContaining({ accountCode: "4100", debit: "0.0000", credit: "59.9700" }),
       expect.objectContaining({ accountCode: "2120", debit: "0.0000", credit: "9.0000" }),
     ]));
+  });
+
+  it("issues unique LC references for simultaneous different distributor sales", async () => {
+    const [first, second] = await Promise.all([
+      createDistributorInvoice({
+        creationKey: `parallel-a-${base}-invoice`, distributorId,
+        items: [{ productId, quantity: 1, unitPrice: 20 }],
+      }, actorId, env),
+      createDistributorInvoice({
+        creationKey: `parallel-b-${base}-invoice`, distributorId,
+        items: [{ productId, quantity: 1, unitPrice: 20 }],
+      }, actorId, env),
+    ]);
+    expect(first.invoiceNumber).toMatch(/^LC-[0-9]+$/);
+    expect(second.invoiceNumber).toMatch(/^LC-[0-9]+$/);
+    expect(first.invoiceNumber).not.toBe(second.invoiceNumber);
+    expect(Math.abs(first.sequenceNumber - second.sequenceNumber)).toBe(1);
   });
 
   it("records partial and full collections without allowing overpayment", async () => {
