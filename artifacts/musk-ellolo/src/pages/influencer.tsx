@@ -16,8 +16,9 @@ import {
   Copy, ExternalLink, LogOut, Share2, TrendingUp, TrendingDown, ShoppingBag, Eye, Wallet,
   UserRound, Activity, BarChart3, Check, Sparkles, Globe, Minus
 } from 'lucide-react';
+import { Money } from '@/components/money';
 
-const money = (value: unknown) => `${Number(value ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR`;
+const money = (value: unknown, lang: 'ar' | 'en' = 'en') => <Money value={Number(value ?? 0)} lang={lang} fractionDigits={2} />;
 const text = (value: unknown, fallback = '—') => value === undefined || value === null ? fallback : String(value);
 
 function Login() {
@@ -432,20 +433,20 @@ function Dashboard() {
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           <MetricCard
             title={t('إجمالي الأرباح', 'Total Earnings')}
-            value={money(summary.commission)}
+            value={money(summary.commission, lang)}
             icon={Wallet}
             change={changes.commission}
-            changeValue={money}
+            changeValue={(value: number) => money(value, lang)}
             t={t}
             valueColor="text-emerald-600 dark:text-emerald-400"
             testId="metric-earnings"
           />
           <MetricCard
             title={t('المبيعات المحققة', 'Generated Sales')}
-            value={money(summary.sales)}
+            value={money(summary.sales, lang)}
             icon={TrendingUp}
             change={changes.sales}
-            changeValue={money}
+            changeValue={(value: number) => money(value, lang)}
             t={t}
             testId="metric-sales"
           />
@@ -478,10 +479,10 @@ function Dashboard() {
           />
           <MetricCard
             title={t('متوسط قيمة الطلب', 'Average Order Value')}
-            value={money(summary.averageOrderValue)}
+            value={money(summary.averageOrderValue, lang)}
             icon={BarChart3}
             change={changes.averageOrderValue}
-            changeValue={money}
+            changeValue={(value: number) => money(value, lang)}
             t={t}
             testId="metric-aov"
           />
@@ -534,7 +535,7 @@ function Dashboard() {
                       tickFormatter={(value) => `${value.toLocaleString()}`}
                     />
                     <Tooltip
-                      formatter={(value: number, name: string) => [money(value), name === 'currentSales' ? t('الفترة الحالية', 'Current period') : t('الفترة السابقة', 'Previous period')]}
+                       formatter={(value: number, name: string) => [money(value, lang), name === 'currentSales' ? t('الفترة الحالية', 'Current period') : t('الفترة السابقة', 'Previous period')]}
                       contentStyle={{ backgroundColor: 'var(--tw-colors-stone-900)', borderColor: 'var(--tw-colors-stone-800)', borderRadius: '12px', fontWeight: 600, color: 'white' }}
                       itemStyle={{ color: '#d97706' }}
                     />
@@ -588,7 +589,7 @@ function Dashboard() {
                           </span>
                         </div>
                         <p className="text-xs font-medium text-stone-500">
-                          {code.discountType === 'percentage' ? `${code.discountValue}% ${t('خصم', 'Off')}` : `${money(code.discountValue)} ${t('خصم', 'Off')}`}
+                          {code.discountType === 'percentage' ? `${code.discountValue}% ${t('خصم', 'Off')}` : <>{money(code.discountValue, lang)} {t('خصم', 'Off')}</>}
                         </p>
                       </div>
                       <div className="text-end">
@@ -627,8 +628,8 @@ function Dashboard() {
                         </div>
                       </div>
                       <div className="text-end">
-                        <p className="font-bold text-sm text-stone-900 dark:text-white">{money(order.total)}</p>
-                        <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+{money(order.commission)}</p>
+                         <p className="font-bold text-sm text-stone-900 dark:text-white">{money(order.total, lang)}</p>
+                         <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+{money(order.commission, lang)}</p>
                       </div>
                     </div>
                   ))}

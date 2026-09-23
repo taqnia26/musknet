@@ -5,9 +5,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PackageX } from 'lucide-react';
 import { Link } from 'wouter';
 import { Button } from '@/components/ui/button';
+import { Money } from '@/components/money';
 
 export default function Orders() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { data: orders, isLoading } = useListOrders();
 
   const getStatusColor = (status: string) => {
@@ -63,7 +64,7 @@ export default function Orders() {
                     <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getStatusColor(order.status)}`}>
                       {statusText}
                     </span>
-                    <p className="mt-2 font-bold text-lg">{order.total} {t('ر.س', 'SAR')}</p>
+                    <Money value={order.total} lang={lang} className="mt-2 font-bold text-lg" />
                   </div>
                 </div>
                 
@@ -79,10 +80,10 @@ export default function Orders() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-bold">{item.productName}</p>
-                        <p className="text-sm text-muted-foreground">{t('الكمية', 'Qty')}: {item.quantity} × {item.unitPrice} {t('ر.س', 'SAR')}</p>
+                        <p className="text-sm text-muted-foreground">{t('الكمية', 'Qty')}: {item.quantity} × <Money value={item.unitPrice} lang={lang} /></p>
                       </div>
                       <div className="shrink-0 font-bold">
-                        {item.totalPrice} {t('ر.س', 'SAR')}
+                        <Money value={item.totalPrice} lang={lang} />
                       </div>
                     </div>
                   ))}

@@ -16,10 +16,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { BarChart3, AlertCircle, Clock, CheckSquare, Scale, Search, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
+import { Money } from '@/components/money';
 import { Button } from '@/components/ui/button';
 
 export default function AdminInventoryReports() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [activeTab, setActiveTab] = useState('valuation');
 
   // Hooks for various reports
@@ -29,7 +30,7 @@ export default function AdminInventoryReports() {
   const reconciliationQuery = useGetInventoryReconciliationReport({ query: { enabled: activeTab === 'reconciliation', queryKey: getGetInventoryReconciliationReportQueryKey() } });
 
   // Format helpers
-  const money = (val: number) => `${formatCurrency(val)} SAR`;
+  const money = (val: number) => <Money value={val} lang={lang} />;
 
   // Safe data extraction
   const valuationData = typeof valuationQuery.data === 'string' ? null : valuationQuery.data;

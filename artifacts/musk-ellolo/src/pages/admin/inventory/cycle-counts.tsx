@@ -17,6 +17,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getListInventoryCycleCountsQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
+import { Money } from '@/components/money';
 
 export default function AdminInventoryCounts() {
   const { t, lang } = useLanguage();
@@ -188,7 +189,7 @@ export default function AdminInventoryCounts() {
                         </div>;
                       })}
                     </TableCell>
-                    <TableCell>{formatCurrency(count.lines.reduce((sum, line) => sum + (line.countedQuantity - line.expectedQuantity) * Number(line.unitCost), 0))} SAR</TableCell>
+                    <TableCell><Money value={count.lines.reduce((sum, line) => sum + (line.countedQuantity - line.expectedQuantity) * Number(line.unitCost), 0)} lang={lang} /></TableCell>
                     <TableCell>
                       <Badge variant={count.status === 'draft' ? 'secondary' : count.status === 'approved' ? 'default' : 'outline'}>
                         {count.status}

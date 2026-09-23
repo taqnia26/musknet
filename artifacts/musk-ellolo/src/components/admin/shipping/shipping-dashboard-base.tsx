@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { 
   useGetAdminShippingDashboard, 
   getGetAdminShippingDashboardQueryKey,
@@ -111,7 +112,7 @@ export function getStatusIcon(status: ShipmentStatus) {
 
 // Format Currency
 const formatMoney = (amount: number, lang: string) => {
-  return `${formatCurrency(amount, lang === 'ar' ? 'ar' : 'en')} SAR`;
+  return <Money value={amount} lang={lang === 'ar' ? 'ar' : 'en'} />;
 };
 
 // Form Schemas
@@ -549,7 +550,7 @@ function ShipmentFormFields({
               name="actualCost"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('التكلفة الفعلية', 'Actual Cost')} (SAR)</FormLabel>
+                  <FormLabel>{t('التكلفة الفعلية', 'Actual Cost')}</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} value={field.value || ''} />
                   </FormControl>
@@ -562,7 +563,7 @@ function ShipmentFormFields({
               name="collectedCost"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('المبلغ المحصل من العميل', 'Collected Cost')} (SAR)</FormLabel>
+                  <FormLabel>{t('المبلغ المحصل من العميل', 'Collected Cost')}</FormLabel>
                   <FormControl>
                     <Input type="number" step="0.01" {...field} value={field.value || ''} />
                   </FormControl>

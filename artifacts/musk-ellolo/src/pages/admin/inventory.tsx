@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Boxes, CircleDollarSign, History, PackagePlus, Search, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { hasPermission } from '@/lib/permissions';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +45,7 @@ function statusLabel(status: AdminInventoryItem['stockStatus'], t: (ar: string, 
 function InventoryDetails({ item, open, onOpenChange, canEdit }: {
   item: AdminInventoryItem; open: boolean; onOpenChange: (open: boolean) => void; canEdit: boolean;
 }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [operation, setOperation] = useState<AdminInventoryAdjustmentOperation>('increase');
@@ -107,7 +108,7 @@ function InventoryDetails({ item, open, onOpenChange, canEdit }: {
           <div><p className="text-xs text-muted-foreground">{t('الرصيد الحالي', 'Current')}</p><p className="text-xl font-bold">{currentStock}</p></div>
           <div><p className="text-xs text-muted-foreground">{t('حد الطلب', 'Reorder point')}</p><p className="text-xl font-bold">{item.reorderPoint}</p></div>
           <div><p className="text-xs text-muted-foreground">{t('المستهدف', 'Target')}</p><p className="text-xl font-bold">{item.targetStockQuantity}</p></div>
-          <div><p className="text-xs text-muted-foreground">{t('التكلفة المتوسطة', 'Average cost')}</p><p className="text-xl font-bold">{currentAverageCost.toLocaleString()} SAR</p></div>
+          <div><p className="text-xs text-muted-foreground">{t('التكلفة المتوسطة', 'Average cost')}</p><p className="text-xl font-bold"><Money value={currentAverageCost} lang={lang} /></p></div>
         </div>
         {canEdit && (
           <form onSubmit={submit} className="space-y-4 rounded-lg border p-4">
@@ -210,7 +211,7 @@ export default function AdminInventory({ titleKey = 'overview' }: { titleKey?: '
 
   const cards = [
     { title: t('إجمالي الوحدات', 'Total units'), value: summary.totalUnits.toLocaleString(), icon: Boxes },
-    { title: t('قيمة المخزون', 'Inventory value'), value: `${summary.totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} SAR`, icon: CircleDollarSign },
+    { title: t('قيمة المخزون', 'Inventory value'), value: <Money value={summary.totalValue} lang={lang} />, icon: CircleDollarSign },
     { title: t('منتجات منخفضة', 'Low stock'), value: summary.lowStockProducts.toLocaleString(), icon: AlertTriangle },
     { title: t('منتجات نافدة', 'Out of stock'), value: summary.outOfStockProducts.toLocaleString(), icon: XCircle },
   ];

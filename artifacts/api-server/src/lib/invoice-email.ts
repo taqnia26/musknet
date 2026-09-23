@@ -1,7 +1,7 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -36,6 +36,23 @@ const invoiceFooter = [
   resolve(dirname(fileURLToPath(import.meta.url)), "../../musk-ellolo/public/site-assets/invoice-footer.jpg"),
   resolve(dirname(fileURLToPath(import.meta.url)), "../../../musk-ellolo/public/site-assets/invoice-footer.jpg"),
 ].find(existsSync);
+const riyalSymbolSvg = [
+  resolve(dirname(fileURLToPath(import.meta.url)), "../../musk-ellolo/public/site-assets/saudi-riyal-symbol.svg"),
+  resolve(dirname(fileURLToPath(import.meta.url)), "../../../musk-ellolo/public/site-assets/saudi-riyal-symbol.svg"),
+].find(existsSync);
+const riyalSymbolPaths = riyalSymbolSvg
+  ? [...readFileSync(riyalSymbolSvg, "utf8").matchAll(/<path\b[^>]*\bd="([^"]+)"/g)].map((match) => match[1])
+  : [];
+
+function drawRiyalSymbol(document: PDFKit.PDFDocument, x: number, y: number, size: number) {
+  if (!riyalSymbolPaths.length) throw new Error("Saudi Riyal symbol is missing from the application assets");
+  // PDFKit does not consume SVG files directly. Its path renderer supports the
+  // SVG path grammar used by the official artwork, so retain the artwork as a
+  // vector in the PDF rather than substituting a text glyph.
+  const drawing = document.save().translate(x, y).scale(size / 1124.14, size / 1124.14);
+  for (const path of riyalSymbolPaths) drawing.path(path).fill("#231f20");
+  drawing.restore();
+}
 
 export async function createInvoicePdf(invoice: InvoiceForEmail) {
   if (!invoiceLogo) throw new Error("Invoice brand logo is missing from the application assets");
@@ -67,7 +84,9 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   document.text(invoice.dueDate || "-", 152, 305, { width: 120, align: "right" });
   document.roundedRect(52, 328, 224, 30, 3).fillOpacity(0.2).fill("#a8a29e").fillOpacity(1);
   document.fillColor("#292728").font("Helvetica-Bold").fontSize(9).text("Amount Due", 62, 338);
-  document.text(money(invoice.outstandingAmount) + " SAR", 155, 338, { width: 111, align: "right" });
+  // Keep the symbol in its own slot so right-aligned numbers never cover it.
+  drawRiyalSymbol(document, 140, 337, 14);
+  document.text(money(invoice.outstandingAmount), 158, 338, { width: 108, align: "right" });
 
   document.fillColor("#57534e").font("Helvetica-Bold").fontSize(9).text("BILL TO", 310, 152);
   document.fillColor("#292728").fontSize(14).text(invoice.buyerName || "-", 310, 173, { width: 243, height: 36 });
@@ -90,7 +109,9 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
     if (y > 665) { document.addPage(); y = 50; }
     document.fillColor("#111827").font("Helvetica").fontSize(9).text(item.productName, 54, y + 7, { width: 230 });
     document.fillColor("#4b5563").text(String(item.quantity), 300, y + 7, { width: 45, align: "center" });
+    drawRiyalSymbol(document, 347, y + 7, 10);
     document.text(money(item.unitPrice), 360, y + 7, { width: 75, align: "right" });
+    drawRiyalSymbol(document, 437, y + 7, 10);
     document.fillColor("#111827").font("Helvetica-Bold").text(money(item.totalAmount), 450, y + 7, { width: 90, align: "right" });
     document.moveTo(42, y + 25).lineTo(right, y + 25).strokeColor("#e5e7eb").stroke();
     y += 29;
@@ -110,11 +131,13 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   const totalsX = 325;
   totalRows.forEach(([label, value], index) => {
     document.fillColor("#4b5563").font("Helvetica").fontSize(9).text(String(label), totalsX, y + index * 23, { width: 110 });
+    drawRiyalSymbol(document, 437, y + index * 23, 10);
     document.text(money(Number(value)), 450, y + index * 23, { width: 90, align: "right" });
   });
   const totalY = y + totalRows.length * 23 + 2;
   document.roundedRect(totalsX - 8, totalY, 223, 35, 4).fill("#f5f5f4");
   document.fillColor("#111827").font("Helvetica-Bold").fontSize(13).text("TOTAL", totalsX, totalY + 11);
+  drawRiyalSymbol(document, 432, totalY + 12, 13);
   document.fillColor("#292728").text(money(invoice.totalAmount), 450, totalY + 11, { width: 90, align: "right" });
   const pages = document.bufferedPageRange();
   for (let index = pages.start; index < pages.start + pages.count; index++) {
@@ -131,7 +154,7 @@ export async function sendInvoiceEmail(input: { recipient: string; invoice: Invo
       from,
       to: [input.recipient],
       subject: `Tax Invoice ${input.invoice.invoiceNumber} - Musk Ellolo`,
-      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>فاتورة ضريبية ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة الضريبية مرفقة بصيغة PDF.</p><p>الإجمالي: <strong>${money(input.invoice.totalAmount)}</strong></p><p>الرصيد المستحق: <strong>${money(input.invoice.outstandingAmount)}</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
+      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>فاتورة ضريبية ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة الضريبية مرفقة بصيغة PDF.</p><p>الإجمالي: <strong>${money(input.invoice.totalAmount)} ريال سعودي</strong></p><p>الرصيد المستحق: <strong>${money(input.invoice.outstandingAmount)} ريال سعودي</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
       attachments: [{ filename: `${input.invoice.invoiceNumber}.pdf`, content: input.pdf.toString("base64") }],
   };
   const apiKey = process.env.RESEND_API_KEY?.trim();

@@ -8,13 +8,14 @@ import { Minus, Plus, Heart, Share2, Truck, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { FaApplePay } from 'react-icons/fa';
+import { Money } from '@/components/money';
 
 const siteAsset = (filename: string) => `${import.meta.env.BASE_URL}site-assets/${filename}`;
 
 export default function ProductDetails() {
   const params = useParams();
   const slug = params.slug || '';
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   
   const { data: product, isLoading, isError } = useGetProduct(slug);
@@ -60,8 +61,6 @@ export default function ProductDetails() {
     });
   };
 
-  const formattedPrice = `${product.price} ${t('ر.س', 'SAR')}`;
-
   return (
     <div className="min-h-screen w-full min-w-0 overflow-x-clip bg-white pb-24">
       <div className="container mx-auto px-4 py-8 md:py-12">
@@ -98,7 +97,7 @@ export default function ProductDetails() {
 
             {/* Price */}
             <div className="mb-6">
-              <span className="text-2xl font-bold text-black">{formattedPrice}</span>
+              <Money value={product.price} lang={lang} className="text-2xl font-bold text-black" />
             </div>
 
             {/* Installments (Tamara/Tabby placeholder) */}
@@ -126,7 +125,7 @@ export default function ProductDetails() {
             <div className="bg-white">
               <div className="mb-4 flex items-center justify-between gap-4">
                 <span className="font-bold text-black">{t('السعر', 'Price')}</span>
-                <span className="text-2xl font-bold text-black">{formattedPrice}</span>
+                <Money value={product.price} lang={lang} className="text-2xl font-bold text-black" />
               </div>
               
               <div className="mb-4 flex flex-wrap items-center gap-4">
@@ -212,7 +211,7 @@ export default function ProductDetails() {
 }
 
 function RelatedProductCard({ product }: { product: any }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   return (
     <Link href={`/products/${product.slug}`}>
       <div className="group cursor-pointer flex flex-col h-full bg-white border border-gray-100 rounded-sm p-4 hover:shadow-md transition-shadow">
@@ -225,7 +224,7 @@ function RelatedProductCard({ product }: { product: any }) {
         </div>
         <div className="space-y-2 text-center flex-1 flex flex-col justify-end pt-4 border-t border-gray-100">
           <h3 className="font-medium text-sm text-black line-clamp-1">{t(product.nameAr, product.nameEn)}</h3>
-          <p className="font-bold text-black text-sm">{product.price} {t('ر.س', 'SAR')}</p>
+          <Money value={product.price} lang={lang} className="font-bold text-black text-sm" />
         </div>
       </div>
     </Link>

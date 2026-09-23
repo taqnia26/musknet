@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -388,7 +389,7 @@ export default function AdminWalletBilling() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="font-semibold text-sm">{purchase.amount} SAR</div>
+                      <div className="font-semibold text-sm"><Money value={purchase.amount} lang={lang} /></div>
                       {purchase.invoiceObjectPath && ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(purchase.invoiceContentType ?? '') && (
                         <Button variant="outline" size="sm" onClick={() => void openInvoice(purchase.id)}>
                           {t('تنزيل المستند', 'Download document')}

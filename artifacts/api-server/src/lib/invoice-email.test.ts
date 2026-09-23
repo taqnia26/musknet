@@ -30,6 +30,7 @@ describe("invoice email PDF", () => {
     expect(contents).toContain("/Width 700");
     expect(contents).toContain("/Height 145");
     expect(contents).toContain("/MediaBox [0 0 595.28 841.89]");
+    expect(contents).not.toContain(" SAR");
     expect(pdf.length).toBeGreaterThan(2000);
   });
 });

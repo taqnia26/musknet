@@ -18,6 +18,7 @@ import {
 } from '@workspace/api-client-react';
 import { CalendarDays, DollarSign, Download, Edit2, Megaphone, PauseCircle, Plus, ShoppingCart, TicketCheck, MoreHorizontal } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { hasPermission } from '@/lib/permissions';
 import { Badge } from '@/components/ui/badge';
@@ -175,11 +176,7 @@ export default function AdminCampaigns() {
   };
   const locale = lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US';
   const formatNumber = (value: number) => new Intl.NumberFormat(locale).format(value);
-  const formatCurrency = (value: number) => new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'SAR',
-    maximumFractionDigits: 0,
-  }).format(value);
+  const formatCurrency = (value: number) => <Money value={value} lang={lang} />;
   const resultByCampaign = new Map(results?.campaigns.map((campaign) => [campaign.id, campaign]));
 
   return (

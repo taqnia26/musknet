@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { Money } from '@/components/money';
 
 export default function Products() {
   const params = useParams();
@@ -96,7 +97,7 @@ export default function Products() {
 }
 
 function ProductGridCard({ product }: { product: any }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const addItemMutation = useAddCartItem();
   
@@ -152,9 +153,9 @@ function ProductGridCard({ product }: { product: any }) {
           </h3>
           
           <div className="flex items-center justify-center gap-2">
-            <span className="font-bold text-black text-sm">{product.price} {t('ر.س', 'SAR')}</span>
+            <Money value={product.price} lang={lang} className="font-bold text-black text-sm" />
             {product.compareAtPrice && (
-              <span className="text-gray-400 line-through text-xs">{product.compareAtPrice} {t('ر.س', 'SAR')}</span>
+              <Money value={product.compareAtPrice} lang={lang} className="text-gray-400 line-through text-xs" />
             )}
           </div>
         </div>

@@ -1,7 +1,8 @@
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 
 export default function Policy() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   return (
     <div className="w-full bg-white min-h-screen">
@@ -16,10 +17,10 @@ export default function Policy() {
             <ul className="list-disc list-inside space-y-2 rtl:pr-4 ltr:pl-4">
               <li>{t('يتم التوصيل خلال 5 أيام عمل كحد أقصى داخل المملكة العربية السعودية.', 'Delivery is within a maximum of 5 working days within Saudi Arabia.')}</li>
               <li>{t('يتم التوصيل خلال 10 أيام عمل كحد أقصى لدول مجلس التعاون الخليجي.', 'Delivery is within a maximum of 10 working days for GCC countries.')}</li>
-              <li>{t('رسوم التوصيل داخل المملكة: 28 ريال سعودي.', 'Delivery fee within the Kingdom: 28 SAR.')}</li>
-              <li>{t('رسوم التوصيل لدول الخليج: 35 ريال سعودي لأول كيلو و 15 ريال سعودي لكل كيلو إضافي.', 'Delivery fee to GCC countries: 35 SAR for the first kilo and 15 SAR for each additional kilo.')}</li>
-              <li>{t('توصيل مجاني للطلبات التي تبلغ 800 ريال سعودي فأكثر داخل المملكة.', 'Free delivery for orders of 800 SAR or more within the Kingdom.')}</li>
-              <li>{t('توصيل مجاني للطلبات التي تبلغ 1000 ريال سعودي فأكثر خارج المملكة.', 'Free delivery for orders of 1000 SAR or more outside the Kingdom.')}</li>
+               <li>{t('رسوم التوصيل داخل المملكة: ', 'Delivery fee within the Kingdom: ')}<Money value={28} lang={lang} />.</li>
+               <li>{t('رسوم التوصيل لدول الخليج: ', 'Delivery fee to GCC countries: ')}<Money value={35} lang={lang} /> {t('لأول كيلو و ', 'for the first kilo and ')}<Money value={15} lang={lang} /> {t('لكل كيلو إضافي.', 'for each additional kilo.')}</li>
+               <li>{t('توصيل مجاني للطلبات التي تبلغ ', 'Free delivery for orders of ')}<Money value={800} lang={lang} />{t(' فأكثر داخل المملكة.', ' or more within the Kingdom.')}</li>
+               <li>{t('توصيل مجاني للطلبات التي تبلغ ', 'Free delivery for orders of ')}<Money value={1000} lang={lang} />{t(' فأكثر خارج المملكة.', ' or more outside the Kingdom.')}</li>
             </ul>
           </section>
 
@@ -37,7 +38,7 @@ export default function Policy() {
             <ul className="list-disc list-inside space-y-2 rtl:pr-4 ltr:pl-4">
               <li>{t('يحق للعميل استبدال المنتج خلال 7 أيام من تاريخ الفاتورة.', 'The customer has the right to exchange the product within 7 days from the invoice date.')}</li>
               <li>{t('بشرط أن يكون المنتج غير مستخدم ومغلقًا تمامًا مع إرفاق الفاتورة الأصلية.', 'Provided the product is unused and completely sealed, with the original invoice attached.')}</li>
-              <li>{t('تُضاف رسوم استبدال بقيمة 4 ريال سعودي ورسوم توصيل 25 ريال سعودي.', 'An exchange fee of 4 SAR and a delivery fee of 25 SAR will be added.')}</li>
+               <li>{t('تُضاف رسوم استبدال بقيمة ', 'An exchange fee of ')}<Money value={4} lang={lang} />{t(' ورسوم توصيل ', ' and a delivery fee of ')}<Money value={25} lang={lang} />{t('.', '.')}</li>
             </ul>
           </section>
 

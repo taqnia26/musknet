@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -194,9 +195,9 @@ export function PurchaseReceiptForm() {
                       <tr key={receipt.id} className="border-t">
                         <td className="p-3"><div className="font-medium">{receipt.receiptNumber}</div><div className="text-xs text-muted-foreground">{receipt.receiptDate.slice(0, 10)}</div></td>
                         <td className="p-3"><div>{receipt.vendorName}</div><div className="text-xs text-muted-foreground">{reference || receipt.paymentReference || '—'}</div></td>
-                        <td className="p-3 text-end">{total.toFixed(2)} SAR</td>
-                        <td className="p-3 text-end">{paid.toFixed(2)} SAR</td>
-                        <td className="p-3 text-end font-medium">{outstanding.toFixed(2)} SAR</td>
+                        <td className="p-3 text-end"><Money value={total} lang={lang} fractionDigits={2} /></td>
+                        <td className="p-3 text-end"><Money value={paid} lang={lang} fractionDigits={2} /></td>
+                        <td className="p-3 text-end font-medium"><Money value={outstanding} lang={lang} fractionDigits={2} /></td>
                         <td className="p-3">{receipt.paymentStatus}</td>
                         <td className="p-3 text-end">{outstanding > 0 ? <Button size="sm" variant="outline" onClick={() => setPaymentReceiptId(receipt.id)}>{t('تسجيل سداد', 'Record payment')}</Button> : <span className="text-xs text-muted-foreground">{t('مغلق', 'Settled')}</span>}</td>
                       </tr>
@@ -208,7 +209,7 @@ export function PurchaseReceiptForm() {
           )}
           {selectedReceipt && (
             <form onSubmit={submitPayment} className="rounded-md border bg-muted/20 p-4 space-y-4">
-              <div className="flex items-center justify-between"><h3 className="font-medium">{t(`سداد ${selectedReceipt.receiptNumber}`, `Settle ${selectedReceipt.receiptNumber}`)}</h3><span className="text-sm text-muted-foreground">{t('المتبقي', 'Remaining')}: {remaining.toFixed(2)} SAR</span></div>
+              <div className="flex items-center justify-between"><h3 className="font-medium">{t(`سداد ${selectedReceipt.receiptNumber}`, `Settle ${selectedReceipt.receiptNumber}`)}</h3><span className="text-sm text-muted-foreground">{t('المتبقي', 'Remaining')}: <Money value={remaining} lang={lang} fractionDigits={2} /></span></div>
               <div className="grid gap-4 md:grid-cols-4">
                 <label className="space-y-1 text-sm"><span>{t('التاريخ', 'Date')}</span><Input name="paymentDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></label>
                 <label className="space-y-1 text-sm"><span>{t('المبلغ', 'Amount')}</span><Input name="amount" type="number" min="0.01" max={remaining} step="0.01" required defaultValue={remaining.toFixed(2)} /></label>

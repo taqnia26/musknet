@@ -17,6 +17,7 @@ import {
   getAdminListPayrollQueryKey
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -507,7 +508,7 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
 }
 
 function PayrollTab({ canEdit }: { canEdit: boolean }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { data: payroll, isLoading } = useAdminListPayroll({});
   const { data: employees } = useAdminListEmployees({});
   const [isOpen, setIsOpen] = useState(false);
@@ -619,7 +620,7 @@ function PayrollTab({ canEdit }: { canEdit: boolean }) {
                 </div>
                 <div className="p-3 bg-muted rounded-md flex justify-between items-center">
                   <span className="font-semibold">{t('الصافي:', 'Net:')}</span>
-                  <span className="font-bold text-lg text-primary">{Math.max(0, base + bonuses - deductions)} SAR</span>
+                  <span className="font-bold text-lg text-primary"><Money value={Math.max(0, base + bonuses - deductions)} lang={lang} /></span>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">

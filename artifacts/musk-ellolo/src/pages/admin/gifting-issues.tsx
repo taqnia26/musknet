@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, type ReactNode } from 'react';
 import { Coins, Package, Search, Plus, Trash2, Clock, FileStack, Pencil, RotateCcw, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -29,7 +29,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { giftingIssueLabels as labels, issueUses } from './gifting-issues-config';
-import { formatCurrency, formatInteger } from '@/lib/formatters';
+import { formatInteger } from '@/lib/formatters';
+import { Money } from '@/components/money';
 
 type StockSource = 'normal' | 'used_return';
 type Line = { productId: string; quantity: string; stockSource: StockSource | '' };
@@ -530,7 +531,7 @@ export default function AdminGiftingIssues() {
                         {isDuplicate && <p className="mt-1 text-[11px] font-medium text-destructive">{t('هذا المنتج مكرر', 'This product is duplicated')}</p>}
                         {product && !isDuplicate && (
                           <p className={`mt-1.5 text-[11.5px] ${productNeedsCost ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>
-                             {productNeedsCost ? t('لا توجد تكلفة للوحدة. أدخلها من المخزون.', 'No unit cost. Enter it from Inventory.') : <>{t('المخزون الرئيسي', 'Main stock')}: <span className="font-mono">{formatInteger(product.stockQuantity, lang)}</span> · {t('متوسط التكلفة', 'Avg Cost')}: <span className="font-mono">{formatCurrency(product.averageCost, lang)}</span> SAR</>}
+                             {productNeedsCost ? t('لا توجد تكلفة للوحدة. أدخلها من المخزون.', 'No unit cost. Enter it from Inventory.') : <>{t('المخزون الرئيسي', 'Main stock')}: <span className="font-mono">{formatInteger(product.stockQuantity, lang)}</span> · {t('متوسط التكلفة', 'Avg Cost')}: <Money value={product.averageCost} lang={lang} /></>}
                           </p>
                         )}
                         {isTesterMovement && line.productId && (
@@ -592,7 +593,7 @@ export default function AdminGiftingIssues() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
          <SummaryCard icon={FileStack} label={t('عدد العمليات', 'Total Records')} value={formatInteger(summary?.rows, lang)} />
          <SummaryCard icon={Package} label={t('إجمالي الوحدات', 'Total Units')} value={formatInteger(summary?.units, lang)} />
-         <SummaryCard icon={Coins} label={t('إجمالي التكلفة', 'Total Cost')} value={`${formatCurrency(summary?.totalCost, lang)} SAR`} />
+         <SummaryCard icon={Coins} label={t('إجمالي التكلفة', 'Total Cost')} value={<Money value={summary?.totalCost} lang={lang} />} />
       </div>
 
       <Card className="border-border/60 shadow-sm">
@@ -688,7 +689,7 @@ export default function AdminGiftingIssues() {
                          {formatInteger(row.quantity, lang)}
                       </TableCell>
                       <TableCell className="text-right rtl:text-left font-mono font-medium">
-                         {formatCurrency(row.totalCost, lang)}
+                         <Money value={row.totalCost} lang={lang} />
                       </TableCell>
                       <TableCell>
                          <div className="flex items-center justify-center">
@@ -874,7 +875,7 @@ function TesterSourceSelector({ productId, value, onChange, quantity, onSplit, l
   );
 }
 
-function SummaryCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string | number }) {
+function SummaryCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
   return (
     <Card className="border-border/60 shadow-sm overflow-hidden group">
       <CardContent className="flex items-center gap-4 p-5">
@@ -930,7 +931,7 @@ function Detail({ row, lang }: { row: GiftingIssue; lang: 'ar' | 'en' }) {
         </div>
         <div className="bg-muted/20 rounded-lg p-3 text-center border border-border/50">
           <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">{lang === 'ar' ? 'التكلفة' : 'Cost'}</div>
-           <div className="text-xl font-bold font-mono">{formatCurrency(row.totalCost, lang)} <span className="text-xs text-muted-foreground ml-1">SAR</span></div>
+           <div className="text-xl font-bold font-mono"><Money value={row.totalCost} lang={lang} /></div>
         </div>
       </div>
       {row.category === 'B2B_EVALUATION' && (

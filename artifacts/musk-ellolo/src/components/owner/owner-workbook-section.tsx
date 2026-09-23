@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import workbookUrl from '../../../../../attached_assets/التزامات_مسك_1789830735422.xlsx?url';
 import { Button } from '@/components/ui/button';
+import { Money } from '@/components/money';
+import { useLanguage } from '@/hooks/use-language';
 
 type WorkbookSectionProps = {
   title: string;
@@ -23,7 +25,22 @@ function trimSheet(rows: unknown[][]) {
   return keptRows.map((row) => Array.from({ length: lastColumn + 1 }, (_, index) => row[index] ?? ''));
 }
 
+function isMoneyColumn(rows: string[][], columnIndex: number) {
+  const headerText = rows.slice(0, 5).map((row) => row[columnIndex] ?? '').join(' ');
+  return /مبلغ|قيمة|تكلفة|سعر|إجمالي|رصيد|amount|value|cost|price|total|balance|revenue|profit/i.test(headerText);
+}
+
+function renderCell(value: string, rows: string[][], rowIndex: number, columnIndex: number, lang: 'ar' | 'en') {
+  if (!value) return <span className="text-transparent">—</span>;
+  if (rowIndex > 0 && isMoneyColumn(rows, columnIndex)) {
+    const numericValue = Number(value.replace(/,/g, ''));
+    if (Number.isFinite(numericValue)) return <Money value={numericValue} lang={lang} />;
+  }
+  return value;
+}
+
 export function OwnerWorkbookSection({ title, sheetNames }: WorkbookSectionProps) {
+  const { lang } = useLanguage();
   const [sheets, setSheets] = useState<SheetRows>({});
   const [selectedSheet, setSelectedSheet] = useState(sheetNames[0]);
   const [error, setError] = useState(false);
@@ -107,7 +124,7 @@ export function OwnerWorkbookSection({ title, sheetNames }: WorkbookSectionProps
                           value !== '' && rowIndex < 5 ? 'font-medium' : ''
                         }`}
                       >
-                        {value || <span className="text-transparent">—</span>}
+                        {renderCell(value, rows, rowIndex, columnIndex, lang)}
                       </td>
                     ))}
                   </tr>

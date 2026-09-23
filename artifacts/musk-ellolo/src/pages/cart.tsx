@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Minus, Plus, Trash2, ShoppingBag, ShieldCheck } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Money } from '@/components/money';
 
 export default function Cart() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const queryClient = useQueryClient();
   const { data: cart, isLoading } = useGetCart();
   
@@ -92,7 +93,7 @@ export default function Cart() {
                         {t(item.product.nameAr, item.product.nameEn)}
                       </Link>
                     </h3>
-                    <p className="text-muted-foreground text-sm mt-1">{item.product.price} {t('ر.س', 'SAR')}</p>
+                    <p className="text-muted-foreground text-sm mt-1"><Money value={item.product.price} lang={lang} /></p>
                   </div>
                   <button 
                     onClick={() => handleRemove(item.id)}
@@ -123,7 +124,7 @@ export default function Cart() {
                     </button>
                   </div>
                   <div className="font-bold text-lg">
-                    {item.lineTotal} {t('ر.س', 'SAR')}
+                    <Money value={item.lineTotal} lang={lang} />
                   </div>
                 </div>
               </div>
@@ -138,7 +139,7 @@ export default function Cart() {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('المجموع الفرعي', 'Subtotal')}</span>
-                <span className="font-bold">{activeCart.subtotal} {t('ر.س', 'SAR')}</span>
+                <Money value={activeCart.subtotal} lang={lang} className="font-bold" />
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">{t('الشحن', 'Shipping')}</span>
@@ -148,7 +149,7 @@ export default function Cart() {
             
             <div className="border-t pt-4 flex justify-between items-center text-lg">
               <span className="font-bold">{t('الإجمالي', 'Total')}</span>
-                <span className="font-bold">{activeCart.subtotal} {t('ر.س', 'SAR')}</span>
+                <Money value={activeCart.subtotal} lang={lang} className="font-bold" />
             </div>
 
             <Link href="/checkout" className="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 h-14 px-8 rounded-full text-base w-full mt-4">

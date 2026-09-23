@@ -11,6 +11,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Money } from '@/components/money';
 
 const addressSchema = z.object({
   label: z.string().min(1, 'مطلوب / Required'),
@@ -201,7 +202,7 @@ export default function Checkout() {
                             <p className="text-xs text-muted-foreground">{method.estimatedDays}</p>
                           </div>
                         </div>
-                        <span className="shrink-0 text-sm font-bold">{method.price === 0 ? t('مجاناً', 'Free') : `${method.price} ${t('ر.س', 'SAR')}`}</span>
+                        <span className="shrink-0 text-sm font-bold">{method.price === 0 ? t('مجاناً', 'Free') : <Money value={method.price} lang={lang} />}</span>
                       </label>
                     ))}
                   </div>
@@ -249,7 +250,7 @@ export default function Checkout() {
                     </div>
                     <div className="flex-1">
                       <p className="font-bold text-sm line-clamp-1">{t(item.product.nameAr, item.product.nameEn)}</p>
-                      <p className="text-muted-foreground text-xs">{item.lineTotal} {t('ر.س', 'SAR')}</p>
+                      <p className="text-muted-foreground text-xs"><Money value={item.lineTotal} lang={lang} /></p>
                     </div>
                   </div>
                 ))}
@@ -278,27 +279,27 @@ export default function Checkout() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('المجموع الفرعي', 'Subtotal')}</span>
-                  <span className="font-bold">{quote?.subtotal || cart.subtotal} {t('ر.س', 'SAR')}</span>
+                  <Money value={quote?.subtotal || cart.subtotal} lang={lang} className="font-bold" />
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('الشحن', 'Shipping')}</span>
-                  <span className="font-bold">{quote?.shippingCost === 0 ? t('مجاناً', 'Free') : `${quote?.shippingCost || 0} ${t('ر.س', 'SAR')}`}</span>
+                  <span className="font-bold">{quote?.shippingCost === 0 ? t('مجاناً', 'Free') : <Money value={quote?.shippingCost || 0} lang={lang} />}</span>
                 </div>
                 {quote?.discount ? (
                   <div className="flex justify-between text-accent">
                     <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {t('الخصم', 'Discount')}</span>
-                    <span className="font-bold">-{quote.discount} {t('ر.س', 'SAR')}</span>
+                    <span className="font-bold">-<Money value={quote.discount} lang={lang} /></span>
                   </div>
                 ) : null}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('الضريبة (15%)', 'Tax (15%)')}</span>
-                  <span className="font-bold">{quote?.tax || 0} {t('ر.س', 'SAR')}</span>
+                  <Money value={quote?.tax || 0} lang={lang} className="font-bold" />
                 </div>
               </div>
               
               <div className="border-t mt-4 pt-4 flex justify-between items-center text-lg">
                 <span className="font-bold">{t('الإجمالي', 'Total')}</span>
-                <span className="font-bold text-xl text-primary">{quote?.total || cart.subtotal} {t('ر.س', 'SAR')}</span>
+                <Money value={quote?.total || cart.subtotal} lang={lang} className="font-bold text-xl text-primary" />
               </div>
             </div>
           </div>

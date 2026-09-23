@@ -11,6 +11,7 @@ import {
   getAdminGetOrderQueryKey
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -191,7 +192,7 @@ export default function AdminOrders() {
                 <TableRow key={order.id} data-testid={`row-order-${order.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">#{order.orderNumber}</TableCell>
                   <TableCell>{format(new Date(order.createdAt), 'yyyy-MM-dd')}</TableCell>
-                  <TableCell className="font-semibold">{order.total.toFixed(2)} {t('ر.س', 'SAR')}</TableCell>
+                  <TableCell className="font-semibold"><Money value={order.total} lang={lang} fractionDigits={2} /></TableCell>
                   <TableCell>
                     <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={order.status} onValueChange={(v) => handleUpdateStatus(order.id, v)}>
                       <SelectTrigger className={`h-8 text-xs font-semibold ${statusMap[order.status]?.className || ''} border-0 ring-offset-transparent focus:ring-0 focus:ring-offset-0`}>
@@ -433,26 +434,26 @@ export default function AdminOrders() {
                                   <div className="w-full min-w-0 md:w-1/2 lg:w-1/3 bg-muted/10 p-5 rounded-md border space-y-3">
                                   <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">{t('المجموع الفرعي', 'Subtotal')}</span>
-                                    <span className="font-medium">{orderDetail.subtotal.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                    <span className="font-medium"><Money value={orderDetail.subtotal} lang={lang} fractionDigits={2} /></span>
                                   </div>
                                   <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">{t('تكلفة الشحن', 'Shipping')}</span>
-                                    <span className="font-medium">{orderDetail.shippingCost.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                    <span className="font-medium"><Money value={orderDetail.shippingCost} lang={lang} fractionDigits={2} /></span>
                                   </div>
                                   <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">{t('الضريبة', 'Tax')}</span>
-                                    <span className="font-medium">{orderDetail.tax.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                    <span className="font-medium"><Money value={orderDetail.tax} lang={lang} fractionDigits={2} /></span>
                                   </div>
                                   {orderDetail.discount > 0 && (
                                     <div className="flex justify-between text-sm text-success font-medium">
                                       <span className="min-w-0 break-words">{t('الخصم', 'Discount')} {orderDetail.coupon ? `(${orderDetail.coupon.code})` : ''}</span>
-                                      <span>-{orderDetail.discount.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                      <span>-<Money value={orderDetail.discount} lang={lang} fractionDigits={2} /></span>
                                     </div>
                                   )}
                                   <Separator className="my-2" />
                                   <div className="flex justify-between items-center text-base font-bold text-primary">
                                     <span>{t('الإجمالي النهائي', 'Total')}</span>
-                                    <span>{orderDetail.total.toFixed(2)} {t('ر.س', 'SAR')}</span>
+                                    <span><Money value={orderDetail.total} lang={lang} fractionDigits={2} /></span>
                                   </div>
                                   <div className="flex justify-between items-center text-xs mt-2">
                                     <span className="text-muted-foreground">{t('طريقة الدفع', 'Payment Method')}</span>

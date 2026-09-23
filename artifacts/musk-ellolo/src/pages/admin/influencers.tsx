@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getAdminListCouponsQueryKey,
@@ -29,6 +29,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -72,7 +73,7 @@ const blank = {
 const numberValue = (value: unknown) => Number(value ?? 0) || 0;
 
 function formatSar(value: number, lang: string) {
-  return `${formatCurrency(value, lang === 'ar' ? 'ar' : 'en')} SAR`;
+  return <Money value={value} lang={lang === 'ar' ? 'ar' : 'en'} />;
 }
 
 function formatDate(value: string | null | undefined, lang: string) {
@@ -299,7 +300,7 @@ export default function AdminInfluencers() {
         <MetricCard icon={CircleDollarSign} label={t('المبيعات المنسوبة', 'Attributed sales')} value={formatSar(totals.sales, lang)} hint={t('طلبات مدفوعة فقط', 'Paid orders only')} tone="emerald" testId="metric-influencer-sales" />
          <MetricCard icon={WalletCards} label={t('إجمالي العمولات', 'Total commissions')} value={formatSar(totals.commission, lang)} hint={totals.sales ? `${formatPercent((totals.commission / totals.sales) * 100, lang)} ${t('من المبيعات', 'of sales')}` : '—'} tone="amber" testId="metric-influencer-commission" />
         <MetricCard icon={TrendingUp} label={t('الصافي بعد العمولة', 'Net after commission')} value={formatSar(totalNet, lang)} hint={t('قبل تكلفة المنتج والمصاريف', 'Before product cost and expenses')} tone="blue" testId="metric-influencer-net" />
-         <MetricCard icon={PackageCheck} label={t('الطلبات المدفوعة', 'Paid orders')} value={formatInteger(totals.orders, lang)} hint={`${t('متوسط الطلب', 'Average order')} ${formatSar(averageOrder, lang)}`} tone="violet" testId="metric-influencer-orders" />
+         <MetricCard icon={PackageCheck} label={t('الطلبات المدفوعة', 'Paid orders')} value={formatInteger(totals.orders, lang)} hint={<>{t('متوسط الطلب', 'Average order')} {formatSar(averageOrder, lang)}</>} tone="violet" testId="metric-influencer-orders" />
          <MetricCard icon={Users} label={t('زيارات الإحالة', 'Referral visits')} value={formatInteger(totals.visits, lang)} hint={totals.visits ? `${formatPercent((totals.orders / totals.visits) * 100, lang)} ${t('تحويل إلى طلب مدفوع', 'converted to paid orders')}` : t('لم تسجل زيارات بعد', 'No visits recorded yet')} tone="slate" testId="metric-influencer-visits" />
       </section>
 
@@ -489,7 +490,7 @@ export default function AdminInfluencers() {
                     </span>
                     <span className="ms-auto text-xs text-muted-foreground">
                       {item.efficiency > 0
-                        ? `${formatSar(item.efficiency, lang)} ${t('مبيعات لكل ريال عمولة', 'sales per SAR commission')}`
+                        ? <>{formatSar(item.efficiency, lang)} {t('مبيعات لكل ريال عمولة', 'sales per Saudi riyal commission')}</>
                         : t('لا توجد عمولة مدفوعة بعد', 'No paid commission yet')}
                     </span>
                   </div>
@@ -517,8 +518,8 @@ function MetricCard({
 }: {
   icon: typeof CircleDollarSign;
   label: string;
-  value: string;
-  hint: string;
+  value: ReactNode;
+  hint: ReactNode;
   tone: 'emerald' | 'amber' | 'blue' | 'violet' | 'slate';
   testId: string;
 }) {
@@ -540,7 +541,7 @@ function MetricCard({
   );
 }
 
-function InsightRow({ icon: Icon, label, value, detail }: { icon: typeof Crown; label: string; value: string; detail: string }) {
+function InsightRow({ icon: Icon, label, value, detail }: { icon: typeof Crown; label: string; value: ReactNode; detail: ReactNode }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border bg-background/60 p-3">
       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent/10 text-accent"><Icon className="h-4 w-4" /></div>
@@ -553,7 +554,7 @@ function InsightRow({ icon: Icon, label, value, detail }: { icon: typeof Crown; 
   );
 }
 
-function PerformanceCell({ label, value, negative, emphasized }: { label: string; value: string; negative?: boolean; emphasized?: boolean }) {
+function PerformanceCell({ label, value, negative, emphasized }: { label: string; value: ReactNode; negative?: boolean; emphasized?: boolean }) {
   return (
     <div className={`rounded-xl border p-2.5 ${emphasized ? 'border-emerald-500/25 bg-emerald-500/5' : 'bg-background/60'}`}>
       <p className="text-[10px] text-muted-foreground">{label}</p>

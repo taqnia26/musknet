@@ -4,9 +4,10 @@ import { useGetCurrentUser, useListOrders } from '@workspace/api-client-react';
 import { Link } from 'wouter';
 import { Package, Clock, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Money } from '@/components/money';
 
 export default function Account() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { data: user } = useGetCurrentUser();
   const { data: orders } = useListOrders();
 
@@ -70,7 +71,7 @@ export default function Account() {
                     <p className="text-sm text-muted-foreground">{new Date(order.createdAt).toLocaleDateString('en-GB')}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{order.total} {t('ر.س', 'SAR')}</p>
+                    <Money value={order.total} lang={lang} className="font-bold" />
                     <p className="text-sm text-primary">{t(order.status, order.status)}</p>
                   </div>
                 </div>

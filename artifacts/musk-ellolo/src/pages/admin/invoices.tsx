@@ -15,6 +15,7 @@ import {
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -100,7 +101,7 @@ function InvoiceTemplate({
             {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</dd></div>
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
-            <div className="flex items-baseline justify-between gap-3 rounded-sm border border-stone-200 bg-stone-200/20 px-3 py-2.5"><dt className="font-semibold text-[#292728]">{t('المبلغ المستحق', 'Amount Due')}</dt><dd className="font-mono font-semibold text-[#292728]">{invoice.outstandingAmount.toFixed(2)} {t('ر.س', 'SAR')}</dd></div>
+            <div className="flex items-baseline justify-between gap-3 rounded-sm border border-stone-200 bg-stone-200/20 px-3 py-2.5"><dt className="font-semibold text-[#292728]">{t('المبلغ المستحق', 'Amount Due')}</dt><dd className="font-mono font-semibold text-[#292728]"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></dd></div>
           </dl>
         </div>
       </div>
@@ -122,8 +123,8 @@ function InvoiceTemplate({
                 <tr key={idx}>
                   <td className="py-3 px-4 sm:px-6 font-medium text-gray-900">{item.productName}</td>
                   <td className="py-3 px-3 sm:px-4 text-center text-gray-600">{item.quantity}</td>
-                  <td className="py-3 px-3 sm:px-4 text-end text-gray-600 font-mono">{item.unitPrice.toFixed(2)}</td>
-                  <td className="py-3 px-4 sm:px-6 text-end font-mono font-bold text-gray-900">{item.totalAmount.toFixed(2)}</td>
+                  <td className="py-3 px-3 sm:px-4 text-end text-gray-600 font-mono"><Money value={item.unitPrice} lang={lang} fractionDigits={2} /></td>
+                  <td className="py-3 px-4 sm:px-6 text-end font-mono font-bold text-gray-900"><Money value={item.totalAmount} lang={lang} fractionDigits={2} /></td>
                 </tr>
               ))
             ) : (
@@ -147,34 +148,34 @@ function InvoiceTemplate({
         <div className="w-full sm:w-80 space-y-4">
           <div className="flex justify-between text-gray-600 px-2 text-sm">
             <span>{t('المجموع الفرعي', 'Subtotal')}</span>
-            <span className="font-mono">{invoice.subtotal.toFixed(2)}</span>
+            <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
           </div>
           <div className="flex justify-between text-gray-600 px-2 text-sm">
             <span>{t('ضريبة القيمة المضافة (15%)', 'VAT (15%)')}</span>
-            <span className="font-mono">{invoice.vatAmount.toFixed(2)}</span>
+            <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
           </div>
           {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
             <span>{t('الشحن', 'Shipping')}</span>
-            <span className="font-mono">{invoice.shippingAmount!.toFixed(2)}</span>
+            <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
           </div>}
           <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
             <span>{t('الخصم', 'Discount')}</span>
-            <span className="font-mono">-{(invoice.discountAmount ?? 0).toFixed(2)}</span>
+            <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
           </div>
            <div data-testid="invoice-total-card" className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
             <span className="text-[#292728]">{t('الإجمالي', 'Total')}</span>
-            <span className="font-mono text-[#292728]">{invoice.totalAmount.toFixed(2)}</span>
+            <span className="font-mono text-[#292728]"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></span>
           </div>
           
           {(invoice.paidAmount > 0 || invoice.outstandingAmount > 0) && (
             <div className="pt-2 space-y-2 px-2 text-xs sm:text-sm">
               <div className="flex justify-between text-stone-600 font-medium">
                 <span>{t('المبلغ المدفوع', 'Amount Paid')}</span>
-                <span className="font-mono">{invoice.paidAmount.toFixed(2)}</span>
+                <span className="font-mono"><Money value={invoice.paidAmount} lang={lang} fractionDigits={2} /></span>
               </div>
               <div className="flex justify-between text-stone-700 font-semibold">
                 <span>{t('الرصيد المستحق', 'Amount Due')}</span>
-                <span className="font-mono">{invoice.outstandingAmount.toFixed(2)}</span>
+                <span className="font-mono"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></span>
               </div>
             </div>
           )}
@@ -572,7 +573,7 @@ function RecordPaymentDialog({
         <div className="space-y-4">
           <div className="rounded-md border bg-muted/20 p-3">
             <p className="text-sm text-muted-foreground">{t('الرصيد المستحق', 'Outstanding balance')}</p>
-            <p className="text-2xl font-bold">{invoice?.outstandingAmount.toFixed(2)}</p>
+            <p className="text-2xl font-bold">{invoice && <Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} />}</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="receivable-amount">{t('المبلغ', 'Amount')}</Label>
@@ -608,7 +609,7 @@ function RecordPaymentDialog({
 }
 
 function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'online' }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [search, setSearch] = useState('');
   const [receivableStatus, setReceivableStatus] = useState<'all' | 'open' | 'overdue' | 'paid'>('all');
   
@@ -649,15 +650,15 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Banknote className="h-4 w-4" /> {t('إجمالي الفواتير', 'Total billed')}</p>
-          <p className="mt-2 text-2xl font-bold">{totals.billed.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">SAR</span></p>
+          <p className="mt-2 text-2xl font-bold"><Money value={totals.billed} lang={lang} fractionDigits={2} /></p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Banknote className="h-4 w-4 text-emerald-600" /> {t('المحصل', 'Collected')}</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-600">{totals.paid.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">SAR</span></p>
+          <p className="mt-2 text-2xl font-bold text-emerald-600"><Money value={totals.paid} lang={lang} fractionDigits={2} /></p>
         </div>
         <div className="rounded-lg border bg-card p-4 shadow-sm">
           <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><AlertCircle className="h-4 w-4 text-destructive" /> {t('الرصيد المستحق', 'Outstanding')}</p>
-          <p className="mt-2 text-2xl font-bold text-destructive">{totals.outstanding.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">SAR</span></p>
+          <p className="mt-2 text-2xl font-bold text-destructive"><Money value={totals.outstanding} lang={lang} fractionDigits={2} /></p>
         </div>
       </div>
 
@@ -711,9 +712,9 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
                   <TableCell>{invoice.orderNumber ?? <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell>{channel === 'online' ? (invoice.buyerName ?? '-') : (invoice.distributorName ?? <span className="text-muted-foreground">-</span>)}</TableCell>
                   <TableCell className={invoice.dueDate && invoice.outstandingAmount > 0 && invoice.dueDate < new Date().toISOString().slice(0, 10) ? 'font-semibold text-destructive' : ''}>{invoice.dueDate ?? '-'}</TableCell>
-                  <TableCell className="text-end font-semibold text-primary">{invoice.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell className="text-end text-emerald-600">{invoice.paidAmount.toFixed(2)}</TableCell>
-                  <TableCell className="text-end font-semibold">{invoice.outstandingAmount.toFixed(2)}</TableCell>
+                  <TableCell className="text-end font-semibold text-primary"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></TableCell>
+                  <TableCell className="text-end text-emerald-600"><Money value={invoice.paidAmount} lang={lang} fractionDigits={2} /></TableCell>
+                  <TableCell className="text-end font-semibold"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></TableCell>
                   <TableCell><Badge variant={invoice.paymentStatus === 'paid' ? 'secondary' : invoice.paymentStatus === 'partial' ? 'default' : 'outline'}>{invoice.paymentStatus === 'paid' ? t('مسددة', 'Paid') : invoice.paymentStatus === 'partial' ? t('جزئية', 'Partial') : t('غير مسددة', 'Unpaid')}</Badge></TableCell>
                   <TableCell className="text-center whitespace-nowrap">
                     <DropdownMenu>
@@ -805,7 +806,7 @@ export function AdminOnlineInvoices() {
 }
 
 export function AdminExhibitionInvoices() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [search, setSearch] = useState('');
   const [preview, setPreview] = useState<AdminInvoice | null>(null);
   const [print, setPrint] = useState(false);
@@ -840,7 +841,7 @@ export function AdminExhibitionInvoices() {
                 <TableCell>{invoice.exhibitionName}</TableCell>
                 <TableCell>{invoice.issueDatetime.slice(0, 10)}</TableCell>
                 <TableCell>{invoice.buyerName}</TableCell>
-                <TableCell>{invoice.totalAmount.toFixed(2)} SAR</TableCell>
+                <TableCell><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></TableCell>
                 <TableCell><div className="flex justify-center gap-1">
                   <Button size="icon" variant="ghost" aria-label={t('معاينة الفاتورة', 'Preview invoice')} onClick={() => { setPrint(false); setPreview(invoice); }}><Eye className="h-4 w-4" /></Button>
                   <Button size="icon" variant="ghost" aria-label={t('طباعة الفاتورة', 'Print invoice')} onClick={() => { setPrint(true); setPreview(invoice); }}><Printer className="h-4 w-4" /></Button>

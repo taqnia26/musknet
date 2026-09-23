@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { getAdminListInvoicesQueryKey, getAdminListExhibitionProductsQueryKey, useAdminCreateExhibitionInvoice, useAdminListExhibitions, useAdminListExhibitionProducts } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -116,7 +117,7 @@ export function CreateExhibitionInvoiceDialog() {
         <div className="grid grid-cols-3 gap-2 rounded-md border bg-muted/20 p-3 text-center text-sm">
           <div>{t('قبل الضريبة', 'Subtotal')}<strong className="block">{totals.subtotal.toFixed(2)}</strong></div>
           <div>{t('الضريبة 15%', 'VAT 15%')}<strong className="block">{totals.vat.toFixed(2)}</strong></div>
-          <div>{t('الإجمالي', 'Total')}<strong className="block">{totals.total.toFixed(2)} SAR</strong></div>
+          <div>{t('الإجمالي', 'Total')}<strong className="block"><Money value={totals.total} lang={lang} fractionDigits={2} /></strong></div>
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <Button className="w-full" onClick={submit} disabled={mutation.isPending || loadingAllocations || exhibitionsError || allocationsError}>{mutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ وإصدار الفاتورة', 'Save and issue invoice')}</Button>

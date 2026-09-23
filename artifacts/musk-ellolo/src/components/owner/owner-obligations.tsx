@@ -8,23 +8,22 @@ import {
   unnamedNameAmountRows,
   type ObligationDetailRow,
 } from '@/data/owner-obligations';
+import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 
-const money = new Intl.NumberFormat('ar-SA-u-nu-latn', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
-
-function Value({ value }: { value?: number | string }) {
+function Value({ value, lang }: { value?: number | string; lang: 'ar' | 'en' }) {
   if (value === undefined || value === '') return <span className="text-[#b2aea5]">—</span>;
-  return <>{typeof value === 'number' ? money.format(value) : value}</>;
+  return <>{typeof value === 'number' ? <Money value={value} lang={lang} /> : value}</>;
 }
 
 function NameAmountTable({
   rows,
   total,
+  lang,
 }: {
   rows: Array<{ name: string; amount?: number }>;
   total?: number;
+  lang: 'ar' | 'en';
 }) {
   return (
     <div className="overflow-x-auto">
@@ -39,13 +38,13 @@ function NameAmountTable({
           {rows.map((row, index) => (
             <tr key={`${row.name}-${index}`} className="odd:bg-white even:bg-[#fcfbf8] dark:odd:bg-[#111214] dark:even:bg-[#171819]">
               <td className="border border-[#ebe7de] px-4 py-3 dark:border-[#2b2d31]">{row.name}</td>
-              <td className="border border-[#ebe7de] px-4 py-3 font-medium tabular-nums dark:border-[#2b2d31]"><Value value={row.amount} /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 font-medium tabular-nums dark:border-[#2b2d31]"><Value value={row.amount} lang={lang} /></td>
             </tr>
           ))}
           {total !== undefined && (
             <tr className="bg-[#f5edcf] font-bold text-[#6e5605] dark:bg-[#2d291b] dark:text-[#ebc94f]">
               <td className="border border-[#dfd4ad] px-4 py-3 dark:border-[#484027]">الإجمالي</td>
-              <td className="border border-[#dfd4ad] px-4 py-3 tabular-nums dark:border-[#484027]"><Value value={total} /></td>
+              <td className="border border-[#dfd4ad] px-4 py-3 tabular-nums dark:border-[#484027]"><Value value={total} lang={lang} /></td>
             </tr>
           )}
         </tbody>
@@ -54,7 +53,7 @@ function NameAmountTable({
   );
 }
 
-function DetailTable({ rows }: { rows: ObligationDetailRow[] }) {
+function DetailTable({ rows, lang }: { rows: ObligationDetailRow[]; lang: 'ar' | 'en' }) {
   const headers = ['الاسم', 'المبلغ', 'تم سداد', 'المتبقي', 'السداد من حساب', 'الاستحقاق'];
   return (
     <div className="overflow-x-auto">
@@ -68,11 +67,11 @@ function DetailTable({ rows }: { rows: ObligationDetailRow[] }) {
           {rows.map((row, index) => (
             <tr key={`${row.name}-${index}`} className="odd:bg-white even:bg-[#fcfbf8] dark:odd:bg-[#111214] dark:even:bg-[#171819]">
               <td className="border border-[#ebe7de] px-4 py-3 font-medium dark:border-[#2b2d31]">{row.name}</td>
-              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.amount} /></td>
-              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.paid} /></td>
-              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.remaining} /></td>
-              <td className="border border-[#ebe7de] px-4 py-3 dark:border-[#2b2d31]"><Value value={row.paymentAccount} /></td>
-              <td className="border border-[#ebe7de] px-4 py-3 dark:border-[#2b2d31]"><Value value={row.due} /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.amount} lang={lang} /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.paid} lang={lang} /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.remaining} lang={lang} /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 dark:border-[#2b2d31]"><Value value={row.paymentAccount} lang={lang} /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 dark:border-[#2b2d31]"><Value value={row.due} lang={lang} /></td>
             </tr>
           ))}
         </tbody>
@@ -91,6 +90,7 @@ function Section({ title, children }: { title?: string; children: React.ReactNod
 }
 
 export function OwnerObligations() {
+  const { lang } = useLanguage();
   return (
     <div className="space-y-6">
       <div>
@@ -100,32 +100,32 @@ export function OwnerObligations() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Section title={recurringObligations.title}>
-          <NameAmountTable rows={recurringObligations.rows} total={recurringObligations.total} />
+          <NameAmountTable rows={recurringObligations.rows} total={recurringObligations.total} lang={lang} />
         </Section>
         <Section title={immediateObligations.title}>
-          <DetailTable rows={immediateObligations.rows} />
+          <DetailTable rows={immediateObligations.rows} lang={lang} />
         </Section>
       </div>
 
       <Section title={annualObligations.title}>
-        <DetailTable rows={annualObligations.rows} />
+         <DetailTable rows={annualObligations.rows} lang={lang} />
       </Section>
 
       <div className="grid gap-6 xl:grid-cols-2">
         <Section title={thirdPartyRights.title}>
-          <NameAmountTable rows={thirdPartyRights.rows} total={thirdPartyRights.total} />
+           <NameAmountTable rows={thirdPartyRights.rows} total={thirdPartyRights.total} lang={lang} />
         </Section>
         <Section>
-          <NameAmountTable rows={unnamedNameAmountRows} />
+           <NameAmountTable rows={unnamedNameAmountRows} lang={lang} />
         </Section>
       </div>
 
       <Section title={debts.title}>
-        <DetailTable rows={debts.rows} />
+         <DetailTable rows={debts.rows} lang={lang} />
       </Section>
 
       <Section>
-        <NameAmountTable rows={trailingObligationRows} />
+         <NameAmountTable rows={trailingObligationRows} lang={lang} />
       </Section>
     </div>
   );

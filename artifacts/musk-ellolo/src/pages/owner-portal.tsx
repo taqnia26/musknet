@@ -55,6 +55,7 @@ import { OwnerWorkbookSection } from '@/components/owner/owner-workbook-section'
 import { GuidedTour } from '@/components/guided-tour/guided-tour';
 import { ownerTourSteps } from '@/components/guided-tour/tour-definitions';
 import { OWNER_TOUR_STORAGE_KEY } from '@/components/guided-tour/tour-state';
+import { Money } from '@/components/money';
 
 type OwnerNavItem = {
   href: string;
@@ -409,7 +410,7 @@ export default function OwnerPortal() {
               t={t}
             />
           ) : location === '/owner' ? (
-            <OwnerOverview ownerName={owner.name} t={t} summary={operationsSummary} loading={operationsLoading} />
+            <OwnerOverview ownerName={owner.name} t={t} lang={lang} summary={operationsSummary} loading={operationsLoading} />
           ) : location === '/owner/obligations' ? (
             <OwnerObligations />
           ) : location === '/owner/products' ? (
@@ -452,7 +453,7 @@ export default function OwnerPortal() {
   );
 }
 
-function OwnerOverview({ ownerName, t, summary, loading }: { ownerName: string; t: (ar: string, en: string) => string; summary?: OwnerOperationsSummary; loading: boolean }) {
+function OwnerOverview({ ownerName, t, lang, summary, loading }: { ownerName: string; t: (ar: string, en: string) => string; lang: 'ar' | 'en'; summary?: OwnerOperationsSummary; loading: boolean }) {
   const opening = summary?.openingBalance;
   const openingLabel = opening?.status === 'approved' ? t('معتمد ومرحل', 'Approved & posted') : opening ? `${t('قيد', 'In')} ${opening.status}` : t('لم تُنشأ مسودة', 'No draft');
   return (
@@ -469,7 +470,7 @@ function OwnerOverview({ ownerName, t, summary, loading }: { ownerName: string; 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           { labelAr: 'كمية المخزون', labelEn: 'Inventory quantity', value: loading ? '…' : String(summary?.inventory?.quantity ?? 0), noteAr: 'الكمية الحالية', noteEn: 'Current quantity', icon: Boxes },
-          { labelAr: 'قيمة المخزون', labelEn: 'Inventory value', value: loading ? '…' : `${summary?.inventory?.value ?? '0.0000'} SAR`, noteAr: 'بالمتوسط المرجح', noteEn: 'Weighted average', icon: Package },
+          { labelAr: 'قيمة المخزون', labelEn: 'Inventory value', value: loading ? '…' : <Money value={summary?.inventory?.value ?? '0.0000'} lang={lang} fractionDigits={4} />, noteAr: 'بالمتوسط المرجح', noteEn: 'Weighted average', icon: Package },
           { labelAr: 'حركات مرحّلة', labelEn: 'Posted events', value: loading ? '…' : `${summary?.events?.posted ?? 0}/${summary?.events?.total ?? 0}`, noteAr: 'حركات مترابطة', noteEn: 'Linked events', icon: CircleDollarSign },
           { labelAr: 'الرصيد الافتتاحي', labelEn: 'Opening balance', value: openingLabel, noteAr: opening?.sourceFileName ?? 'مصدر الملف غير مرحل', noteEn: opening?.sourceFileName ?? 'Workbook source not posted', icon: FileText },
         ].map((metric) => {

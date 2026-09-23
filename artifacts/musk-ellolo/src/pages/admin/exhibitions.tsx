@@ -12,6 +12,7 @@ import {
   getAdminListExhibitionProductsQueryKey
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,7 +129,7 @@ function ExhibitionProducts({ exhibitionId, canEdit }: { exhibitionId: number, c
 }
 
 export default function AdminExhibitions() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { data: currentUser } = useGetAdminMe();
   const canEdit = hasPermission(currentUser, 'exhibitions', 'edit');
   const canDelete = hasPermission(currentUser, 'exhibitions', 'delete');
@@ -299,7 +300,7 @@ export default function AdminExhibitions() {
                   <h2 className="text-2xl font-bold">{exhibitions?.find(e => e.id === selectedExhibition)?.name}</h2>
                   <div className="flex items-center gap-4 mt-2 text-muted-foreground">
                     <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {exhibitions?.find(e => e.id === selectedExhibition)?.location}</span>
-                    <span className="flex items-center gap-1"><DollarSign className="h-4 w-4" /> {exhibitions?.find(e => e.id === selectedExhibition)?.budget} SAR</span>
+                    <span className="flex items-center gap-1"><DollarSign className="h-4 w-4" /> <Money value={exhibitions?.find(e => e.id === selectedExhibition)?.budget} lang={lang} /></span>
                   </div>
                 </div>
                 <Badge className="text-sm px-3 py-1">{exhibitions?.find(e => e.id === selectedExhibition)?.status}</Badge>

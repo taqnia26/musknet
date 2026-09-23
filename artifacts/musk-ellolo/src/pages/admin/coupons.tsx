@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAdminListCoupons, useAdminCreateCoupon, useAdminUpdateCoupon, useAdminDisableCoupon, AdminCouponInputDiscountType, useGetAdminMe, type CouponAffectedCampaign } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,7 @@ const couponSchema = z.object({
 });
 
 export default function AdminCoupons() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -196,7 +197,7 @@ export default function AdminCoupons() {
               coupons?.map((coupon) => (
                 <TableRow key={coupon.id} data-testid={`row-coupon-${coupon.id}`}>
                   <TableCell className="font-bold uppercase tracking-wider">{coupon.code}</TableCell>
-                  <TableCell>{coupon.discountValue} {coupon.discountType === 'percentage' ? '%' : 'SAR'}</TableCell>
+                  <TableCell>{coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : <Money value={coupon.discountValue} lang={lang} />}</TableCell>
                   <TableCell>{coupon.timesUsed} / {coupon.usageLimit || '∞'}</TableCell>
                   <TableCell>
                     <Badge variant={coupon.isActive ? "default" : "secondary"} className={coupon.isActive ? "bg-success text-success-foreground hover:bg-success/90" : "bg-muted text-muted-foreground"}>

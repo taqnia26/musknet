@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAdminListInventory, useListInventoryAlerts, useListInventoryLocations, type InventoryLocation } from '@workspace/api-client-react';
 import { Boxes, CircleDollarSign, AlertTriangle, XCircle, MapPin } from 'lucide-react';
@@ -27,7 +28,7 @@ export default function AdminInventoryOverview() {
 
   const cards = [
     { title: t('إجمالي الوحدات', 'Total units'), value: summary.totalUnits.toLocaleString(), icon: Boxes, color: 'text-blue-500' },
-    { title: t('قيمة المخزون', 'Inventory value'), value: `${summary.totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} SAR`, icon: CircleDollarSign, color: 'text-green-500' },
+    { title: t('قيمة المخزون', 'Inventory value'), value: <Money value={summary.totalValue} lang={lang} />, icon: CircleDollarSign, color: 'text-green-500' },
     { title: t('تنبيهات المخزون', 'Inventory alerts'), value: alerts.length.toLocaleString(), icon: AlertTriangle, color: 'text-amber-500' },
     { title: t('المواقع النشطة', 'Active locations'), value: locations.filter(l => l.active).length.toLocaleString(), icon: MapPin, color: 'text-purple-500' },
   ];

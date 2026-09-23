@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { ShoppingBag, User, Search, Menu, X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useGetCart, useListCategories } from '@workspace/api-client-react';
+import { RiyalSymbol } from '@/components/money';
 
 const siteAsset = (filename: string) => `${import.meta.env.BASE_URL}site-assets/${filename}`;
 
@@ -68,7 +69,7 @@ export function Navbar() {
             {lang === 'ar' ? 'English' : 'العربية'}
           </button>
           <span className="inline-flex min-h-8 items-center justify-center border-s border-gray-300 px-3 text-center">
-            {t('ريال سعودي', 'SAR')}
+            <RiyalSymbol className="mx-1" /> {t('ريال سعودي', 'Saudi riyals')}
           </span>
         </div>
         <div className="ms-4 flex min-w-0 items-center gap-4">

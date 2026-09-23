@@ -28,6 +28,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, LineChart } from 'recharts';
 import { useLocation } from 'wouter';
 import { PurchaseReceiptForm } from '@/components/admin/purchase-receipt-form';
+import { Money } from '@/components/money';
 
 function OverviewTab() {
   const { t, lang } = useLanguage();
@@ -77,21 +78,21 @@ function OverviewTab() {
               <CardTitle className="text-sm font-medium">{t('الإيرادات', 'Revenue')}</CardTitle>
               <DollarSign className="h-4 w-4 text-success" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-bold">{summary.revenue} SAR</div></CardContent>
+            <CardContent><div className="text-2xl font-bold"><Money value={summary.revenue} lang={lang} /></div></CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">{t('المصروفات', 'Expenses')}</CardTitle>
               <PieChart className="h-4 w-4 text-destructive" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-bold">{summary.expenses} SAR</div></CardContent>
+            <CardContent><div className="text-2xl font-bold"><Money value={summary.expenses} lang={lang} /></div></CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">{t('صافي الربح', 'Net Profit')}</CardTitle>
               <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-bold">{summary.netProfit} SAR</div></CardContent>
+            <CardContent><div className="text-2xl font-bold"><Money value={summary.netProfit} lang={lang} /></div></CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -100,7 +101,7 @@ function OverviewTab() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{summary.paidOrderCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">{t('متوسط الطلب:', 'Avg:')} {summary.averageOrderValue} SAR</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('متوسط الطلب:', 'Avg:')} <Money value={summary.averageOrderValue} lang={lang} /></p>
             </CardContent>
           </Card>
         </div>
@@ -132,7 +133,7 @@ function OverviewTab() {
 }
 
 function ExpensesTab({ canEdit, canDelete }: { canEdit: boolean, canDelete: boolean }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { data: expenses, isLoading } = useAdminListExpenses({});
   const [isOpen, setIsOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
@@ -251,7 +252,7 @@ function ExpensesTab({ canEdit, canDelete }: { canEdit: boolean, canDelete: bool
                  <TableCell>{format(new Date(exp.expenseDate), 'yyyy-MM-dd')}</TableCell>
                  <TableCell><Badge variant="outline">{exp.category}</Badge></TableCell>
                  <TableCell>{exp.description}</TableCell>
-                 <TableCell className="font-semibold">{exp.amount} SAR</TableCell>
+                  <TableCell className="font-semibold"><Money value={exp.amount} lang={lang} /></TableCell>
                  <TableCell className="text-end">
                    <DropdownMenu>
                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -273,7 +274,7 @@ function ExpensesTab({ canEdit, canDelete }: { canEdit: boolean, canDelete: bool
 }
 
 function MonthlyTab() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { data: monthly, isLoading } = useAdminGetFinanceMonthly();
 
   return (
@@ -295,11 +296,11 @@ function MonthlyTab() {
              monthly.map(m => (
                <TableRow key={m.month}>
                  <TableCell className="font-medium">{m.month}</TableCell>
-                 <TableCell className="text-success">{m.revenue} SAR</TableCell>
-                 <TableCell className="text-destructive">{m.expenses} SAR</TableCell>
+                  <TableCell className="text-success"><Money value={m.revenue} lang={lang} /></TableCell>
+                  <TableCell className="text-destructive"><Money value={m.expenses} lang={lang} /></TableCell>
                  <TableCell>{m.paidOrderCount}</TableCell>
                  <TableCell className={`font-bold ${m.netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                   {m.netProfit} SAR
+                    <Money value={m.netProfit} lang={lang} />
                  </TableCell>
                </TableRow>
              ))}

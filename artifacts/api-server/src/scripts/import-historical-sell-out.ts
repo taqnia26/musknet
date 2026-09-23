@@ -156,9 +156,9 @@ ${markdownList(analysis.exclusions.barcodesMissingFromStorefront)}
 - القيود المؤهلة الجديدة: **${analysis.entries.length}**
 - القيود الموجودة مسبقاً والمتجاوزة: **${analysis.entriesAlreadyImported}**
 - القيود المنشأة فعلياً: **${createdEntries}**
-- إجمالي المبلغ قبل الضريبة: **${analysis.totals.net} SAR**
-- إجمالي الضريبة: **${analysis.totals.vat} SAR**
-- إجمالي المبلغ شامل الضريبة: **${analysis.totals.gross} SAR**
+- إجمالي المبلغ قبل الضريبة: **${analysis.totals.net} ريال سعودي**
+- إجمالي الضريبة: **${analysis.totals.vat} ريال سعودي**
+- إجمالي المبلغ شامل الضريبة: **${analysis.totals.gross} ريال سعودي**
 
 ## ميزان المراجعة
 - قبل التشغيل — مدين: **${balanceBefore.debit}**، دائن: **${balanceBefore.credit}**، الفرق: **${balanceBefore.difference}**

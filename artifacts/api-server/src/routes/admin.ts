@@ -2381,7 +2381,7 @@ router.get("/admin/campaigns/results/export", permit("campaigns", "view"), route
 
   if (query.format === "csv") {
     const rows: Array<Array<string | number>> = [
-      ["row_type", "channel", "campaign_id", "campaign", "status", "starts_at", "ends_at", "coupon_id", "coupon_code", "campaigns", "coupon_uses", "orders", "revenue_sar"],
+      ["row_type", "channel", "campaign_id", "campaign", "status", "starts_at", "ends_at", "coupon_id", "coupon_code", "campaigns", "coupon_uses", "orders", "revenue_saudi_riyals"],
       ...report.byChannel.map((channel) => ["channel", channel.channel, "", "", "", "", "", "", "", channel.campaigns, channel.couponUses, channel.orders, channel.revenue]),
       ...report.campaigns.map((campaign) => ["campaign", campaign.channel, campaign.id, campaign.name, campaign.status, campaign.startsAt.toISOString(), campaign.endsAt.toISOString(), "", "", "", campaign.couponUses, campaign.orders, campaign.revenue]),
       ...report.campaigns.flatMap((campaign) => campaign.coupons.map((coupon) => ["coupon", campaign.channel, campaign.id, campaign.name, campaign.status, campaign.startsAt.toISOString(), campaign.endsAt.toISOString(), coupon.id, coupon.code, "", coupon.uses, coupon.orders, coupon.revenue])),
@@ -2411,7 +2411,7 @@ router.get("/admin/campaigns/results/export", permit("campaigns", "view"), route
     { header: "Campaigns", key: "campaigns", width: 14 },
     { header: "Coupon uses", key: "couponUses", width: 16 },
     { header: "Orders", key: "orders", width: 14 },
-    { header: "Revenue (SAR)", key: "revenue", width: 18 },
+    { header: "Revenue (Saudi Riyals)", key: "revenue", width: 24 },
   ], report.byChannel);
   addSheet("Campaigns", [
     { header: "ID", key: "id", width: 10 },
@@ -2422,7 +2422,7 @@ router.get("/admin/campaigns/results/export", permit("campaigns", "view"), route
     { header: "Ends at", key: "endsAt", width: 24 },
     { header: "Coupon uses", key: "couponUses", width: 16 },
     { header: "Orders", key: "orders", width: 14 },
-    { header: "Revenue (SAR)", key: "revenue", width: 18 },
+    { header: "Revenue (Saudi Riyals)", key: "revenue", width: 24 },
   ], report.campaigns.map(({ coupons: _coupons, ...campaign }) => campaign));
   addSheet("Coupons", [
     { header: "Campaign ID", key: "campaignId", width: 14 },
@@ -2432,7 +2432,7 @@ router.get("/admin/campaigns/results/export", permit("campaigns", "view"), route
     { header: "Coupon code", key: "code", width: 22 },
     { header: "Uses", key: "uses", width: 12 },
     { header: "Orders", key: "orders", width: 12 },
-    { header: "Revenue (SAR)", key: "revenue", width: 18 },
+    { header: "Revenue (Saudi Riyals)", key: "revenue", width: 24 },
   ], report.campaigns.flatMap((campaign) => campaign.coupons.map((coupon) => ({
     campaignId: campaign.id,
     campaign: campaign.name,
