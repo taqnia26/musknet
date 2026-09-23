@@ -1553,6 +1553,24 @@ paths:
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PurchaseInput" } } } }
       responses: { "201": { description: Purchase, content: { application/json: { schema: { $ref: "#/components/schemas/Purchase" } } } } }
+  /admin/finance/billing-settings:
+    get:
+      operationId: adminGetBillingSettings
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      summary: Get store billing settings; bank identifiers are masked unless finance edit is granted
+      responses:
+        "200": { description: Billing settings, content: { application/json: { schema: { $ref: "#/components/schemas/AdminBillingSettings" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      operationId: adminUpdateBillingSettings
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminBillingSettingsUpdate" } } } }
+      responses:
+        "200": { description: Updated settings, content: { application/json: { schema: { $ref: "#/components/schemas/AdminBillingSettings" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /admin/finance/purchases/invoice-upload:
     post:
       operationId: adminRequestPurchaseInvoiceUpload
@@ -4467,6 +4485,38 @@ components:
         archivedAt: { type: [string, "null"], format: date-time }
         createdBy: { type: number }
         createdAt: { type: string, format: date-time }
+    AdminBillingSettings:
+      type: object
+      required: [invoiceEmail, companyName, streetAddress, city, country, taxNumber, bankName, accountHolder, accountNumber, iban, preferredPaymentMethod, updatedAt]
+      properties:
+        invoiceEmail: { type: [string, "null"] }
+        companyName: { type: [string, "null"] }
+        streetAddress: { type: [string, "null"] }
+        city: { type: [string, "null"] }
+        country: { type: [string, "null"] }
+        taxNumber: { type: [string, "null"] }
+        bankName: { type: [string, "null"] }
+        accountHolder: { type: [string, "null"] }
+        accountNumber: { type: [string, "null"], description: Masked for finance view-only users }
+        iban: { type: [string, "null"], description: Masked for finance view-only users }
+        preferredPaymentMethod: { type: string, enum: [not_set, bank_transfer] }
+        updatedAt: { type: [string, "null"], format: date-time }
+    AdminBillingSettingsUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        invoiceEmail: { type: [string, "null"], pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$', maxLength: 254 }
+        companyName: { type: [string, "null"], minLength: 1, maxLength: 160 }
+        streetAddress: { type: [string, "null"], minLength: 1, maxLength: 300 }
+        city: { type: [string, "null"], minLength: 1, maxLength: 120 }
+        country: { type: [string, "null"], minLength: 1, maxLength: 120 }
+        taxNumber: { type: [string, "null"], pattern: '^[0-9]{15}$' }
+        bankName: { type: [string, "null"], minLength: 1, maxLength: 120 }
+        accountHolder: { type: [string, "null"], minLength: 1, maxLength: 160 }
+        accountNumber: { type: [string, "null"], pattern: '^[0-9]{6,24}$' }
+        iban: { type: [string, "null"], pattern: '^SA[0-9]{22}$' }
+        preferredPaymentMethod: { type: string, enum: [not_set, bank_transfer] }
     PurchaseInput:
       type: object
       required: [title, description, amount, category, paymentSource]

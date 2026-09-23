@@ -25,6 +25,8 @@ import type {
   AddressInput,
   AdminAnalyticsDashboard,
   AdminAuthSession,
+  AdminBillingSettings,
+  AdminBillingSettingsUpdate,
   AdminCampaign,
   AdminCampaignCoupon,
   AdminCampaignInput,
@@ -10398,6 +10400,148 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminCreatePurchaseMutationOptions(options));
+    }
+
+export const getAdminGetBillingSettingsUrl = () => {
+
+
+
+
+  return `/api/admin/finance/billing-settings`
+}
+
+/**
+ * @summary Get store billing settings; bank identifiers are masked unless finance edit is granted
+ */
+export const adminGetBillingSettings = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminBillingSettings> => {
+
+  return customFetch<AdminBillingSettings>(getAdminGetBillingSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetBillingSettingsQueryKey = () => {
+    return [
+    `/api/admin/finance/billing-settings`
+    ] as const;
+    }
+
+
+export const getAdminGetBillingSettingsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetBillingSettings>>, TError = ErrorType<ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetBillingSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetBillingSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetBillingSettings>>> = ({ signal }) => adminGetBillingSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetBillingSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetBillingSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetBillingSettings>>>
+export type AdminGetBillingSettingsQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary Get store billing settings; bank identifiers are masked unless finance edit is granted
+ */
+
+export function useAdminGetBillingSettings<TData = Awaited<ReturnType<typeof adminGetBillingSettings>>, TError = ErrorType<ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetBillingSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetBillingSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminUpdateBillingSettingsUrl = () => {
+
+
+
+
+  return `/api/admin/finance/billing-settings`
+}
+
+export const adminUpdateBillingSettings = async (adminBillingSettingsUpdate: AdminBillingSettingsUpdate, options?: Parameters<typeof customFetch>[1]): Promise<AdminBillingSettings> => {
+
+  return customFetch<AdminBillingSettings>(getAdminUpdateBillingSettingsUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminBillingSettingsUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateBillingSettingsMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateBillingSettings>>, TError,{data: BodyType<AdminBillingSettingsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateBillingSettings>>, TError,{data: BodyType<AdminBillingSettingsUpdate>}, TContext> => {
+
+const mutationKey = ['adminUpdateBillingSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateBillingSettings>>, {data: BodyType<AdminBillingSettingsUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminUpdateBillingSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateBillingSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateBillingSettings>>>
+    export type AdminUpdateBillingSettingsMutationBody = BodyType<AdminBillingSettingsUpdate>
+    export type AdminUpdateBillingSettingsMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    export const useAdminUpdateBillingSettings = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateBillingSettings>>, TError,{data: BodyType<AdminBillingSettingsUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateBillingSettings>>,
+        TError,
+        {data: BodyType<AdminBillingSettingsUpdate>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateBillingSettingsMutationOptions(options));
     }
 
 export const getAdminRequestPurchaseInvoiceUploadUrl = () => {

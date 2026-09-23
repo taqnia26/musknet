@@ -13,6 +13,17 @@ const visibleLabels = (permissions: string[]) => navStructure
   .map((item) => item.labelEn);
 
 describe('admin commercial navigation', () => {
+  it('places wallet and billing directly after finance and restricts it to finance viewers', () => {
+    const financeIndex = navStructure.findIndex((item) => item.labelEn === 'Finance');
+    expect(navStructure[financeIndex + 1]).toMatchObject({
+      href: '/admin/wallet-billing', labelAr: 'المحفظة والفواتير',
+      labelEn: 'Wallet & Billing', module: 'finance', direct: true,
+    });
+    expect(visibleLabels(['finance:view'])).toContain('Wallet & Billing');
+    expect(visibleLabels(['invoices:view'])).not.toContain('Wallet & Billing');
+    expect(isAdminNavActive('/admin/wallet-billing', '/admin/wallet-billing')).toBe(true);
+    expect(isAdminNavActive('/admin/wallet-billing', '/admin/finance/purchases')).toBe(false);
+  });
   it('defines the customer, sales, and marketing groups in both languages', () => {
     expect(group('Customers').children?.map(({ labelEn, labelAr }) => [labelEn, labelAr])).toEqual([
       ['Individuals', 'الأفراد'],

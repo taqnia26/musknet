@@ -330,6 +330,13 @@
       "when": 1790179883985,
       "tag": "0046_mean_hulk",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1790180681447,
+      "tag": "0047_ordinary_blade",
+      "breakpoints": true
     }
   ]
 }

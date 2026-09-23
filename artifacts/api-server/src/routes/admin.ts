@@ -22,6 +22,7 @@ import {
   payrollRecordsTable,
   expensesTable,
   purchasesTable,
+  billingSettingsTable,
   manufacturingBatchesTable,
   exhibitionsTable,
   exhibitionProductsTable,
@@ -3273,6 +3274,49 @@ router.delete("/admin/finance/expenses/:id", permit("finance", "delete"), route(
 }));
 
 const purchaseMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+const billingFields = [
+  "invoiceEmail", "companyName", "streetAddress", "city", "country", "taxNumber",
+  "bankName", "accountHolder", "accountNumber", "iban", "preferredPaymentMethod",
+] as const;
+const emptyBilling = {
+  invoiceEmail: null, companyName: null, streetAddress: null, city: null, country: null,
+  taxNumber: null, bankName: null, accountHolder: null, accountNumber: null, iban: null,
+  preferredPaymentMethod: "not_set" as const, updatedAt: null,
+};
+function billingResponse(row: typeof billingSettingsTable.$inferSelect | undefined, canEdit: boolean) {
+  if (!row) return emptyBilling;
+  const mask = (value: string | null) => value ? `${"•".repeat(Math.min(8, Math.max(0, value.length - 4)))}${value.slice(-4)}` : null;
+  const { invoiceEmail, companyName, streetAddress, city, country, taxNumber,
+    bankName, accountHolder, accountNumber, iban, preferredPaymentMethod, updatedAt } = row;
+  return {
+    invoiceEmail, companyName, streetAddress, city, country, taxNumber,
+    bankName, accountHolder, accountNumber: canEdit ? accountNumber : mask(accountNumber),
+    iban: canEdit ? iban : mask(iban), preferredPaymentMethod, updatedAt,
+  };
+}
+router.get("/admin/finance/billing-settings", permit("finance", "view"), route(async (_req, res) => {
+  const [row] = await db.select().from(billingSettingsTable).where(eq(billingSettingsTable.id, 1)).limit(1);
+  parsedJson(Api.AdminGetBillingSettingsResponse, billingResponse(row, !!allowed(res, "finance", "edit")), res);
+}));
+router.patch("/admin/finance/billing-settings", permit("finance", "edit"), route(async (req, res) => {
+  const raw = req.body;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) ||
+    !Object.keys(raw).length || Object.keys(raw).some((key) => !billingFields.includes(key as typeof billingFields[number]))) {
+    res.status(400).json({ error: "Provide only supported billing settings fields" }); return;
+  }
+  const normalized = Object.fromEntries(Object.entries(raw).map(([key, value]) => [
+    key, typeof value === "string" ? value.trim() : value,
+  ]));
+  const body = parse(Api.AdminUpdateBillingSettingsBody, normalized, res); if (!body) return;
+  // No unverified payment instruments or card data enter this table.
+  const [row] = await db.insert(billingSettingsTable).values({
+    id: 1, ...body, updatedBy: res.locals.admin.id,
+  }).onConflictDoUpdate({
+    target: billingSettingsTable.id,
+    set: { ...body, updatedBy: res.locals.admin.id, updatedAt: new Date() },
+  }).returning();
+  parsedJson(Api.AdminUpdateBillingSettingsResponse, billingResponse(row, true), res);
+}));
 router.post("/admin/finance/purchases/invoice-upload", permit("finance", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminRequestPurchaseInvoiceUploadBody, req.body, res); if (!body) return;
   if (!purchaseMimeTypes.has(body.contentType) || body.size <= 0 || body.size > 10 * 1024 * 1024) {

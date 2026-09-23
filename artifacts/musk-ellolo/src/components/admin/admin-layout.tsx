@@ -23,6 +23,7 @@ import {
   Globe,
   Menu,
   FileText,
+  Wallet,
   ChevronDown,
   MessageCircle,
   Network,
@@ -157,6 +158,7 @@ export const navStructure = [
       { href: '/admin/accounting/trial-balance', labelEn: 'Trial balance', labelAr: 'ميزان المراجعة', module: 'accounting' },
     ]
   },
+  { href: '/admin/wallet-billing', icon: Wallet, labelEn: 'Wallet & Billing', labelAr: 'المحفظة والفواتير', module: 'finance', direct: true },
   {
     labelEn: 'B2B', labelAr: 'B2B', icon: Warehouse, module: 'distributors',
     children: [

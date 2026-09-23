@@ -40,6 +40,7 @@ export * from "./wholesale-distributors";
 export * from "./inventory-movements";
 export * from "./hr";
 export * from "./finance";
+export * from "./billing-settings";
 export * from "./manufacturing";
 export * from "./exhibitions";
 export * from "./invoices";

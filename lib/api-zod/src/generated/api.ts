@@ -4834,7 +4834,23 @@ export const AdminCreatePurchaseResponse = zod.object({
   "createdAt": zod.coerce.date()
 })
 
-
+/**
+ * @summary Get store billing settings; bank identifiers are masked unless finance edit is granted
+ */
+export const AdminGetBillingSettingsResponse = zod.object({
+  "invoiceEmail": zod.string().nullable(),
+  "companyName": zod.string().nullable(),
+  "streetAddress": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "country": zod.string().nullable(),
+  "taxNumber": zod.string().nullable(),
+  "bankName": zod.string().nullable(),
+  "accountHolder": zod.string().nullable(),
+  "accountNumber": zod.string().nullable().describe('Masked for finance view-only users'),
+  "iban": zod.string().nullable().describe('Masked for finance view-only users'),
+  "preferredPaymentMethod": zod.enum(['not_set', 'bank_transfer']),
+  "updatedAt": zod.coerce.date().nullable()
+})
 export const AdminRequestPurchaseInvoiceUploadBody = zod.object({
   "contentType": zod.string(),
   "size": zod.number()
@@ -7133,3 +7149,54 @@ export const ListInventoryAlertsResponseItem = zod.object({
   "status": zod.enum(['out', 'low', 'ok'])
 })
 export const ListInventoryAlertsResponse = zod.array(ListInventoryAlertsResponseItem)
+
+export const AdminUpdateBillingSettingsBody = zod.object({
+  "invoiceEmail": zod.string().max(adminUpdateBillingSettingsBodyInvoiceEmailMax).regex(adminUpdateBillingSettingsBodyInvoiceEmailRegExp).nullish(),
+  "companyName": zod.string().min(1).max(adminUpdateBillingSettingsBodyCompanyNameMax).nullish(),
+  "streetAddress": zod.string().min(1).max(adminUpdateBillingSettingsBodyStreetAddressMax).nullish(),
+  "city": zod.string().min(1).max(adminUpdateBillingSettingsBodyCityMax).nullish(),
+  "country": zod.string().min(1).max(adminUpdateBillingSettingsBodyCountryMax).nullish(),
+  "taxNumber": zod.string().regex(adminUpdateBillingSettingsBodyTaxNumberRegExp).nullish(),
+  "bankName": zod.string().min(1).max(adminUpdateBillingSettingsBodyBankNameMax).nullish(),
+  "accountHolder": zod.string().min(1).max(adminUpdateBillingSettingsBodyAccountHolderMax).nullish(),
+  "accountNumber": zod.string().regex(adminUpdateBillingSettingsBodyAccountNumberRegExp).nullish(),
+  "iban": zod.string().regex(adminUpdateBillingSettingsBodyIbanRegExp).nullish(),
+  "preferredPaymentMethod": zod.enum(['not_set', 'bank_transfer']).optional()
+})
+
+export const adminUpdateBillingSettingsBodyInvoiceEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+export const AdminUpdateBillingSettingsResponse = zod.object({
+  "invoiceEmail": zod.string().nullable(),
+  "companyName": zod.string().nullable(),
+  "streetAddress": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "country": zod.string().nullable(),
+  "taxNumber": zod.string().nullable(),
+  "bankName": zod.string().nullable(),
+  "accountHolder": zod.string().nullable(),
+  "accountNumber": zod.string().nullable().describe('Masked for finance view-only users'),
+  "iban": zod.string().nullable().describe('Masked for finance view-only users'),
+  "preferredPaymentMethod": zod.enum(['not_set', 'bank_transfer']),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+export const adminUpdateBillingSettingsBodyCountryMax = 120;
+
+export const adminUpdateBillingSettingsBodyIbanRegExp = new RegExp('^SA[0-9]{22}$');
+
+export const adminUpdateBillingSettingsBodyStreetAddressMax = 300;
+
+export const adminUpdateBillingSettingsBodyTaxNumberRegExp = new RegExp('^[0-9]{15}$');
+
+export const adminUpdateBillingSettingsBodyAccountHolderMax = 160;
+
+export const adminUpdateBillingSettingsBodyCityMax = 120;
+
+export const adminUpdateBillingSettingsBodyCompanyNameMax = 160;
+
+export const adminUpdateBillingSettingsBodyBankNameMax = 120;
+
+export const adminUpdateBillingSettingsBodyAccountNumberRegExp = new RegExp('^[0-9]{6,24}$');
+
+export const adminUpdateBillingSettingsBodyInvoiceEmailMax = 254;

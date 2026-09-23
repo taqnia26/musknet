@@ -35,6 +35,7 @@ import { AdminWhatsAppSettings, AdminWhatsAppTemplates } from '@/pages/admin/wha
 import AdminIntegrations from '@/pages/admin/integrations';
 import AdminAccounting from '@/pages/admin/accounting';
 import AdminPurchases from '@/pages/admin/purchases';
+import AdminWalletBilling from '@/pages/admin/wallet-billing';
 import AdminGiftingIssues from '@/pages/admin/gifting-issues';
 import OwnerCredentialsSettings from '@/pages/admin/owner-credentials';
 import AdminInfluencers from '@/pages/admin/influencers';
@@ -99,6 +100,7 @@ export default function AdminRoutes() {
         <Route path="/admin/finance/expenses" component={AdminFinance} />
         <Route path="/admin/finance/purchases" component={AdminPurchases} />
         <Route path="/admin/finance/reports" component={AdminFinance} />
+        <Route path="/admin/wallet-billing" component={AdminWalletBilling} />
         <Route path="/admin/accounting" component={AdminAccounting} />
         <Route path="/admin/accounting/accounts" component={AdminAccounting} />
         <Route path="/admin/accounting/journal-entries" component={AdminAccounting} />
