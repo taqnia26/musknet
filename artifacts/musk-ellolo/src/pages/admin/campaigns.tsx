@@ -16,7 +16,7 @@ import {
   useAdminUpdateCampaign,
   useGetAdminMe,
 } from '@workspace/api-client-react';
-import { CalendarDays, DollarSign, Download, Edit2, Megaphone, PauseCircle, Plus, ShoppingCart, TicketCheck } from 'lucide-react';
+import { CalendarDays, DollarSign, Download, Edit2, Megaphone, PauseCircle, Plus, ShoppingCart, TicketCheck, MoreHorizontal } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { useToast } from '@/hooks/use-toast';
 import { hasPermission } from '@/lib/permissions';
@@ -29,6 +29,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const campaignSchema = z.object({
   name: z.string().trim().min(1),
@@ -328,9 +329,14 @@ export default function AdminCampaigns() {
                   <TableCell>{result ? formatNumber(result.orders) : '—'}</TableCell>
                   <TableCell className="font-medium">{result ? formatCurrency(result.revenue) : '—'}</TableCell>
                   <TableCell><Badge variant={state === 'active' ? 'default' : state === 'ended' ? 'secondary' : 'outline'} className={state === 'active' ? 'bg-emerald-600' : ''}>{statusLabels[state]}</Badge></TableCell>
-                  <TableCell><div className="flex justify-end gap-1">
-                    {canEdit && <Button variant="ghost" size="icon" onClick={() => editCampaign(campaign)} aria-label={t('تعديل', 'Edit')}><Edit2 className="h-4 w-4" /></Button>}
-                    {canEdit && campaign.status === 'active' && state !== 'ended' && <Button variant="ghost" size="icon" onClick={() => pause(campaign)} aria-label={t('إيقاف', 'Pause')}><PauseCircle className="h-4 w-4 text-amber-500" /></Button>}
+                  <TableCell><div className="flex justify-end">
+                    {canEdit && <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => editCampaign(campaign)}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                        {campaign.status === 'active' && state !== 'ended' && <><DropdownMenuSeparator /><DropdownMenuItem disabled={pauseMutation.isPending} onClick={() => pause(campaign)}><PauseCircle className="h-4 w-4 me-2 text-amber-500" />{t('إيقاف', 'Pause')}</DropdownMenuItem></>}
+                      </DropdownMenuContent>
+                    </DropdownMenu>}
                   </div></TableCell>
                 </TableRow>;
               })}

@@ -14,6 +14,7 @@ import {
   BarChart3,
   CircleDollarSign,
   Crown,
+  Edit2,
   Medal,
   PackageCheck,
   Percent,
@@ -26,11 +27,13 @@ import {
   Users,
   WalletCards,
   X,
+  MoreHorizontal,
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatCurrency, formatInteger, formatPercent } from '@/lib/formatters';
 
 type Performance = {
@@ -405,10 +408,16 @@ export default function AdminInfluencers() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 xl:max-w-[190px] xl:justify-end">
-                      <Button size="sm" variant="outline" onClick={() => update.mutate({ id: item.id, data: { isActive: item.isActive === false } }, { onSuccess: refresh })}>
-                        <Power className="me-1 h-3.5 w-3.5" />{item.isActive === false ? t('تفعيل', 'Activate') : t('تعطيل', 'Deactivate')}
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => edit(item)}>{t('تعديل', 'Edit')}</Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => edit(item)}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled={update.isPending} onClick={() => update.mutate({ id: item.id, data: { isActive: item.isActive === false } }, { onSuccess: refresh })}>
+                            <Power className="h-4 w-4 me-2" />{item.isActive === false ? t('تفعيل', 'Activate') : t('تعطيل', 'Deactivate')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
 

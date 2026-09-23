@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
@@ -16,6 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListCouponsQueryKey } from '@workspace/api-client-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const couponSchema = z.object({
   code: z.string().min(1),
@@ -203,17 +204,18 @@ export default function AdminCoupons() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
                       {hasPermission(currentUser, 'coupons', 'edit') && (
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(coupon)} data-testid={`btn-edit-coupon-${coupon.id}`}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenuItem onClick={() => handleEdit(coupon)} disabled={updateMutation.isPending}><Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                       )}
                       {hasPermission(currentUser, 'coupons', 'delete') && coupon.isActive && (
-                        <Button variant="ghost" size="icon" onClick={() => handleDisable(coupon.id)} data-testid={`btn-disable-coupon-${coupon.id}`} className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenuItem onClick={() => handleDisable(coupon.id)} disabled={disableMutation.isPending} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}</DropdownMenuItem>
                       )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>

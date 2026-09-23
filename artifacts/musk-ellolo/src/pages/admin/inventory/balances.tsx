@@ -22,9 +22,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Printer, History, ArrowUpDown, Pencil, Trash2 } from 'lucide-react';
+import { Search, Plus, Printer, History, ArrowUpDown, Pencil, Trash2, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { BarcodeScanner } from '@/components/admin/inventory/barcode-scanner';
@@ -136,58 +136,17 @@ export function RowActions({
   return (
     <>
       <div className="flex items-center justify-end gap-1">
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMovementOpen(true)} aria-label="Movement history">
-                <History className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('سجل الحركات', 'Movement History')}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onPrintBarcode(item.barcode || item.sku, item.nameAr)} aria-label="Print barcode">
-                <Printer className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('طباعة الباركود', 'Print Barcode')}</TooltipContent>
-          </Tooltip>
-
-          {canEdit && (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditOpen(true)} aria-label="Edit metadata">
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('تعديل البيانات', 'Edit Metadata')}</TooltipContent>
-              </Tooltip>
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setAdjustOpen(true)} aria-label="Adjust stock">
-                    <ArrowUpDown className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t('تسوية المخزون', 'Adjust Stock')}</TooltipContent>
-              </Tooltip>
-            </>
-          )}
-
-          {canDelete && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteOpen(true)} aria-label="Delete">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('حذف', 'Delete')}</TooltipContent>
-            </Tooltip>
-          )}
-        </TooltipProvider>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="w-4 h-4" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setMovementOpen(true)}><History className="w-4 h-4 mr-2" />{t('سجل الحركات', 'Movement History')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onPrintBarcode(item.barcode || item.sku, item.nameAr)}><Printer className="w-4 h-4 mr-2" />{t('طباعة الباركود', 'Print Barcode')}</DropdownMenuItem>
+            {canEdit && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setEditOpen(true)}><Pencil className="w-4 h-4 mr-2" />{t('تعديل البيانات', 'Edit Metadata')}</DropdownMenuItem><DropdownMenuItem onClick={() => setAdjustOpen(true)}><ArrowUpDown className="w-4 h-4 mr-2" />{t('تسوية المخزون', 'Adjust Stock')}</DropdownMenuItem></>}
+            {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending} onClick={() => setDeleteOpen(true)}><Trash2 className="w-4 h-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem></>}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Edit Dialog */}

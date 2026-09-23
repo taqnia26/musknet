@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +14,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListCategoriesQueryKey, getListCategoriesQueryKey } from '@workspace/api-client-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const categorySchema = z.object({
   nameAr: z.string().min(1),
@@ -164,17 +165,18 @@ export default function AdminCategories() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
                       {hasPermission(currentUser, 'categories', 'edit') && (
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(category)} data-testid={`btn-edit-category-${category.id}`}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenuItem onClick={() => handleEdit(category)} disabled={updateMutation.isPending}><Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                       )}
                       {hasPermission(currentUser, 'categories', 'delete') && category.isActive && (
-                        <Button variant="ghost" size="icon" onClick={() => handleDisable(category.id)} data-testid={`btn-disable-category-${category.id}`} className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenuItem onClick={() => handleDisable(category.id)} disabled={disableMutation.isPending} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}</DropdownMenuItem>
                       )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>

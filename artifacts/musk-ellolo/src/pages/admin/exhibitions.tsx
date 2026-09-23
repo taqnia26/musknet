@@ -18,8 +18,9 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Plus, Edit2, Trash2, Calendar, MapPin, DollarSign, Package } from 'lucide-react';
+import { Plus, Edit2, Trash2, Calendar, MapPin, DollarSign, Package, MoreHorizontal } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -273,10 +274,16 @@ export default function AdminExhibitions() {
                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {ex.location}</div>
                  <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {format(new Date(ex.startDate), 'MMM d, yyyy')} - {format(new Date(ex.endDate), 'MMM d, yyyy')}</div>
                </CardContent>
-               {canEdit && (
+               {(canEdit || canDelete) && (
                  <CardFooter className="p-2 border-t flex justify-end gap-1 bg-muted/30">
-                   <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setEditingExhibition(ex); setIsOpen(true); }}><Edit2 className="h-4 w-4" /></Button>
-                   <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}><Trash2 className="h-4 w-4" /></Button>
+                   <DropdownMenu>
+                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()} aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                     <DropdownMenuContent align="end">
+                       {canEdit && <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditingExhibition(ex); setIsOpen(true); }}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>}
+                       {canEdit && canDelete && <DropdownMenuSeparator />}
+                       {canDelete && <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending} onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}><Trash2 className="h-4 w-4 me-2" />{t('حذف', 'Delete')}</DropdownMenuItem>}
+                     </DropdownMenuContent>
+                   </DropdownMenu>
                  </CardFooter>
                )}
              </Card>

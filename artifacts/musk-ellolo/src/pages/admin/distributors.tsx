@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListDistributorsQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const normalizePhone = (value: string) => value
   .trim()
@@ -268,17 +269,18 @@ export default function AdminDistributors() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
                       {hasPermission(currentUser, 'distributors', 'edit') && (
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(distributor)} data-testid={`btn-edit-distributor-${distributor.id}`}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenuItem onClick={() => handleEdit(distributor)} disabled={updateMutation.isPending}><Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                       )}
                       {hasPermission(currentUser, 'distributors', 'delete') && distributor.isActive && (
-                        <Button variant="ghost" size="icon" onClick={() => handleDisable(distributor.id)} data-testid={`btn-disable-distributor-${distributor.id}`} className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <DropdownMenuItem onClick={() => handleDisable(distributor.id)} disabled={disableMutation.isPending} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}</DropdownMenuItem>
                       )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>

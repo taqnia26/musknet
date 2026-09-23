@@ -16,8 +16,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck, Clock3, ClipboardCheck, PackageCheck, Package, Check, Ban, CreditCard } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck, Clock3, ClipboardCheck, PackageCheck, Package, Check, Ban, CreditCard, MoreHorizontal } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -214,12 +215,19 @@ export default function AdminOrders() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-end">
-                    <Dialog open={selectedOrderId === order.id} onOpenChange={(v) => !v && setSelectedOrderId(null)}>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedOrderId(order.id)} title={t('عرض التفاصيل', 'View Details')}>
-                          <Eye className="h-4 w-4" />
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('إجراءات الطلب', 'Order actions')}>
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                      </DialogTrigger>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => setSelectedOrderId(order.id)}>
+                          <Eye className="me-2 h-4 w-4" />{t('عرض التفاصيل', 'View details')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Dialog open={selectedOrderId === order.id} onOpenChange={(v) => !v && setSelectedOrderId(null)}>
                       <DialogContent
                         dir={lang === 'ar' ? 'rtl' : 'ltr'}
                         className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden"

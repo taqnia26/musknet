@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, ShieldAlert } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ShieldAlert, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListStaffQueryKey } from '@workspace/api-client-react';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 import { useToast } from '@/hooks/use-toast';
 
@@ -370,15 +371,22 @@ export default function AdminStaff() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(user)} data-testid={`btn-edit-staff-${user.id}`} disabled={user.id === currentUser?.id}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      {user.isActive && (
-                        <Button variant="ghost" size="icon" onClick={() => handleDisable(user.id)} data-testid={`btn-disable-staff-${user.id}`} disabled={user.id === currentUser?.id} className="text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                    <div className="flex justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(user)} disabled={user.id === currentUser?.id || updateMutation.isPending}>
+                            <Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}
+                          </DropdownMenuItem>
+                          {user.isActive && (
+                            <DropdownMenuItem onClick={() => handleDisable(user.id)} disabled={user.id === currentUser?.id || disableMutation.isPending} className="text-destructive focus:text-destructive">
+                              <Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                 </TableRow>

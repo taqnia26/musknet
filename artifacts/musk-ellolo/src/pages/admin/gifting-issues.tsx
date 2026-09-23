@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { Coins, Package, Search, Plus, Trash2, Clock, FileStack, Pencil, RotateCcw, type LucideIcon } from 'lucide-react';
+import { Coins, Package, Search, Plus, Trash2, Clock, FileStack, Pencil, RotateCcw, MoreHorizontal, type LucideIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getGetAdminGiftingIssuesQueryKey,
@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { giftingIssueLabels as labels, issueUses } from './gifting-issues-config';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
 
@@ -618,23 +619,17 @@ export default function AdminGiftingIssues() {
                          {formatCurrency(row.totalCost, lang)}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-center gap-1">
-                          <Button type="button" variant="ghost" size="icon" title={t('تعديل', 'Edit')} onClick={(event) => { event.stopPropagation(); openEdit(row); }}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                           {row.category === 'B2B_EVALUATION' && row.returnedQuantity < row.quantity && (
-                             <Button type="button" variant="ghost" size="icon" className="text-primary hover:bg-primary/10" title={t('استرجاع', 'Return')} onClick={(event) => {
-                               event.stopPropagation();
-                               setReturning(row);
-                               setReturnForm({ quantity: String(row.quantity - row.returnedQuantity), condition: row.returnCondition ?? 'new' });
-                             }}>
-                               <RotateCcw className="h-4 w-4" />
-                             </Button>
-                           )}
-                          <Button type="button" variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 hover:text-destructive" title={t('حذف', 'Delete')} disabled={deleteMutation.isPending} onClick={(event) => { event.stopPropagation(); removeMovement(row); }}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                         <div className="flex items-center justify-center">
+                           <DropdownMenu>
+                             <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')} onClick={(event) => event.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                             <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+                               <DropdownMenuItem onClick={() => openEdit(row)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                               {row.category === 'B2B_EVALUATION' && row.returnedQuantity < row.quantity && <DropdownMenuItem onClick={() => { setReturning(row); setReturnForm({ quantity: String(row.quantity - row.returnedQuantity), condition: row.returnCondition ?? 'new' }); }}><RotateCcw className="h-4 w-4 mr-2" />{t('استرجاع', 'Return')}</DropdownMenuItem>}
+                               <DropdownMenuSeparator />
+                               <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending} onClick={() => removeMovement(row)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
+                             </DropdownMenuContent>
+                           </DropdownMenu>
+                         </div>
                       </TableCell>
                     </TableRow>
                   ))}

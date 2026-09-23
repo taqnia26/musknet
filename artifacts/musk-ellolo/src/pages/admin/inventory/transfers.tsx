@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeftRight, Plus } from 'lucide-react';
+import { ArrowLeftRight, Plus, MoreHorizontal, Send, PackageCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListInventoryTransfersQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function AdminInventoryTransfers() {
   const { t, lang } = useLanguage();
@@ -139,10 +140,15 @@ export default function AdminInventoryTransfers() {
                         {trf.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
-                      {trf.status === 'draft' && <Button variant="ghost" size="sm" disabled={sendMutation.isPending} onClick={() => sendMutation.mutate({ id: trf.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryTransfersQueryKey() }), onError: (error) => toast({ title: t('تعذر الإرسال', 'Could not send'), description: error.message, variant: 'destructive' }) })}>{t('إرسال', 'Send')}</Button>}
-                      {trf.status === 'sent' && <Button variant="ghost" size="sm" disabled={receiveMutation.isPending} onClick={() => receiveMutation.mutate({ id: trf.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryTransfersQueryKey() }), onError: (error) => toast({ title: t('تعذر الاستلام', 'Could not receive'), description: error.message, variant: 'destructive' }) })}>{t('استلام', 'Receive')}</Button>}
-                    </TableCell>
+                     <TableCell>
+                       <DropdownMenu>
+                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                         <DropdownMenuContent align="end">
+                           {trf.status === 'draft' && <DropdownMenuItem disabled={sendMutation.isPending} onClick={() => sendMutation.mutate({ id: trf.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryTransfersQueryKey() }), onError: (error) => toast({ title: t('تعذر الإرسال', 'Could not send'), description: error.message, variant: 'destructive' }) })}><Send className="h-4 w-4 mr-2" />{t('إرسال', 'Send')}</DropdownMenuItem>}
+                           {trf.status === 'sent' && <DropdownMenuItem disabled={receiveMutation.isPending} onClick={() => receiveMutation.mutate({ id: trf.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryTransfersQueryKey() }), onError: (error) => toast({ title: t('تعذر الاستلام', 'Could not receive'), description: error.message, variant: 'destructive' }) })}><PackageCheck className="h-4 w-4 mr-2" />{t('استلام', 'Receive')}</DropdownMenuItem>}
+                         </DropdownMenuContent>
+                       </DropdownMenu>
+                     </TableCell>
                   </TableRow>
                 ))
               )}

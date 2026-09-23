@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardCheck, Mail, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
+import { ClipboardCheck, Mail, Pencil, Plus, Printer, Trash2, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -193,13 +194,17 @@ export default function AdminInventoryCounts() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-center">
-                      <div className="flex flex-wrap items-center justify-center gap-2">
-                      {count.status === 'draft' && <Button variant="outline" size="sm" className="h-8 rounded-lg border-primary/30 bg-primary/10 text-primary hover:bg-primary/20" disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر إرسال الجرد', 'Could not submit count'), description: error.message, variant: 'destructive' }) })}>{t('مراجعة', 'Review')}</Button>}
-                      {count.status === 'review' && <Button variant="outline" size="sm" className="h-8 rounded-lg border-primary/30 bg-primary/10 text-primary hover:bg-primary/20" disabled={approveMutation.isPending} onClick={() => approveMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر اعتماد الجرد', 'Could not approve count'), description: error.message, variant: 'destructive' }) })}>{t('اعتماد', 'Approve')}</Button>}
-                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-sky-500/25 bg-sky-500/10 text-sky-600 shadow-sm hover:bg-sky-500/20 hover:text-sky-700" title={t('طباعة', 'Print')} onClick={() => printCount(count)}><Printer className="h-4 w-4 stroke-[1.8]" /></Button>
-                      <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-violet-500/25 bg-violet-500/10 text-violet-600 shadow-sm hover:bg-violet-500/20 hover:text-violet-700" title={t('إرسال بالبريد', 'Send by email')} onClick={() => emailCount(count)}><Mail className="h-4 w-4 stroke-[1.8]" /></Button>
-                      {(["draft", "review"] as const).includes(count.status as "draft" | "review") && <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-amber-500/25 bg-amber-500/10 text-amber-600 shadow-sm hover:bg-amber-500/20 hover:text-amber-700" title={t('تعديل الجرد كاملًا', 'Edit full count')} onClick={() => openEdit(count)}><Pencil className="h-4 w-4 stroke-[1.8]" /></Button>}
-                      {(["draft", "review"] as const).includes(count.status as "draft" | "review") && <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-destructive/25 bg-destructive/10 text-destructive shadow-sm hover:bg-destructive/20 hover:text-destructive" title={t('حذف الجرد كاملًا', 'Delete full count')} disabled={deleteMutation.isPending} onClick={() => removeCount(count)}><Trash2 className="h-4 w-4 stroke-[1.8]" /></Button>}
+                      <div className="flex items-center justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {count.status === 'draft' && <DropdownMenuItem disabled={reviewMutation.isPending} onClick={() => reviewMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر إرسال الجرد', 'Could not submit count'), description: error.message, variant: 'destructive' }) })}>{t('مراجعة', 'Review')}</DropdownMenuItem>}
+                            {count.status === 'review' && <DropdownMenuItem disabled={approveMutation.isPending} onClick={() => approveMutation.mutate({ id: count.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryCycleCountsQueryKey() }), onError: (error) => toast({ title: t('تعذر اعتماد الجرد', 'Could not approve count'), description: error.message, variant: 'destructive' }) })}>{t('اعتماد', 'Approve')}</DropdownMenuItem>}
+                            <DropdownMenuItem onClick={() => printCount(count)}><Printer className="h-4 w-4 mr-2" />{t('طباعة', 'Print')}</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => emailCount(count)}><Mail className="h-4 w-4 mr-2" />{t('إرسال بالبريد', 'Send by email')}</DropdownMenuItem>
+                            {(["draft", "review"] as const).includes(count.status as "draft" | "review") && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => openEdit(count)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل الجرد كاملًا', 'Edit full count')}</DropdownMenuItem><DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending} onClick={() => removeCount(count)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف الجرد كاملًا', 'Delete full count')}</DropdownMenuItem></>}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>

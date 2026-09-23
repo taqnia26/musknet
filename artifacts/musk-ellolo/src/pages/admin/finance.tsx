@@ -18,8 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Edit2, Trash2, DollarSign, TrendingUp, ShoppingBag, PieChart } from 'lucide-react';
+import { Plus, Edit2, Trash2, DollarSign, TrendingUp, ShoppingBag, PieChart, MoreHorizontal, Eye } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -252,21 +253,15 @@ function ExpensesTab({ canEdit, canDelete }: { canEdit: boolean, canDelete: bool
                  <TableCell>{exp.description}</TableCell>
                  <TableCell className="font-semibold">{exp.amount} SAR</TableCell>
                  <TableCell className="text-end">
-                   {exp.receiptUrl && (
-                     <Button variant="ghost" size="icon" asChild>
-                       <a href={exp.receiptUrl} target="_blank" rel="noopener noreferrer"><Eye className="h-4 w-4" /></a>
-                     </Button>
-                   )}
-                   {canEdit && (
-                     <Button variant="ghost" size="icon" onClick={() => { setEditingExpense(exp); setIsOpen(true); }}>
-                       <Edit2 className="h-4 w-4" />
-                     </Button>
-                   )}
-                   {canDelete && (
-                     <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(exp.id)}>
-                       <Trash2 className="h-4 w-4" />
-                     </Button>
-                   )}
+                   <DropdownMenu>
+                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                     <DropdownMenuContent align="end">
+                       {exp.receiptUrl && <DropdownMenuItem asChild><a href={exp.receiptUrl} target="_blank" rel="noopener noreferrer"><Eye className="h-4 w-4 me-2" />{t('عرض الإيصال', 'View receipt')}</a></DropdownMenuItem>}
+                       {canEdit && <DropdownMenuItem onClick={() => { setEditingExpense(exp); setIsOpen(true); }}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>}
+                       {canEdit && canDelete && <DropdownMenuSeparator />}
+                       {canDelete && <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending} onClick={() => handleDelete(exp.id)}><Trash2 className="h-4 w-4 me-2" />{t('حذف', 'Delete')}</DropdownMenuItem>}
+                     </DropdownMenuContent>
+                   </DropdownMenu>
                  </TableCell>
                </TableRow>
              ))}
@@ -275,10 +270,6 @@ function ExpensesTab({ canEdit, canDelete }: { canEdit: boolean, canDelete: bool
       </div>
     </div>
   );
-}
-
-function Eye(props: any) {
-  return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
 }
 
 function MonthlyTab() {

@@ -24,7 +24,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, Plus, Edit2, Check, X, Eye } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, Plus, Edit2, Check, X, Eye, MoreHorizontal } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -187,11 +188,12 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
                     </Badge>
                  </TableCell>
                  <TableCell className="text-end">
-                   {canEdit && (
-                     <Button variant="ghost" size="icon" onClick={() => { setEditingEmployee(emp); setIsOpen(true); }}>
-                       <Edit2 className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                     </Button>
-                   )}
+                   {canEdit && <DropdownMenu>
+                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                     <DropdownMenuContent align="end">
+                       <DropdownMenuItem onClick={() => { setEditingEmployee(emp); setIsOpen(true); }}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                     </DropdownMenuContent>
+                   </DropdownMenu>}
                  </TableCell>
                </TableRow>
              ))}
@@ -486,16 +488,14 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
                    </Badge>
                  </TableCell>
                  <TableCell className="text-end">
-                   {canEdit && req.status === 'pending' && (
-                     <div className="flex justify-end gap-2">
-                       <Button variant="outline" size="sm" className="text-success border-success" onClick={() => handleStatus(req.id, 'approved')} disabled={updateMutation.isPending}>
-                         <Check className="h-4 w-4 me-1" /> {t('موافقة', 'Approve')}
-                       </Button>
-                       <Button variant="outline" size="sm" className="text-destructive border-destructive" onClick={() => handleStatus(req.id, 'rejected')} disabled={updateMutation.isPending}>
-                         <X className="h-4 w-4 me-1" /> {t('رفض', 'Reject')}
-                       </Button>
-                     </div>
-                   )}
+                   {canEdit && req.status === 'pending' && <DropdownMenu>
+                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                     <DropdownMenuContent align="end">
+                       <DropdownMenuItem className="text-success focus:text-success" onClick={() => handleStatus(req.id, 'approved')} disabled={updateMutation.isPending}><Check className="h-4 w-4 me-2" />{t('موافقة', 'Approve')}</DropdownMenuItem>
+                       <DropdownMenuSeparator />
+                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleStatus(req.id, 'rejected')} disabled={updateMutation.isPending}><X className="h-4 w-4 me-2" />{t('رفض', 'Reject')}</DropdownMenuItem>
+                     </DropdownMenuContent>
+                   </DropdownMenu>}
                  </TableCell>
                </TableRow>
              ))}

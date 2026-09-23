@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Eye, MapPin, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Eye, MapPin, Pencil, Plus, Trash2, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -195,17 +196,16 @@ export default function AdminInventoryLocations() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-center gap-2">
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-sky-500/25 bg-sky-500/10 text-sky-600 shadow-sm hover:bg-sky-500/20" title={t('عرض', 'View')} onClick={() => setViewing(loc)}>
-                          <Eye className="h-4 w-4 stroke-[1.8]" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-amber-500/25 bg-amber-500/10 text-amber-600 shadow-sm hover:bg-amber-500/20" title={t('تعديل', 'Edit')} onClick={() => setEditing(loc)}>
-                          <Pencil className="h-4 w-4 stroke-[1.8]" />
-                        </Button>
-                        <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-destructive/25 bg-destructive/10 text-destructive shadow-sm hover:bg-destructive/20 disabled:opacity-35" title={loc.isDefault ? t('لا يمكن حذف الموقع الأساسي', 'Default location cannot be deleted') : t('حذف', 'Delete')} disabled={loc.isDefault || deleteMutation.isPending} onClick={() => removeLocation(loc)}>
-                          <Trash2 className="h-4 w-4 stroke-[1.8]" />
-                        </Button>
-                      </div>
+                        <div className="flex items-center justify-center">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setViewing(loc)}><Eye className="h-4 w-4 mr-2" />{t('عرض', 'View')}</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setEditing(loc)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={loc.isDefault || deleteMutation.isPending} onClick={() => removeLocation(loc)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -41,7 +41,7 @@ Arabic-first luxury fragrance storefront for Musk Ellolo, with a public product 
 
 ## User preferences
 
-- Do not build the admin dashboard until the public storefront and sections are reviewed; it will have separately defined requirements.
+- In admin tables and record cards, place per-record actions (view, edit, delete, archive, status changes, and similar actions) inside an accessible three-dot menu. Do not scatter action buttons across rows. Keep create/global controls and inline form Save/Cancel outside the menu.
 
 ## Gotchas
 

@@ -4,10 +4,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, Save, Image as ImageIcon, Search } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Save, Pencil, Image as ImageIcon, Search, MoreHorizontal } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export default function AdminDistributorCatalog() {
   const { data: catalog, isLoading } = useAdminListDistributorCatalog();
@@ -151,8 +152,7 @@ export default function AdminDistributorCatalog() {
                     ) : (
                       <Badge
                         variant="secondary"
-                        className={item.showOnDistributors ? "cursor-pointer border-transparent bg-success text-success-foreground" : "cursor-pointer"}
-                        onClick={() => toggleVisibility(item.id, item.showOnDistributors)}
+                        className={item.showOnDistributors ? "border-transparent bg-success text-success-foreground" : ""}
                       >
                         {item.showOnDistributors ? <Eye className="ml-1 h-3 w-3 inline" /> : <EyeOff className="ml-1 h-3 w-3 inline" />}
                         {item.showOnDistributors ? 'ظاهر' : 'مخفي'}
@@ -209,7 +209,13 @@ export default function AdminDistributorCatalog() {
                         </Button>
                       </div>
                     ) : (
-                      <Button variant="outline" size="sm" onClick={() => startEditing(item)}>تعديل</Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label="إجراءات المنتج"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem disabled={updateCatalog.isPending} onClick={() => toggleVisibility(item.id, item.showOnDistributors)}>{item.showOnDistributors ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}{item.showOnDistributors ? 'إخفاء' : 'إظهار'}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => startEditing(item)}><Pencil className="h-4 w-4 mr-2" />تعديل</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     )}
                   </TableCell>
                 </TableRow>

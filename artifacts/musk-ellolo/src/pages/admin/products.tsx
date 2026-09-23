@@ -23,6 +23,7 @@ import {
   Plus,
   Search,
   Trash2,
+  MoreHorizontal,
   Upload,
   X,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const MAX_IMAGES = 6;
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
@@ -412,17 +414,18 @@ export default function AdminProducts() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
                         {hasPermission(currentUser, 'products', 'edit') && (
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(product)} aria-label={t('تعديل المنتج', 'Edit product')}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenuItem onClick={() => handleEdit(product)} disabled={updateMutation.isPending}><Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                         )}
                         {hasPermission(currentUser, 'products', 'delete') && product.isActive && (
-                          <Button variant="ghost" size="icon" onClick={() => handleDisable(product.id)} className="text-destructive" aria-label={t('تعطيل المنتج', 'Disable product')}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenuItem onClick={() => handleDisable(product.id)} disabled={disableMutation.isPending} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}</DropdownMenuItem>
                         )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </TableCell>
                   </TableRow>
