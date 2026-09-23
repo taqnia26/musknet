@@ -25,3 +25,4 @@
 - [Salla one-time import](salla-one-time-import.md) — import products and orders into local storage, then allow disconnecting Salla without breaking the storefront.
 - [Contract storage provider paths](contract-storage-provider-paths.md) — persist the provider in each contract path so old Replit files are not silently treated as local files.
 - [SQL export encoding](sql-export-encoding.md) — single-column base64 results from executeSql may be quoted and line-wrapped; normalize the result before decoding.
+- [Shopper phone identity](shopper-phone-identity.md) — avoid changing OTP phone normalization without a legacy-account migration; formatted historical numbers may have separate identities.

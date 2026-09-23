@@ -2362,6 +2362,18 @@ export interface AdminCustomer {
   updatedAt: string;
 }
 
+export interface AdminCustomerInput {
+  /** @minLength 1 */
+  name: string;
+  /** @minLength 8 */
+  phone: string;
+  /**
+     * @nullable
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  email?: string | null;
+}
+
 export interface AdminCustomerUpdate {
   name?: string;
   /** @nullable */

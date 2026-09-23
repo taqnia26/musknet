@@ -1200,6 +1200,18 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminSearch" }, { $ref: "#/components/parameters/AdminStatus" }]
       responses: { "200": { description: Customers, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminCustomer" } } } } } }
+    post:
+      operationId: adminCreateCustomer
+      tags: [admin]
+      summary: Add an unverified individual customer
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCustomerInput" } } } }
+      responses:
+        "201": { description: Customer created, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCustomer" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Phone already belongs to a customer, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/customers/{id}:
     get:
       operationId: adminGetCustomer
@@ -3910,6 +3922,14 @@ components:
         isActive: { type: boolean }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    AdminCustomerInput:
+      type: object
+      additionalProperties: false
+      required: [name, phone]
+      properties:
+        name: { type: string, minLength: 1 }
+        phone: { type: string, minLength: 8 }
+        email: { type: [string, "null"], pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$' }
     AdminCustomerUpdate:
       type: object
       properties:

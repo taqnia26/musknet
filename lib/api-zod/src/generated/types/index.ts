@@ -43,6 +43,7 @@ export * from './adminCouponInput';
 export * from './adminCouponInputDiscountType';
 export * from './adminCouponUpdate';
 export * from './adminCustomer';
+export * from './adminCustomerInput';
 export * from './adminCustomerUpdate';
 export * from './adminDashboard';
 export * from './adminDistributor';

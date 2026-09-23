@@ -45,6 +45,7 @@ let viewerToken: string;
 let categoryId: number;
 let productId: number;
 let customerId: number;
+let manualCustomerId: number;
 let orderId: number;
 let createdAdminOrderId: number;
 let inventoryCreatedProductId: number;
@@ -186,6 +187,7 @@ afterAll(async () => {
   if (productId) await db.delete(productsTable).where(eq(productsTable.id, productId));
   if (categoryId) await db.delete(categoriesTable).where(eq(categoriesTable.id, categoryId));
   if (customerId) await db.delete(customersTable).where(eq(customersTable.id, customerId));
+  if (manualCustomerId) await db.delete(customersTable).where(eq(customersTable.id, manualCustomerId));
   if (temporarilyDisabledSuperIds.length) {
     await db.update(adminUsersTable).set({ isActive: true })
       .where(inArray(adminUsersTable.id, temporarilyDisabledSuperIds));
@@ -234,6 +236,52 @@ describe.sequential("admin route authorization", () => {
       .send({ nameEn: "Forbidden edit" })
       .expect(403);
     expect(denied.body.error).toMatch(/permission/i);
+  });
+
+  it("creates an unverified customer only with edit permission, without duplicating a phone", async () => {
+    if (!viewerToken) {
+      const [viewer] = await db.insert(adminUsersTable).values({
+        email: `customer-viewer-${Date.now()}@example.com`,
+        name: "Customer view-only",
+        passwordHash: await hashAdminPassword("viewer-test-password"),
+      }).returning();
+      createdIds.push(viewer.id);
+      viewerToken = await createAdminSession(viewer.id);
+    }
+    const url = "/api/admin/customers";
+    const uniquePhone = `9665${String(Date.now()).slice(-8)}`;
+    const payload = { name: "  عميل جديد  ", phone: `+${uniquePhone.slice(0, 3)} ${uniquePhone.slice(3, 5)} ${uniquePhone.slice(5)}`, email: "new@example.com" };
+    await request(app).post(url).send(payload).expect(401);
+    await request(app).post(url).set("Authorization", `Bearer ${viewerToken}`).send(payload).expect(403);
+    const admin = { Authorization: `Bearer ${superToken}` };
+    for (const invalid of [
+      { ...payload, name: "   " },
+      { ...payload, phone: "123" },
+      { ...payload, phone: "9665ABC123" },
+      { ...payload, email: "invalid" },
+      { ...payload, phoneVerified: true },
+    ]) await request(app).post(url).set(admin).send(invalid).expect(400);
+
+    const created = await request(app).post(url).set(admin).send(payload).expect(201);
+    manualCustomerId = created.body.id;
+    expect(created.body).toMatchObject({ name: "عميل جديد", phone: uniquePhone, email: "new@example.com", phoneVerified: false, isActive: true });
+    const [stored] = await db.select().from(customersTable).where(eq(customersTable.id, manualCustomerId));
+    expect(stored.phoneVerified).toBe(false);
+    const duplicate = await request(app).post(url).set(admin)
+      .send({ name: "Overwrite attempt", phone: uniquePhone }).expect(409);
+    expect(duplicate.body.error).toMatch(/phone/i);
+    await request(app).post(url).set(admin)
+      .send({ name: "Formatted duplicate", phone: `+${uniquePhone}` }).expect(409);
+    const [existingCustomer] = await db.select({ phone: customersTable.phone }).from(customersTable)
+      .where(eq(customersTable.id, customerId));
+    await request(app).post(url).set(admin)
+      .send({ name: "Existing customer duplicate", phone: `+${existingCustomer.phone}` }).expect(409);
+    const listed = await request(app).get(`${url}?search=${uniquePhone}`).set(admin).expect(200);
+    expect(listed.body).toHaveLength(1);
+    expect(listed.body[0].id).toBe(manualCustomerId);
+    const edited = await request(app).patch(`${url}/${manualCustomerId}`).set(admin)
+      .send({ name: "Updated individual" }).expect(200);
+    expect(edited.body).toMatchObject({ name: "Updated individual", phone: uniquePhone, phoneVerified: false });
   });
 
   it("stores private contracts locally across service instances, validates uploads, and reports configuration errors", async () => {

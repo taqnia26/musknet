@@ -2454,6 +2454,36 @@ router.get("/admin/customers", permit("customers", "view"), route(async (req, re
   rows = statusFilter(searchFilter(rows, query.search, ["name", "phone", "email"]), query.status);
   res.json(Api.AdminListCustomersResponse.parse(rows));
 }));
+router.post("/admin/customers", permit("customers", "edit"), route(async (req, res) => {
+  if (!req.body || typeof req.body !== "object" || Array.isArray(req.body) ||
+    Object.keys(req.body).some((key) => !["name", "phone", "email"].includes(key))) {
+    res.status(400).json({ error: "Only name, phone and optional email are accepted" }); return;
+  }
+  const body = parse(Api.AdminCreateCustomerBody, req.body, res); if (!body) return;
+  const name = body.name.trim();
+  const rawPhone = body.phone.trim()
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
+  if (!/^\+?[\d\s().-]+$/.test(rawPhone) || !/^\d{8,15}$/.test(rawPhone.replace(/\D/g, "")) || !name) {
+    res.status(400).json({ error: "A name and a valid phone number (8–15 digits) are required" }); return;
+  }
+  const phone = rawPhone.replace(/\D/g, "");
+  const email = body.email?.trim() || null;
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ error: "Enter a valid email address" }); return;
+  }
+  // Older shopper records may contain a leading + or formatting characters.
+  const [existing] = await db.select({ id: customersTable.id }).from(customersTable)
+    .where(sql`regexp_replace(translate(${customersTable.phone}, '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789'), '[^0-9]', '', 'g') = ${phone}`)
+    .limit(1);
+  if (existing) { res.status(409).json({ error: "A customer with this phone number already exists" }); return; }
+  const [row] = await db.insert(customersTable)
+    .values({ name, phone, email, phoneVerified: false })
+    .onConflictDoNothing({ target: customersTable.phone }).returning();
+  if (!row) { res.status(409).json({ error: "A customer with this phone number already exists" }); return; }
+  res.status(201).json(Api.AdminCreateCustomerResponse.parse(row));
+}));
 router.get("/admin/customers/:id", permit("customers", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetCustomerParams, req.params, res); if (!params) return;
   const [row] = await db.select().from(customersTable).where(eq(customersTable.id, params.id)).limit(1);

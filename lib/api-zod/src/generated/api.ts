@@ -3284,6 +3284,33 @@ export const AdminListCustomersResponseItem = zod.object({
 export const AdminListCustomersResponse = zod.array(AdminListCustomersResponseItem)
 
 
+/**
+ * @summary Add an unverified individual customer
+ */
+
+export const adminCreateCustomerBodyPhoneMin = 8;
+
+export const adminCreateCustomerBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+
+export const AdminCreateCustomerBody = zod.object({
+  "name": zod.string().min(1),
+  "phone": zod.string().min(adminCreateCustomerBodyPhoneMin),
+  "email": zod.string().regex(adminCreateCustomerBodyEmailRegExp).nullish()
+})
+
+export const AdminCreateCustomerResponse = zod.object({
+  "id": zod.number(),
+  "phone": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phoneVerified": zod.boolean(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
 export const AdminGetCustomerParams = zod.object({
   "id": zod.coerce.number()
 })

@@ -38,6 +38,7 @@ import type {
   AdminCouponInput,
   AdminCouponUpdate,
   AdminCustomer,
+  AdminCustomerInput,
   AdminCustomerUpdate,
   AdminDashboard,
   AdminDistributor,
@@ -7612,6 +7613,77 @@ export function useAdminListCustomers<TData = Awaited<ReturnType<typeof adminLis
 
 
 
+
+export const getAdminCreateCustomerUrl = () => {
+
+
+
+
+  return `/api/admin/customers`
+}
+
+/**
+ * @summary Add an unverified individual customer
+ */
+export const adminCreateCustomer = async (adminCustomerInput: AdminCustomerInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminCustomer> => {
+
+  return customFetch<AdminCustomer>(getAdminCreateCustomerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminCustomerInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateCustomerMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCustomer>>, TError,{data: BodyType<AdminCustomerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateCustomer>>, TError,{data: BodyType<AdminCustomerInput>}, TContext> => {
+
+const mutationKey = ['adminCreateCustomer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateCustomer>>, {data: BodyType<AdminCustomerInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateCustomer(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateCustomerMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateCustomer>>>
+    export type AdminCreateCustomerMutationBody = BodyType<AdminCustomerInput>
+    export type AdminCreateCustomerMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | Error>
+
+    /**
+ * @summary Add an unverified individual customer
+ */
+export const useAdminCreateCustomer = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCustomer>>, TError,{data: BodyType<AdminCustomerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateCustomer>>,
+        TError,
+        {data: BodyType<AdminCustomerInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateCustomerMutationOptions(options));
+    }
 
 export const getAdminGetCustomerUrl = (id: number,) => {
 
