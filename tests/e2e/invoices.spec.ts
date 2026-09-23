@@ -168,13 +168,81 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   if (await skipTour.isVisible()) await skipTour.click();
 
   await page.goto("/admin/sales/companies");
-  await expect(page.getByRole("heading", { name: /مبيعات الشركات|Company Sales/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /فواتير الشركات|Company Invoices/ })).toBeVisible();
   const row = page.getByTestId(`invoice-row-${invoiceId}`);
   await expect(row).toContainText(invoiceNumber);
 
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText(/معاينة الفاتورة|Preview Invoice/, { exact: true }).click();
   const preview = page.getByTestId("invoice-template");
+  const checkPalette = async (dark: boolean, print = false) => {
+    await page.emulateMedia({ media: print ? "print" : "screen" });
+    const colors = await preview.evaluate((sheet) => {
+      const get = (selector: string) => {
+        const element = sheet.querySelector(selector);
+        if (!element) throw new Error(`Missing invoice element: ${selector}`);
+        const style = getComputedStyle(element);
+        return { background: style.backgroundColor, text: style.color, display: style.display };
+      };
+      const black = sheet.querySelector<HTMLImageElement>(".invoice-logo-black")!;
+      const white = sheet.querySelector<HTMLImageElement>(".invoice-logo-white")!;
+      const visibleLogo = getComputedStyle(black).display !== "none" ? black : white;
+      const canvas = document.createElement("canvas");
+      canvas.width = visibleLogo.naturalWidth;
+      canvas.height = visibleLogo.naturalHeight;
+      const context = canvas.getContext("2d")!;
+      context.drawImage(visibleLogo, 0, 0);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let luminance = 0;
+      let opaque = 0;
+      for (let i = 0; i < pixels.length; i += 4) {
+        if (pixels[i + 3] < 128) continue;
+        luminance += (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+        opaque++;
+      }
+      return {
+        sheet: { background: getComputedStyle(sheet).backgroundColor, text: getComputedStyle(sheet).color },
+        title: get('[data-testid="invoice-title"]'),
+        info: get('[data-testid="invoice-info-card"]'),
+        table: get('[data-testid="invoice-table-head"]'),
+        body: get('[data-testid="invoice-table-body"]'),
+        item: get('[data-testid="invoice-table-body"] td'),
+        total: get('[data-testid="invoice-total-card"]'),
+        qr: get('[data-testid="invoice-qr-surface"]'),
+        footer: get('[data-testid="invoice-footer"]'),
+        footerLoaded: !!sheet.querySelector<HTMLImageElement>('[data-testid="invoice-footer"] img')?.naturalWidth,
+        buyerRight: sheet.querySelector('[data-testid="invoice-buyer"]')!.getBoundingClientRect().right,
+        sellerRight: sheet.querySelector('[data-testid="invoice-seller"]')!.getBoundingClientRect().right,
+        blackDisplay: get(".invoice-logo-black").display,
+        whiteDisplay: get(".invoice-logo-white").display,
+        logoLoaded: visibleLogo.complete && visibleLogo.naturalWidth > 0,
+        logoRatio: visibleLogo.naturalWidth / visibleLogo.naturalHeight,
+        logoLuminance: opaque ? luminance / opaque : -1,
+        qrLoaded: !!sheet.querySelector<HTMLImageElement>('[data-testid="invoice-qr"]')?.naturalWidth,
+      };
+    });
+    const ink = dark && !print ? "rgb(245, 243, 240)" : "rgb(41, 39, 40)";
+    expect(colors.sheet.background).toBe(dark && !print ? "rgb(21, 23, 27)" : "rgb(255, 255, 255)");
+    expect(colors.sheet.text).toBe(ink);
+    expect(colors.title.text).toBe(ink);
+    expect(colors.info.background).toBe(dark && !print ? "rgb(38, 41, 47)" : "rgb(245, 245, 244)");
+    expect(colors.table.background).toBe(dark && !print ? "rgb(32, 35, 41)" : "rgb(250, 250, 249)");
+    expect(colors.body.background).toBe(colors.sheet.background);
+    expect(colors.item.text).toBe(ink);
+    expect(colors.total.background).toBe(colors.info.background);
+    expect(colors.total.text).toBe(ink);
+    expect(colors.qr.background).toBe("rgb(255, 255, 255)");
+    expect(colors.qrLoaded).toBe(true);
+    expect(colors.footer.background).toBe("rgb(255, 255, 255)");
+    expect(colors.footerLoaded).toBe(true);
+    expect(colors.buyerRight).toBeGreaterThan(colors.sellerRight);
+    expect(colors.logoLoaded).toBe(true);
+    expect(colors.logoRatio).toBeGreaterThan(3);
+    expect(colors.blackDisplay === "none").toBe(dark && !print);
+    expect(colors.whiteDisplay === "none").toBe(!dark || print);
+    expect(dark && !print ? colors.logoLuminance : 255 - colors.logoLuminance).toBeGreaterThan(200);
+    await page.emulateMedia({ media: "screen" });
+  };
   await expect(preview).toHaveAttribute("dir", "rtl");
   await expect(preview).toContainText("فاتورة ضريبية");
   await expect(preview).toContainText("Musk Ellolo Test Seller");
@@ -182,15 +250,26 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await expect(preview).toContainText(productName);
   await expect(preview).toContainText("15.00");
   await expect(preview).toContainText("115.00");
+  await expect(page.getByTestId("invoice-discount")).toContainText("-0.00");
   await expect(page.getByTestId("invoice-qr")).toBeVisible();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect.poll(async () => page.getByTestId("invoice-qr").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await checkPalette(true);
+  await checkPalette(true, true);
+  await page.locator('button[title="تغيير المظهر"], button[title="Toggle theme"]').evaluate((button: HTMLButtonElement) => button.click());
+  await checkPalette(false);
+  await checkPalette(false, true);
+  await page.getByRole("button", { name: "Close", exact: true }).last().click();
   await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText("Preview Invoice", { exact: true }).click();
   await expect(page.getByTestId("invoice-template")).toHaveAttribute("dir", "ltr");
   await expect(page.getByTestId("invoice-template")).toContainText("Tax Invoice");
   await expect(page.getByTestId("invoice-template")).toContainText(productName);
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await checkPalette(false);
+  await page.locator('button[title="تغيير المظهر"], button[title="Toggle theme"]').evaluate((button: HTMLButtonElement) => button.click());
+  await checkPalette(true);
+  await checkPalette(true, true);
+  await page.getByRole("button", { name: "Close", exact: true }).last().click();
   await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
 
   let printCalls = 0;
@@ -210,7 +289,7 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await expect(page.getByTestId("invoice-template")).toContainText(invoiceNumber);
   await expect(page.getByTestId("invoice-qr")).toBeVisible();
   await expect.poll(() => printCalls).toBe(1);
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).last().click();
 
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText(/تعديل البيانات|Edit Details/, { exact: true }).click();
@@ -226,7 +305,7 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await page.getByText(/معاينة الفاتورة|Preview Invoice/, { exact: true }).click();
   await expect(page.getByTestId("invoice-template")).toContainText(updatedBuyer);
   await expect(page.getByTestId("invoice-template")).toContainText(updatedAddress);
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).last().click();
 
   await page.route(`**/api/admin/invoices/${invoiceId}/email-deliveries`, async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
@@ -258,7 +337,7 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await page.getByTestId("button-send-invoice-email").click();
   await expect(page.getByText(/تم إرسال الفاتورة بنجاح|Invoice sent successfully/)).toBeVisible();
   expect(sentRecipient).toBe("client@example.com");
-  await page.getByRole("button", { name: /إغلاق|Close/, exact: true }).click();
+  await page.getByRole("button", { name: "إغلاق", exact: true }).click();
 
   await page.goto("/admin/sales/companies");
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();

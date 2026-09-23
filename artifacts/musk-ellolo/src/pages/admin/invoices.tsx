@@ -50,7 +50,7 @@ function InvoiceTemplate({
 }) {
   const { t, lang } = useLanguage();
   return (
-    <div id="invoice-print-area" data-testid="invoice-template" className="bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div id="invoice-print-area" data-testid="invoice-template" className="invoice-sheet bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <style>{`
         @media print {
           body, html { height: auto !important; overflow: visible !important; }
@@ -70,17 +70,9 @@ function InvoiceTemplate({
         }
       `}</style>
       
-      {/* Header */}
-      <div className="mb-9 flex flex-col items-center border-b border-stone-200 pb-8 text-center">
-        <img src={`${import.meta.env.BASE_URL}site-assets/admin-logo.png`} alt="Musk Ellolo" className="h-auto w-36 sm:w-44 object-contain" />
-        <h1 className="mt-3 text-xl font-semibold tracking-wide text-[#292728]">{t('فاتورة ضريبية', 'Tax Invoice')}</h1>
-        <p className="mt-2 text-sm font-medium text-stone-700">{invoice.sellerName}</p>
-        <p className="mt-1 text-xs text-stone-500">{t('الرقم الضريبي', 'VAT Number')}: <span className="font-mono text-stone-700">{invoice.sellerVatNumber}</span></p>
-      </div>
-
-      {/* Info Grid */}
-      <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-9">
-        <div className="p-4 sm:p-5">
+      {/* Customer on the physical right, seller on the left, with the mark centered. */}
+      <div dir="rtl" className="invoice-heading grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)] sm:items-start mb-7">
+        <div data-testid="invoice-buyer" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-buyer min-w-0 pt-4 sm:pt-24">
           <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('فاتورة إلى', 'Bill To')}</h3>
           <p className="font-semibold text-lg text-[#292728]">{invoice.buyerName || invoice.distributorName || '-'}</p>
           {invoice.buyerAddress && <p className="text-xs sm:text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{invoice.buyerAddress}</p>}
@@ -88,7 +80,21 @@ function InvoiceTemplate({
           {invoice.buyerCommercialRegistrationNumber && <p className="text-xs sm:text-sm text-gray-600 mt-1">{t('السجل التجاري', 'CR')}: <span className="font-mono text-gray-900">{invoice.buyerCommercialRegistrationNumber}</span></p>}
           {invoice.orderNumber && <p className="mt-3 text-xs text-stone-500">{t('رقم الطلب', 'Order No.')}: <span className="font-mono text-stone-700">{invoice.orderNumber}</span></p>}
         </div>
-        <div className="rounded-md border border-stone-200 bg-stone-100 p-4 sm:p-5">
+        <div className="invoice-heading-logo flex flex-col items-center text-center">
+          <div className="flex h-20 items-center justify-center">
+            <img src={`${import.meta.env.BASE_URL}site-assets/invoice-logo-black.png`} alt="Musk Ellolo" data-testid="invoice-logo-black" className="invoice-logo-black h-auto w-48 sm:w-56 object-contain" />
+            <img src={`${import.meta.env.BASE_URL}site-assets/invoice-logo-white.png`} alt="Musk Ellolo" data-testid="invoice-logo-white" className="invoice-logo-white h-auto w-48 sm:w-56 object-contain" />
+          </div>
+          <h1 data-testid="invoice-title" className="mt-2 text-xl font-semibold tracking-wide text-[#292728]">{t('فاتورة ضريبية', 'Tax Invoice')}</h1>
+        </div>
+        <div data-testid="invoice-seller" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-seller min-w-0 pt-4 sm:pt-24">
+          <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('بياناتنا', 'From')}</h3>
+          <p className="font-semibold text-lg text-[#292728]">{invoice.sellerName}</p>
+          <p className="mt-2 text-xs text-stone-500">{t('الرقم الضريبي', 'VAT Number')}: <span className="font-mono text-stone-700">{invoice.sellerVatNumber}</span></p>
+        </div>
+      </div>
+      <div dir="rtl" className="flex justify-end mb-8">
+        <div data-testid="invoice-info-card" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="w-full sm:w-[46%] rounded-md border border-stone-200 bg-stone-100 p-4 sm:p-5">
           <dl className="space-y-3 text-sm">
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
             {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
@@ -102,7 +108,7 @@ function InvoiceTemplate({
       {/* Items Table */}
       <div className="rounded-xl overflow-x-auto border border-gray-200 mb-8">
         <table className="w-full text-xs sm:text-sm min-w-[500px]">
-          <thead className="bg-gray-50">
+           <thead data-testid="invoice-table-head" className="bg-gray-50">
             <tr>
               <th className="text-start py-3 px-4 sm:px-6 font-bold text-gray-900">{t('المنتج', 'Product')}</th>
               <th className="text-center py-3 px-3 sm:px-4 font-bold text-gray-900">{t('الكمية', 'Qty')}</th>
@@ -110,7 +116,7 @@ function InvoiceTemplate({
               <th className="text-end py-3 px-4 sm:px-6 font-bold text-gray-900">{t('المجموع', 'Total')}</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+           <tbody data-testid="invoice-table-body" className="divide-y divide-gray-100 bg-white">
             {invoice.items.length > 0 ? (
               invoice.items.map((item, idx) => (
                 <tr key={idx}>
@@ -131,7 +137,7 @@ function InvoiceTemplate({
 
       {/* Totals & QR */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-6">
-        <div className="w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
+         <div data-testid="invoice-qr-surface" className="invoice-qr-surface w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
           {qrUrl ? (
             <img src={qrUrl} alt="ZATCA QR" data-testid="invoice-qr" onLoad={onQrLoad} className="w-full h-full object-contain" />
           ) : (
@@ -147,7 +153,15 @@ function InvoiceTemplate({
             <span>{t('ضريبة القيمة المضافة (15%)', 'VAT (15%)')}</span>
             <span className="font-mono">{invoice.vatAmount.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
+          {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
+            <span>{t('الشحن', 'Shipping')}</span>
+            <span className="font-mono">{invoice.shippingAmount!.toFixed(2)}</span>
+          </div>}
+          <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
+            <span>{t('الخصم', 'Discount')}</span>
+            <span className="font-mono">-{(invoice.discountAmount ?? 0).toFixed(2)}</span>
+          </div>
+           <div data-testid="invoice-total-card" className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
             <span className="text-[#292728]">{t('الإجمالي', 'Total')}</span>
             <span className="font-mono text-[#292728]">{invoice.totalAmount.toFixed(2)}</span>
           </div>
@@ -166,6 +180,9 @@ function InvoiceTemplate({
           )}
         </div>
       </div>
+      <footer className="invoice-footer" data-testid="invoice-footer">
+        <img src={`${import.meta.env.BASE_URL}site-assets/invoice-footer.jpg`} alt={t('muskellolo.com، العنوان وبيانات الشركة', 'muskellolo.com, company address and details')} className="w-full h-auto" />
+      </footer>
     </div>
   );
 }
@@ -221,7 +238,7 @@ function InvoicePreviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-muted/20 border-none shadow-2xl sm:max-h-[90vh] flex flex-col">
-        <div className="print-hide flex justify-between items-center p-4 bg-background border-b shrink-0">
+         <div className="print-hide flex justify-between items-center p-4 pe-14 bg-background border-b shrink-0">
           <DialogTitle className="text-lg font-bold">{t('معاينة الفاتورة', 'Invoice Preview')} - {invoice?.invoiceNumber}</DialogTitle>
           <div className="flex gap-2">
             <Button onClick={() => window.print()} variant="outline" size="sm" className="gap-2">

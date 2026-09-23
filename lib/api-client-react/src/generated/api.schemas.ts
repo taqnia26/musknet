@@ -1765,6 +1765,8 @@ export interface AdminInvoice {
   /** @nullable */
   buyerAddress: string | null;
   subtotal: number;
+  discountAmount?: number;
+  shippingAmount?: number;
   vatAmount: number;
   totalAmount: number;
   paidAmount: number;
@@ -4531,4 +4533,3 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
-

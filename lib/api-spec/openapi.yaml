@@ -3540,6 +3540,8 @@ components:
         buyerCommercialRegistrationNumber: { type: [string, "null"] }
         buyerAddress: { type: [string, "null"] }
         subtotal: { type: number }
+        discountAmount: { type: number }
+        shippingAmount: { type: number }
         vatAmount: { type: number }
         totalAmount: { type: number }
         paidAmount: { type: number }

@@ -1569,6 +1569,8 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     buyerAddress: invoicesTable.buyerAddress,
     subtotal: invoicesTable.subtotal,
+    discountAmount: sql<number>`coalesce(${ordersTable.discount}, 0)`,
+    shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount,
     totalAmount: invoicesTable.totalAmount,
     qrCodeData: invoicesTable.qrCodeData,
@@ -1719,6 +1721,8 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
     buyerName: invoicesTable.buyerName, buyerAddress: invoicesTable.buyerAddress,
     buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
+    discountAmount: sql<number>`coalesce(${ordersTable.discount}, 0)`,
+    shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount, totalAmount: invoicesTable.totalAmount, qrCodeData: invoicesTable.qrCodeData,
   }).from(invoicesTable).leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
     .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).limit(1);

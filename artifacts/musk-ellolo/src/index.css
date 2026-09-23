@@ -565,3 +565,104 @@ html.dark.admin-route {
 .admin-theme[data-mask-numeric="true"] input[type="tel"]:not(:focus) {
   -webkit-text-security: disc;
 }
+
+@layer base {
+/* The invoice is a document inside an admin portal. Keep its own palette,
+   including in Radix portals, without changing other admin surfaces. */
+.invoice-sheet {
+  --invoice-paper: #ffffff;
+  --invoice-panel: #f5f5f4;
+  --invoice-panel-soft: #fafaf9;
+  --invoice-ink: #292728;
+  --invoice-secondary: #57534e;
+  --invoice-muted: #57534e;
+  --invoice-border: #e7e5e4;
+  background-color: var(--invoice-paper) !important;
+  color: var(--invoice-ink) !important;
+  border-color: var(--invoice-border) !important;
+  display: flex;
+  flex-direction: column;
+  min-height: 960px;
+}
+
+/* The sheet itself also carries bg-white; the admin rule for that utility is
+   important and more specific than a bare .invoice-sheet selector. */
+html.admin-route .invoice-sheet.bg-white {
+  background-color: var(--invoice-paper) !important;
+  color: var(--invoice-ink) !important;
+}
+
+html.dark.admin-route .invoice-sheet {
+  --invoice-paper: #15171b;
+  --invoice-panel: #26292f;
+  --invoice-panel-soft: #202329;
+  --invoice-ink: #f5f3f0;
+  --invoice-secondary: #d5d1ca;
+  --invoice-muted: #bcb7af;
+  --invoice-border: #42454b;
+}
+
+.invoice-sheet .bg-white,
+.invoice-sheet .bg-gray-50,
+.invoice-sheet .bg-stone-100,
+.invoice-sheet .bg-stone-200\/20,
+.invoice-sheet .bg-gray-100 {
+  color: var(--invoice-ink) !important;
+}
+.invoice-sheet .bg-white { background-color: var(--invoice-paper) !important; }
+.invoice-sheet .bg-gray-50,
+.invoice-sheet .bg-stone-200\/20 { background-color: var(--invoice-panel-soft) !important; }
+.invoice-sheet .bg-stone-100,
+.invoice-sheet .bg-gray-100 { background-color: var(--invoice-panel) !important; }
+.invoice-sheet .invoice-qr-surface { background-color: #fff !important; }
+
+.invoice-sheet .text-\[\#292728\],
+.invoice-sheet .text-gray-900 { color: var(--invoice-ink) !important; }
+.invoice-sheet .text-gray-600,
+.invoice-sheet .text-stone-600,
+.invoice-sheet .text-stone-700 { color: var(--invoice-secondary) !important; }
+.invoice-sheet .text-gray-500,
+.invoice-sheet .text-stone-500 { color: var(--invoice-muted) !important; }
+.invoice-sheet .border-stone-200,
+.invoice-sheet .border-gray-200 { border-color: var(--invoice-border) !important; }
+.invoice-sheet .divide-gray-100 > :not(:last-child) {
+  border-color: var(--invoice-border) !important;
+}
+.invoice-sheet .invoice-logo-white { display: none; }
+html.dark.admin-route .invoice-sheet .invoice-logo-black { display: none; }
+html.dark.admin-route .invoice-sheet .invoice-logo-white { display: block; }
+.invoice-sheet .invoice-footer {
+  margin-top: auto;
+  padding-top: 4rem;
+  background-color: #fff !important;
+}
+.invoice-sheet .invoice-footer img { display: block; }
+
+@media (max-width: 639px) {
+  .invoice-sheet .invoice-heading-logo { order: -1; }
+}
+
+@media print {
+  html.admin-route #invoice-print-area {
+    --invoice-paper: #ffffff !important;
+    --invoice-panel: #f5f5f4 !important;
+    --invoice-panel-soft: #fafaf9 !important;
+    --invoice-ink: #292728 !important;
+    --invoice-secondary: #57534e !important;
+    --invoice-muted: #57534e !important;
+    --invoice-border: #e7e5e4 !important;
+    background-color: #ffffff !important;
+    color: #292728 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    min-height: 267mm;
+  }
+  .invoice-sheet .invoice-heading {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+  .invoice-sheet .invoice-heading-logo { order: 0; }
+  .invoice-sheet .invoice-footer { break-inside: avoid; }
+  html.dark.admin-route .invoice-sheet .invoice-logo-black { display: block; }
+  html.dark.admin-route .invoice-sheet .invoice-logo-white { display: none; }
+}
+}

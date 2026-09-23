@@ -19,6 +19,7 @@
 - [Baileys restart-required pairing](baileys-restart-required-pairing.md) — status 515 is a normal pairing restart; persist updated credentials before reconnecting.
 - [Historical shipping scope](historical-shipping-scope.md) — legacy shipments default to domestic because geography was not previously stored; correct exceptions explicitly.
 - [Scrollable flex dialogs](scrollable-flex-dialogs.md) — prefer a native overflow region when Radix ScrollArea expands its viewport to content height inside flex dialogs.
+- [Layered admin CSS overrides](layered-admin-css-overrides.md) — important rules in Tailwind's base layer outrank unlayered important rules; keep isolated document overrides in that layer.
 - [External protocol browser tests](external-protocol-browser-tests.md) — verify computed mailto-style URLs in-page; headless Chromium may not navigate to external protocols.
 - [Object storage abort signals](object-storage-abort-signals.md) — browser automation can report ERR_ABORTED after a signed upload or delete already completed successfully.
 - [Transactional email credentials](transactional-email-credentials.md) — connector setup may not attach; keep a secret-based provider fallback without persisting credentials.
@@ -30,3 +31,4 @@
 - [Posted journal test cleanup](posted-journal-test-cleanup.md) — disable immutability triggers before fixture deletion, re-enable only after commit.
 - [WhatsApp LID identity](whatsapp-lid-identity.md) — do not infer a phone or shopper identity from an opaque LID; require a verified mapping before linking.
 - [Opened tester pool](opened-tester-pool.md) — reuse the separate B2B tester balance, distinguish sellable stock from asset value, and key partial returns per event.
+- [Word letterhead footer art](word-letterhead-footer-art.md) — the brand's Word footer artwork lives inside its full-page header image, not the document's empty footer section.
