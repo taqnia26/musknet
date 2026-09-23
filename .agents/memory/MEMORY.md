@@ -24,3 +24,4 @@
 - [Transactional email credentials](transactional-email-credentials.md) — connector setup may not attach; keep a secret-based provider fallback without persisting credentials.
 - [Salla one-time import](salla-one-time-import.md) — import products and orders into local storage, then allow disconnecting Salla without breaking the storefront.
 - [Contract storage provider paths](contract-storage-provider-paths.md) — persist the provider in each contract path so old Replit files are not silently treated as local files.
+- [SQL export encoding](sql-export-encoding.md) — single-column base64 results from executeSql may be quoted and line-wrapped; normalize the result before decoding.

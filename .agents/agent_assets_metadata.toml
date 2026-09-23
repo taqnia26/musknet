@@ -28,3 +28,45 @@ mtime_ms = 1788452615846
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/b7508600-280b-4173-ad17-c0f05b211855/43272e9a-927b-4287-8130-3f829054ccbe"
 storage_version_token = "1788452762145121"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "2a6yoQKHZNJMCLVVB6WRi"
+uri = "file://.local/reports/master-sales-production-backup-ff316fd33b56c91c4a383043.html"
+type = "html"
+title = "نسخة احتياطية كاملة لقيود Master Sales"
+description = "نسخة بيانات الإنتاج قبل الحذف؛ تحتوي زر تنزيل JSON للسجلات الـ82 وسطورها وسجل تدقيقها. احفظها خارج المشروع."
+logical_id = "73502bd6-5604-4158-acbd-b9da02d5bf15"
+content_hash = "sha256:c33e40ec417898716998cbd9a3417dc374e24ba44913a77b8af3ce47a5b9d33e"
+size = 181185
+mtime_ms = 1790170392069
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/73502bd6-5604-4158-acbd-b9da02d5bf15/adcd213c-f805-4d71-af1a-226e277c4b6e"
+storage_version_token = "1790170454536830"
+content_type = "text/html"
+
+[[outputs]]
+id = "DUijyldZo5ZJiX2qbWC_N"
+uri = "file://.local/reports/master-sales-production-entry-list-ff316fd33b56c91c4a383043.csv"
+type = "table"
+title = "قائمة قيود Master Sales المستهدفة"
+description = "كشف قابل للتنزيل بالقيود الـ82 التي سيشملها إجراء الحذف اليدوي فقط."
+logical_id = "67b9766e-8811-44ee-a053-9d341edfafeb"
+content_hash = "sha256:8e7b7c43db3cfe25ac3648798063efc79a0bb3609e2d8820d078a23a2716fda0"
+size = 19545
+mtime_ms = 1790170369393
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/67b9766e-8811-44ee-a053-9d341edfafeb/325d320d-e186-4f9f-901c-8aa5c1eb224c"
+storage_version_token = "1790170455827320"
+content_type = "text/csv"
+
+[[outputs]]
+id = "Clb5ae-koYtTvpIMNRvyi"
+uri = "file://.local/reports/master-sales-production-backup-ff316fd33b56c91c4a383043.json"
+type = "unspecified"
+title = "نسخة JSON الأصلية للقيود المستوردة"
+description = "أرشيف كامل قابل للاستعادة يضم قيود الإنتاج الـ82 وسطورها وسجل تدقيقها قبل الحذف."
+logical_id = "dd721a01-1064-4bd8-ab73-daeac67e6046"
+content_hash = "sha256:eb8fe43cdc673ad2b29a2b5764ca5d77c1ee551417080835f5318bdfb0978bc9"
+size = 135155
+mtime_ms = 1790170186617
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/dd721a01-1064-4bd8-ab73-daeac67e6046/2a01d950-c1a1-4828-ab21-7f143a930bb8"
+storage_version_token = "1790170479727745"
+content_type = "application/octet-stream"
