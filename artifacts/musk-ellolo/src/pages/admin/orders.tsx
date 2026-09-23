@@ -22,7 +22,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { CreateOrderDialog } from '@/components/admin/create-order-dialog';
 
@@ -230,17 +229,17 @@ export default function AdminOrders() {
                     <Dialog open={selectedOrderId === order.id} onOpenChange={(v) => !v && setSelectedOrderId(null)}>
                       <DialogContent
                         dir={lang === 'ar' ? 'rtl' : 'ltr'}
-                        className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden"
+                        className="max-w-4xl max-h-[90vh] max-h-[90dvh] flex flex-col gap-0 p-0 overflow-hidden"
                       >
-                        <DialogHeader className={`px-6 py-4 border-b ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
-                          <DialogTitle className="flex min-w-0 w-full items-center gap-2 pe-10 text-start text-xl">
-                            <ShoppingBag className="h-5 w-5 text-primary" />
+                        <DialogHeader className={`shrink-0 px-4 sm:px-6 py-4 border-b ${lang === 'ar' ? 'text-right' : 'text-left'}`}>
+                          <DialogTitle className="flex min-w-0 w-full items-center gap-2 px-0 text-start text-xl">
+                            <ShoppingBag className="h-5 w-5 shrink-0 text-primary" />
                             <span className="min-w-0 flex-1 break-words">{t('تفاصيل الطلب', 'Order Details')}</span>
-                            <span dir="ltr" className="shrink-0 text-base text-muted-foreground">#{order.orderNumber}</span>
+                            <span dir="ltr" className="min-w-0 max-w-[60%] break-all text-base text-muted-foreground">#{order.orderNumber}</span>
                           </DialogTitle>
                         </DialogHeader>
                         
-                        <ScrollArea className="flex-1 px-6 py-4">
+                        <div data-testid="order-details-scroll" className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 touch-pan-y">
                           {isDetailLoading ? (
                             <div className="flex flex-col items-center justify-center py-12 space-y-4">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -259,11 +258,11 @@ export default function AdminOrders() {
                                   <div className="grid grid-cols-2 gap-4">
                                     <div className="bg-muted/30 p-4 rounded-md border">
                                       <p className="text-xs text-muted-foreground mb-1 font-medium">{t('تاريخ الطلب', 'Order Date')}</p>
-                                      <p className="font-semibold text-sm">{format(new Date(orderDetail.createdAt), 'PPpp')}</p>
+                                        <p className="font-semibold text-sm break-words">{format(new Date(orderDetail.createdAt), 'PPpp')}</p>
                                     </div>
                                     <div className="bg-muted/30 p-4 rounded-md border">
                                       <p className="text-xs text-muted-foreground mb-1 font-medium">{t('طريقة الشحن', 'Shipping Method')}</p>
-                                      <p className="font-semibold text-sm capitalize">{orderDetail.shippingMethod}</p>
+                                        <p className="font-semibold text-sm capitalize break-words">{orderDetail.shippingMethod}</p>
                                     </div>
                                   </div>
                                   {orderDetail.trackingNumber && (
@@ -271,7 +270,7 @@ export default function AdminOrders() {
                                       <Truck className="h-5 w-5 text-primary opacity-70" />
                                       <div>
                                         <p className="text-xs text-muted-foreground font-medium">{t('رقم التتبع', 'Tracking Number')}</p>
-                                        <p className="font-semibold text-sm">{orderDetail.trackingNumber}</p>
+                                        <p className="font-semibold text-sm break-all">{orderDetail.trackingNumber}</p>
                                       </div>
                                     </div>
                                   )}
@@ -322,18 +321,18 @@ export default function AdminOrders() {
                                     <h3 className="font-bold text-sm tracking-wide uppercase">{t('بيانات العميل', 'Customer Info')}</h3>
                                   </div>
                                   <div className="space-y-3 text-sm">
-                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                    <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
                                       <span className="text-muted-foreground">{t('الاسم', 'Name')}:</span>
-                                      <span className="font-medium">{orderDetail.customer.name}</span>
+                                      <span className="font-medium break-words">{orderDetail.customer.name}</span>
                                     </div>
-                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                    <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
                                       <span className="text-muted-foreground">{t('الهاتف', 'Phone')}:</span>
-                                      <span className="font-medium" dir="ltr">{orderDetail.customer.phone}</span>
+                                      <span className="font-medium break-all" dir="ltr">{orderDetail.customer.phone}</span>
                                     </div>
                                     {orderDetail.customer.email && (
-                                      <div className="grid grid-cols-[100px_1fr] gap-2">
+                                      <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
                                         <span className="text-muted-foreground">{t('البريد الإلكتروني', 'Email')}:</span>
-                                        <span className="font-medium">{orderDetail.customer.email}</span>
+                                        <span className="font-medium break-all">{orderDetail.customer.email}</span>
                                       </div>
                                     )}
                                   </div>
@@ -345,22 +344,22 @@ export default function AdminOrders() {
                                     <h3 className="font-bold text-sm tracking-wide uppercase">{t('عنوان الشحن', 'Shipping Address')}</h3>
                                   </div>
                                   <div className="space-y-3 text-sm">
-                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                    <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
                                       <span className="text-muted-foreground">{t('المدينة/الحي', 'City/District')}:</span>
-                                      <span className="font-medium">{orderDetail.orderAddress.city} - {orderDetail.orderAddress.district}</span>
+                                      <span className="font-medium break-words">{orderDetail.orderAddress.city} - {orderDetail.orderAddress.district}</span>
                                     </div>
-                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                    <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
                                       <span className="text-muted-foreground">{t('الشارع', 'Street')}:</span>
-                                      <span className="font-medium">{orderDetail.orderAddress.street}</span>
+                                      <span className="font-medium break-words">{orderDetail.orderAddress.street}</span>
                                     </div>
-                                    <div className="grid grid-cols-[100px_1fr] gap-2">
+                                    <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
                                       <span className="text-muted-foreground">{t('المبنى', 'Building')}:</span>
-                                      <span className="font-medium">{orderDetail.orderAddress.buildingNo}</span>
+                                      <span className="font-medium break-words">{orderDetail.orderAddress.buildingNo}</span>
                                     </div>
                                     {orderDetail.orderAddress.additionalInfo && (
-                                      <div className="grid grid-cols-[100px_1fr] gap-2">
+                                      <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
                                         <span className="text-muted-foreground">{t('معلومات إضافية', 'Additional Info')}:</span>
-                                        <span className="font-medium text-muted-foreground italic">{orderDetail.orderAddress.additionalInfo}</span>
+                                        <span className="font-medium text-muted-foreground italic break-words">{orderDetail.orderAddress.additionalInfo}</span>
                                       </div>
                                     )}
                                   </div>
@@ -375,8 +374,8 @@ export default function AdminOrders() {
                                   <Receipt className="h-4 w-4" />
                                   <h3 className="font-bold text-sm tracking-wide uppercase">{t('المنتجات', 'Items')}</h3>
                                 </div>
-                                <div className="border rounded-md overflow-hidden">
-                                  <Table>
+                                <div className="max-w-full border rounded-md overflow-x-auto">
+                                  <Table className="min-w-[420px]">
                                     <TableHeader className="bg-muted/30">
                                       <TableRow>
                                         <TableHead>{t('المنتج', 'Product')}</TableHead>
@@ -399,7 +398,7 @@ export default function AdminOrders() {
                                                   <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                                                 </div>
                                               )}
-                                              <span>{item.productName}</span>
+                                              <span className="min-w-0 break-words">{item.productName}</span>
                                             </div>
                                           </TableCell>
                                           <TableCell className="text-center">{item.quantity}</TableCell>
@@ -414,7 +413,7 @@ export default function AdminOrders() {
 
                               {/* Financial Summary */}
                               <div className="flex flex-col md:flex-row justify-end">
-                                <div className="w-full md:w-1/2 lg:w-1/3 bg-muted/10 p-5 rounded-md border space-y-3">
+                                  <div className="w-full min-w-0 md:w-1/2 lg:w-1/3 bg-muted/10 p-5 rounded-md border space-y-3">
                                   <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">{t('المجموع الفرعي', 'Subtotal')}</span>
                                     <span className="font-medium">{orderDetail.subtotal.toFixed(2)} {t('ر.س', 'SAR')}</span>
@@ -429,7 +428,7 @@ export default function AdminOrders() {
                                   </div>
                                   {orderDetail.discount > 0 && (
                                     <div className="flex justify-between text-sm text-success font-medium">
-                                      <span>{t('الخصم', 'Discount')} {orderDetail.coupon ? `(${orderDetail.coupon.code})` : ''}</span>
+                                      <span className="min-w-0 break-words">{t('الخصم', 'Discount')} {orderDetail.coupon ? `(${orderDetail.coupon.code})` : ''}</span>
                                       <span>-{orderDetail.discount.toFixed(2)} {t('ر.س', 'SAR')}</span>
                                     </div>
                                   )}
@@ -447,7 +446,7 @@ export default function AdminOrders() {
 
                             </div>
                           )}
-                        </ScrollArea>
+                        </div>
                       </DialogContent>
                     </Dialog>
                   </TableCell>
