@@ -1,6 +1,9 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 type InvoiceForEmail = {
   invoiceNumber: string;
@@ -23,8 +26,13 @@ type InvoiceForEmail = {
 };
 
 const money = (value: number) => value.toFixed(2);
+const invoiceLogo = [
+  resolve(dirname(fileURLToPath(import.meta.url)), "../../musk-ellolo/public/site-assets/admin-logo.png"),
+  resolve(dirname(fileURLToPath(import.meta.url)), "../../../musk-ellolo/public/site-assets/admin-logo.png"),
+].find(existsSync);
 
 export async function createInvoicePdf(invoice: InvoiceForEmail) {
+  if (!invoiceLogo) throw new Error("Invoice brand logo is missing from the application assets");
   const qr = await QRCode.toBuffer(invoice.qrCodeData, { type: "png", errorCorrectionLevel: "M", margin: 2 });
   const document = new PDFDocument({ size: "A4", margin: 42, info: { Title: invoice.invoiceNumber } });
   const chunks: Buffer[] = [];
@@ -35,35 +43,35 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   });
 
   const right = 553;
-  document.rect(0, 0, 595, 7).fill("#6b4f3a");
-  document.fillColor("#6b4f3a").font("Helvetica-Bold").fontSize(22).text("TAX INVOICE", 42, 35);
-  document.fillColor("#111827").fontSize(17).text(invoice.sellerName, 300, 37, { width: 253, align: "right" });
-  document.fillColor("#6b7280").font("Helvetica").fontSize(9).text(`VAT Number: ${invoice.sellerVatNumber}`, 300, 62, { width: 253, align: "right" });
+  document.image(invoiceLogo, 239, 26, { fit: [117, 86], align: "center", valign: "center" });
+  document.fillColor("#292728").font("Helvetica-Bold").fontSize(17).text("TAX INVOICE", 42, 117, { width: 511, align: "center" });
+  document.fontSize(12).text(invoice.sellerName, 42, 143, { width: 511, align: "center" });
+  document.fillColor("#78716c").font("Helvetica").fontSize(9).text(`VAT Number: ${invoice.sellerVatNumber}`, 42, 164, { width: 511, align: "center" });
+  document.moveTo(42, 190).lineTo(right, 190).strokeColor("#e7e5e4").stroke();
 
-  document.roundedRect(42, 94, 244, 104, 8).fill("#f9fafb");
-  document.fillColor("#6b4f3a").font("Helvetica-Bold").fontSize(9).text("BILL TO", 56, 108);
-  document.fillColor("#111827").fontSize(14).text(invoice.buyerName || "-", 56, 128, { width: 216 });
-  document.fillColor("#4b5563").font("Helvetica").fontSize(8);
-  if (invoice.buyerAddress) document.text(invoice.buyerAddress, 56, 150, { width: 216, height: 28 });
-  const buyerMeta = [invoice.buyerTaxNumber && `VAT: ${invoice.buyerTaxNumber}`, invoice.buyerCommercialRegistrationNumber && `CR: ${invoice.buyerCommercialRegistrationNumber}`].filter(Boolean).join("  |  ");
-  if (buyerMeta) document.text(buyerMeta, 56, 181, { width: 216 });
-
+  document.roundedRect(42, 208, 244, 157, 5).fill("#f5f5f4");
+  document.fillColor("#57534e").font("Helvetica-Bold").fontSize(9);
+  document.text("Invoice No.", 56, 225);
+  document.text("Issue Date", 56, 255);
+  document.text("Due Date", 56, 285);
+  document.fillColor("#292728").text(invoice.invoiceNumber, 152, 225, { width: 120, align: "right" });
   const issueDate = invoice.issueDatetime.toISOString().slice(0, 10);
-  const details = [
-    ["Invoice No.", invoice.invoiceNumber],
-    ["Order No.", invoice.orderNumber || "-"],
-    ["Issue Date", issueDate],
-    ["Due Date", invoice.dueDate || "-"],
-  ];
-  details.forEach(([label, value], index) => {
-    const x = 315 + (index % 2) * 124;
-    const y = 105 + Math.floor(index / 2) * 50;
-    document.fillColor("#9ca3af").font("Helvetica-Bold").fontSize(8).text(label, x, y);
-    document.fillColor("#111827").fontSize(10).text(value, x, y + 15, { width: 112 });
-  });
+  document.text(issueDate, 152, 255, { width: 120, align: "right" });
+  document.text(invoice.dueDate || "-", 152, 285, { width: 120, align: "right" });
+  document.roundedRect(52, 321, 224, 33, 3).fillOpacity(0.2).fill("#a8a29e").fillOpacity(1);
+  document.fillColor("#292728").font("Helvetica-Bold").fontSize(9).text("Amount Due", 62, 332);
+  document.text(money(invoice.outstandingAmount) + " SAR", 155, 332, { width: 111, align: "right" });
 
-  let y = 225;
-  document.roundedRect(42, y, 511, 26, 6).fill("#f3f4f6");
+  document.fillColor("#57534e").font("Helvetica-Bold").fontSize(9).text("BILL TO", 310, 225);
+  document.fillColor("#292728").fontSize(14).text(invoice.buyerName || "-", 310, 247, { width: 243 });
+  document.fillColor("#57534e").font("Helvetica").fontSize(8);
+  if (invoice.buyerAddress) document.text(invoice.buyerAddress, 310, 275, { width: 243, height: 35 });
+  const buyerMeta = [invoice.buyerTaxNumber && `VAT: ${invoice.buyerTaxNumber}`, invoice.buyerCommercialRegistrationNumber && `CR: ${invoice.buyerCommercialRegistrationNumber}`].filter(Boolean).join("  |  ");
+  if (buyerMeta) document.text(buyerMeta, 310, 318, { width: 243 });
+  if (invoice.orderNumber) document.text(`Order No.: ${invoice.orderNumber}`, 310, 345, { width: 243 });
+
+  let y = 390;
+  document.roundedRect(42, y, 511, 26, 4).fill("#f5f5f4");
   document.fillColor("#111827").font("Helvetica-Bold").fontSize(9);
   document.text("Product", 54, y + 9, { width: 230 });
   document.text("Qty", 300, y + 9, { width: 45, align: "center" });
@@ -80,7 +88,13 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
     y += 29;
   }
 
-  y = Math.max(y + 18, 440);
+  y += 18;
+  if (y + 137 > document.page.height - 42) {
+    document.addPage();
+    y = 52;
+  } else {
+    y = Math.max(y, 535);
+  }
   document.image(qr, 48, y, { width: 105, height: 105 });
   const totalsX = 325;
   const totalRows = [["Subtotal", invoice.subtotal], ["VAT (15%)", invoice.vatAmount], ["Amount Paid", invoice.paidAmount], ["Amount Due", invoice.outstandingAmount]];
@@ -88,9 +102,9 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
     document.fillColor("#4b5563").font("Helvetica").fontSize(9).text(String(label), totalsX, y + index * 23, { width: 110 });
     document.text(money(Number(value)), 450, y + index * 23, { width: 90, align: "right" });
   });
-  document.roundedRect(totalsX - 8, y + 94, 223, 35, 7).fill("#f3f4f6");
+  document.roundedRect(totalsX - 8, y + 94, 223, 35, 4).fill("#f5f5f4");
   document.fillColor("#111827").font("Helvetica-Bold").fontSize(13).text("TOTAL", totalsX, y + 105);
-  document.fillColor("#6b4f3a").text(money(invoice.totalAmount), 450, y + 105, { width: 90, align: "right" });
+  document.fillColor("#292728").text(money(invoice.totalAmount), 450, y + 105, { width: 90, align: "right" });
   document.end();
   return completed;
 }

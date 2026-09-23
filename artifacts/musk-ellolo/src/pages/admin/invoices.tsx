@@ -49,7 +49,7 @@ function InvoiceTemplate({
 }) {
   const { t, lang } = useLanguage();
   return (
-    <div id="invoice-print-area" data-testid="invoice-template" className="bg-white text-black p-6 sm:p-10 rounded-xl shadow-lg border border-gray-100 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div id="invoice-print-area" data-testid="invoice-template" className="bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <style>{`
         @media print {
           body, html { height: auto !important; overflow: visible !important; }
@@ -62,53 +62,38 @@ function InvoiceTemplate({
           #invoice-print-area { 
             position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; 
             margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; border-radius: 0 !important;
+            -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
           }
           .print-hide { display: none !important; }
           @page { size: A4 portrait; margin: 15mm; }
         }
       `}</style>
       
-      {/* Accent Header Line */}
-      <div className="absolute top-0 left-0 right-0 h-2 bg-primary"></div>
-
       {/* Header */}
-      <div className="flex justify-between items-start mb-10 mt-2">
-        <div className="flex flex-col gap-3">
-          <img src="/site-assets/admin-logo.png" alt="Logo" className="h-14 sm:h-16 w-auto object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-primary">{t('فاتورة ضريبية', 'Tax Invoice')}</h1>
-        </div>
-        <div className="text-end">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{invoice.sellerName}</h2>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">{t('الرقم الضريبي', 'VAT Number')}: <span className="font-mono text-gray-900">{invoice.sellerVatNumber}</span></p>
-        </div>
+      <div className="mb-9 flex flex-col items-center border-b border-stone-200 pb-8 text-center">
+        <img src={`${import.meta.env.BASE_URL}site-assets/admin-logo.png`} alt="Musk Ellolo" className="h-auto w-36 sm:w-44 object-contain" />
+        <h1 className="mt-3 text-xl font-semibold tracking-wide text-[#292728]">{t('فاتورة ضريبية', 'Tax Invoice')}</h1>
+        <p className="mt-2 text-sm font-medium text-stone-700">{invoice.sellerName}</p>
+        <p className="mt-1 text-xs text-stone-500">{t('الرقم الضريبي', 'VAT Number')}: <span className="font-mono text-stone-700">{invoice.sellerVatNumber}</span></p>
       </div>
 
       {/* Info Grid */}
-      <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-10">
-        <div className="bg-gray-50 p-5 rounded-xl border border-gray-100/50">
-          <h3 className="text-[10px] sm:text-xs font-bold text-primary uppercase tracking-widest mb-3">{t('فاتورة إلى', 'Bill To')}</h3>
-          <p className="font-bold text-lg sm:text-xl text-gray-900">{invoice.buyerName || invoice.distributorName || '-'}</p>
+      <div className="grid sm:grid-cols-2 gap-6 sm:gap-8 mb-9">
+        <div className="p-4 sm:p-5">
+          <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('فاتورة إلى', 'Bill To')}</h3>
+          <p className="font-semibold text-lg text-[#292728]">{invoice.buyerName || invoice.distributorName || '-'}</p>
           {invoice.buyerAddress && <p className="text-xs sm:text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{invoice.buyerAddress}</p>}
           {invoice.buyerTaxNumber && <p className="text-xs sm:text-sm text-gray-600 mt-2">{t('الرقم الضريبي', 'VAT')}: <span className="font-mono text-gray-900">{invoice.buyerTaxNumber}</span></p>}
           {invoice.buyerCommercialRegistrationNumber && <p className="text-xs sm:text-sm text-gray-600 mt-1">{t('السجل التجاري', 'CR')}: <span className="font-mono text-gray-900">{invoice.buyerCommercialRegistrationNumber}</span></p>}
+          {invoice.orderNumber && <p className="mt-3 text-xs text-stone-500">{t('رقم الطلب', 'Order No.')}: <span className="font-mono text-stone-700">{invoice.orderNumber}</span></p>}
         </div>
-        <div className="grid grid-cols-2 gap-y-6 gap-x-4 p-2">
-          <div>
-            <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">{t('رقم الفاتورة', 'Invoice No.')}</h3>
-            <p className="font-mono font-bold text-base sm:text-lg text-gray-900">{invoice.invoiceNumber}</p>
-          </div>
-          <div>
-            <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">{t('رقم الطلب', 'Order No.')}</h3>
-            <p className="font-mono font-medium text-gray-900">{invoice.orderNumber || '-'}</p>
-          </div>
-          <div>
-            <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">{t('تاريخ الإصدار', 'Issue Date')}</h3>
-            <p className="font-medium text-gray-900 text-sm">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</p>
-          </div>
-          <div>
-            <h3 className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">{t('تاريخ الاستحقاق', 'Due Date')}</h3>
-            <p className="font-medium text-gray-900 text-sm">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</p>
-          </div>
+        <div className="rounded-md border border-stone-200 bg-stone-100 p-4 sm:p-5">
+          <dl className="space-y-3 text-sm">
+            <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
+            <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</dd></div>
+            <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
+            <div className="flex items-baseline justify-between gap-3 rounded-sm border border-stone-200 bg-stone-200/20 px-3 py-2.5"><dt className="font-semibold text-[#292728]">{t('المبلغ المستحق', 'Amount Due')}</dt><dd className="font-mono font-semibold text-[#292728]">{invoice.outstandingAmount.toFixed(2)} {t('ر.س', 'SAR')}</dd></div>
+          </dl>
         </div>
       </div>
 
@@ -160,18 +145,18 @@ function InvoiceTemplate({
             <span>{t('ضريبة القيمة المضافة (15%)', 'VAT (15%)')}</span>
             <span className="font-mono">{invoice.vatAmount.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between font-black text-lg sm:text-xl p-3 sm:p-4 bg-gray-50 rounded-xl border border-gray-100">
-            <span className="text-gray-900">{t('الإجمالي', 'Total')}</span>
-            <span className="font-mono text-primary">{invoice.totalAmount.toFixed(2)}</span>
+          <div className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
+            <span className="text-[#292728]">{t('الإجمالي', 'Total')}</span>
+            <span className="font-mono text-[#292728]">{invoice.totalAmount.toFixed(2)}</span>
           </div>
           
           {(invoice.paidAmount > 0 || invoice.outstandingAmount > 0) && (
             <div className="pt-2 space-y-2 px-2 text-xs sm:text-sm">
-              <div className="flex justify-between text-emerald-600 font-bold">
+              <div className="flex justify-between text-stone-600 font-medium">
                 <span>{t('المبلغ المدفوع', 'Amount Paid')}</span>
                 <span className="font-mono">{invoice.paidAmount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-amber-600 font-bold">
+              <div className="flex justify-between text-stone-700 font-semibold">
                 <span>{t('الرصيد المستحق', 'Amount Due')}</span>
                 <span className="font-mono">{invoice.outstandingAmount.toFixed(2)}</span>
               </div>
