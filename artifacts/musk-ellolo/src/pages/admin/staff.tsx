@@ -206,13 +206,14 @@ export default function AdminStaff() {
           </DialogTrigger>
           <DialogContent
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
-            className="max-h-[90vh] max-w-3xl overflow-y-auto"
+            className="flex max-h-[90dvh] max-w-3xl flex-col gap-0 overflow-hidden p-0"
           >
-            <DialogHeader>
+            <DialogHeader className="shrink-0 px-6 pb-4 pt-6">
               <DialogTitle>{editingId ? t('تعديل مستخدم', 'Edit User') : t('إضافة مستخدم', 'Add User')}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-col">
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-4">
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem><FormLabel>{t('الاسم', 'Name')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
@@ -257,7 +258,7 @@ export default function AdminStaff() {
                         {t('اختر الإجراء المطلوب داخل كل قسم رئيسي', 'Choose the required actions inside each main section')}
                       </p>
                     </div>
-                    <div className="max-h-[46vh] space-y-3 overflow-y-auto pe-1">
+                    <div className="space-y-3">
                       {permissionModules.map((module) => {
                         const modulePermissions = [...groupedPermissions[module]].sort(
                           (a, b) => (permissionActionOrder[a.action] ?? 99) - (permissionActionOrder[b.action] ?? 99),
@@ -309,10 +310,12 @@ export default function AdminStaff() {
                     </div>
                   </div>
                 )}
-
-                <Button type="submit" className="w-full mt-4" disabled={createMutation.isPending || updateMutation.isPending}>
-                  {t('حفظ', 'Save')}
-                </Button>
+                </div>
+                <div className="shrink-0 border-t bg-background px-6 py-4">
+                  <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {t('حفظ', 'Save')}
+                  </Button>
+                </div>
               </form>
             </Form>
           </DialogContent>
