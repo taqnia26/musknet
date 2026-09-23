@@ -344,9 +344,25 @@ export default function AdminOrders() {
                                     <h3 className="font-bold text-sm tracking-wide uppercase">{t('عنوان الشحن', 'Shipping Address')}</h3>
                                   </div>
                                   <div className="space-y-3 text-sm">
+                                    {orderDetail.orderAddress.country && (
+                                      <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
+                                        <span className="text-muted-foreground">{t('الدولة', 'Country')}:</span>
+                                        <span className="font-medium break-words">{orderDetail.orderAddress.country === 'SA' ? t('السعودية', 'Saudi Arabia') : orderDetail.orderAddress.country}</span>
+                                      </div>
+                                    )}
                                     <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
-                                      <span className="text-muted-foreground">{t('المدينة/الحي', 'City/District')}:</span>
-                                      <span className="font-medium break-words">{orderDetail.orderAddress.city} - {orderDetail.orderAddress.district}</span>
+                                      <span className="text-muted-foreground">{t('المدينة', 'City')}:</span>
+                                      <span className="font-medium break-words">{orderDetail.orderAddress.city}</span>
+                                    </div>
+                                    {orderDetail.orderAddress.nationalAddressShortCode ? (
+                                      <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
+                                        <span className="text-muted-foreground">{t('الرمز المختصر', 'Short code')}:</span>
+                                        <span dir="ltr" className="font-medium break-all">{orderDetail.orderAddress.nationalAddressShortCode}</span>
+                                      </div>
+                                    ) : <>
+                                    <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
+                                      <span className="text-muted-foreground">{t('الحي', 'District')}:</span>
+                                      <span className="font-medium break-words">{orderDetail.orderAddress.district}</span>
                                     </div>
                                     <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
                                       <span className="text-muted-foreground">{t('الشارع', 'Street')}:</span>
@@ -362,6 +378,7 @@ export default function AdminOrders() {
                                         <span className="font-medium text-muted-foreground italic break-words">{orderDetail.orderAddress.additionalInfo}</span>
                                       </div>
                                     )}
+                                    </>}
                                   </div>
                                 </div>
                               </div>

@@ -2521,6 +2521,8 @@ export const AdminCreateOrderBody = zod.object({
   "orderAddress": zod.object({
   "label": zod.string(),
   "city": zod.string(),
+  "country": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().nullish(),
   "district": zod.string(),
   "street": zod.string(),
   "buildingNo": zod.string(),
@@ -2585,6 +2587,8 @@ export const AdminGetOrderResponse = zod.object({
   "orderAddress": zod.object({
   "label": zod.string(),
   "city": zod.string(),
+  "country": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().nullish(),
   "district": zod.string(),
   "street": zod.string(),
   "buildingNo": zod.string(),
@@ -7129,4 +7133,3 @@ export const ListInventoryAlertsResponseItem = zod.object({
   "status": zod.enum(['out', 'low', 'ok'])
 })
 export const ListInventoryAlertsResponse = zod.array(ListInventoryAlertsResponseItem)
-

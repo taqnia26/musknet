@@ -14,29 +14,10 @@ import { Search, Edit2, MoreHorizontal, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useQueryClient } from '@tanstack/react-query';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-
-const normalizePhone = (value: string) => value.trim()
-  .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
-  .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
-  .replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '');
-
-const emailSchema = z.union([z.literal(''), z.string().email('أدخل بريداً إلكترونياً صالحاً / Enter a valid email address')]);
-const nameSchema = z.string().trim().min(1, 'الاسم مطلوب / Name is required');
-const createSchema = z.object({
-  name: nameSchema,
-  phone: z.string().refine((value) => {
-    const phone = normalizePhone(value);
-    return /^\+?[\d\s().-]+$/.test(phone) && /^\d{8,15}$/.test(phone.replace(/\D/g, ''));
-  }, 'أدخل رقم هاتف من 8 إلى 15 رقماً / Enter a phone number with 8–15 digits'),
-  email: emailSchema,
-});
-const editSchema = z.object({ name: nameSchema, email: emailSchema, isActive: z.boolean() });
-type CreateValues = z.infer<typeof createSchema>;
-type EditValues = z.infer<typeof editSchema>;
+import { createCustomerSchema, editCustomerSchema, customerPayload, customerCreateError, type CreateCustomerValues, type EditCustomerValues } from '@/lib/customer-create';
 
 export default function AdminCustomers() {
   const { t } = useLanguage();
@@ -49,11 +30,11 @@ export default function AdminCustomers() {
   const { data: customers, isLoading } = useAdminListCustomers({ search });
   const createMutation = useAdminCreateCustomer();
   const updateMutation = useAdminUpdateCustomer();
-  const createForm = useForm<CreateValues>({
-    resolver: zodResolver(createSchema), defaultValues: { name: '', phone: '', email: '' },
+  const createForm = useForm<CreateCustomerValues>({
+    resolver: zodResolver(createCustomerSchema), defaultValues: { name: '', phone: '', email: '' },
   });
-  const editForm = useForm<EditValues>({
-    resolver: zodResolver(editSchema), defaultValues: { name: '', email: '', isActive: true },
+  const editForm = useForm<EditCustomerValues>({
+    resolver: zodResolver(editCustomerSchema), defaultValues: { name: '', email: '', isActive: true },
   });
   const errorMessage = (error: unknown, fallback: string) => {
     const cause = error as { status?: number; data?: { error?: string } };
@@ -76,10 +57,10 @@ export default function AdminCustomers() {
     editForm.reset({ name: customer.name, email: customer.email ?? '', isActive: customer.isActive });
     setMode('edit');
   };
-  const onCreate = (data: CreateValues) => {
+  const onCreate = (data: CreateCustomerValues) => {
     if (createMutation.isPending) return;
     createMutation.mutate({
-      data: { name: data.name.trim(), phone: normalizePhone(data.phone).replace(/\D/g, ''), email: data.email.trim() || null },
+      data: customerPayload(data),
     }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListCustomersQueryKey() });
@@ -88,12 +69,12 @@ export default function AdminCustomers() {
       },
       onError: (error) => toast({
         title: t('تعذر إضافة العميل', 'Could not add customer'),
-        description: errorMessage(error, t('تحقق من البيانات والصلاحيات ثم حاول مرة أخرى', 'Check the details and permissions, then try again')),
+         description: customerCreateError(error, t('تحقق من البيانات والصلاحيات ثم حاول مرة أخرى', 'Check the details and permissions, then try again'), t('رقم الهاتف مسجل لعميل آخر', 'This phone number already belongs to a customer')),
         variant: 'destructive',
       }),
     });
   };
-  const onEdit = (data: EditValues) => {
+  const onEdit = (data: EditCustomerValues) => {
     if (!selectedCustomer || updateMutation.isPending) return;
     updateMutation.mutate({
       id: selectedCustomer.id,

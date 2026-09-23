@@ -1364,6 +1364,29 @@ router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => 
 }));
 router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
+  const country = body.orderAddress.country?.trim() || null;
+  const domestic = country === "SA";
+  const city = body.orderAddress.city.trim();
+  const district = body.orderAddress.district.trim();
+  const street = body.orderAddress.street.trim();
+  const buildingNo = body.orderAddress.buildingNo.trim();
+  const shortCode = body.orderAddress.nationalAddressShortCode?.trim() || null;
+  if (!city || (domestic ? !shortCode : !district || !street || !buildingNo) ||
+      (country && !domestic && shortCode)) {
+    res.status(400).json({ error: domestic
+      ? "City and national address short code are required for Saudi Arabia"
+      : "City, district, street, and building number are required for international addresses; short code is only for Saudi Arabia" });
+    return;
+  }
+  // Older API callers omit country and keep their existing detailed-address behavior.
+  const cleanedAddress = {
+    ...body.orderAddress, city, country,
+    nationalAddressShortCode: domestic ? shortCode : null,
+    district: domestic ? "" : district,
+    street: domestic ? "" : street,
+    buildingNo: domestic ? "" : buildingNo,
+    additionalInfo: domestic ? null : body.orderAddress.additionalInfo?.trim() || null,
+  };
   const duplicateProductIds = body.items
     .map((item) => item.productId)
     .filter((productId, index, ids) => ids.indexOf(productId) !== index);
@@ -1399,7 +1422,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         0,
       ) * 100) / 100;
       const shippingCost = body.shippingCost ?? (
-        /الرياض|riyadh/i.test(body.orderAddress.city.trim()) ? 20 : 30
+         (domestic || !country) && /الرياض|riyadh/i.test(city) ? 20 : 30
       );
       const tax = Math.round(subtotal * 0.15 * 100) / 100;
       const total = Math.round((subtotal + shippingCost + tax) * 100) / 100;
@@ -1412,7 +1435,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         discount: 0,
         tax,
         total,
-        address: JSON.stringify(body.orderAddress),
+        address: JSON.stringify(cleanedAddress),
         shippingMethod: body.shippingMethod,
         paymentMethod: body.paymentMethod,
         adminNotes: body.adminNotes ?? null,
@@ -1420,19 +1443,28 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
 
       await tx.insert(orderAddressesTable).values({
         orderId: created.id,
-        label: body.orderAddress.label,
-        city: body.orderAddress.city,
-        district: body.orderAddress.district,
-        street: body.orderAddress.street,
-        buildingNo: body.orderAddress.buildingNo,
-        additionalInfo: body.orderAddress.additionalInfo,
-        isDefault: body.orderAddress.isDefault,
+        label: cleanedAddress.label,
+        city,
+        country,
+        nationalAddressShortCode: cleanedAddress.nationalAddressShortCode,
+        district: cleanedAddress.district,
+        street: cleanedAddress.street,
+        buildingNo: cleanedAddress.buildingNo,
+        additionalInfo: cleanedAddress.additionalInfo,
+        isDefault: cleanedAddress.isDefault,
       });
       await tx.insert(shipmentsTable).values({
         channel: "online",
         orderId: created.id,
-        destinationCity: body.orderAddress.city,
-        destinationAddress: [body.orderAddress.district, body.orderAddress.street, body.orderAddress.buildingNo].filter(Boolean).join(", "),
+        shippingScope: country && !domestic ? "international" : "domestic",
+        destinationCity: city,
+        destinationCountry: country,
+        nationalAddressShortCode: cleanedAddress.nationalAddressShortCode,
+        destinationDistrict: country && !domestic ? district : null,
+        destinationStreet: country && !domestic ? street : null,
+        destinationBuildingNumber: country && !domestic ? buildingNo : null,
+        destinationAdditionalDetails: country && !domestic ? cleanedAddress.additionalInfo : null,
+        destinationAddress: domestic ? shortCode : [district, street, buildingNo].filter(Boolean).join(", "),
         serviceMethod: body.shippingMethod,
         status: "pending",
         collectedCost: shippingCost,
@@ -1520,6 +1552,8 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
   const address = orderAddress ?? {
     label: typeof legacyAddress.label === "string" ? legacyAddress.label : "",
     city: typeof legacyAddress.city === "string" ? legacyAddress.city : "",
+    country: typeof legacyAddress.country === "string" ? legacyAddress.country : null,
+    nationalAddressShortCode: typeof legacyAddress.nationalAddressShortCode === "string" ? legacyAddress.nationalAddressShortCode : null,
     district: typeof legacyAddress.district === "string" ? legacyAddress.district : "",
     street: typeof legacyAddress.street === "string" ? legacyAddress.street : "",
     buildingNo: typeof legacyAddress.buildingNo === "string" ? legacyAddress.buildingNo : "",
@@ -1534,6 +1568,7 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
     customer,
     orderAddress: {
       label: address.label, city: address.city, district: address.district, street: address.street,
+      country: address.country, nationalAddressShortCode: address.nationalAddressShortCode,
       buildingNo: address.buildingNo, additionalInfo: address.additionalInfo, isDefault: address.isDefault,
     },
     items,

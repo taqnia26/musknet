@@ -3688,6 +3688,8 @@ components:
       properties:
         label: { type: string }
         city: { type: string }
+        country: { type: [string, "null"] }
+        nationalAddressShortCode: { type: [string, "null"] }
         district: { type: string }
         street: { type: string }
         buildingNo: { type: string }

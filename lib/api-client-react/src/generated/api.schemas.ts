@@ -1670,6 +1670,10 @@ export const AdminOrderInputPaymentMethod = {
 export interface AdminOrderAddress {
   label: string;
   city: string;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  nationalAddressShortCode?: string | null;
   district: string;
   street: string;
   buildingNo: string;

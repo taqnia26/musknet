@@ -8,6 +8,8 @@ export const orderAddressesTable = pgTable("storefront_order_addresses", {
   orderId: integer("order_id").notNull().references(() => ordersTable.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   city: text("city").notNull(),
+  country: text("country"),
+  nationalAddressShortCode: text("national_address_short_code"),
   district: text("district").notNull(),
   street: text("street").notNull(),
   buildingNo: text("building_no").notNull(),

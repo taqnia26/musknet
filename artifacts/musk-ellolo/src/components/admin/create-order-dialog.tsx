@@ -2,9 +2,13 @@ import { useMemo, useState } from 'react';
 import {
   getAdminListInventoryQueryKey,
   getAdminListOrdersQueryKey,
+  getGetAdminShippingDashboardQueryKey,
   useAdminCreateOrder,
   useAdminListCustomers,
   useAdminListProducts,
+  useAdminCreateCustomer,
+  useGetAdminMe,
+  getAdminListCustomersQueryKey,
   type AdminOrderInputPaymentMethod,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,12 +22,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import { hasPermission } from '@/lib/permissions';
+import { createCustomerSchema, customerPayload, customerCreateError, type CreateCustomerValues } from '@/lib/customer-create';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
 type Line = { productId: string; quantity: number };
 
 const initialAddress = {
   label: 'المنزل',
+  country: 'SA',
   city: 'الرياض',
+  nationalAddressShortCode: '',
   district: '',
   street: '',
   buildingNo: '',
@@ -42,9 +53,18 @@ export function CreateOrderDialog() {
   const [paymentMethod, setPaymentMethod] = useState<AdminOrderInputPaymentMethod>('cash');
   const [adminNotes, setAdminNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [addingCustomer, setAddingCustomer] = useState(false);
+  const [customerError, setCustomerError] = useState<string | null>(null);
+  const [newCustomer, setNewCustomer] = useState<{ id: number; name: string; phone: string } | null>(null);
+  const customerForm = useForm<CreateCustomerValues>({
+    resolver: zodResolver(createCustomerSchema),
+    defaultValues: { name: '', phone: '', email: '' },
+  });
 
+  const { data: currentUser } = useGetAdminMe();
   const { data: customers } = useAdminListCustomers({ status: 'active' });
   const { data: products } = useAdminListProducts({ status: 'active' });
+  const createCustomer = useAdminCreateCustomer();
   const createOrder = useAdminCreateOrder();
   const availableProducts = useMemo(
     () => sortProductsForSelection(
@@ -62,6 +82,30 @@ export function CreateOrderDialog() {
     setPaymentMethod('cash');
     setAdminNotes('');
     setError(null);
+    setAddingCustomer(false);
+    setCustomerError(null);
+    setNewCustomer(null);
+    customerForm.reset();
+  };
+
+  const saveCustomer = (values: CreateCustomerValues) => {
+    if (createCustomer.isPending || !hasPermission(currentUser, 'customers', 'edit')) return;
+    setCustomerError(null);
+    createCustomer.mutate({ data: customerPayload(values) }, {
+      onSuccess: (customer) => {
+        setNewCustomer(customer);
+        setCustomerId(String(customer.id));
+        queryClient.invalidateQueries({ queryKey: getAdminListCustomersQueryKey() });
+        customerForm.reset();
+        setAddingCustomer(false);
+        toast({ title: t('تمت إضافة العميل', 'Customer added') });
+      },
+      onError: (cause) => setCustomerError(customerCreateError(
+        cause,
+        t('تحقق من البيانات والصلاحيات ثم حاول مرة أخرى', 'Check the details and permissions, then try again'),
+        t('رقم الهاتف مسجل لعميل آخر', 'This phone number already belongs to a customer'),
+      )),
+    });
   };
 
   const updateLine = (index: number, update: Partial<Line>) => {
@@ -69,12 +113,15 @@ export function CreateOrderDialog() {
   };
 
   const submit = () => {
+    if (createOrder.isPending) return;
     setError(null);
     if (!customerId || lines.some((line) => !line.productId || line.quantity < 1)) {
       setError(t('اختر العميل والمنتجات والكميات أولاً', 'Select a customer, products, and quantities first'));
       return;
     }
-    if (!address.city.trim() || !address.district.trim() || !address.street.trim() || !address.buildingNo.trim()) {
+    if (!address.country.trim() || !address.city.trim() ||
+      (address.country === 'SA' ? !address.nationalAddressShortCode.trim() :
+        !address.district.trim() || !address.street.trim() || !address.buildingNo.trim())) {
       setError(t('أكمل عنوان الشحن', 'Complete the shipping address'));
       return;
     }
@@ -89,8 +136,14 @@ export function CreateOrderDialog() {
         userId: Number(customerId),
         items: lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
         orderAddress: {
-          ...address,
-          additionalInfo: address.additionalInfo.trim() || null,
+           label: address.label,
+           country: address.country.trim(),
+           city: address.city.trim(),
+           nationalAddressShortCode: address.country === 'SA' ? address.nationalAddressShortCode.trim() : null,
+           district: address.country === 'SA' ? '' : address.district.trim(),
+           street: address.country === 'SA' ? '' : address.street.trim(),
+           buildingNo: address.country === 'SA' ? '' : address.buildingNo.trim(),
+           additionalInfo: address.country === 'SA' ? null : address.additionalInfo.trim() || null,
           isDefault: false,
         },
         shippingMethod,
@@ -101,6 +154,7 @@ export function CreateOrderDialog() {
       onSuccess: (order) => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAdminShippingDashboardQueryKey() });
         toast({
           title: t('تم إنشاء الطلب', 'Order created'),
           description: `${t('رقم الطلب', 'Order number')}: ${order.orderNumber}`,
@@ -129,11 +183,21 @@ export function CreateOrderDialog() {
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="space-y-2">
-            <Label>{t('العميل', 'Customer')}</Label>
+           <div className="space-y-2">
+             <div className="flex items-center justify-between gap-2">
+               <Label>{t('العميل', 'Customer')}</Label>
+               {hasPermission(currentUser, 'customers', 'edit') && (
+                 <Button type="button" size="sm" variant="outline" onClick={() => { setAddingCustomer((value) => !value); setCustomerError(null); }} disabled={createCustomer.isPending}>
+                   <Plus className="me-1 h-4 w-4" />{t('إضافة عميل', 'Add customer')}
+                 </Button>
+               )}
+             </div>
             <Select value={customerId} onValueChange={setCustomerId}>
               <SelectTrigger><SelectValue placeholder={t('اختر العميل', 'Select customer')} /></SelectTrigger>
               <SelectContent>
+                 {newCustomer && !(customers ?? []).some((customer) => customer.id === newCustomer.id) && (
+                   <SelectItem value={String(newCustomer.id)}>{newCustomer.name} — <span dir="ltr">{newCustomer.phone}</span></SelectItem>
+                 )}
                 {(customers ?? []).map((customer) => (
                   <SelectItem key={customer.id} value={String(customer.id)}>
                     {customer.name} — <span dir="ltr">{customer.phone}</span>
@@ -141,6 +205,23 @@ export function CreateOrderDialog() {
                 ))}
               </SelectContent>
             </Select>
+             {addingCustomer && hasPermission(currentUser, 'customers', 'edit') && (
+               <Form {...customerForm}>
+                 <form onSubmit={customerForm.handleSubmit(saveCustomer)} className="space-y-3 rounded-md border p-4">
+                   <FormField control={customerForm.control} name="name" render={({ field }) => (
+                     <FormItem><FormLabel>{t('اسم العميل *', 'Customer name *')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                   )} />
+                   <FormField control={customerForm.control} name="phone" render={({ field }) => (
+                     <FormItem><FormLabel>{t('رقم الهاتف *', 'Phone number *')}</FormLabel><FormControl><Input {...field} dir="ltr" type="tel" /></FormControl><FormMessage /></FormItem>
+                   )} />
+                   <FormField control={customerForm.control} name="email" render={({ field }) => (
+                     <FormItem><FormLabel>{t('البريد الإلكتروني (اختياري)', 'Email (optional)')}</FormLabel><FormControl><Input {...field} dir="ltr" type="email" /></FormControl><FormMessage /></FormItem>
+                   )} />
+                   {customerError && <p role="alert" className="text-sm text-destructive">{customerError}</p>}
+                   <Button type="submit" disabled={createCustomer.isPending}>{createCustomer.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ العميل', 'Save customer')}</Button>
+                 </form>
+               </Form>
+             )}
           </div>
 
           <div className="space-y-3">
@@ -180,23 +261,42 @@ export function CreateOrderDialog() {
             })}
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {([
-              ['city', t('المدينة', 'City')],
-              ['district', t('الحي', 'District')],
-              ['street', t('الشارع', 'Street')],
-              ['buildingNo', t('رقم المبنى', 'Building number')],
-            ] as const).map(([field, label]) => (
+           <div className="grid gap-4 md:grid-cols-2">
+             <div className="space-y-2">
+               <Label>{t('الدولة *', 'Country *')}</Label>
+               <Select value={address.country === 'SA' ? 'SA' : 'other'} onValueChange={(value) => setAddress((current) => ({
+                 ...current, country: value === 'SA' ? 'SA' : '', nationalAddressShortCode: '',
+                 district: '', street: '', buildingNo: '', additionalInfo: '', city: '',
+               }))}>
+                 <SelectTrigger aria-label={t('الدولة', 'Country')}><SelectValue /></SelectTrigger>
+                 <SelectContent>
+                   <SelectItem value="SA">{t('السعودية', 'Saudi Arabia')}</SelectItem>
+                   <SelectItem value="other">{t('دولة أخرى', 'Other country')}</SelectItem>
+                 </SelectContent>
+               </Select>
+             </div>
+             {address.country !== 'SA' && (
+               <div className="space-y-2">
+                 <Label htmlFor="order-country-name">{t('اسم الدولة *', 'Country name *')}</Label>
+                 <Input id="order-country-name" value={address.country} onChange={(event) => setAddress((current) => ({ ...current, country: event.target.value }))} />
+               </div>
+             )}
+             {([
+               ['city', t('المدينة *', 'City *')],
+               ...(address.country === 'SA'
+                 ? [['nationalAddressShortCode', t('الرمز المختصر للعنوان الوطني *', 'National address short code *')]]
+                 : [['district', t('الحي *', 'District *')], ['street', t('الشارع *', 'Street *')], ['buildingNo', t('رقم المبنى *', 'Building number *')]]),
+             ] as Array<[keyof typeof initialAddress, string]>).map(([field, label]) => (
               <div key={field} className="space-y-2">
                 <Label htmlFor={`order-${field}`}>{label}</Label>
                 <Input id={`order-${field}`} value={address[field]} onChange={(event) => setAddress((current) => ({ ...current, [field]: event.target.value }))} />
               </div>
             ))}
           </div>
-          <div className="space-y-2">
+           {address.country !== 'SA' && <div className="space-y-2">
             <Label htmlFor="order-additional-info">{t('معلومات إضافية للعنوان', 'Additional address information')}</Label>
             <Input id="order-additional-info" value={address.additionalInfo} onChange={(event) => setAddress((current) => ({ ...current, additionalInfo: event.target.value }))} />
-          </div>
+           </div>}
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">

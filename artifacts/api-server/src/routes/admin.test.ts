@@ -567,6 +567,73 @@ describe.sequential("admin route authorization", () => {
       .where(eq(inventoryBalancesTable.productId, productId));
   });
 
+  it("requires the right address fields per country and retrieves clean order and shipment addresses", async () => {
+    const auth = { Authorization: `Bearer ${superToken}` };
+    const address = {
+      label: "Home", city: "جدة", country: "SA", nationalAddressShortCode: "JEDH1234",
+      district: "stale district", street: "stale street", buildingNo: "99",
+      additionalInfo: "stale notes", isDefault: false,
+    };
+    const payload = (orderAddress: typeof address) => ({
+      userId: customerId, items: [{ productId, quantity: 1 }],
+      orderAddress, shippingMethod: "admin-standard", paymentMethod: "cash",
+    });
+    const url = "/api/admin/orders";
+    await request(app).post(url).set(auth).send(payload({ ...address, nationalAddressShortCode: "" })).expect(400);
+    await request(app).post(url).set(auth).send(payload({
+      ...address, country: "AE", nationalAddressShortCode: "", district: "",
+    })).expect(400);
+    await request(app).post(url).set(auth).send(payload({
+      ...address, country: "AE", nationalAddressShortCode: "JEDH1234",
+    })).expect(400);
+
+    const created: number[] = [];
+    try {
+      const sa = await request(app).post(url).set(auth).send(payload(address)).expect(201);
+      created.push(sa.body.id);
+      const saDetail = await request(app).get(`${url}/${sa.body.id}`).set(auth).expect(200);
+      expect(saDetail.body.orderAddress).toMatchObject({
+        city: "جدة", country: "SA", nationalAddressShortCode: "JEDH1234",
+        district: "", street: "", buildingNo: "", additionalInfo: null,
+      });
+      const [saShipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, sa.body.id));
+      expect(saShipment).toMatchObject({
+        shippingScope: "domestic", destinationCountry: "SA", destinationCity: "جدة",
+        nationalAddressShortCode: "JEDH1234", destinationDistrict: null,
+        destinationStreet: null, destinationBuildingNumber: null,
+      });
+
+      const intl = await request(app).post(url).set(auth).send(payload({
+        ...address, country: "AE", city: "Dubai", nationalAddressShortCode: "",
+        district: "Deira", street: "Al Maktoum", buildingNo: "25", additionalInfo: "Unit 7",
+      })).expect(201);
+      created.push(intl.body.id);
+      const intlDetail = await request(app).get(`${url}/${intl.body.id}`).set(auth).expect(200);
+      expect(intlDetail.body.orderAddress).toMatchObject({
+        country: "AE", city: "Dubai", nationalAddressShortCode: null,
+        district: "Deira", street: "Al Maktoum", buildingNo: "25", additionalInfo: "Unit 7",
+      });
+      const [intlShipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, intl.body.id));
+      expect(intlShipment).toMatchObject({
+        shippingScope: "international", destinationCountry: "AE", destinationCity: "Dubai",
+        nationalAddressShortCode: null, destinationDistrict: "Deira",
+        destinationStreet: "Al Maktoum", destinationBuildingNumber: "25",
+        destinationAdditionalDetails: "Unit 7",
+      });
+      const old = await request(app).get(`${url}/${orderId}`).set(auth).expect(200);
+      expect(old.body.orderAddress).toMatchObject({ country: null, nationalAddressShortCode: null, district: "Olaya" });
+    } finally {
+      for (const id of created) {
+        await db.delete(ordersTable).where(eq(ordersTable.id, id));
+        await db.delete(inventoryMovementsTable).where(and(
+          eq(inventoryMovementsTable.sourceType, "order"), eq(inventoryMovementsTable.sourceId, String(id)),
+        ));
+      }
+      await db.update(productsTable).set({ stockQuantity: 5 }).where(eq(productsTable.id, productId));
+      await db.update(inventoryBalancesTable).set({ available: 5 }).where(eq(inventoryBalancesTable.productId, productId));
+    }
+  });
+
   it("creates a carrier label and persists tracking without changing collected shipping", async () => {
     [previousSmsaIntegration] = await db.select().from(adminIntegrationsTable)
       .where(eq(adminIntegrationsTable.providerId, "smsa")).limit(1);

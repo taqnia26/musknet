@@ -186,9 +186,7 @@ function mapFormValuesToShipmentData(values: ShipmentInputValues | ShipmentUpdat
   const carrier = values.carrierSelection === 'storage_station' ? 'Storage Station' : values.customCarrier;
   return {
     shippingScope: values.shippingScope,
-    destinationCity: values.shippingScope === 'domestic'
-      ? 'المملكة العربية السعودية'
-      : values.destinationCity?.trim() || '',
+    destinationCity: values.destinationCity?.trim() || (values.shippingScope === 'domestic' ? 'المملكة العربية السعودية' : ''),
     destinationAddress: values.destinationAddress,
     carrier,
     serviceMethod: values.serviceMethod,
@@ -199,7 +197,7 @@ function mapFormValuesToShipmentData(values: ShipmentInputValues | ShipmentUpdat
     shippedAt: values.shippedAt,
     deliveredAt: values.deliveredAt,
     nationalAddressShortCode: values.shippingScope === 'domestic' ? values.nationalAddressShortCode : null,
-    destinationCountry: values.shippingScope === 'international' ? values.destinationCountry : null,
+    destinationCountry: values.shippingScope === 'international' ? values.destinationCountry : 'SA',
     destinationDistrict: values.shippingScope === 'international' ? values.destinationDistrict : null,
     destinationStreet: values.shippingScope === 'international' ? values.destinationStreet : null,
     destinationBuildingNumber: values.shippingScope === 'international' ? values.destinationBuildingNumber : null,
@@ -1186,7 +1184,18 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                           <Badge variant="outline" className="mt-1 text-[10px]">
                             {shipment.shippingScope === 'international' ? t('خارجي', 'International') : t('داخلي', 'Domestic')}
                           </Badge>
-                          {shipment.destinationAddress && (
+                          {shipment.destinationCountry && (
+                            <div className="text-xs text-muted-foreground">{t('الدولة', 'Country')}: {shipment.destinationCountry === 'SA' ? t('السعودية', 'Saudi Arabia') : shipment.destinationCountry}</div>
+                          )}
+                          {shipment.nationalAddressShortCode && (
+                            <div className="text-xs text-muted-foreground">{t('الرمز المختصر', 'Short code')}: <span dir="ltr">{shipment.nationalAddressShortCode}</span></div>
+                          )}
+                          {shipment.shippingScope === 'international' && (
+                            <div className="text-xs text-muted-foreground">
+                              {[shipment.destinationDistrict, shipment.destinationStreet, shipment.destinationBuildingNumber, shipment.destinationAdditionalDetails].filter(Boolean).join('، ')}
+                            </div>
+                          )}
+                          {shipment.destinationAddress && shipment.destinationAddress !== shipment.nationalAddressShortCode && (
                             <div className="text-xs text-muted-foreground mt-0.5 max-w-[200px] truncate" title={shipment.destinationAddress}>
                               {shipment.destinationAddress}
                             </div>
