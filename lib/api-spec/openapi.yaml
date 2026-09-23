@@ -832,7 +832,7 @@ paths:
         - $ref: "#/components/parameters/AdminSearch"
         - name: status
           in: query
-          schema: { type: string, enum: [all, new, processing, shipped, delivered, cancelled], default: all }
+          schema: { type: string, enum: [all, new, processing, ready, completed, shipped, delivered, cancelled], default: all }
       responses: { "200": { description: Orders, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminOrder" } } } } } }
     post:
       operationId: adminCreateOrder
@@ -3400,7 +3400,7 @@ components:
         discount: { type: number }
         tax: { type: number }
         total: { type: number }
-        status: { type: string, enum: [new, processing, shipped, delivered, cancelled] }
+        status: { type: string, enum: [new, processing, ready, completed, shipped, delivered, cancelled] }
         paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
         trackingNumber: { type: [string, "null"] }
         address: { type: string }
@@ -3412,7 +3412,7 @@ components:
     AdminOrderUpdate:
       type: object
       properties:
-        status: { type: string, enum: [new, processing, shipped, delivered, cancelled] }
+        status: { type: string, enum: [new, processing, ready, completed, shipped, delivered, cancelled] }
         paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
         trackingNumber: { type: [string, "null"] }
         adminNotes: { type: [string, "null"] }

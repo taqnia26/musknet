@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { 
   useAdminListOrders, 
+  type AdminOrder,
   useAdminUpdateOrder, 
-  AdminListOrdersStatus, 
   AdminOrderUpdateStatus, 
   AdminOrderUpdatePaymentStatus, 
   useGetAdminMe,
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck } from 'lucide-react';
+import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck, Clock3, ClipboardCheck, PackageCheck, Package, Check, Ban, CreditCard } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQueryClient } from '@tanstack/react-query';
@@ -25,28 +25,36 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { CreateOrderDialog } from '@/components/admin/create-order-dialog';
 
+type OrderStage = 'all' | 'cancelled' | 'awaiting_payment' | 'awaiting_review' | 'processing' | 'ready' | 'completed' | 'shipped' | 'delivered';
+function stageOf(order: AdminOrder): OrderStage {
+  if (order.status === 'cancelled') return 'cancelled';
+  if (order.status === 'new') return order.paymentStatus === 'paid' ? 'awaiting_review' : 'awaiting_payment';
+  if (order.status === 'processing' || order.status === 'ready' || order.status === 'completed' || order.status === 'shipped' || order.status === 'delivered') return order.status;
+  return 'all';
+}
+
 export default function AdminOrders() {
   const { t, lang } = useLanguage();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<AdminListOrdersStatus>('all');
+  const [statusFilter, setStatusFilter] = useState<OrderStage>('all');
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
   
   const queryClient = useQueryClient();
   const { data: currentUser } = useGetAdminMe();
-  const { data: orders, isLoading } = useAdminListOrders({ search, status: statusFilter !== 'all' ? statusFilter : undefined });
+  const { data: orders, isLoading, isError } = useAdminListOrders({ search });
   const updateMutation = useAdminUpdateOrder();
-
-  const totals = (orders ?? []).reduce((summary, order) => {
-    summary.totalOrders++;
-    if (order.status !== 'cancelled') {
-      summary.totalRevenue += order.total;
-    }
-    if (order.status === 'new' || order.status === 'processing') {
-      summary.pendingOrders++;
-    }
-    return summary;
-  }, { totalOrders: 0, totalRevenue: 0, pendingOrders: 0 });
+  const visibleOrders = statusFilter === 'all' ? orders : orders?.filter((order) => stageOf(order) === statusFilter);
+  const stages = [
+    { key: 'cancelled', ar: 'ملغي', en: 'Cancelled', icon: Ban, dot: 'bg-slate-400' },
+    { key: 'awaiting_payment', ar: 'بانتظار الدفع', en: 'Awaiting payment', icon: CreditCard, dot: 'bg-rose-500' },
+    { key: 'awaiting_review', ar: 'بانتظار المراجعة', en: 'Awaiting review', icon: Clock3, dot: 'bg-slate-500' },
+    { key: 'processing', ar: 'قيد التنفيذ', en: 'In progress', icon: ClipboardCheck, dot: 'bg-amber-500' },
+    { key: 'ready', ar: 'قيد التسليم', en: 'Ready for handoff', icon: Package, dot: 'bg-sky-500' },
+    { key: 'completed', ar: 'تم التنفيذ', en: 'Completed', icon: Check, dot: 'bg-emerald-500' },
+    { key: 'shipped', ar: 'جاري التوصيل', en: 'Out for delivery', icon: Truck, dot: 'bg-teal-500' },
+    { key: 'delivered', ar: 'تم التوصيل', en: 'Delivered', icon: PackageCheck, dot: 'bg-green-500' },
+  ] as const;
 
   const { data: orderDetail, isLoading: isDetailLoading, isError: isDetailError } = useAdminGetOrder(
     selectedOrderId as number, 
@@ -87,6 +95,8 @@ export default function AdminOrders() {
   const statusMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
     'new': { label: t('جديد', 'New'), variant: 'default', className: 'bg-primary/20 text-primary hover:bg-primary/30' },
     'processing': { label: t('قيد التجهيز', 'Processing'), variant: 'secondary', className: 'bg-primary/15 text-primary hover:bg-primary/25' },
+    'ready': { label: t('قيد التسليم', 'Ready for handoff'), variant: 'secondary' },
+    'completed': { label: t('تم التنفيذ', 'Completed'), variant: 'secondary' },
     'shipped': { label: t('مشحون', 'Shipped'), variant: 'outline', className: 'bg-accent/20 text-accent-foreground hover:bg-accent/30 border-accent/30' },
     'delivered': { label: t('تم التوصيل', 'Delivered'), variant: 'default', className: 'bg-success/20 text-success hover:bg-success/30' },
     'cancelled': { label: t('ملغي', 'Cancelled'), variant: 'destructive', className: 'bg-destructive/30 text-destructive-foreground hover:bg-destructive/40' },
@@ -109,18 +119,23 @@ export default function AdminOrders() {
         {hasPermission(currentUser, 'orders', 'edit') && <CreateOrderDialog />}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><ShoppingBag className="h-4 w-4" /> {t('إجمالي الطلبات', 'Total Orders')}</p>
-          <p className="mt-2 text-2xl font-bold">{totals.totalOrders}</p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Truck className="h-4 w-4 text-amber-600" /> {t('طلبات قيد المعالجة', 'Pending Orders')}</p>
-          <p className="mt-2 text-2xl font-bold text-amber-600">{totals.pendingOrders}</p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 shadow-sm">
-          <p className="text-sm text-muted-foreground font-medium flex items-center gap-2"><Receipt className="h-4 w-4 text-emerald-600" /> {t('إجمالي الإيرادات (المكتملة)', 'Total Revenue (Active)')}</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-600">{totals.totalRevenue.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">SAR</span></p>
+      <div className="overflow-x-auto pb-2">
+        <div className="flex min-w-max gap-2">
+          {stages.map((stage) => {
+            const Icon = stage.icon;
+            const selected = statusFilter === stage.key;
+            return (
+              <button key={stage.key} type="button" aria-pressed={selected} data-testid={`order-stage-${stage.key}`}
+                onClick={() => setStatusFilter(selected ? 'all' : stage.key)}
+                className={`flex min-h-[86px] w-[120px] shrink-0 flex-col justify-between rounded-lg border bg-card p-3 text-start shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? 'border-primary ring-1 ring-primary' : ''}`}>
+                <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <div className="flex w-full items-center justify-between gap-1">
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground"><span className={`h-1.5 w-1.5 shrink-0 rounded-full ${stage.dot}`} />{t(stage.ar, stage.en)}</span>
+                  <span className="font-bold tabular-nums">{isLoading ? '…' : (orders ?? []).filter((order) => stageOf(order) === stage.key).length}</span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -134,17 +149,13 @@ export default function AdminOrders() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as AdminListOrdersStatus)}>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as OrderStage)}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder={t('تصفية بالحالة', 'Filter by status')} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('الكل', 'All')}</SelectItem>
-            <SelectItem value="new">{t('جديد', 'New')}</SelectItem>
-            <SelectItem value="processing">{t('قيد التجهيز', 'Processing')}</SelectItem>
-            <SelectItem value="shipped">{t('مشحون', 'Shipped')}</SelectItem>
-            <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
-            <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
+            {stages.map((stage) => <SelectItem key={stage.key} value={stage.key}>{t(stage.ar, stage.en)}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -171,10 +182,12 @@ export default function AdminOrders() {
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
-            ) : orders?.length === 0 ? (
+            ) : isError ? (
+              <TableRow><TableCell colSpan={6} className="text-center py-12 text-destructive">{t('تعذر تحميل الطلبات', 'Could not load orders')}</TableCell></TableRow>
+            ) : visibleOrders?.length === 0 ? (
               <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{t('لا توجد طلبات', 'No orders found')}</TableCell></TableRow>
             ) : (
-              orders?.map((order) => (
+              visibleOrders?.map((order) => (
                 <TableRow key={order.id} data-testid={`row-order-${order.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">#{order.orderNumber}</TableCell>
                   <TableCell>{format(new Date(order.createdAt), 'yyyy-MM-dd')}</TableCell>
@@ -187,6 +200,8 @@ export default function AdminOrders() {
                       <SelectContent>
                         <SelectItem value="new">{t('جديد', 'New')}</SelectItem>
                         <SelectItem value="processing">{t('قيد التجهيز', 'Processing')}</SelectItem>
+                        <SelectItem value="ready">{t('قيد التسليم', 'Ready for handoff')}</SelectItem>
+                        <SelectItem value="completed">{t('تم التنفيذ', 'Completed')}</SelectItem>
                         <SelectItem value="shipped">{t('مشحون', 'Shipped')}</SelectItem>
                         <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
                         <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
@@ -264,6 +279,8 @@ export default function AdminOrders() {
                                       <SelectContent>
                                         <SelectItem value="new">{t('جديد', 'New')}</SelectItem>
                                         <SelectItem value="processing">{t('قيد التجهيز', 'Processing')}</SelectItem>
+                                        <SelectItem value="ready">{t('قيد التسليم', 'Ready for handoff')}</SelectItem>
+                                        <SelectItem value="completed">{t('تم التنفيذ', 'Completed')}</SelectItem>
                                         <SelectItem value="shipped">{t('مشحون', 'Shipped')}</SelectItem>
                                         <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
                                         <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>

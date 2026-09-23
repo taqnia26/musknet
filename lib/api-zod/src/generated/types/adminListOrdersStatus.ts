@@ -13,6 +13,8 @@ export const AdminListOrdersStatus = {
   all: 'all',
   new: 'new',
   processing: 'processing',
+  ready: 'ready',
+  completed: 'completed',
   shipped: 'shipped',
   delivered: 'delivered',
   cancelled: 'cancelled',

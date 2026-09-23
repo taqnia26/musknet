@@ -2209,7 +2209,7 @@ export const adminListOrdersQueryStatusDefault = `all`;
 
 export const AdminListOrdersQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "status": zod.enum(['all', 'new', 'processing', 'shipped', 'delivered', 'cancelled']).default(adminListOrdersQueryStatusDefault)
+  "status": zod.enum(['all', 'new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']).default(adminListOrdersQueryStatusDefault)
 })
 
 export const AdminListOrdersResponseItem = zod.object({
@@ -2221,7 +2221,7 @@ export const AdminListOrdersResponseItem = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
@@ -2276,7 +2276,7 @@ export const AdminCreateOrderResponse = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
@@ -2301,7 +2301,7 @@ export const AdminGetOrderResponse = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
@@ -2346,7 +2346,7 @@ export const AdminUpdateOrderParams = zod.object({
 })
 
 export const AdminUpdateOrderBody = zod.object({
-  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']).optional(),
+  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']).optional(),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']).optional(),
   "trackingNumber": zod.string().nullish(),
   "adminNotes": zod.string().nullish()
@@ -2361,7 +2361,7 @@ export const AdminUpdateOrderResponse = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
