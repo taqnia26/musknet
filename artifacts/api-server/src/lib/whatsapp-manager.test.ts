@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => {
   const sockets: Array<{ events: Record<string, (value: any) => any>; end: ReturnType<typeof vi.fn>; logout: ReturnType<typeof vi.fn> }> = [];
   return { rows, sockets, qr: vi.fn(async (value: string) => `data:image/png;base64,${value}`) };
 });
+vi.mock("./whatsapp-alert", () => ({ sendWhatsappDisconnectAlert: vi.fn(async () => undefined) }));
+vi.mock("./logger", () => ({ logger: { warn: vi.fn() } }));
 vi.mock("qrcode", () => ({ default: { toDataURL: mocks.qr } }));
 vi.mock("@workspace/db", () => ({
   whatsappAuthStateTable: { key: "key" },
@@ -15,7 +17,7 @@ vi.mock("@workspace/db", () => ({
       onConflictDoUpdate: async () => { mocks.rows.set(key, value); },
     }) }),
     delete: () => ({
-      where: async (_: unknown) => undefined,
+      where: async (_: unknown) => { for (const key of [...mocks.rows.keys()]) if (key !== "connection-monitor") mocks.rows.delete(key); },
       then: (resolve: (value: unknown) => void) => { mocks.rows.clear(); resolve(undefined); },
     }),
   },
@@ -38,6 +40,7 @@ vi.mock("@whiskeysockets/baileys", async (importOriginal) => {
 });
 
 import { WhatsAppManager } from "./whatsapp";
+import { sendWhatsappDisconnectAlert } from "./whatsapp-alert";
 
 const emit = async (index: number, event: string, value: unknown) => {
   await mocks.sockets[index].events[event](value);
@@ -48,6 +51,7 @@ describe("WhatsApp pairing lifecycle", () => {
     mocks.rows.clear();
     mocks.sockets.length = 0;
     mocks.qr.mockClear();
+    vi.mocked(sendWhatsappDisconnectAlert).mockClear();
     process.env.SESSION_SECRET = "whatsapp-test-secret";
   });
 
@@ -133,6 +137,70 @@ describe("WhatsApp pairing lifecycle", () => {
       await manager.start(true);
       expect(mocks.sockets).toHaveLength(2);
       await manager.logout();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("alerts once after a sustained outage, across reconnection attempts and server restart", async () => {
+    vi.useFakeTimers();
+    try {
+      const manager = new WhatsAppManager();
+      await manager.start(true);
+      await emit(0, "creds.update", { registered: true });
+      await emit(0, "connection.update", { connection: "open" });
+      await emit(0, "connection.update", { connection: "close" });
+      await vi.advanceTimersByTimeAsync(1500);
+      await emit(1, "connection.update", { connection: "close" });
+      await vi.advanceTimersByTimeAsync(110_000);
+      expect(sendWhatsappDisconnectAlert).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(sendWhatsappDisconnectAlert).toHaveBeenCalledTimes(1);
+      expect(manager.state().connectionAlerted).toBe(true);
+      const restarted = new WhatsAppManager();
+      await restarted.restore();
+      await vi.advanceTimersByTimeAsync(180_000);
+      expect(sendWhatsappDisconnectAlert).toHaveBeenCalledTimes(1);
+      await manager.logout();
+      await restarted.logout();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("does not alert for a brief drop, initial pairing, or intentional logout", async () => {
+    vi.useFakeTimers();
+    try {
+      const manager = new WhatsAppManager();
+      await manager.start(true);
+      await vi.advanceTimersByTimeAsync(46_000);
+      expect(sendWhatsappDisconnectAlert).not.toHaveBeenCalled();
+      await manager.start(true);
+      await emit(1, "creds.update", { registered: true });
+      await emit(1, "connection.update", { connection: "open" });
+      await emit(1, "connection.update", { connection: "close" });
+      await vi.advanceTimersByTimeAsync(1500);
+      await emit(2, "connection.update", { connection: "open" });
+      await vi.advanceTimersByTimeAsync(180_000);
+      expect(sendWhatsappDisconnectAlert).not.toHaveBeenCalled();
+      await manager.logout();
+      await vi.advanceTimersByTimeAsync(180_000);
+      expect(sendWhatsappDisconnectAlert).not.toHaveBeenCalled();
+    } finally { vi.useRealTimers(); }
+  });
+
+  it("alerts after a remote logout but not again after a restart", async () => {
+    vi.useFakeTimers();
+    try {
+      const manager = new WhatsAppManager();
+      await manager.start(true);
+      await emit(0, "creds.update", { registered: true });
+      await emit(0, "connection.update", { connection: "open" });
+      await emit(0, "connection.update", { connection: "close", lastDisconnect: { error: { output: { statusCode: 401 } } } });
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(sendWhatsappDisconnectAlert).toHaveBeenCalledTimes(1);
+      const restarted = new WhatsAppManager();
+      await restarted.restore();
+      await vi.advanceTimersByTimeAsync(180_000);
+      expect(sendWhatsappDisconnectAlert).toHaveBeenCalledTimes(1);
+      await manager.logout();
+      await restarted.logout();
     } finally { vi.useRealTimers(); }
   });
 });

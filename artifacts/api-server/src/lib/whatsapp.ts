@@ -5,10 +5,12 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 import QRCode from "qrcode";
 import pino from "pino";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, ne } from "drizzle-orm";
 import {
   db, whatsappAuthStateTable, whatsappChatsTable, whatsappMessagesTable,
 } from "@workspace/db";
+import { logger } from "./logger";
+import { sendWhatsappDisconnectAlert } from "./whatsapp-alert";
 
 export const encryptWhatsappState = (plain: string, secret = process.env.SESSION_SECRET): string => {
   if (!secret) throw new Error("SESSION_SECRET must be configured for WhatsApp sessions");
@@ -33,7 +35,12 @@ const waLogger = pino({ level: "silent" });
 const encode = (value: unknown) => JSON.stringify(value, BufferJSON.replacer);
 const decode = <T>(value: string) => JSON.parse(value, BufferJSON.reviver) as T;
 
-async function useDatabaseAuthState(): Promise<AuthenticationState> {
+const monitorKey = "connection-monitor";
+const ALERT_DELAY_MS = 120_000;
+
+type ConnectionMonitor = { alerted: boolean; disconnectedAt: number | null };
+
+async function useDatabaseAuthState(): Promise<{ auth: AuthenticationState; monitor: ConnectionMonitor | null }> {
   const rows = await db.select().from(whatsappAuthStateTable);
   const values = new Map(rows.map((row) => [row.key, decode<unknown>(decryptWhatsappState(row.value))]));
   const save = async (key: string, value: unknown) => {
@@ -62,9 +69,9 @@ async function useDatabaseAuthState(): Promise<AuthenticationState> {
     clear: async () => { values.clear(); await db.delete(whatsappAuthStateTable); },
   };
   return {
-    creds,
-    keys,
-  } as AuthenticationState;
+    auth: { creds, keys } as AuthenticationState,
+    monitor: (values.get(monitorKey) as ConnectionMonitor | undefined) ?? null,
+  };
 }
 
 export const whatsappText = (message: proto.IMessage | null | undefined): string => {
@@ -93,6 +100,53 @@ export class WhatsAppManager {
   private qrTimer: ReturnType<typeof setTimeout> | null = null;
   private connectTimer: ReturnType<typeof setTimeout> | null = null;
   private failed = false;
+  private monitor: ConnectionMonitor | null = null;
+  private alertTimer: ReturnType<typeof setTimeout> | null = null;
+  private alertInFlight = false;
+
+  private async saveMonitor(monitor: ConnectionMonitor) {
+    const value = encryptWhatsappState(encode(monitor));
+    await db.insert(whatsappAuthStateTable).values({ key: monitorKey, value })
+      .onConflictDoUpdate({ target: whatsappAuthStateTable.key, set: { value, updatedAt: new Date() } });
+    this.monitor = monitor;
+  }
+
+  private clearAlertTimer() {
+    if (this.alertTimer) clearTimeout(this.alertTimer);
+    this.alertTimer = null;
+  }
+
+  private scheduleAlert() {
+    this.clearAlertTimer();
+    if (!this.monitor?.disconnectedAt || this.monitor.alerted) return;
+    const disconnectedAt = this.monitor.disconnectedAt;
+    this.alertTimer = setTimeout(() => {
+      this.alertTimer = null;
+      if (this.monitor?.disconnectedAt !== disconnectedAt || this.monitor.alerted || this.alertInFlight) return;
+      this.alertInFlight = true;
+      void (async () => {
+        try {
+          await sendWhatsappDisconnectAlert();
+          if (this.monitor?.disconnectedAt === disconnectedAt) {
+            await this.saveMonitor({ alerted: true, disconnectedAt });
+          }
+        } catch {
+          logger.warn("Could not deliver WhatsApp connection alert");
+          if (this.monitor?.disconnectedAt === disconnectedAt && !this.monitor.alerted) {
+            this.alertTimer = setTimeout(() => { this.alertTimer = null; this.scheduleAlert(); }, ALERT_DELAY_MS);
+          }
+        } finally {
+          this.alertInFlight = false;
+        }
+      })();
+    }, Math.max(0, disconnectedAt + ALERT_DELAY_MS - Date.now()));
+  }
+
+  private async markOutage() {
+    if (!this.monitor || this.monitor.disconnectedAt) return;
+    await this.saveMonitor({ ...this.monitor, disconnectedAt: Date.now() });
+    this.scheduleAlert();
+  }
 
   async start(forcePair = false) {
     if (this.starting) return this.starting;
@@ -107,6 +161,7 @@ export class WhatsAppManager {
       this.qr = null;
       this.failed = true;
       this.lastError = "Could not start WhatsApp pairing. Check the server connection and try again.";
+      if (this.monitor?.disconnectedAt) this.scheduleAlert();
     }).finally(() => { this.starting = null; });
     return this.starting;
   }
@@ -126,7 +181,10 @@ export class WhatsAppManager {
 
   private async connect() {
     this.status = "connecting"; this.clearQr();
-    const auth = await useDatabaseAuthState();
+    const stored = await useDatabaseAuthState();
+    const { auth } = stored;
+    if (stored.monitor && !this.monitor) this.monitor = stored.monitor;
+    if (this.monitor?.disconnectedAt) this.scheduleAlert();
     if (!auth.creds.registered && !this.pairing) {
       this.status = "disconnected";
       return;
@@ -144,6 +202,7 @@ export class WhatsAppManager {
       this.status = "disconnected";
       this.clearQr();
       this.lastError = "WhatsApp did not respond. Check the server connection and try again.";
+      void this.markOutage().catch(() => logger.warn("Could not record WhatsApp outage"));
       socket.end(new Error("Connection timed out"));
     }, 45000);
     let credsSave = Promise.resolve();
@@ -182,6 +241,7 @@ export class WhatsAppManager {
           this.socket = null;
           this.pairing = false;
           this.failed = true;
+          void this.markOutage().catch(() => logger.warn("Could not record WhatsApp outage"));
           socket.end(new Error("QR generation failed"));
         }
       }
@@ -192,12 +252,15 @@ export class WhatsAppManager {
         try {
           await credsSave;
           if (generation !== this.generation || this.socket !== socket) return;
+          await this.saveMonitor({ alerted: false, disconnectedAt: null });
+          this.clearAlertTimer();
           this.status = "connected"; this.lastError = null; this.pairing = false;
         } catch {
           if (generation !== this.generation) return;
           this.status = "disconnected";
           this.lastError = "Could not save WhatsApp credentials. Try again.";
           this.failed = true;
+          void this.markOutage().catch(() => logger.warn("Could not record WhatsApp outage"));
           this.generation++;
           this.socket = null;
           socket.end(new Error("Credentials could not be saved"));
@@ -213,6 +276,7 @@ export class WhatsAppManager {
           this.status = "disconnected";
           this.lastError = "Could not save WhatsApp credentials. Try again.";
           this.failed = true;
+          await this.markOutage().catch(() => logger.warn("Could not record WhatsApp outage"));
           return;
         }
         if (generation !== this.generation) return;
@@ -220,10 +284,18 @@ export class WhatsAppManager {
         const restartRequired = code === DisconnectReason.restartRequired;
         if (code === DisconnectReason.loggedOut || this.explicitLogout) {
           this.status = "disconnected"; this.explicitLogout = false; this.pairing = false;
-          await this.clearAuth();
+          if (code === DisconnectReason.loggedOut) {
+            await this.markOutage().catch(() => logger.warn("Could not record WhatsApp outage"));
+            await this.clearAuth(true);
+          } else {
+            this.clearAlertTimer();
+            this.monitor = null;
+            await this.clearAuth();
+          }
           this.lastError = code === DisconnectReason.loggedOut ? "WhatsApp logged out. Start pairing again." : null;
           return;
         }
+        await this.markOutage().catch(() => logger.warn("Could not record WhatsApp outage"));
         if (restartRequired && auth.creds.registered) this.pairing = false;
         this.status = restartRequired ? "completing" : "connecting";
         if (this.lastError !== "Could not generate a pairing code. Try again.") this.lastError = null;
@@ -265,6 +337,8 @@ export class WhatsAppManager {
   async logout() {
     this.explicitLogout = true;
     this.generation++;
+    this.clearAlertTimer();
+    this.monitor = null;
     if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
     this.clearQr();
     this.clearConnectTimer();
@@ -275,11 +349,12 @@ export class WhatsAppManager {
     await this.clearAuth();
   }
 
-  private async clearAuth() {
-    await db.delete(whatsappAuthStateTable);
+  private async clearAuth(keepMonitor = false) {
+    if (keepMonitor) await db.delete(whatsappAuthStateTable).where(ne(whatsappAuthStateTable.key, monitorKey));
+    else await db.delete(whatsappAuthStateTable);
   }
 
-  state() { return { status: this.status, qr: this.qr, connected: this.status === "connected", lastError: this.lastError }; }
+  state() { return { status: this.status, qr: this.qr, connected: this.status === "connected", lastError: this.lastError, connectionAlerted: this.monitor?.alerted ?? false, previouslyConnected: this.monitor !== null }; }
   async send(jid: string, text: string) {
     if (!this.socket || this.status !== "connected") throw new Error("WhatsApp is not connected");
     const result = await this.socket.sendMessage(jid, { text });

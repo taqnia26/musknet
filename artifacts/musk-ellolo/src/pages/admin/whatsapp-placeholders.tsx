@@ -56,7 +56,7 @@ export function AdminWhatsAppTemplates() {
 
 export function AdminWhatsAppSettings() {
   const { t } = useLanguage();
-  const [state, setState] = useState<{ status: string; qr: string | null; lastError?: string | null }>({ status: 'disconnected', qr: null, lastError: null });
+  const [state, setState] = useState<{ status: string; qr: string | null; lastError?: string | null; connectionAlerted?: boolean; previouslyConnected?: boolean }>({ status: 'disconnected', qr: null, lastError: null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const requestId = useRef(0);
@@ -114,6 +114,7 @@ export function AdminWhatsAppSettings() {
         <div className="rounded-xl border bg-muted/30 p-4 sm:p-6" aria-live="polite">
           <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{t('حالة الاتصال', 'Connection status')}</span><span data-testid="whatsapp-connection-status" className={connected ? 'font-semibold text-success' : 'text-muted-foreground'}>{connected ? t('متصل', 'Connected') : pairing ? t('بانتظار مسح الرمز', 'Waiting for scan') : state.status === 'completing' ? t('جارٍ إكمال الاتصال', 'Finishing connection') : state.status === 'connecting' ? t('جارٍ إنشاء الرمز أو استعادة الاتصال', 'Generating code or reconnecting') : t('غير متصل', 'Disconnected')}</span></div>
           {(state.lastError || error) && <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{state.lastError || error} {t('يمكنك الضغط على بدء الربط للمحاولة مجددًا.', 'Press Start pairing to try again.')}</p>}
+          {state.connectionAlerted && !connected && <p data-testid="whatsapp-disconnect-alert" role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{t('استمر انقطاع واتساب وأُرسل تنبيه للمسؤول. قد تحتاج إلى إعادة ربط الجهاز لاستئناف رسائل العملاء.', 'WhatsApp remains disconnected and an administrator was alerted. You may need to pair the device again to resume customer messages.')}</p>}
           {pairing && <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center">
             <div className="shrink-0 rounded-xl border bg-white p-3 shadow-sm"><img data-testid="whatsapp-pairing-qr" src={state.qr!} alt={t('رمز ربط واتساب', 'WhatsApp pairing QR code')} className="h-auto w-[min(70vw,288px)] max-w-[288px]" /></div>
             <div className="max-w-xs space-y-3 text-start text-sm"><Smartphone className="h-7 w-7 text-primary" /><h3 className="text-base font-semibold">{t('اربط جهازك بواتساب', 'Link your device with WhatsApp')}</h3>
