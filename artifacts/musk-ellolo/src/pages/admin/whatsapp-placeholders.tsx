@@ -1,6 +1,6 @@
 import { Link } from 'wouter';
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Loader2, MessageCircle, Phone, RefreshCw, Unplug } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, Loader2, MessageCircle, Phone, RefreshCw, Unplug, Smartphone } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,17 +59,50 @@ export function AdminWhatsAppSettings() {
   const [state, setState] = useState<{ status: string; qr: string | null; lastError?: string | null }>({ status: 'disconnected', qr: null, lastError: null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestId = useRef(0);
   const api = async (path: string, init?: RequestInit) => {
     const response = await fetch(`/api${path}`, { ...init, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAdminToken() ?? ''}`, ...(init?.headers ?? {}) } });
     if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? 'Request failed');
     return response.json();
   };
-  const refresh = async () => { try { setState(await api('/admin/whatsapp/status')); setError(null); } catch (cause) { setError(cause instanceof Error ? cause.message : t('تعذر تحميل حالة الاتصال', 'Could not load connection status')); } };
-  useEffect(() => { void refresh(); const timer = window.setInterval(() => void refresh(), 3500); return () => window.clearInterval(timer); }, []);
-  const connect = async () => { setBusy(true); try { await api('/admin/whatsapp/connect', { method: 'POST' }); await refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : t('تعذر بدء الربط', 'Could not start pairing')); } finally { setBusy(false); } };
-  const disconnect = async () => { if (!window.confirm(t('هل تريد فصل حساب واتساب؟ ستحتاج لمسح QR من جديد عند الربط.', 'Disconnect WhatsApp? You will need to scan a new QR code to reconnect.'))) return; setBusy(true); try { await api('/admin/whatsapp/disconnect', { method: 'POST' }); await refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : t('تعذر فصل واتساب', 'Could not disconnect WhatsApp')); } finally { setBusy(false); } };
+  const refresh = async () => {
+    const id = ++requestId.current;
+    try {
+      const next = await api('/admin/whatsapp/status');
+      if (id === requestId.current) { setState(next); setError(null); }
+    } catch (cause) {
+      if (id === requestId.current) setError(cause instanceof Error ? cause.message : t('تعذر تحميل حالة الاتصال', 'Could not load connection status'));
+    }
+  };
+  useEffect(() => {
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3500);
+    return () => { window.clearInterval(timer); requestId.current++; };
+  }, []);
+  const connect = async () => {
+    if (busy) return;
+    setBusy(true); setError(null);
+    const id = ++requestId.current;
+    setState(current => ({ ...current, status: 'connecting', qr: null, lastError: null }));
+    try {
+      const next = await api('/admin/whatsapp/connect', { method: 'POST' });
+      if (id === requestId.current) setState(next);
+      await refresh();
+    } catch (cause) { setState(current => ({ ...current, status: 'disconnected', qr: null })); setError(cause instanceof Error ? cause.message : t('تعذر بدء الربط', 'Could not start pairing')); }
+    finally { setBusy(false); }
+  };
+  const disconnect = async () => {
+    if (busy || !window.confirm(t('هل تريد فصل حساب واتساب؟ ستحتاج لمسح QR من جديد عند الربط.', 'Disconnect WhatsApp? You will need to scan a new QR code to reconnect.'))) return;
+    setBusy(true); ++requestId.current;
+    try { setState(await api('/admin/whatsapp/disconnect', { method: 'POST' })); setError(null); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : t('تعذر فصل واتساب', 'Could not disconnect WhatsApp')); }
+    finally { setBusy(false); }
+  };
+  const connected = state.status === 'connected';
+  const pairing = state.status === 'qr' && !!state.qr;
+  const inProgress = state.status === 'connecting' || state.status === 'completing';
   return (
-    <Card className="mx-auto max-w-2xl">
+    <Card className="mx-auto max-w-3xl">
       <CardHeader>
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
           <Phone className="h-6 w-6" />
@@ -78,14 +111,24 @@ export function AdminWhatsAppSettings() {
       </CardHeader>
       <CardContent className="space-y-5">
         <p className="text-muted-foreground">{t('اربط حساب واتساب بزنس عبر رمز QR مثل واتساب ويب، ثم اعرض المحادثات من صندوق الوارد.', 'Pair your WhatsApp Business account with a QR code like WhatsApp Web, then manage conversations from the inbox.')}</p>
-        <div className="rounded-xl border bg-muted/30 p-4">
-          <div className="flex items-center justify-between"><span className="font-semibold">{t('حالة الاتصال', 'Connection status')}</span><span data-testid="whatsapp-connection-status" className={state.status === 'connected' ? 'text-success' : 'text-muted-foreground'}>{state.status === 'connected' ? t('متصل', 'Connected') : state.status === 'qr' ? t('بانتظار مسح QR', 'Waiting for QR scan') : state.status === 'connecting' ? t('جاري الاتصال', 'Connecting') : t('غير متصل', 'Disconnected')}</span></div>
-          {state.lastError && <p className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{t('سبب آخر فصل:', 'Last disconnect reason:')} {state.lastError}</p>}
-          {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
-          {state.qr && <div className="mt-5 text-center"><img data-testid="whatsapp-pairing-qr" src={state.qr} alt={t('رمز ربط واتساب', 'WhatsApp pairing QR code')} className="mx-auto rounded-lg border bg-white p-2" /><p className="mt-3 text-sm text-muted-foreground">{t('افتح واتساب بزنس ← الأجهزة المرتبطة ← ربط جهاز، ثم امسح الرمز.', 'Open WhatsApp Business → Linked devices → Link a device, then scan this code.')}</p></div>}
+        <div className="rounded-xl border bg-muted/30 p-4 sm:p-6" aria-live="polite">
+          <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-semibold">{t('حالة الاتصال', 'Connection status')}</span><span data-testid="whatsapp-connection-status" className={connected ? 'font-semibold text-success' : 'text-muted-foreground'}>{connected ? t('متصل', 'Connected') : pairing ? t('بانتظار مسح الرمز', 'Waiting for scan') : state.status === 'completing' ? t('جارٍ إكمال الاتصال', 'Finishing connection') : state.status === 'connecting' ? t('جارٍ إنشاء الرمز أو استعادة الاتصال', 'Generating code or reconnecting') : t('غير متصل', 'Disconnected')}</span></div>
+          {(state.lastError || error) && <p role="alert" className="mt-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{state.lastError || error} {t('يمكنك الضغط على بدء الربط للمحاولة مجددًا.', 'Press Start pairing to try again.')}</p>}
+          {pairing && <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center">
+            <div className="shrink-0 rounded-xl border bg-white p-3 shadow-sm"><img data-testid="whatsapp-pairing-qr" src={state.qr!} alt={t('رمز ربط واتساب', 'WhatsApp pairing QR code')} className="h-auto w-[min(70vw,288px)] max-w-[288px]" /></div>
+            <div className="max-w-xs space-y-3 text-start text-sm"><Smartphone className="h-7 w-7 text-primary" /><h3 className="text-base font-semibold">{t('اربط جهازك بواتساب', 'Link your device with WhatsApp')}</h3>
+              <ol className="list-inside list-decimal space-y-2 text-muted-foreground">
+                <li>{t('افتح واتساب أو واتساب بزنس على هاتفك.', 'Open WhatsApp or WhatsApp Business on your phone.')}</li>
+                <li>{t('انتقل إلى الأجهزة المرتبطة ← ربط جهاز.', 'Go to Linked devices → Link a device.')}</li>
+                <li>{t('وجّه كاميرا هاتفك إلى هذا الرمز.', 'Point your phone camera at this code.')}</li>
+              </ol><p className="text-muted-foreground">{t('سيُحدّث الرمز تلقائيًا عند تغيّره.', 'The code updates automatically when it changes.')}</p>
+            </div>
+          </div>}
+          {inProgress && <div className="mt-6 flex items-center gap-3 rounded-lg border bg-background p-5 text-sm text-muted-foreground"><Loader2 className="h-5 w-5 shrink-0 animate-spin" />{state.status === 'completing' ? t('تم مسح الرمز؛ نتحقق من فتح الجلسة...', 'Code scanned; waiting for the session to open...') : t('يرجى الانتظار حتى يظهر رمز الربط...', 'Please wait for the pairing code...')}</div>}
+          {connected && <div className="mt-6 flex items-center gap-3 rounded-lg border border-success/30 bg-success/10 p-5 text-success"><CheckCircle2 className="h-6 w-6" />{t('واتساب متصل وجاهز للاستخدام.', 'WhatsApp is connected and ready.')}</div>}
         </div>
         <div className="flex gap-2">
-          {state.status === 'connected' ? <Button data-testid="whatsapp-disconnect-button" variant="destructive" onClick={() => void disconnect()} disabled={busy}><Unplug className="me-2 h-4 w-4" />{t('فصل الجهاز', 'Disconnect')}</Button> : <Button data-testid="whatsapp-pairing-button" onClick={() => void connect()} disabled={busy}><RefreshCw className="me-2 h-4 w-4" />{busy ? t('جاري البدء...', 'Starting...') : t('بدء الربط وإظهار QR', 'Start pairing')}</Button>}
+          {connected ? <Button data-testid="whatsapp-disconnect-button" variant="destructive" onClick={() => void disconnect()} disabled={busy}><Unplug className="me-2 h-4 w-4" />{t('فصل الجهاز', 'Disconnect')}</Button> : <Button data-testid="whatsapp-pairing-button" onClick={() => void connect()} disabled={busy || ((pairing || inProgress) && !error && !state.lastError)}><RefreshCw className="me-2 h-4 w-4" />{busy ? t('جارٍ البدء...', 'Starting...') : t('بدء الربط وإظهار الرمز', 'Start pairing')}</Button>}
           {busy && <Loader2 className="h-5 w-5 animate-spin self-center text-muted-foreground" />}
         </div>
         <div className="rounded-xl border border-primary/30 bg-primary/10 p-4">

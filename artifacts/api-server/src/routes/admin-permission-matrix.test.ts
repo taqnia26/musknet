@@ -72,6 +72,14 @@ describe.sequential("expanded admin permission matrix", () => {
     await request(app).get("/api/admin/analytics/revenue").set(auth("revenue")).expect(200);
     await request(app).get("/api/admin/integrations").set(auth("revenue")).expect(403);
     await request(app).get("/api/admin/whatsapp/chats").set(auth("revenue")).expect(403);
+    await request(app).get("/api/admin/whatsapp/status").expect(401);
+    await request(app).post("/api/admin/whatsapp/connect").expect(401);
+    await request(app).post("/api/admin/whatsapp/disconnect").expect(401);
+    await request(app).get("/api/admin/whatsapp/status").set(auth("revenue")).expect(403);
+    await request(app).post("/api/admin/whatsapp/connect").set(auth("revenue")).expect(403);
+    await request(app).post("/api/admin/whatsapp/disconnect").set(auth("revenue")).expect(403);
+    await request(app).post("/api/admin/whatsapp/connect").set(auth("customer-service")).expect(403);
+    await request(app).post("/api/admin/whatsapp/disconnect").set(auth("customer-service")).expect(403);
 
     await request(app).get("/api/admin/whatsapp/chats").set(auth("customer-service")).expect(200);
     await request(app).get("/api/admin/analytics/revenue").set(auth("customer-service")).expect(403);

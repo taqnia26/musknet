@@ -79,8 +79,8 @@ export const whatsappText = (message: proto.IMessage | null | undefined): string
   return "رسالة غير نصية";
 };
 
-type ConnectionStatus = "disconnected" | "connecting" | "qr" | "connected";
-class WhatsAppManager {
+type ConnectionStatus = "disconnected" | "connecting" | "qr" | "completing" | "connected";
+export class WhatsAppManager {
   private socket: ReturnType<typeof makeWASocket> | null = null;
   private starting: Promise<void> | null = null;
   private status: ConnectionStatus = "disconnected";
@@ -89,34 +89,45 @@ class WhatsAppManager {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private generation = 0;
   private lastError: string | null = null;
+  private pairing = false;
+  private qrTimer: ReturnType<typeof setTimeout> | null = null;
+  private connectTimer: ReturnType<typeof setTimeout> | null = null;
+  private failed = false;
 
   async start(forcePair = false) {
     if (this.starting) return this.starting;
-    if (forcePair) await this.resetPairing();
-    else if (this.socket) return;
-    this.starting = this.connect(forcePair).finally(() => { this.starting = null; });
+    if (this.socket || this.status === "connected") return;
+    if (!forcePair && this.failed) return;
+    if (forcePair) this.failed = false;
+    if (forcePair) this.pairing = true;
+    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    this.lastError = null;
+    this.starting = this.connect().catch(() => {
+      this.status = "disconnected";
+      this.qr = null;
+      this.failed = true;
+      this.lastError = "Could not start WhatsApp pairing. Check the server connection and try again.";
+    }).finally(() => { this.starting = null; });
     return this.starting;
   }
 
   async restore() { return this.start(false); }
 
-  private async resetPairing() {
-    this.generation++;
-    this.explicitLogout = true;
-    if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
-    if (this.socket) this.socket.end(new Error("Starting a fresh WhatsApp pairing session"));
-    this.socket = null;
-    this.status = "disconnected";
+  private clearQr() {
+    if (this.qrTimer) clearTimeout(this.qrTimer);
+    this.qrTimer = null;
     this.qr = null;
-    this.lastError = null;
-    await this.clearAuth();
-    this.explicitLogout = false;
   }
 
-  private async connect(forcePair: boolean) {
-    this.status = "connecting"; this.qr = null;
+  private clearConnectTimer() {
+    if (this.connectTimer) clearTimeout(this.connectTimer);
+    this.connectTimer = null;
+  }
+
+  private async connect() {
+    this.status = "connecting"; this.clearQr();
     const auth = await useDatabaseAuthState();
-    if (!forcePair && !auth.creds.registered) {
+    if (!auth.creds.registered && !this.pairing) {
       this.status = "disconnected";
       return;
     }
@@ -124,35 +135,103 @@ class WhatsAppManager {
     this.explicitLogout = false;
     const socket = makeWASocket({ auth, browser: Browsers.macOS("Chrome"), printQRInTerminal: false, syncFullHistory: true, logger: waLogger });
     this.socket = socket;
+    this.connectTimer = setTimeout(() => {
+      if (generation !== this.generation || this.socket !== socket || this.status === "qr" || this.status === "connected") return;
+      this.generation++;
+      this.socket = null;
+      this.pairing = false;
+      this.failed = true;
+      this.status = "disconnected";
+      this.clearQr();
+      this.lastError = "WhatsApp did not respond. Check the server connection and try again.";
+      socket.end(new Error("Connection timed out"));
+    }, 45000);
     let credsSave = Promise.resolve();
     socket.ev.on("creds.update", (update) => {
       Object.assign(auth.creds, update);
+      const snapshot = encode(auth.creds);
       credsSave = credsSave.then(async () => {
-        const value = encryptWhatsappState(encode(auth.creds));
+        const value = encryptWhatsappState(snapshot);
         await db.insert(whatsappAuthStateTable).values({ key: "creds", value })
           .onConflictDoUpdate({ target: whatsappAuthStateTable.key, set: { value, updatedAt: new Date() } });
       });
+      void credsSave.catch(() => undefined);
     });
     socket.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
-      if (qr) { this.status = "qr"; this.lastError = null; this.qr = await QRCode.toDataURL(qr, { margin: 1, width: 320 }); }
-      if (connection === "open") { this.status = "connected"; this.lastError = null; this.qr = null; }
+      if (generation !== this.generation) return;
+      if (qr && connection !== "close" && this.status !== "connected") {
+        try {
+          const image = await QRCode.toDataURL(qr, { margin: 2, width: 320 });
+          if (generation !== this.generation || this.socket !== socket || this.state().connected || this.status === "completing") return;
+          this.clearQr();
+          this.clearConnectTimer();
+          this.qr = image; this.status = "qr"; this.lastError = null;
+          this.qrTimer = setTimeout(() => {
+            if (generation !== this.generation || this.socket !== socket || this.status !== "qr") return;
+            this.clearQr();
+            this.status = "connecting";
+            socket.end(new Error("QR expired"));
+          }, 60000);
+        } catch {
+          if (generation !== this.generation || this.socket !== socket) return;
+          this.clearQr();
+          this.clearConnectTimer();
+          this.lastError = "Could not generate a pairing code. Try again.";
+          this.status = "disconnected";
+          this.generation++;
+          this.socket = null;
+          this.pairing = false;
+          this.failed = true;
+          socket.end(new Error("QR generation failed"));
+        }
+      }
+      if (connection === "open") {
+        this.clearQr();
+        this.clearConnectTimer();
+        this.status = "completing";
+        try {
+          await credsSave;
+          if (generation !== this.generation || this.socket !== socket) return;
+          this.status = "connected"; this.lastError = null; this.pairing = false;
+        } catch {
+          if (generation !== this.generation) return;
+          this.status = "disconnected";
+          this.lastError = "Could not save WhatsApp credentials. Try again.";
+          this.failed = true;
+          this.generation++;
+          this.socket = null;
+          socket.end(new Error("Credentials could not be saved"));
+        }
+      }
       if (connection === "close") {
-        this.socket = null; this.qr = null;
+        this.clearQr(); this.clearConnectTimer();
+        this.status = "completing";
         const code = (lastDisconnect?.error as { output?: { statusCode?: number } })?.output?.statusCode;
-        const message = lastDisconnect?.error instanceof Error ? lastDisconnect.error.message : "WhatsApp connection closed";
-        await credsSave.catch((error) => {
-          this.lastError = error instanceof Error ? error.message : "Could not save WhatsApp credentials";
-        });
-        const restartRequired = code === DisconnectReason.restartRequired;
-        this.lastError = restartRequired ? null : (code ? `${message} (${code})` : message);
-        if (code === DisconnectReason.loggedOut || this.explicitLogout) {
-          this.status = "disconnected"; this.explicitLogout = false;
-          await this.clearAuth();
+        try { await credsSave; } catch {
+          if (generation !== this.generation) return;
+          this.socket = null;
+          this.status = "disconnected";
+          this.lastError = "Could not save WhatsApp credentials. Try again.";
+          this.failed = true;
           return;
         }
-        this.status = restartRequired ? "connecting" : "disconnected";
-        if (generation === this.generation && !this.explicitLogout) {
-          this.reconnectTimer = setTimeout(() => { this.reconnectTimer = null; void this.start(false); }, restartRequired ? 100 : 1500);
+        if (generation !== this.generation) return;
+        this.socket = null;
+        const restartRequired = code === DisconnectReason.restartRequired;
+        if (code === DisconnectReason.loggedOut || this.explicitLogout) {
+          this.status = "disconnected"; this.explicitLogout = false; this.pairing = false;
+          await this.clearAuth();
+          this.lastError = code === DisconnectReason.loggedOut ? "WhatsApp logged out. Start pairing again." : null;
+          return;
+        }
+        if (restartRequired && auth.creds.registered) this.pairing = false;
+        this.status = restartRequired ? "completing" : "connecting";
+        if (this.lastError !== "Could not generate a pairing code. Try again.") this.lastError = null;
+        if (!this.explicitLogout) {
+          this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            if (generation === this.generation) void this.start(false);
+          }, restartRequired ? 100 : 1500);
         }
       }
     });
@@ -187,8 +266,12 @@ class WhatsAppManager {
     this.explicitLogout = true;
     this.generation++;
     if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+    this.clearQr();
+    this.clearConnectTimer();
     if (this.socket) await this.socket.logout().catch(() => undefined);
     this.socket = null; this.status = "disconnected"; this.qr = null; this.lastError = null;
+    this.pairing = false;
+    this.failed = false;
     await this.clearAuth();
   }
 
