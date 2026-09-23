@@ -26,13 +26,13 @@ import {
   UserRound,
   Users,
   WalletCards,
-  X,
   MoreHorizontal,
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatCurrency, formatInteger, formatPercent } from '@/lib/formatters';
 
@@ -159,6 +159,20 @@ export default function AdminInfluencers() {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: getListInfluencersQueryKey() });
 
+  const closeDialog = () => {
+    setOpen(false);
+    setSelected(null);
+    setForm(blank);
+    setMessage('');
+  };
+
+  const add = () => {
+    setSelected(null);
+    setForm(blank);
+    setMessage('');
+    setOpen(true);
+  };
+
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     setMessage('');
@@ -186,8 +200,7 @@ export default function AdminInfluencers() {
     if (selected) {
       update.mutate({ id: selected, data }, {
         onSuccess: () => {
-          setSelected(null);
-          setOpen(false);
+          closeDialog();
           void refresh();
         },
         onError: () => setMessage(t('تعذر تحديث الحساب', 'Could not update account')),
@@ -195,8 +208,7 @@ export default function AdminInfluencers() {
     } else {
       create.mutate({ data: { ...data, password: form.password } }, {
         onSuccess: () => {
-          setForm(blank);
-          setOpen(false);
+          closeDialog();
           void refresh();
         },
         onError: () => setMessage(t('تعذر إنشاء الحساب', 'Could not create account')),
@@ -206,6 +218,7 @@ export default function AdminInfluencers() {
 
   const edit = (item: InfluencerRow) => {
     setSelected(item.id);
+    setMessage('');
     setForm({
       name: item.name,
       email: item.email,
@@ -232,54 +245,55 @@ export default function AdminInfluencers() {
         </div>
         <Button
           data-testid="button-new-influencer"
-          onClick={() => {
-            setSelected(null);
-            setForm(blank);
-            setOpen((value) => !value);
-          }}
+          onClick={add}
         >
-          {open ? <X className="me-2 h-4 w-4" /> : <Plus className="me-2 h-4 w-4" />}
-          {open ? t('إغلاق النموذج', 'Close form') : t('مشهور جديد', 'New influencer')}
+          <Plus className="me-2 h-4 w-4" />
+          {t('مشهور جديد', 'New influencer')}
         </Button>
       </div>
 
-      {open && (
-        <form onSubmit={save} className="grid gap-4 rounded-2xl border bg-card p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-3">
-          <div className="sm:col-span-2 lg:col-span-3">
-            <h2 className="font-bold">{selected ? t('تعديل حساب المشهور', 'Edit influencer account') : t('إضافة مشهور جديد', 'Add a new influencer')}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">{t('بيانات الحساب ورمز التتبع ونسبة العمولة.', 'Account, tracking code and commission settings.')}</p>
-          </div>
-          {([
-            ['name', t('الاسم', 'Name')],
-            ['email', t('البريد الإلكتروني', 'Email')],
-            ['password', selected ? t('كلمة مرور جديدة (اختياري)', 'New password (optional)') : t('كلمة المرور', 'Password')],
-            ['referralCode', t('رمز الإحالة', 'Referral code')],
-            ['commissionRate', t('نسبة العمولة %', 'Commission %')],
-            ['imageUrl', t('رابط الصورة', 'Photo URL')],
-          ] as const).map(([key, label]) => (
-            <label key={key} className="text-sm font-medium">
-              {label}
-              <Input
-                className="mt-2"
-                required={!selected && ['name', 'email', 'password', 'referralCode'].includes(key)}
-                type={key === 'password' ? 'password' : key === 'commissionRate' ? 'number' : key === 'email' ? 'email' : 'text'}
-                min={key === 'commissionRate' ? 0 : undefined}
-                max={key === 'commissionRate' ? 100 : undefined}
-                step={key === 'commissionRate' ? 'any' : undefined}
-                dir={key === 'name' ? undefined : 'ltr'}
-                value={form[key]}
-                data-testid={`input-influencer-${key}`}
-                onChange={(event) => setForm({ ...form, [key]: event.target.value })}
-              />
-            </label>
-          ))}
-          <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-3">
-            <Button data-testid="button-save-influencer" disabled={create.isPending || update.isPending}>{t('حفظ', 'Save')}</Button>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t('إلغاء', 'Cancel')}</Button>
-            {message && <span className="text-sm text-destructive" role="alert">{message}</span>}
-          </div>
-        </form>
-      )}
+      <Dialog open={open} onOpenChange={(value) => {
+        if (value) setOpen(true);
+        else if (!create.isPending && !update.isPending) closeDialog();
+      }}>
+        <DialogContent dir={lang === 'ar' ? 'rtl' : 'ltr'} closeLabel={t('إغلاق', 'Close')} className="w-[calc(100%-2rem)] max-h-[90vh] max-h-[90dvh] sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="px-0">{selected ? t('تعديل حساب المشهور', 'Edit influencer account') : t('إضافة مشهور جديد', 'Add a new influencer')}</DialogTitle>
+            <DialogDescription>{t('بيانات الحساب ورمز التتبع ونسبة العمولة.', 'Account, tracking code and commission settings.')}</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
+            {([
+              ['name', t('الاسم', 'Name')],
+              ['email', t('البريد الإلكتروني', 'Email')],
+              ['password', selected ? t('كلمة مرور جديدة (اختياري)', 'New password (optional)') : t('كلمة المرور', 'Password')],
+              ['referralCode', t('رمز الإحالة', 'Referral code')],
+              ['commissionRate', t('نسبة العمولة %', 'Commission %')],
+              ['imageUrl', t('رابط الصورة', 'Photo URL')],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="text-sm font-medium">
+                {label}
+                <Input
+                  className="mt-2"
+                  required={!selected && ['name', 'email', 'password', 'referralCode'].includes(key)}
+                  type={key === 'password' ? 'password' : key === 'commissionRate' ? 'number' : key === 'email' ? 'email' : 'text'}
+                  min={key === 'commissionRate' ? 0 : undefined}
+                  max={key === 'commissionRate' ? 100 : undefined}
+                  step={key === 'commissionRate' ? 'any' : undefined}
+                  dir={key === 'name' ? undefined : 'ltr'}
+                  value={form[key]}
+                  data-testid={`input-influencer-${key}`}
+                  onChange={(event) => setForm({ ...form, [key]: event.target.value })}
+                />
+              </label>
+            ))}
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+              <Button data-testid="button-save-influencer" disabled={create.isPending || update.isPending}>{t('حفظ', 'Save')}</Button>
+              <Button type="button" variant="outline" disabled={create.isPending || update.isPending} onClick={closeDialog}>{t('إلغاء', 'Cancel')}</Button>
+              {message && <span className="w-full text-sm text-destructive" role="alert">{message}</span>}
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard icon={CircleDollarSign} label={t('المبيعات المنسوبة', 'Attributed sales')} value={formatSar(totals.sales, lang)} hint={t('طلبات مدفوعة فقط', 'Paid orders only')} tone="emerald" testId="metric-influencer-sales" />
@@ -361,7 +375,7 @@ export default function AdminInfluencers() {
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent/10 text-accent"><UserRound className="h-7 w-7" /></div>
             <h3 className="mt-4 font-bold">{t('أضف أول مشهور لتبدأ قياس العائد', 'Add your first influencer to start measuring value')}</h3>
             <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-muted-foreground">{t('بعد ربط كود الإحالة أو الكوبون، ستظهر هنا المبيعات والطلبات والعمولة والصافي لكل مشهور.', 'After linking a referral code or coupon, sales, orders, commission and net contribution will appear here.')}</p>
-            <Button className="mt-5" onClick={() => setOpen(true)}><Plus className="me-2 h-4 w-4" />{t('إضافة مشهور', 'Add influencer')}</Button>
+            <Button className="mt-5" onClick={add}><Plus className="me-2 h-4 w-4" />{t('إضافة مشهور', 'Add influencer')}</Button>
           </div>
         )}
         {!list.isLoading && !list.error && !!influencers.length && !filtered.length && (
