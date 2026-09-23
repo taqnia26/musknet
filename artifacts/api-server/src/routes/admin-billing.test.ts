@@ -59,7 +59,7 @@ describe.sequential("billing settings permissions and persistence", () => {
     await request(app).patch(path).set(auth(1)).send({ iban: "SA123" }).expect(400);
   });
 
-  it("persists settings and masks bank identifiers for view-only staff", async () => {
+  it("persists settings and hides all bank details from view-only staff", async () => {
     const payload = {
       invoiceEmail: "billing-test@example.com", companyName: "Billing test",
       bankName: "Test bank", accountHolder: "Billing test",
@@ -72,8 +72,8 @@ describe.sequential("billing settings permissions and persistence", () => {
     expect(editor.body).toMatchObject(payload);
     const viewer = await request(app).get(path).set(auth(0)).expect(200);
     expect(viewer.body.invoiceEmail).toBe(payload.invoiceEmail);
-    expect(viewer.body.accountNumber).toMatch(/9012$/);
-    expect(viewer.body.accountNumber).not.toBe(payload.accountNumber);
-    expect(viewer.body.iban).not.toBe(payload.iban);
+    for (const field of ["bankName", "accountHolder", "accountNumber", "iban"]) {
+      expect(viewer.body[field]).toBeNull();
+    }
   });
 });

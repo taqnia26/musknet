@@ -3285,13 +3285,13 @@ const emptyBilling = {
 };
 function billingResponse(row: typeof billingSettingsTable.$inferSelect | undefined, canEdit: boolean) {
   if (!row) return emptyBilling;
-  const mask = (value: string | null) => value ? `${"•".repeat(Math.min(8, Math.max(0, value.length - 4)))}${value.slice(-4)}` : null;
   const { invoiceEmail, companyName, streetAddress, city, country, taxNumber,
     bankName, accountHolder, accountNumber, iban, preferredPaymentMethod, updatedAt } = row;
   return {
     invoiceEmail, companyName, streetAddress, city, country, taxNumber,
-    bankName, accountHolder, accountNumber: canEdit ? accountNumber : mask(accountNumber),
-    iban: canEdit ? iban : mask(iban), preferredPaymentMethod, updatedAt,
+    bankName: canEdit ? bankName : null, accountHolder: canEdit ? accountHolder : null,
+    accountNumber: canEdit ? accountNumber : null, iban: canEdit ? iban : null,
+    preferredPaymentMethod, updatedAt,
   };
 }
 router.get("/admin/finance/billing-settings", permit("finance", "view"), route(async (_req, res) => {

@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { 
   MapPin, 
   Mail, 
@@ -18,8 +17,9 @@ import {
   Loader2, 
   CreditCard,
   Building,
-  CheckCircle2,
-  AlertCircle
+  ChevronDown,
+  Wallet,
+  Banknote,
 } from 'lucide-react';
 import { 
   useAdminGetBillingSettings, 
@@ -31,6 +31,44 @@ import {
 } from '@workspace/api-client-react';
 import { getAdminToken } from '@/lib/auth-token';
 import { hasPermission } from '@/lib/permissions';
+
+export const hasSupplierInvoice = (purchase: { archivedAt?: unknown; invoiceObjectPath?: string | null; invoiceContentType?: string | null }) =>
+  !purchase.archivedAt && !!purchase.invoiceObjectPath &&
+  ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(purchase.invoiceContentType ?? '');
+
+export function WalletBalanceCards({ t }: { t: (ar: string, en: string) => string }) {
+  const balances = [
+    { key: 'store', icon: Wallet, title: t('رصيد المتجر', 'Store balance'), note: t('لا يوجد مصدر لرصيد المتجر', 'No store balance source is connected') },
+    { key: 'online', icon: CreditCard, title: t('رصيد المدفوعات الإلكترونية', 'Online payments balance'), note: t('رصيد المدفوعات الإلكترونية غير متصل', 'Online payment balance is not connected') },
+    { key: 'cod', icon: Banknote, title: t('رصيد الدفع عند الاستلام', 'Cash on delivery balance'), note: t('رصيد الدفع عند الاستلام غير متصل', 'Cash on delivery balance is not connected') },
+  ];
+  return <section aria-label={t('الأرصدة', 'Balances')} className="grid gap-4 md:grid-cols-3" data-testid="wallet-balances">
+    {balances.map(({ key, icon: Icon, title, note }) => (
+      <Card key={key} className="min-w-0" data-testid={`card-balance-${key}`}>
+        <CardContent className="flex h-full min-h-44 flex-col p-5 sm:p-6">
+          <div className="flex items-center gap-3 font-semibold"><span className="rounded-lg bg-primary/10 p-2 text-primary"><Icon className="h-5 w-5" /></span>{title}</div>
+          <div className="mt-6 text-xl font-semibold" data-testid={`status-balance-${key}`}>{t('غير متاح', 'Unavailable')}</div>
+          <p className="mt-1 text-sm text-muted-foreground">{note}</p>
+        </CardContent>
+      </Card>
+    ))}
+  </section>;
+}
+
+function UnavailableTable({ title, columns, message, testId }: { title: string; columns: string[]; message: string; testId: string }) {
+  return <Card data-testid={testId} className="min-w-0">
+    <CardHeader><CardTitle className="text-lg">{title}</CardTitle></CardHeader>
+    <CardContent>
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50 text-muted-foreground"><tr>{columns.map((column) => <th scope="col" key={column} className="px-4 py-3 text-start font-medium">{column}</th>)}</tr></thead>
+          <tbody><tr><td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">{message}</td></tr></tbody>
+        </table>
+      </div>
+      <p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground md:hidden">{message}</p>
+    </CardContent>
+  </Card>;
+}
 
 export default function AdminWalletBilling() {
   const { t, lang } = useLanguage();
@@ -141,7 +179,7 @@ export default function AdminWalletBilling() {
     }
   }
 
-  const supplierPurchases = (purchases || []).filter(p => !p.archivedAt && !!p.invoiceObjectPath);
+  const supplierPurchases = (purchases || []).filter(hasSupplierInvoice);
   if (user && !hasPermission(user, 'finance', 'view')) {
     return <div role="alert" className="rounded-lg border p-8">{t('ليس لديك صلاحية عرض المالية', 'You do not have finance viewing permission')}</div>;
   }
@@ -153,270 +191,70 @@ export default function AdminWalletBilling() {
         <p className="text-muted-foreground">{t('إعدادات الفوترة ومستندات مشتريات مسك اللولو. بيانات سلة غير متصلة بهذا النظام.', 'Musk Ellolo billing settings and supplier documents. Salla data is not connected to this system.')}</p>
       </div>
 
-      {/* Wallet Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-primary/5 border-primary/20">
-          <CardContent className="p-6">
-            <div className="flex flex-col space-y-4">
-              <div className="flex items-center space-x-2 space-x-reverse text-primary">
-                <CreditCard className="h-5 w-5" />
-                 <span className="font-semibold">{t('رصيد المحفظة', 'Wallet balance')}</span>
-              </div>
-              <div>
-                 <div className="text-xl font-bold">{t('غير متاح', 'Unavailable')}</div>
-                 <p className="text-sm text-muted-foreground mt-1">{t('لا يوجد مصدر لرصيد محفظة المتجر أو رصيد سلة', 'No source for a store wallet or Salla balance')}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <WalletBalanceCards t={t} />
 
+      <section aria-label={t('إعدادات الفوترة', 'Billing settings')} data-testid="billing-settings">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-col space-y-4">
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                <span className="font-semibold">{t('آخر حركة وسجل العمليات', 'Latest activity & transaction history')}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">{t('غير متاح', 'Unavailable')}</div>
-                  <p className="text-sm text-muted-foreground mt-1">{t('لا توجد حركات محفظة موثقة في النظام', 'No wallet transactions are recorded in this system')}</p>
-                </div>
-                <Badge variant="outline" className="text-muted-foreground">N/A</Badge>
-        </div>
-        <Card><CardContent className="p-6"><div className="font-semibold">{t('رصيد المدفوعات', 'Payment balance')}</div><p className="mt-4 text-xl font-bold">{t('غير متاح', 'Unavailable')}</p><p className="mt-2 text-sm text-muted-foreground">{t('رصيد المدفوعات الإلكترونية أو عند الاستلام في سلة غير متصل', 'Salla online and cash-on-delivery payment balances are not connected')}</p></CardContent></Card>
-            </div>
+          <CardHeader><CardTitle>{t('إعدادات الفوترة', 'Billing settings')}</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            {settingsLoading ? <div role="status" className="p-8 text-muted-foreground">{t('جارٍ تحميل إعدادات الفوترة', 'Loading billing settings')} <Loader2 className="inline h-5 w-5 animate-spin" /></div>
+              : settingsError || !settings ? <div role="alert" className="p-6">{t('تعذر تحميل إعدادات الفوترة', 'Could not load billing settings')} <Button variant="outline" onClick={() => void retrySettings()}>{t('إعادة المحاولة', 'Retry')}</Button></div>
+              : [
+                { key: 'payment', icon: CreditCard, title: t('طريقة الدفع الافتراضية', 'Default payment method'), summary: settings.preferredPaymentMethod === 'bank_transfer' ? t('حوالة بنكية (تفضيل فقط)', 'Bank transfer (preference only)') : t('غير محدد', 'Not set'), details: t('هذا تفضيل محفوظ فقط؛ لا تنفذ هذه الصفحة مدفوعات.', 'This is a saved preference only; this page does not execute payments.'), editable: true },
+                { key: 'card', icon: CreditCard, title: t('البطاقة الائتمانية', 'Credit card'), summary: t('غير متاحة', 'Unavailable'), details: t('لا يمكن إضافة بطاقة أو تنفيذ دفعات هنا.', 'Cards and actual payments are not supported here.'), editable: false },
+                { key: 'bank', icon: Landmark, title: t('الحساب البنكي', 'Bank account'), summary: isFinanceEdit ? (settings.bankName || t('غير محدد', 'Not set')) : t('البيانات مخفية', 'Details hidden'), details: isFinanceEdit ? `${settings.bankName || '-'} · ${settings.accountHolder || '-'} · ${settings.iban || '-'} · ${settings.accountNumber || '-'}` : t('تظهر بيانات الحساب فقط لمن يملك صلاحية تعديل المالية.', 'Bank details are visible only to finance editors.'), editable: true },
+                { key: 'email', icon: Mail, title: t('بريد الفواتير', 'Invoice email'), summary: settings.invoiceEmail || t('غير محدد', 'Not set'), details: settings.invoiceEmail || t('غير محدد', 'Not set'), editable: true },
+                { key: 'address', icon: MapPin, title: t('عنوان الشركة', 'Company address'), summary: [settings.streetAddress, settings.city, settings.country].filter(Boolean).join('، ') || t('غير محدد', 'Not set'), details: [settings.streetAddress, settings.city, settings.country].filter(Boolean).join('، ') || t('غير محدد', 'Not set'), editable: true },
+                { key: 'company', icon: Building, title: t('بيانات الشركة', 'Company details'), summary: settings.companyName || t('غير محدد', 'Not set'), details: `${settings.companyName || '-'} · ${t('الرقم الضريبي', 'Tax number')}: ${settings.taxNumber || '-'}`, editable: true },
+              ].map(({ key, icon: Icon, title, summary, details, editable }) => (
+                <details key={key} className="group border-t px-5 py-1" data-testid={`billing-row-${key}`}>
+                  <summary className="flex min-w-0 cursor-pointer list-none items-center gap-3 py-4 [&::-webkit-details-marker]:hidden">
+                    <Icon className="h-5 w-5 shrink-0 text-primary" />
+                    <span className="min-w-0 flex-1"><span className="block font-medium">{title}</span><span className="block truncate text-sm text-muted-foreground">{summary}</span></span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 ps-8 text-sm text-muted-foreground">
+                    <span className="min-w-0 break-all">{details}</span>
+                    {editable && isFinanceEdit && <Button variant="outline" size="sm" data-testid={`button-edit-${key}`} onClick={() => openEdit(key as 'payment' | 'bank' | 'email' | 'address' | 'company')}>{t('تعديل', 'Edit')}</Button>}
+                  </div>
+                </details>
+              ))}
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      {/* Settings Grid */}
-      {settingsLoading ? (
-        <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : settingsError || !settings ? (
-        <div role="alert" className="rounded-lg border border-destructive/50 p-6 text-sm">
-          {t('تعذر تحميل إعدادات الفوترة', 'Could not load billing settings')}
-          <Button variant="outline" className="ms-3" onClick={() => void retrySettings()}>{t('إعادة المحاولة', 'Retry')}</Button>
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-          {/* Company Settings */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-              <div className="space-y-1">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                  {t('بيانات الشركة', 'Company Details')}
-                </CardTitle>
-              </div>
-              {isFinanceEdit && (
-                <Button variant="ghost" size="sm" onClick={() => openEdit('company')}>
-                  {t('تعديل', 'Edit')}
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-muted-foreground mb-1">{t('اسم الشركة', 'Company Name')}</div>
-                  <div className="font-medium">{settings?.companyName || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground mb-1">{t('الرقم الضريبي', 'Tax Number')}</div>
-                  <div className="font-medium">{settings?.taxNumber || '-'}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="flex items-center gap-2 text-base"><Mail className="h-4 w-4" />{t('البريد الإلكتروني لاستلام الفواتير', 'Invoice receiving email')}</CardTitle>
-              {isFinanceEdit && <Button variant="ghost" size="sm" onClick={() => openEdit('email')}>{t('تعديل', 'Edit')}</Button>}
-            </CardHeader>
-            <CardContent className="text-sm">
-              <div>
-                  <div className="text-muted-foreground mb-1 flex items-center gap-1">
-                    {t('البريد الإلكتروني للفواتير', 'Invoice Email')}
-                  </div>
-                  <div className="font-medium break-all" dir="ltr">{settings.invoiceEmail || t('غير محدد', 'Not set')}</div>
-              </div>
-            </CardContent>
-          </Card>
+      <UnavailableTable testId="platform-subscriptions" title={t('الاشتراكات المفعلة', 'Active subscriptions')}
+        columns={[t('تفاصيل الاشتراك', 'Subscription details'), t('المدة', 'Duration'), t('تاريخ الاشتراك', 'Start date'), t('تاريخ التجديد القادم', 'Next renewal'), t('رسوم الاشتراك', 'Fee'), t('التجديد التلقائي', 'Auto-renewal')]}
+        message={t('غير متاح — لا يوجد مصدر متصل لاشتراكات المنصة.', 'Unavailable — no platform subscription source is connected.')} />
+      <UnavailableTable testId="platform-invoices" title={t('فواتير المشتريات — اشتراكات المنصة', 'Purchase invoices — platform subscriptions')}
+        columns={[t('رقم الفاتورة', 'Invoice number'), t('المجموع', 'Total'), t('تاريخ الفاتورة', 'Invoice date'), t('المستند', 'Document')]}
+        message={t('غير متاح — لا يوجد مصدر متصل لفواتير اشتراك المنصة.', 'Unavailable — no platform subscription invoice source is connected.')} />
 
-          {/* Address Settings */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-              <div className="space-y-1">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                   {t('عنوان الشركة', 'Company address')}
-                </CardTitle>
+      <Card data-testid="supplier-invoices" className="min-w-0">
+        <CardHeader><CardTitle className="text-lg">{t('فواتير مشتريات الموردين المحلية', 'Local supplier purchase invoices')}</CardTitle>
+          <CardDescription>{t('مستندات المشتريات المحلية، وليست فواتير اشتراك المنصة', 'Local purchase documents, not platform subscription invoices')}</CardDescription></CardHeader>
+        <CardContent>
+          {purchasesLoading ? <div role="status" className="p-6 text-muted-foreground">{t('جارٍ تحميل فواتير الموردين', 'Loading supplier invoices')} <Loader2 className="inline h-5 w-5 animate-spin" /></div>
+            : purchasesError ? <div role="alert" className="p-6 text-destructive">{t('تعذر تحميل فواتير المشتريات', 'Could not load purchase invoices')} <Button variant="outline" onClick={() => void retryPurchases()}>{t('إعادة المحاولة', 'Retry')}</Button></div>
+            : supplierPurchases.length === 0 ? <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">{t('لا توجد فواتير مشتريات مرفقة', 'No attached purchase invoices found')}</p>
+            : <>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-sm"><thead className="bg-muted/50 text-muted-foreground"><tr>
+                  {[t('المشتريات / المرجع المحلي', 'Purchase / local reference'), t('المجموع', 'Total'), t('تاريخ الشراء', 'Purchase date'), t('المستند', 'Document')].map(label => <th scope="col" key={label} className="px-4 py-3 text-start font-medium">{label}</th>)}
+                </tr></thead><tbody>{supplierPurchases.map(purchase => <tr key={purchase.id} className="border-t" data-testid={`row-supplier-${purchase.id}`}>
+                  <td className="px-4 py-3"><span className="font-medium">{purchase.title}</span><span className="block text-xs text-muted-foreground">#{purchase.id}</span></td>
+                  <td className="px-4 py-3"><Money value={purchase.amount} lang={lang} /></td><td className="px-4 py-3">{purchase.purchaseDate}</td>
+                  <td className="px-4 py-3"><Button variant="outline" size="sm" data-testid={`button-download-${purchase.id}`} onClick={() => void openInvoice(purchase.id)}><FileText className="me-2 h-4 w-4" />{t('تنزيل المستند', 'Download document')}</Button></td>
+                </tr>)}</tbody></table>
               </div>
-              {isFinanceEdit && (
-                <Button variant="ghost" size="sm" onClick={() => openEdit('address')}>
-                  {t('تعديل', 'Edit')}
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="col-span-2">
-                  <div className="text-muted-foreground mb-1">{t('الشارع والحي', 'Street Address')}</div>
-                  <div className="font-medium">{settings?.streetAddress || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground mb-1">{t('المدينة', 'City')}</div>
-                  <div className="font-medium">{settings?.city || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground mb-1">{t('الدولة', 'Country')}</div>
-                  <div className="font-medium">{settings?.country || '-'}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bank Settings */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-              <div className="space-y-1">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Landmark className="h-4 w-4 text-muted-foreground" />
-                  {t('الحساب البنكي', 'Bank Account')}
-                </CardTitle>
-              </div>
-              {isFinanceEdit && (
-                <Button variant="ghost" size="sm" onClick={() => openEdit('bank')}>
-                  {t('تعديل', 'Edit')}
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-muted-foreground mb-1">{t('البنك', 'Bank Name')}</div>
-                  <div className="font-medium">{settings?.bankName || '-'}</div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground mb-1">{t('صاحب الحساب', 'Account Holder')}</div>
-                  <div className="font-medium">{settings?.accountHolder || '-'}</div>
-                </div>
-                <div className="col-span-2">
-                  <div className="text-muted-foreground mb-1">{t('الآيبان (IBAN)', 'IBAN')}</div>
-                   <div className="font-medium font-mono text-[13px] break-all" dir="ltr">{settings.iban || '-'}</div>
-                </div>
-                <div className="col-span-2">
-                  <div className="text-muted-foreground mb-1">{t('رقم الحساب', 'Account Number')}</div>
-                   <div className="font-medium font-mono text-[13px] break-all" dir="ltr">{settings.accountNumber || '-'}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payment Method */}
-          <Card>
-            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-              <div className="space-y-1">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  {t('طريقة الدفع المفضلة', 'Preferred Payment Method')}
-                </CardTitle>
-              </div>
-              {isFinanceEdit && (
-                <Button variant="ghost" size="sm" onClick={() => openEdit('payment')}>
-                  {t('تعديل', 'Edit')}
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                {settings?.preferredPaymentMethod === 'bank_transfer' ? (
-                  <>
-                    <CheckCircle2 className="h-5 w-5 text-success" />
-                    <div>
-                      <div className="font-medium">{t('حوالة بنكية', 'Bank Transfer')}</div>
-                       <div className="text-xs text-muted-foreground">{t('تفضيل محفوظ فقط؛ لا ينفذ أي مدفوعات', 'Saved preference only; no payments are executed')}</div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium">{t('غير محدد', 'Not Set')}</div>
-                      <div className="text-xs text-muted-foreground">{t('لم يتم تعيين طريقة دفع مفضلة', 'No preferred payment method set')}</div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      <Card>
-        <CardHeader><CardTitle>{t('الاشتراكات المفعلة', 'Active subscriptions')}</CardTitle></CardHeader>
-        <CardContent className="rounded-lg text-sm text-muted-foreground">{t('غير متاح — لا توجد بيانات لاشتراكات المنصة متصلة بهذا النظام.', 'Unavailable — no platform subscription source is connected to this system.')}</CardContent>
+              <div className="space-y-3 md:hidden">{supplierPurchases.map(purchase => <div key={purchase.id} className="rounded-lg border p-4 text-sm" data-testid={`mobile-supplier-${purchase.id}`}>
+                <div className="font-medium">{purchase.title} <span className="text-muted-foreground">#{purchase.id}</span></div>
+                <div className="mt-2 flex flex-wrap justify-between gap-2 text-muted-foreground"><Money value={purchase.amount} lang={lang} /><span>{purchase.purchaseDate}</span></div>
+                <Button variant="outline" size="sm" className="mt-3" data-testid={`button-mobile-download-${purchase.id}`} onClick={() => void openInvoice(purchase.id)}>{t('تنزيل المستند', 'Download document')}</Button>
+              </div>)}</div>
+            </>}
+        </CardContent>
       </Card>
-
-      {/* Invoices and Purchases */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Supplier Purchases */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">{t('فواتير مشتريات الموردين', 'Supplier purchase invoices')}</CardTitle>
-            <CardDescription>{t('سجل المشتريات التي تحتوي على فواتير مرفقة', 'Purchase records with attached invoices')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {purchasesLoading ? (
-              <div className="flex justify-center p-6"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-            ) : purchasesError ? (
-              <div role="alert" className="text-sm text-destructive">{t('تعذر تحميل فواتير المشتريات', 'Could not load purchase invoices')} <Button variant="outline" onClick={() => void retryPurchases()}>{t('إعادة المحاولة', 'Retry')}</Button></div>
-            ) : supplierPurchases.length === 0 ? (
-              <div className="text-center p-6 text-sm text-muted-foreground border border-dashed rounded-lg">
-                {t('لا توجد فواتير مشتريات', 'No purchase invoices found')}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {supplierPurchases.map((purchase) => (
-                   <div key={purchase.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-lg border">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-muted p-2 rounded-md">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{purchase.title}</div>
-                        <div className="text-xs text-muted-foreground">{purchase.purchaseDate}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="font-semibold text-sm"><Money value={purchase.amount} lang={lang} /></div>
-                      {purchase.invoiceObjectPath && ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(purchase.invoiceContentType ?? '') && (
-                        <Button variant="outline" size="sm" onClick={() => void openInvoice(purchase.id)}>
-                          {t('تنزيل المستند', 'Download document')}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Platform Invoices */}
-        <Card className="col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">{t('فواتير المنصة', 'Platform Invoices')}</CardTitle>
-            <CardDescription>{t('فواتير اشتراك المنصة ليست فواتير الموردين أو المبيعات', 'Platform subscriptions are separate from supplier and sales invoices')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-             <div className="text-center p-12 text-sm text-muted-foreground border border-dashed rounded-lg">
-                <AlertCircle className="h-8 w-8 mx-auto mb-3 opacity-50" />
-                 {t('غير متاح — لا يوجد مصدر لفواتير اشتراك المنصة', 'Unavailable — no platform subscription invoice source')}
-              </div>
-          </CardContent>
-        </Card>
-      </div>
       {hasPermission(user, 'invoices', 'view') && <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">{t('فواتير المبيعات الصادرة:', 'Issued sales invoices:')} <Link href="/admin/sales/online" className="text-primary underline">{t('الأفراد', 'Individuals')}</Link><Link href="/admin/sales/companies" className="text-primary underline">{t('الشركات', 'Companies')}</Link><Link href="/admin/sales/exhibitions" className="text-primary underline">{t('المعارض', 'Exhibitions')}</Link></p>}
 
       {/* Edit Dialog */}
