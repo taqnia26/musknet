@@ -506,9 +506,14 @@ router.get("/admin/contracts/:id/pdf", permit("contracts", "view"), route(async 
   const params = parse(Api.AdminGetContractPdfParams, req.params, res); if (!params) return;
   const [row] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
   if (!row) { res.status(404).json({ error: "Contract not found" }); return; }
-  const url = `${process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`}/api/public/contracts/by-token/${row.signingTokenHash ?? row.id}`;
-  const pdf = await createContractPdf(row, url);
-  res.type("application/pdf").setHeader("Content-Disposition", `inline; filename="${row.contractNumber}.pdf"`).send(pdf);
+  const url = `${process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`}/admin/contracts/${row.id}`;
+  try {
+    const pdf = await createContractPdf(row, url);
+    res.type("application/pdf").setHeader("Content-Disposition", `attachment; filename="${row.contractNumber}.pdf"`).send(pdf);
+  } catch (error) {
+    req.log.error({ err: error, contractId: row.id }, "Contract PDF generation failed");
+    res.status(500).json({ error: "تعذر إنشاء PDF للعقد. تأكد من توفر خط عربي على الخادم ثم حاول مجدداً." });
+  }
 }));
 
 const contractFileMimeTypes = new Set([
@@ -633,8 +638,17 @@ router.delete("/admin/contract-files/:id", permit("contracts", "delete"), route(
   res.sendStatus(204);
 }));
 
-router.get("/admin/site-content", permit("site-content", "view"), route(async (_req, res) => {
-  const rows = await db.select().from(siteContentTable).orderBy(siteContentTable.key);
+router.get("/admin/site-content", route(async (_req, res) => {
+  const user = res.locals.admin as typeof adminUsersTable.$inferSelect;
+  res.locals.permissions = (await publicAdmin(user)).permissions;
+  const canViewContent = allowed(res, "site-content", "view");
+  if (!canViewContent && !allowed(res, "contracts", "edit")) {
+    res.status(403).json({ error: "Insufficient permission" });
+    return;
+  }
+  const rows = await db.select().from(siteContentTable)
+    .where(canViewContent ? undefined : eq(siteContentTable.key, "seller_legal_profile"))
+    .orderBy(siteContentTable.key);
   res.json(Api.AdminListSiteContentResponse.parse(rows));
 }));
 router.put("/admin/site-content", permit("site-content", "edit"), route(async (req, res) => {

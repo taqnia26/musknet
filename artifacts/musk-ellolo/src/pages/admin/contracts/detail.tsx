@@ -3,7 +3,6 @@ import { useRoute, Link } from 'wouter';
 import { 
   useAdminGetContract, 
   getAdminGetContractQueryKey, 
-  adminGetContractPdf,
   useAdminSignContract,
   useAdminRequestContractSignatureUpload,
   useAdminSendContract,
@@ -18,6 +17,8 @@ import { Loader2, ArrowRight, FileText, CheckCircle, Clock, Ban, Download, PenTo
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { sellerNumberLabel } from './seller-defaults';
+import { downloadContractPdf, pdfDownloadError } from './download-pdf';
 
 const statusMap: Record<DistributorContractStatus, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', icon: any, color: string }> = {
   draft: { label: 'مسودة', variant: 'secondary', icon: FileText, color: 'text-muted-foreground' },
@@ -60,18 +61,10 @@ export default function AdminContractDetail() {
   const handleDownloadPdf = async () => {
     try {
       setIsDownloading(true);
-      const blob = await adminGetContractPdf(id);
-      const url = window.URL.createObjectURL(blob as unknown as Blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Contract_${contract.contractNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+       await downloadContractPdf(id, contract.contractNumber);
       toast({ title: 'نجاح', description: 'تم تحميل الملف بنجاح' });
     } catch (err) {
-      toast({ title: 'خطأ', description: 'فشل تحميل الملف', variant: 'destructive' });
+       toast({ title: 'تعذر تحميل PDF', description: pdfDownloadError(err), variant: 'destructive' });
     } finally {
       setIsDownloading(false);
     }
@@ -211,7 +204,7 @@ export default function AdminContractDetail() {
                 <div className="font-medium">{contract.sellerName}</div>
               </div>
               <div>
-                <div className="text-muted-foreground mb-1">سجل تجاري</div>
+                 <div className="text-muted-foreground mb-1">{sellerNumberLabel(contract.sellerCrNumber)}</div>
                 <div className="font-medium font-mono">{contract.sellerCrNumber}</div>
               </div>
               <div>

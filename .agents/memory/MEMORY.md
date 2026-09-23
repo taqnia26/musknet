@@ -9,7 +9,7 @@
 - [OpenAPI integer codegen](openapi-integer-codegen.md) — model integer responses as number + multipleOf 1 until generated Zod stops emitting unsupported z.int().
 - [Styled Excel rows](styled-excel-rows.md) — Excel row ranges can include many formatted but valueless rows; report scanned, populated, and unique counts separately.
 - [Ledger totals after API tests](ledger-totals-after-api-tests.md) — integration tests can change development ledger totals; recalculate immediately before and after accounting imports.
-- [PDFKit bundle runtime helpers](pdfkit-bundle-runtime-helpers.md) — bundled PDFKit/fontkit servers must declare @swc/helpers as a direct runtime dependency.
+- [PDFKit build runtime](pdfkit-bundle-runtime-helpers.md) — keep PDFKit font metrics resolvable after bundling; bundled fontkit also needs direct runtime helpers.
 - [Owner-paid purchases](owner-paid-purchases.md) — treat owner-funded business purchases as a liability until the company reimburses the owner.
 - [Router middleware scope](router-middleware-scope.md) — feature-specific authentication middleware must be mounted on that feature path, never on its whole child router.
 - [Polymorphic journal sources](polymorphic-journal-sources.md) — identify journal sources by type and ID together; numeric IDs are reused across business tables.

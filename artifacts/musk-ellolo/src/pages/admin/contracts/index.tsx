@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { 
   useAdminListContracts, useAdminDeleteContract, useAdminCancelContract, getAdminListContractsQueryKey, useAdminSendContract, DistributorContractStatus,
   useAdminListContractFiles, useAdminDeleteContractFile, getAdminListContractFilesQueryKey,
-  adminGetContractPdf, adminDownloadContractFile
+   adminDownloadContractFile
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { UploadContractDialog } from './components/UploadContractDialog';
+import { downloadContractPdf, pdfDownloadError } from './download-pdf';
 
 const statusMap: Record<DistributorContractStatus, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', icon: any }> = {
   draft: { label: 'مسودة', variant: 'secondary', icon: FileText },
@@ -139,17 +140,9 @@ export default function AdminContractsList() {
 
   const handleDownloadGenerated = async (id: number, refNumber: string) => {
     try {
-      const blob = await adminGetContractPdf(id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contract-${refNumber}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+       await downloadContractPdf(id, refNumber);
     } catch (error) {
-      toast({ title: 'خطأ', description: 'فشل في تحميل العقد', variant: 'destructive' });
+       toast({ title: 'تعذر تحميل PDF', description: pdfDownloadError(error), variant: 'destructive' });
     }
   };
 

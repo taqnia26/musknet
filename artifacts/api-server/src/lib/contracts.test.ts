@@ -17,13 +17,14 @@ describe("contracts", () => {
     expect(hashContractToken(token)).toHaveLength(64);
   });
 
-  it("renders a downloadable PDF with a verification QR", async () => {
+  it.each(["draft", "final"] as const)("renders an Arabic %s PDF with a valid header", async (status) => {
     const pdf = await createContractPdf({
       id: 1, contractNumber: "DC-TEST-1", distributorId: null, contractType: "distribution",
-      status: "final", contractDate: new Date(), hijriDateStr: null, gregorianDateStr: null,
-      contractDayName: null, sellerName: "Seller", sellerCrNumber: "CR", sellerCrDate: "2024",
-      sellerCrIssuer: "Issuer", sellerAddress: "Address", sellerRepName: "Rep", sellerRepTitle: "Title",
-      buyerCompanyName: "Buyer", buyerCrNumber: null, buyerCrDate: null, buyerCrIssuer: null,
+       status, contractDate: new Date(), hijriDateStr: null, gregorianDateStr: null,
+       contractDayName: null, sellerName: "مؤسسة مسك اللولو للتجارة", sellerCrNumber: "7003185274", sellerCrDate: "02/07/2011",
+       sellerCrIssuer: "وزارة التجارة", sellerAddress: "الرياض، حي السليمانية، شارع امرؤ القيس",
+       sellerRepName: "ممثل اختباري", sellerRepTitle: "مدير اختباري",
+       buyerCompanyName: "شركة اختبار", buyerCrNumber: null, buyerCrDate: null, buyerCrIssuer: null,
       buyerNeighborhood: null, buyerCity: null, buyerPoBox: null, buyerPostalCode: null,
       buyerRepName: null, buyerRepTitle: null, buyerEmail: null, buyerPhone: null,
       showroomName: null, showroomLocation: null, showroomCity: null, marginPercent: "0",

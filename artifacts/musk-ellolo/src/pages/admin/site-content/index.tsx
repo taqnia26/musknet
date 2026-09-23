@@ -9,16 +9,9 @@ import { Loader2, Plus, Trash2, Save, Building2, MoreHorizontal } from 'lucide-r
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { sellerDefaults, sellerNumberLabel, sellerProfile } from '../contracts/seller-defaults';
 
-const defaultSellerLegalProfile = {
-  sellerName: '',
-  sellerCrNumber: '',
-  sellerCrDate: '',
-  sellerCrIssuer: '',
-  sellerAddress: '',
-  sellerRepName: '',
-  sellerRepTitle: ''
-};
+const defaultSellerLegalProfile = sellerDefaults;
 
 export default function AdminSiteContent() {
   const { data: content, isLoading } = useAdminListSiteContent();
@@ -38,33 +31,12 @@ export default function AdminSiteContent() {
 
       const legalProfile = content.find(c => c.key === 'seller_legal_profile');
       if (legalProfile && typeof legalProfile.data === 'object' && legalProfile.data) {
-        setSellerLegalProfile({ ...defaultSellerLegalProfile, ...(legalProfile.data as any) });
+        setSellerLegalProfile(sellerProfile(legalProfile.data));
       }
     }
   }, [content]);
 
   const handleSave = () => {
-    // Validate legal profile fields
-    const requiredLegalFields = [
-      { key: 'sellerName', label: 'اسم الشركة / المؤسسة' },
-      { key: 'sellerCrNumber', label: 'رقم السجل التجاري' },
-      { key: 'sellerCrDate', label: 'تاريخ السجل' },
-      { key: 'sellerCrIssuer', label: 'مصدر السجل' },
-      { key: 'sellerAddress', label: 'العنوان الوطني / مقر الشركة' },
-      { key: 'sellerRepName', label: 'الممثل القانوني الافتراضي' },
-      { key: 'sellerRepTitle', label: 'صفة الممثل الافتراضي' },
-    ];
-
-    const missingFields = requiredLegalFields.filter(f => !sellerLegalProfile[f.key as keyof typeof defaultSellerLegalProfile]?.trim());
-    if (missingFields.length > 0) {
-      toast({
-        title: 'حقول مطلوبة مفقودة / Missing required fields',
-        description: `الرجاء تعبئة: ${missingFields.map(f => f.label).join('، ')}`,
-        variant: 'destructive'
-      });
-      return;
-    }
-
     try {
       const itemsToSave = localItems.map(item => {
         let parsedData: unknown = item.data;
@@ -176,7 +148,7 @@ export default function AdminSiteContent() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sellerCrNumber">رقم السجل التجاري *</Label>
+             <Label htmlFor="sellerCrNumber">{sellerNumberLabel(sellerLegalProfile.sellerCrNumber)}</Label>
             <Input
               id="sellerCrNumber"
               name="sellerCrNumber"
@@ -188,7 +160,7 @@ export default function AdminSiteContent() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sellerCrDate">تاريخ السجل *</Label>
+             <Label htmlFor="sellerCrDate">تاريخ إصدار شهادة السجل</Label>
             <Input
               id="sellerCrDate"
               name="sellerCrDate"
@@ -200,7 +172,7 @@ export default function AdminSiteContent() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sellerCrIssuer">مصدر السجل *</Label>
+             <Label htmlFor="sellerCrIssuer">الجهة المصدرة</Label>
             <Input
               id="sellerCrIssuer"
               name="sellerCrIssuer"
@@ -218,26 +190,26 @@ export default function AdminSiteContent() {
               value={sellerLegalProfile.sellerAddress}
               onChange={(e) => updateSellerField('sellerAddress', e.target.value)}
             />
+             <p className="text-xs text-muted-foreground">إثبات العنوان المرفق انتهى في 25/05/2024؛ تحقق من العنوان قبل الاعتماد.</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sellerRepName">الممثل القانوني الافتراضي *</Label>
+             <Label htmlFor="sellerRepName">الممثل القانوني الافتراضي (اختياري هنا)</Label>
             <Input
               id="sellerRepName"
               name="sellerRepName"
-              required
               value={sellerLegalProfile.sellerRepName}
               onChange={(e) => updateSellerField('sellerRepName', e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sellerRepTitle">صفة الممثل الافتراضي *</Label>
+             <Label htmlFor="sellerRepTitle">صفة الممثل الافتراضي (اختياري هنا)</Label>
             <Input
               id="sellerRepTitle"
               name="sellerRepTitle"
-              required
               value={sellerLegalProfile.sellerRepTitle}
               onChange={(e) => updateSellerField('sellerRepTitle', e.target.value)}
             />
+             <p className="text-xs text-muted-foreground">الاسم والصفة غير واردين في المرفقات؛ يلزم إدخالهما عند إنشاء العقد.</p>
           </div>
         </CardContent>
       </Card>

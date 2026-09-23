@@ -41,41 +41,43 @@ function pdfFontPath() {
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
   ].filter((value): value is string => Boolean(value));
-  return candidates.find((value) => fs.existsSync(value));
+  const font = candidates.find((value) => fs.existsSync(value));
+  if (!font) throw new Error("Arabic contract PDF font is unavailable; configure CONTRACT_PDF_FONT_PATH");
+  return font;
 }
 
 export async function createContractPdf(contract: DistributorContract, verificationUrl: string) {
+  const font = pdfFontPath();
   const qrDataUrl = await QRCode.toDataURL(verificationUrl, { errorCorrectionLevel: "M", margin: 1, width: 180 });
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     const doc = new PDFDocument({ size: "A4", margin: 48, info: { Title: `Contract ${contract.contractNumber}` } });
-    const font = pdfFontPath();
-    if (font) doc.font(font);
     doc.on("data", (chunk: Buffer) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
-    doc.fontSize(18).text("Distributor Contract", { align: "center" });
+     doc.font(font);
+     doc.fontSize(18).text("عقد توزيع", { align: "center" });
     doc.moveDown().fontSize(10);
-    const line = (label: string, value: unknown) => doc.text(`${label}: ${value ?? ""}`);
-    line("Contract number", contract.contractNumber);
-    line("Status", contract.status);
-    line("Contract type", contract.contractType);
+     const line = (label: string, value: unknown) => doc.text(`${label}: ${value ?? ""}`, { align: "right" });
+     line("رقم العقد", contract.contractNumber);
+     line("الحالة", contract.status === "draft" ? "مسودة" : contract.status);
+     line("نوع العقد", contract.contractType);
     doc.moveDown();
-    doc.fontSize(13).text("Seller");
+     doc.fontSize(13).text("الطرف الأول", { align: "right" });
     doc.fontSize(10);
-    line("Legal name", contract.sellerName);
-    line("Commercial registration", contract.sellerCrNumber);
-    line("Registration date", contract.sellerCrDate);
-    line("Issuer", contract.sellerCrIssuer);
-    line("Address", contract.sellerAddress);
-    line("Authorized representative", `${contract.sellerRepName} (${contract.sellerRepTitle})`);
-    doc.moveDown().fontSize(13).text("Buyer");
+     line("الاسم", contract.sellerName);
+     line(contract.sellerCrNumber === "7003185274" ? "الرقم الوطني الموحد" : "رقم السجل / الرقم الوطني الموحد حسب الوثيقة", contract.sellerCrNumber);
+     line("تاريخ إصدار شهادة السجل", contract.sellerCrDate);
+     line("الجهة المصدرة", contract.sellerCrIssuer);
+     line("العنوان الوطني", contract.sellerAddress);
+     line("الممثل", `${contract.sellerRepName} (${contract.sellerRepTitle})`);
+     doc.moveDown().fontSize(13).text("الطرف الثاني", { align: "right" });
     doc.fontSize(10);
-    line("Company", contract.buyerCompanyName);
-    line("Representative", `${contract.buyerRepName ?? ""} (${contract.buyerRepTitle ?? ""})`);
-    line("Email", contract.buyerEmail);
-    line("Phone", contract.buyerPhone);
-    doc.moveDown().fontSize(9).text("Electronic signatures are recorded evidence and do not by themselves claim legal validity.");
+     line("المنشأة", contract.buyerCompanyName);
+     line("الممثل", `${contract.buyerRepName ?? ""} (${contract.buyerRepTitle ?? ""})`);
+     line("البريد الإلكتروني", contract.buyerEmail);
+     line("الهاتف", contract.buyerPhone);
+     doc.moveDown().fontSize(9).text("التوقيعات الإلكترونية دليل مسجل ولا تعني وحدها تحقق الصلاحية القانونية.", { align: "right" });
     doc.image(qrDataUrl, { fit: [120, 120], align: "center" });
     doc.fontSize(8).text(verificationUrl, { align: "center" });
     doc.end();

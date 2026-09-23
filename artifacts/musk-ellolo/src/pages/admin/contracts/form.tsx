@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowRight, Save } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { sellerDefaults, sellerNumberLabel, sellerProfile } from './seller-defaults';
 
 const contractSchema = z.object({
   contractType: z.string().min(1, 'مطلوب'),
@@ -79,7 +80,7 @@ export default function AdminContractForm() {
     query: { enabled: isEditing && !!id, queryKey: getAdminGetContractQueryKey(id) } 
   });
   
-  const { data: siteContent, isLoading: isSiteContentLoading } = useAdminListSiteContent({
+   const { data: siteContent, isLoading: isSiteContentLoading, isError: isSiteContentError, refetch: refetchSiteContent } = useAdminListSiteContent({
     query: { enabled: !isEditing, queryKey: getAdminListSiteContentQueryKey() }
   });
   
@@ -90,11 +91,11 @@ export default function AdminContractForm() {
     resolver: zodResolver(contractSchema),
     defaultValues: {
       contractType: 'عقد توريد أجل المملكة العربية السعودية',
-      sellerName: '',
-      sellerCrNumber: '',
-      sellerCrDate: '',
-      sellerCrIssuer: '',
-      sellerAddress: '',
+       sellerName: sellerDefaults.sellerName,
+       sellerCrNumber: sellerDefaults.sellerCrNumber,
+       sellerCrDate: sellerDefaults.sellerCrDate,
+       sellerCrIssuer: sellerDefaults.sellerCrIssuer,
+       sellerAddress: sellerDefaults.sellerAddress,
       sellerRepName: '',
       sellerRepTitle: '',
       buyerCompanyName: '',
@@ -153,22 +154,14 @@ export default function AdminContractForm() {
   }, [contract, isEditing, form]);
 
   useEffect(() => {
-    if (!isEditing && siteContent && !sellerInitialized.current) {
+     if (!isEditing && siteContent && !sellerInitialized.current) {
       const legalProfile = siteContent.find(c => c.key === 'seller_legal_profile');
-      if (legalProfile && typeof legalProfile.data === 'object' && legalProfile.data) {
-        sellerInitialized.current = true;
-        const d = legalProfile.data as any;
-        form.reset({
-          ...form.getValues(),
-          sellerName: d.sellerName || '',
-          sellerCrNumber: d.sellerCrNumber || '',
-          sellerCrDate: d.sellerCrDate || '',
-          sellerCrIssuer: d.sellerCrIssuer || '',
-          sellerAddress: d.sellerAddress || '',
-          sellerRepName: d.sellerRepName || '',
-          sellerRepTitle: d.sellerRepTitle || '',
-        });
-      }
+       sellerInitialized.current = true;
+       const profile = sellerProfile(legalProfile?.data);
+       for (const [key, value] of Object.entries(profile)) {
+         const field = key as keyof typeof sellerDefaults;
+         if (!form.getFieldState(field).isDirty) form.setValue(field, value);
+       }
     }
   }, [isEditing, siteContent, form]);
 
@@ -200,7 +193,7 @@ export default function AdminContractForm() {
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
-  if (isEditing && isLoading) {
+   if ((isEditing && isLoading) || (!isEditing && isSiteContentLoading)) {
     return <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
 
@@ -218,6 +211,12 @@ export default function AdminContractForm() {
           </h1>
         </div>
       </div>
+       {!isEditing && isSiteContentError && (
+         <div role="alert" className="rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
+           تعذر تحميل البيانات القانونية المركزية. تظهر القيم المستخرجة من المرفقات؛ تحقق منها قبل إنشاء العقد.
+           <Button type="button" variant="link" onClick={() => refetchSiteContent()}>إعادة المحاولة</Button>
+         </div>
+       )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -254,7 +253,7 @@ export default function AdminContractForm() {
                 name="sellerCrNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم السجل التجاري *</FormLabel>
+                     <FormLabel>{sellerNumberLabel(form.watch('sellerCrNumber'))} *</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -265,7 +264,7 @@ export default function AdminContractForm() {
                 name="sellerCrDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>تاريخ السجل *</FormLabel>
+                     <FormLabel>تاريخ إصدار شهادة السجل *</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -276,7 +275,7 @@ export default function AdminContractForm() {
                 name="sellerCrIssuer"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>مصدر السجل *</FormLabel>
+                     <FormLabel>الجهة المصدرة *</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -289,6 +288,7 @@ export default function AdminContractForm() {
                   <FormItem className="md:col-span-2">
                     <FormLabel>العنوان الوطني *</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
+                     <p className="text-xs text-muted-foreground">العنوان من إثبات انتهت صلاحيته في 25/05/2024؛ يرجى التحقق منه قبل الاعتماد.</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -300,6 +300,7 @@ export default function AdminContractForm() {
                   <FormItem>
                     <FormLabel>يمثلها في هذا العقد *</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
+                     <p className="text-xs text-muted-foreground">اسم الممثل غير وارد في المرفقات؛ أدخله قبل إنشاء العقد.</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -311,6 +312,7 @@ export default function AdminContractForm() {
                   <FormItem>
                     <FormLabel>الصفة *</FormLabel>
                     <FormControl><Input {...field} /></FormControl>
+                     <p className="text-xs text-muted-foreground">صفة الممثل غير واردة في المرفقات؛ أدخلها قبل إنشاء العقد.</p>
                     <FormMessage />
                   </FormItem>
                 )}
