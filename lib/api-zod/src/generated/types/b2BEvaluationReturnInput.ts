@@ -11,4 +11,9 @@ export interface B2BEvaluationReturnInput {
   /** @minimum 1 */
   quantity: number;
   condition: B2BEvaluationReturnInputCondition;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  idempotencyKey: string;
 }

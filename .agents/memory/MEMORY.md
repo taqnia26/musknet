@@ -29,3 +29,4 @@
 - [Catalog settings boundary](catalog-settings-boundary.md) — saved product options are not checkout rules until pricing, tax, shipping, and order flows are updated together.
 - [Posted journal test cleanup](posted-journal-test-cleanup.md) — disable immutability triggers before fixture deletion, re-enable only after commit.
 - [WhatsApp LID identity](whatsapp-lid-identity.md) — do not infer a phone or shopper identity from an opaque LID; require a verified mapping before linking.
+- [Opened tester pool](opened-tester-pool.md) — reuse the separate B2B tester balance, distinguish sellable stock from asset value, and key partial returns per event.

@@ -15,4 +15,5 @@ export type GiftingIssueReturnCondition = typeof GiftingIssueReturnCondition[key
 export const GiftingIssueReturnCondition = {
   new: 'new',
   used: 'used',
+  mixed: 'mixed',
 } as const;

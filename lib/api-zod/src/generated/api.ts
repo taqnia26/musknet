@@ -5484,7 +5484,7 @@ export const GetAdminGiftingIssuesResponse = zod.object({
   "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssuesResponseRowsItemQuantityMultipleOf),
   "stockSource": zod.enum(['normal', 'used_return']),
   "returnedQuantity": zod.number().min(getAdminGiftingIssuesResponseRowsItemReturnedQuantityMin).multipleOf(getAdminGiftingIssuesResponseRowsItemReturnedQuantityMultipleOf),
-  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal('mixed'),zod.literal(null)]).nullish(),
   "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
@@ -5519,7 +5519,7 @@ export const createAdminGiftingIssueBodyTwoOneLinesItemProductIdMultipleOf = 1;
 
 export const createAdminGiftingIssueBodyTwoOneLinesItemQuantityMultipleOf = 1;
 
-export const createAdminGiftingIssueBodyTwoOneLinesItemStockSourceDefault = `normal`;
+
 export const createAdminGiftingIssueBodyTwoTwoProductIdMultipleOf = 1;
 
 export const createAdminGiftingIssueBodyTwoTwoQuantityMultipleOf = 1;
@@ -5539,7 +5539,7 @@ export const CreateAdminGiftingIssueBody = zod.object({
   "lines": zod.array(zod.object({
   "productId": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoOneLinesItemProductIdMultipleOf),
   "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoOneLinesItemQuantityMultipleOf),
-  "stockSource": zod.enum(['normal', 'used_return']).default(createAdminGiftingIssueBodyTwoOneLinesItemStockSourceDefault)
+  "stockSource": zod.enum(['normal', 'used_return']).optional()
 })).min(1)
 }),zod.object({
   "productId": zod.number().min(1).multipleOf(createAdminGiftingIssueBodyTwoTwoProductIdMultipleOf).describe('Legacy single-line form'),
@@ -5575,7 +5575,7 @@ export const CreateAdminGiftingIssueResponse = zod.object({
   "quantity": zod.number().min(1).multipleOf(createAdminGiftingIssueResponseQuantityMultipleOf),
   "stockSource": zod.enum(['normal', 'used_return']),
   "returnedQuantity": zod.number().min(createAdminGiftingIssueResponseReturnedQuantityMin).multipleOf(createAdminGiftingIssueResponseReturnedQuantityMultipleOf),
-  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal('mixed'),zod.literal(null)]).nullish(),
   "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
@@ -5657,7 +5657,7 @@ export const GetAdminGiftingIssueResponse = zod.object({
   "quantity": zod.number().min(1).multipleOf(getAdminGiftingIssueResponseQuantityMultipleOf),
   "stockSource": zod.enum(['normal', 'used_return']),
   "returnedQuantity": zod.number().min(getAdminGiftingIssueResponseReturnedQuantityMin).multipleOf(getAdminGiftingIssueResponseReturnedQuantityMultipleOf),
-  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal('mixed'),zod.literal(null)]).nullish(),
   "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
@@ -5732,7 +5732,7 @@ export const UpdateAdminGiftingIssueResponse = zod.object({
   "quantity": zod.number().min(1).multipleOf(updateAdminGiftingIssueResponseQuantityMultipleOf),
   "stockSource": zod.enum(['normal', 'used_return']),
   "returnedQuantity": zod.number().min(updateAdminGiftingIssueResponseReturnedQuantityMin).multipleOf(updateAdminGiftingIssueResponseReturnedQuantityMultipleOf),
-  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal('mixed'),zod.literal(null)]).nullish(),
   "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),
@@ -5766,11 +5766,14 @@ export const ReturnAdminB2BEvaluationParams = zod.object({
 
 export const returnAdminB2BEvaluationBodyQuantityMultipleOf = 1;
 
+export const returnAdminB2BEvaluationBodyIdempotencyKeyMax = 200;
+
 
 
 export const ReturnAdminB2BEvaluationBody = zod.object({
   "quantity": zod.number().min(1).multipleOf(returnAdminB2BEvaluationBodyQuantityMultipleOf),
-  "condition": zod.enum(['new', 'used'])
+  "condition": zod.enum(['new', 'used']),
+  "idempotencyKey": zod.string().min(1).max(returnAdminB2BEvaluationBodyIdempotencyKeyMax)
 })
 
 export const returnAdminB2BEvaluationResponseIdMultipleOf = 1;
@@ -5802,7 +5805,7 @@ export const ReturnAdminB2BEvaluationResponse = zod.object({
   "quantity": zod.number().min(1).multipleOf(returnAdminB2BEvaluationResponseQuantityMultipleOf),
   "stockSource": zod.enum(['normal', 'used_return']),
   "returnedQuantity": zod.number().min(returnAdminB2BEvaluationResponseReturnedQuantityMin).multipleOf(returnAdminB2BEvaluationResponseReturnedQuantityMultipleOf),
-  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal(null)]).nullish(),
+  "returnCondition": zod.union([zod.literal('new'),zod.literal('used'),zod.literal('mixed'),zod.literal(null)]).nullish(),
   "returnedAt": zod.coerce.date().nullish(),
   "totalCost": zod.string(),
   "issueDate": zod.coerce.date(),

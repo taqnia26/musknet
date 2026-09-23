@@ -2581,6 +2581,9 @@ router.get("/admin/inventory/locations", permit("inventory", "view"), route(asyn
   res.json(await listInventoryLocations());
 }));
 router.post("/admin/inventory/locations", permit("inventory", "edit"), route(async (req, res) => {
+  if (String(req.body.code).trim() === "B2B_USED_RETURN") {
+    res.status(409).json({ error: "The opened tester location is managed by the tester workflow" }); return;
+  }
   const location = await db.transaction(async (tx) => {
     if (req.body.isDefault) await tx.update(inventoryLocationsTable).set({ isDefault: false });
     const [created] = await tx.insert(inventoryLocationsTable).values({
@@ -2600,6 +2603,9 @@ router.patch("/admin/inventory/locations/:id", permit("inventory", "edit"), rout
   const id = Number(req.params.id);
   const [existing] = await db.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.id, id));
   if (!existing) { res.status(404).json({ error: "Inventory location not found" }); return; }
+  if (existing.code === "B2B_USED_RETURN") {
+    res.status(409).json({ error: "The opened tester location is managed by the tester workflow" }); return;
+  }
   if (existing.isDefault && !req.body.isDefault) {
     res.status(409).json({ error: "Choose another default location before removing the current default" });
     return;
@@ -2624,6 +2630,9 @@ router.delete("/admin/inventory/locations/:id", permit("inventory", "edit"), rou
   const id = Number(req.params.id);
   const [existing] = await db.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.id, id));
   if (!existing) { res.status(404).json({ error: "Inventory location not found" }); return; }
+  if (existing.code === "B2B_USED_RETURN") {
+    res.status(409).json({ error: "The opened tester location is managed by the tester workflow" }); return;
+  }
   if (existing.isDefault) { res.status(409).json({ error: "The default inventory location cannot be deleted" }); return; }
   try {
     await db.delete(inventoryLocationsTable).where(eq(inventoryLocationsTable.id, id));
@@ -2740,6 +2749,7 @@ router.patch("/admin/inventory/cycle-counts/:id", permit("inventory", "edit"), r
       const [location] = await tx.select().from(inventoryLocationsTable)
         .where(and(eq(inventoryLocationsTable.id, locationId), eq(inventoryLocationsTable.active, true))).limit(1);
       if (!location) throw Object.assign(new Error("Inventory location not found"), { status: 400 });
+      if (location.code === "B2B_USED_RETURN") throw Object.assign(new Error("Opened tester stock cannot be cycle-counted as ordinary inventory"), { status: 409 });
       const products = await tx.select({ id: productsTable.id }).from(productsTable)
         .where(inArray(productsTable.id, lines.map((line: { productId: number }) => line.productId)));
       if (products.length !== lines.length) throw Object.assign(new Error("One or more products were not found"), { status: 400 });

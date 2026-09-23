@@ -1,4 +1,4 @@
-import { check, integer, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { check, integer, jsonb, numeric, pgEnum, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -10,7 +10,7 @@ export const giftingCategoryEnum = pgEnum("gifting_issue_category", [
   "B2B_EVALUATION", "TESTER", "VIP_GIFT", "INFLUENCERS", "DAMAGED", "OTHER",
 ]);
 export const b2bStockSourceEnum = pgEnum("b2b_stock_source", ["normal", "used_return"]);
-export const b2bReturnConditionEnum = pgEnum("b2b_return_condition", ["new", "used"]);
+export const b2bReturnConditionEnum = pgEnum("b2b_return_condition", ["new", "used", "mixed"]);
 
 export const giftingIssuesTable = pgTable("gifting_issues", {
   id: serial("id").primaryKey(),
@@ -49,6 +49,20 @@ export const giftingIssuesTable = pgTable("gifting_issues", {
   uniqueIndex("gifting_issues_row_fingerprint_unique").on(table.rowFingerprint),
   uniqueIndex("gifting_issues_idempotency_key_unique").on(table.idempotencyKey),
   check("gifting_issues_returned_quantity_valid", sql`${table.returnedQuantity} >= 0 and ${table.returnedQuantity} <= ${table.quantity}`),
+]);
+
+export const giftingIssueReturnsTable = pgTable("gifting_issue_returns", {
+  id: serial("id").primaryKey(),
+  issueId: integer("issue_id").notNull().references(() => giftingIssuesTable.id, { onDelete: "cascade" }),
+  idempotencyKey: text("idempotency_key").notNull(),
+  quantity: integer("quantity").notNull(),
+  condition: b2bReturnConditionEnum("condition").notNull(),
+  responseSnapshot: jsonb("response_snapshot").$type<Record<string, unknown>>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("gifting_issue_returns_idempotency_key_unique").on(table.idempotencyKey),
+  uniqueIndex("gifting_issue_returns_issue_key_unique").on(table.issueId, table.idempotencyKey),
+  check("gifting_issue_returns_quantity_positive", sql`${table.quantity} > 0`),
 ]);
 
 export const insertGiftingIssueSchema = createInsertSchema(giftingIssuesTable).omit({ id: true, importedAt: true, voidedAt: true, voidedBy: true });

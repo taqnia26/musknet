@@ -4607,7 +4607,7 @@ components:
         quantity: { type: number, multipleOf: 1, minimum: 1 }
         stockSource: { type: string, enum: [normal, used_return] }
         returnedQuantity: { type: number, multipleOf: 1, minimum: 0 }
-        returnCondition: { type: [string, "null"], enum: [new, used, null] }
+        returnCondition: { type: [string, "null"], enum: [new, used, mixed, null] }
         returnedAt: { type: [string, "null"], format: date-time }
         totalCost: { type: string }
         issueDate: { type: string, format: date-time }
@@ -4626,7 +4626,7 @@ components:
       properties:
         productId: { type: number, multipleOf: 1, minimum: 1 }
         quantity: { type: number, multipleOf: 1, minimum: 1 }
-        stockSource: { type: string, enum: [normal, used_return], default: normal }
+        stockSource: { type: string, enum: [normal, used_return] }
     GiftingIssueInput:
       allOf:
         - type: object
@@ -4672,10 +4672,11 @@ components:
         totalAvailable: { type: number, multipleOf: 1, minimum: 0 }
     B2BEvaluationReturnInput:
       type: object
-      required: [quantity, condition]
+      required: [quantity, condition, idempotencyKey]
       properties:
         quantity: { type: number, multipleOf: 1, minimum: 1 }
         condition: { type: string, enum: [new, used] }
+        idempotencyKey: { type: string, minLength: 1, maxLength: 200 }
     InfluencerLogin:
       type: object
       required: [email, password]

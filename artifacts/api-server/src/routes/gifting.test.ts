@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
   accountingAccountsTable, adminUsersTable, categoriesTable, db, giftingIssuesTable,
-  inventoryBalancesTable, inventoryMovementsTable, journalEntriesTable, journalEntryLinesTable,
+  inventoryBalancesTable, inventoryLocationsTable, inventoryMovementsTable, journalEntriesTable, journalEntryLinesTable,
   journalEntryAuditTable, productsTable,
 } from "@workspace/db";
 import app from "../app";
@@ -198,7 +198,7 @@ describe.sequential("gifting issue operations", () => {
     expect(secondBalance.available).toBe(2);
 
     const rows = await db.select().from(giftingIssuesTable)
-      .where(eq(giftingIssuesTable.dedupeKey, `manual:multi-%_${suffix}:line:${secondProductId}`));
+      .where(eq(giftingIssuesTable.dedupeKey, `manual:multi-%_${suffix}:line:${secondProductId}:normal`));
     expect(rows).toHaveLength(1);
     const movements = await db.select().from(inventoryMovementsTable)
       .where(sql`event_key like ${`gifting:multi-%_${suffix}:%`}`);
@@ -216,6 +216,11 @@ describe.sequential("gifting issue operations", () => {
     }).from(journalEntryLinesTable).where(eq(journalEntryLinesTable.journalEntryId, entry.id));
     expect(journalTotals.debit).toBe(journalTotals.credit);
 
+    // Compatibility regression: batches written before source-qualified line
+    // keys used only the product id for non-first rows.
+    await db.update(giftingIssuesTable).set({
+      dedupeKey: `manual:multi-%_${suffix}:line:${secondProductId}`,
+    }).where(eq(giftingIssuesTable.dedupeKey, `manual:multi-%_${suffix}:line:${secondProductId}:normal`));
     const duplicate = await request(app).post("/api/admin/gifting-issues")
       .set("Authorization", `Bearer ${token}`).send({
         ...payload,
@@ -228,7 +233,7 @@ describe.sequential("gifting issue operations", () => {
     await request(app).post("/api/admin/gifting-issues")
       .set("Authorization", `Bearer ${token}`)
       .send({
-        lines: [{ productId, quantity: 1 }, { productId: secondProductId, quantity: 99 }],
+        lines: [{ productId, quantity: 1, stockSource: "normal" }, { productId: secondProductId, quantity: 99, stockSource: "normal" }],
         category: "TESTER", idempotencyKey: `rollback-${suffix}`,
       }).expect(409);
     const afterRollback = await db.select().from(productsTable)
@@ -236,5 +241,89 @@ describe.sequential("gifting issue operations", () => {
     expect(afterRollback.map((row) => row.stockQuantity)).toEqual(beforeRollback.map((row) => row.stockQuantity));
     expect(await db.select().from(giftingIssuesTable)
       .where(sql`${giftingIssuesTable.dedupeKey} = ${`manual:rollback-${suffix}:batch`}`)).toHaveLength(0);
+  });
+
+  it("reuses opened B2B testers separately and records mixed returns safely", async () => {
+    let [location] = await db.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.code, "B2B_USED_RETURN")).limit(1);
+    if (!location) {
+      [location] = await db.insert(inventoryLocationsTable).values({
+        name: "Test opened testers", code: "B2B_USED_RETURN", type: "virtual", isDefault: false,
+      }).returning();
+    }
+    await db.insert(inventoryBalancesTable).values({ productId: secondProductId, locationId: location.id, available: 1, averageCost: "8.0000" });
+
+    const opened = await request(app).post("/api/admin/gifting-issues").set("Authorization", `Bearer ${token}`).send({
+      lines: [{ productId: secondProductId, quantity: 1, stockSource: "used_return" }], category: "B2B_EVALUATION",
+      idempotencyKey: `opened-${suffix}`,
+    }).expect(201);
+    await request(app).post(`/api/admin/gifting-issues/${opened.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`).send({ quantity: 1, condition: "new", idempotencyKey: `opened-new-${suffix}` }).expect(409);
+    const openedReturn = await request(app).post(`/api/admin/gifting-issues/${opened.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`).send({ quantity: 1, condition: "used", idempotencyKey: `opened-used-${suffix}` }).expect(200);
+    const replay = await request(app).post(`/api/admin/gifting-issues/${opened.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`).send({ quantity: 1, condition: "used", idempotencyKey: `opened-used-${suffix}` }).expect(200);
+    expect(replay.body).toEqual(openedReturn.body);
+    await request(app).post(`/api/admin/gifting-issues/${opened.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`).send({ quantity: 1, condition: "new", idempotencyKey: `opened-used-${suffix}` }).expect(409);
+
+    const normal = await request(app).post("/api/admin/gifting-issues").set("Authorization", `Bearer ${token}`).send({
+      productId: secondProductId, quantity: 2, category: "B2B_EVALUATION", idempotencyKey: `mixed-${suffix}`,
+    }).expect(201);
+    const firstNormalReturn = await request(app).post(`/api/admin/gifting-issues/${normal.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`).send({ quantity: 1, condition: "new", idempotencyKey: `mixed-new-${suffix}` }).expect(200);
+    const mixed = await request(app).post(`/api/admin/gifting-issues/${normal.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`).send({ quantity: 1, condition: "used", idempotencyKey: `mixed-used-${suffix}` }).expect(200);
+    expect(mixed.body.returnCondition).toBe("mixed");
+    const firstReplay = await request(app).post(`/api/admin/gifting-issues/${normal.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`).send({ quantity: 1, condition: "new", idempotencyKey: `mixed-new-${suffix}` }).expect(200);
+    expect(firstReplay.body).toEqual(firstNormalReturn.body);
+    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
+    const [openedBalance] = await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.locationId, location.id));
+    expect(product.stockQuantity).toBe(1);
+    expect(openedBalance.available).toBe(2);
+
+    const splitPayload = {
+      category: "B2B_EVALUATION",
+      idempotencyKey: `split-${suffix}`,
+      lines: [
+        { productId: secondProductId, quantity: 1, stockSource: "used_return" },
+        { productId: secondProductId, quantity: 1, stockSource: "normal" },
+      ],
+    };
+    const split = await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`).send(splitPayload).expect(201);
+    const splitRows = await db.select().from(giftingIssuesTable)
+      .where(sql`${giftingIssuesTable.dedupeKey} like ${`manual:split-${suffix}:%`}`);
+    expect(splitRows).toHaveLength(2);
+    expect(splitRows.map((row) => row.stockSource).sort()).toEqual(["normal", "used_return"]);
+    const retry = await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ ...splitPayload, lines: [...splitPayload.lines].reverse() }).expect(201);
+    expect(retry.body.id).toBe(split.body.id);
+    const availability = await request(app).get("/api/admin/gifting-issues/tester-availability")
+      .set("Authorization", `Bearer ${token}`).query({ productId: secondProductId }).expect(200);
+    expect(availability.body).toMatchObject({ normalAvailable: 0, usedReturnAvailable: 1, totalAvailable: 1 });
+    await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ productId: secondProductId, quantity: 1, category: "TESTER", idempotencyKey: `no-main-${suffix}` })
+      .expect(409);
+    const [stillOpened] = await db.select().from(inventoryBalancesTable)
+      .where(eq(inventoryBalancesTable.locationId, location.id));
+    expect(stillOpened.available).toBe(1);
+
+    const finalTester = await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        category: "TESTER", idempotencyKey: `final-opened-${suffix}`,
+        lines: [{ productId: secondProductId, quantity: 1, stockSource: "used_return" }],
+      }).expect(201);
+    await request(app).post(`/api/admin/gifting-issues/${finalTester.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ quantity: 1, condition: "used", idempotencyKey: `final-return-${suffix}` }).expect(409);
+    const [afterFinalOpened] = await db.select().from(inventoryBalancesTable)
+      .where(eq(inventoryBalancesTable.locationId, location.id));
+    const [afterFinalMain] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
+    expect(afterFinalOpened.available).toBe(0);
+    expect(afterFinalMain.stockQuantity).toBe(0);
   });
 });

@@ -3613,6 +3613,7 @@ export type GiftingIssueReturnCondition = typeof GiftingIssueReturnCondition[key
 export const GiftingIssueReturnCondition = {
   new: 'new',
   used: 'used',
+  mixed: 'mixed',
 } as const;
 
 export type GiftingIssueCategory = typeof GiftingIssueCategory[keyof typeof GiftingIssueCategory];
@@ -3795,6 +3796,11 @@ export interface B2BEvaluationReturnInput {
   /** @minimum 1 */
   quantity: number;
   condition: B2BEvaluationReturnInputCondition;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  idempotencyKey: string;
 }
 
 export interface InfluencerLogin {

@@ -1,4 +1,4 @@
-import { and, asc, eq, sql, desc, ilike } from "drizzle-orm";
+import { and, asc, eq, ne, sql, desc, ilike } from "drizzle-orm";
 import {
   db, inventoryMovementsTable, operationEventsTable, openingBalanceImportsTable,
   openingBalanceLinesTable, productsTable,
@@ -41,9 +41,13 @@ export async function adjustOperationalBalances(
     id: inventoryBalancesTable.id,
     available: inventoryBalancesTable.available,
     isDefault: inventoryLocationsTable.isDefault,
+    locationCode: inventoryLocationsTable.code,
   }).from(inventoryBalancesTable)
     .innerJoin(inventoryLocationsTable, eq(inventoryLocationsTable.id, inventoryBalancesTable.locationId))
-    .where(eq(inventoryBalancesTable.productId, productId))
+    .where(and(
+      eq(inventoryBalancesTable.productId, productId),
+      ne(inventoryLocationsTable.code, "B2B_USED_RETURN"),
+    ))
     .orderBy(sql`${inventoryLocationsTable.isDefault} desc`, inventoryBalancesTable.id)
     .for("update");
 
@@ -481,7 +485,10 @@ export async function ensureDefaultInventoryLocation() {
 
 export async function listInventoryLocations() {
   await ensureDefaultInventoryLocation();
-  return db.select().from(inventoryLocationsTable).orderBy(inventoryLocationsTable.id);
+  const rows = await db.select().from(inventoryLocationsTable).orderBy(inventoryLocationsTable.id);
+  return rows.map((row) => row.code === "B2B_USED_RETURN"
+    ? { ...row, name: "تيستر مفتوح (Opened Testers)" }
+    : row);
 }
 
 export async function lookupInventoryBarcode(barcode: string) {
@@ -503,6 +510,9 @@ export async function transferInventory(input: {
   if (input.fromLocationId === input.toLocationId) throw new Error("Transfer locations must differ");
   if (!input.lines.length || input.lines.some((l) => !Number.isSafeInteger(l.quantity) || l.quantity <= 0)) throw new Error("Transfer quantities must be positive integers");
   return db.transaction(async (tx) => {
+    const protectedLocations = await tx.select({ id: inventoryLocationsTable.id }).from(inventoryLocationsTable)
+      .where(and(eq(inventoryLocationsTable.code, "B2B_USED_RETURN"), sql`${inventoryLocationsTable.id} in (${input.fromLocationId}, ${input.toLocationId})`));
+    if (protectedLocations.length) throw new Error("Opened tester stock cannot be transferred as ordinary inventory");
     const [prior] = await tx.select().from(inventoryTransfersTable).where(eq(inventoryTransfersTable.idempotencyKey, input.idempotencyKey)).limit(1);
     if (prior) return prior;
     const [transfer] = await tx.insert(inventoryTransfersTable).values(input).returning();
@@ -524,6 +534,9 @@ export async function sendInventoryTransfer(transferId: number, actorId: number)
   return db.transaction(async (tx) => {
     const [transfer] = await tx.select().from(inventoryTransfersTable).where(eq(inventoryTransfersTable.id, transferId)).for("update");
     if (!transfer) throw new Error("Transfer not found");
+    const protectedLocations = await tx.select({ id: inventoryLocationsTable.id }).from(inventoryLocationsTable)
+      .where(and(eq(inventoryLocationsTable.code, "B2B_USED_RETURN"), sql`${inventoryLocationsTable.id} in (${transfer.fromLocationId}, ${transfer.toLocationId})`));
+    if (protectedLocations.length) throw new Error("Opened tester stock cannot be transferred as ordinary inventory");
     if (transfer.status === "sent" || transfer.status === "received") return transfer;
     if (transfer.status !== "draft") throw new Error("Only draft transfers can be sent");
     const lines = await tx.select().from(inventoryTransferLinesTable).where(eq(inventoryTransferLinesTable.transferId, transferId));
@@ -542,6 +555,9 @@ export async function receiveInventoryTransfer(transferId: number, actorId: numb
   return db.transaction(async (tx) => {
     const [transfer] = await tx.select().from(inventoryTransfersTable).where(eq(inventoryTransfersTable.id, transferId)).for("update");
     if (!transfer) throw new Error("Transfer not found");
+    const protectedLocations = await tx.select({ id: inventoryLocationsTable.id }).from(inventoryLocationsTable)
+      .where(and(eq(inventoryLocationsTable.code, "B2B_USED_RETURN"), sql`${inventoryLocationsTable.id} in (${transfer.fromLocationId}, ${transfer.toLocationId})`));
+    if (protectedLocations.length) throw new Error("Opened tester stock cannot be transferred as ordinary inventory");
     if (transfer.status === "received") return transfer;
     if (transfer.status !== "sent") throw new Error("Only sent transfers can be received");
     const lines = await tx.select().from(inventoryTransferLinesTable).where(eq(inventoryTransferLinesTable.transferId, transferId));
@@ -563,7 +579,13 @@ export async function inventoryValueReport() {
 
 export async function inventoryReorderSuggestions() {
   const products = await db.select().from(productsTable).where(eq(productsTable.isActive, true));
-  const balances = await db.select().from(inventoryBalancesTable);
+  const balances = await db.select({
+    productId: inventoryBalancesTable.productId,
+    available: inventoryBalancesTable.available,
+    incoming: inventoryBalancesTable.incoming,
+  }).from(inventoryBalancesTable)
+    .innerJoin(inventoryLocationsTable, eq(inventoryLocationsTable.id, inventoryBalancesTable.locationId))
+    .where(ne(inventoryLocationsTable.code, "B2B_USED_RETURN"));
   const suggestions = products.map((product) => {
     const rows = balances.filter((b) => b.productId === product.id);
     const available = rows.reduce((n, b) => n + b.available, 0);
@@ -670,11 +692,25 @@ export async function inventoryReconciliationReport() {
     .where(and(eq(accountingAccountsTable.code, "1140"), eq(journalEntriesTable.status, "posted")));
   const values = await inventoryValueReport();
   const operationalValue = values.reduce((n, row) => n + Number(row.value), 0);
-  const movements = await db.select({ sourceType: inventoryMovementsTable.sourceType, sourceId: inventoryMovementsTable.sourceId }).from(inventoryMovementsTable);
+  const movements = await db.select({ sourceType: inventoryMovementsTable.sourceType, sourceId: inventoryMovementsTable.sourceId, eventKey: inventoryMovementsTable.eventKey }).from(inventoryMovementsTable);
   const journals = await db.select({ sourceType: journalEntriesTable.sourceType, sourceId: journalEntriesTable.sourceId }).from(journalEntriesTable).where(eq(journalEntriesTable.status, "posted"));
   const journalKeys = new Set(journals.map((j) => `${j.sourceType}:${j.sourceId}`));
-  const movementKeys = new Set(movements.map((m) => `${m.sourceType}:${m.sourceId}`));
-  return { operationalValue, accountingInventoryValue: Number(account?.value ?? 0), difference: operationalValue - Number(account?.value ?? 0), unlinkedMovements: movements.filter((m) => !journalKeys.has(`${m.sourceType}:${m.sourceId}`)), unlinkedInventoryJournals: journals.filter((j) => j.sourceType?.includes("inventory") && !movementKeys.has(`${j.sourceType}:${j.sourceId}`)) };
+  const movementKeys = new Set(movements.flatMap((m) => [
+    `${m.sourceType}:${m.sourceId}`,
+    // Older opened-tester issues used a dedicated movement type while their
+    // journal used the gifting issue type.
+    ...(m.sourceType === "b2b_tester_used_return" ? [`gifting_issue:${m.sourceId}`, `gifting_issue_batch:${m.sourceId}`] : []),
+    ...(m.sourceType === "b2b_return_new" || m.sourceType === "b2b_return_used"
+      ? [m.eventKey?.startsWith("b2b:return:")
+        ? `b2b_evaluation_return:${m.eventKey.slice("b2b:return:".length)}`
+        : `b2b_evaluation_return:${m.sourceId}`]
+      : []),
+  ]));
+  const movementLinked = (m: typeof movements[number]) =>
+    journalKeys.has(`${m.sourceType}:${m.sourceId}`) ||
+    (m.sourceType === "b2b_tester_used_return" && (journalKeys.has(`gifting_issue:${m.sourceId}`) || journalKeys.has(`gifting_issue_batch:${m.sourceId}`))) ||
+    ((m.sourceType === "b2b_return_new" || m.sourceType === "b2b_return_used") && movementKeys.has(`b2b_evaluation_return:${m.eventKey?.slice("b2b:return:".length)}`));
+  return { operationalValue, accountingInventoryValue: Number(account?.value ?? 0), difference: operationalValue - Number(account?.value ?? 0), unlinkedMovements: movements.filter((m) => !movementLinked(m)), unlinkedInventoryJournals: journals.filter((j) => (j.sourceType?.includes("inventory") || j.sourceType === "b2b_evaluation_return" || j.sourceType === "gifting_issue" || j.sourceType === "gifting_issue_batch") && !movementKeys.has(`${j.sourceType}:${j.sourceId}`)) };
 }
 
 export function inventoryCsv(rows: Array<Record<string, unknown>>) {
@@ -758,6 +794,9 @@ export async function receiveInventoryPurchaseOrder(orderId: number, actorId: nu
 
 export async function createCycleCount(input: { locationId: number; createdBy: number; lines: Array<{ productId: number; countedQuantity: number }> }) {
   return db.transaction(async (tx) => {
+    const [protectedLocation] = await tx.select({ id: inventoryLocationsTable.id }).from(inventoryLocationsTable)
+      .where(and(eq(inventoryLocationsTable.id, input.locationId), eq(inventoryLocationsTable.code, "B2B_USED_RETURN"))).limit(1);
+    if (protectedLocation) throw new Error("Opened tester stock cannot be cycle-counted as ordinary inventory");
     const [count] = await tx.insert(inventoryCycleCountsTable).values({ locationId: input.locationId, createdBy: input.createdBy }).returning();
     if (!count) throw new Error("Cycle count could not be created");
     const createdLines: Array<typeof inventoryCycleCountLinesTable.$inferSelect> = [];

@@ -31,7 +31,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { giftingIssueLabels as labels, issueUses } from './gifting-issues-config';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
 
-type Line = { productId: string; quantity: string; stockSource: 'normal' | 'used_return' };
+type StockSource = 'normal' | 'used_return';
+type Line = { productId: string; quantity: string; stockSource: StockSource | '' };
 
 const initialForm = {
   lines: [{ productId: '', quantity: '1', stockSource: 'normal' }] as Line[],
@@ -70,6 +71,8 @@ export default function AdminGiftingIssues() {
   const returnMutation = useReturnAdminB2BEvaluation();
   const idempotencyKeyRef = useRef(crypto.randomUUID());
   const lastAttemptedFormRef = useRef('');
+  const returnIdempotencyKeyRef = useRef(crypto.randomUUID());
+  const lastAttemptedReturnRef = useRef('');
 
   const rows = data?.rows ?? [];
   const summary = data?.summary;
@@ -79,27 +82,49 @@ export default function AdminGiftingIssues() {
     return sortProductsForSelection(inventory.items, lang);
   }, [inventory, lang]);
 
-  const selectedProducts = useMemo(() => {
-    if (!inventory) return [];
-    return form.lines
-      .map(line => inventory.items.find(item => item.id === Number(line.productId)))
-      .filter(Boolean);
-  }, [inventory, form.lines]);
-
-  const productNeedsCost = selectedProducts.some(product => product && Number(product.averageCost) <= 0);
+  const productNeedsCost = form.lines.some(line => {
+    const product = inventory?.items.find(item => item.id === Number(line.productId));
+    return product && line.stockSource !== 'used_return' && Number(product.averageCost) <= 0;
+  });
   const allLinesHaveProduct = form.lines.every(l => l.productId !== '');
-  const hasDuplicates = new Set(form.lines.map(l => l.productId).filter(Boolean)).size !== form.lines.filter(l => l.productId).length;
+  const hasDuplicates = new Set(form.lines.filter(l => l.productId).map(l => `${l.productId}:${l.stockSource}`)).size !== form.lines.filter(l => l.productId).length;
+  const isTesterMovement = form.category === 'TESTER' || form.category === 'B2B_EVALUATION';
 
-  const addLine = () => setForm(f => ({ ...f, lines: [...f.lines, { productId: '', quantity: '1', stockSource: 'normal' }] }));
+  const addLine = () => setForm(f => ({ ...f, lines: [...f.lines, { productId: '', quantity: '1', stockSource: isTesterMovement ? '' : 'normal' }] }));
 
   const updateLine = (index: number, field: keyof Line, value: string) => {
-    const newLines = [...form.lines];
-    newLines[index] = { ...newLines[index], [field]: value };
-    setForm(f => ({ ...f, lines: newLines }));
+    setForm(current => ({
+      ...current,
+      lines: current.lines.map((line, i) => i === index
+        ? { ...line, [field]: value, ...(field === 'productId' && isTesterMovement ? { stockSource: '' as const } : {}) }
+        : line),
+    }));
   };
 
   const removeLine = (index: number) => {
     setForm(f => ({ ...f, lines: f.lines.filter((_, i) => i !== index) }));
+  };
+
+  const splitOpenedTesterLine = (index: number, available: number) => {
+    setForm(current => {
+      const line = current.lines[index];
+      const requested = Number(line?.quantity);
+      if (!line || line.stockSource !== 'used_return' || !Number.isSafeInteger(requested) ||
+        !Number.isSafeInteger(available) || available < 0 || requested <= available) return current;
+      const remainder = requested - available;
+      const lines = [...current.lines];
+      if (available > 0) lines[index] = { ...line, quantity: String(available) };
+      else lines[index] = { ...line, quantity: String(remainder), stockSource: 'normal' };
+      if (available > 0) {
+        const normalIndex = lines.findIndex((item, i) => i !== index && item.productId === line.productId && item.stockSource === 'normal');
+        if (normalIndex >= 0) {
+          lines[normalIndex] = { ...lines[normalIndex], quantity: String(Number(lines[normalIndex].quantity) + remainder) };
+        } else {
+          lines.splice(index + 1, 0, { ...line, quantity: String(remainder), stockSource: 'normal' });
+        }
+      }
+      return { ...current, lines };
+    });
   };
 
   const updateCity = (city: string) => {
@@ -190,6 +215,16 @@ export default function AdminGiftingIssues() {
     });
   };
 
+  const openReturn = (row: GiftingIssue) => {
+    returnIdempotencyKeyRef.current = crypto.randomUUID();
+    lastAttemptedReturnRef.current = '';
+    setReturning(row);
+    setReturnForm({
+      quantity: String(row.quantity - row.returnedQuantity),
+      condition: row.stockSource === 'used_return' || row.returnCondition === 'used' ? 'used' : 'new',
+    });
+  };
+
   const saveEdit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!editing || !editForm.category) return;
@@ -224,13 +259,14 @@ export default function AdminGiftingIssues() {
   };
 
   const removeMovement = (row: GiftingIssue) => {
-    if (!window.confirm(t('سيتم حذف الحركة وإعادة الكمية للمخزون وعكس أثرها المحاسبي. هل تريد المتابعة؟', 'This will remove the movement, restore inventory, and reverse its accounting effect. Continue?'))) return;
+    if (!window.confirm(t('سيتم حذف الحركة وإعادة الكمية إلى مصدر مخزونها وعكس أثرها المحاسبي. هل تريد المتابعة؟', 'This will remove the movement, restore its original stock source, and reverse its accounting effect. Continue?'))) return;
     deleteMutation.mutate({ id: row.id }, {
       onSuccess: async () => {
         if (selected === row.id) setSelected(null);
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] }),
           queryClient.invalidateQueries({ queryKey: ['/api/admin/inventory'] }),
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues/tester-availability'] }),
         ]);
         toast({ title: t('تم حذف الحركة وإعادة الكمية للمخزون', 'Movement removed and inventory restored') });
       },
@@ -250,9 +286,23 @@ export default function AdminGiftingIssues() {
       toast({ title: t('أدخل كمية صحيحة ضمن الكمية المتبقية', 'Enter a valid quantity within the outstanding amount'), variant: 'destructive' });
       return;
     }
-    returnMutation.mutate({ id: returning.id, data: { quantity, condition: returnForm.condition } }, {
+    if (returning.stockSource === 'used_return' && returnForm.condition === 'new') {
+      toast({ title: t('التستر المفتوح يعود دائمًا لمخزون التيستر المفتوح', 'An opened tester must return to opened-tester stock'), variant: 'destructive' });
+      return;
+    }
+    const attempt = JSON.stringify({ id: returning.id, quantity, condition: returnForm.condition });
+    if (lastAttemptedReturnRef.current !== attempt) {
+      returnIdempotencyKeyRef.current = crypto.randomUUID();
+      lastAttemptedReturnRef.current = attempt;
+    }
+    returnMutation.mutate({ id: returning.id, data: {
+      quantity,
+      condition: returnForm.condition,
+      idempotencyKey: returnIdempotencyKeyRef.current,
+    } }, {
       onSuccess: async () => {
         setReturning(null);
+        lastAttemptedReturnRef.current = '';
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] }),
           queryClient.invalidateQueries({ queryKey: ['/api/admin/inventory'] }),
@@ -276,7 +326,12 @@ export default function AdminGiftingIssues() {
     }
 
     if (hasDuplicates) {
-      toast({ title: t('لا يمكن تكرار نفس المنتج، يرجى دمج الكمية', 'Cannot duplicate the same product, please combine the quantity'), variant: 'destructive' });
+      toast({ title: t('لا يمكن تكرار نفس المنتج من نفس مصدر المخزون', 'Cannot repeat a product with the same stock source'), variant: 'destructive' });
+      return;
+    }
+
+    if (isTesterMovement && form.lines.some(line => !line.stockSource)) {
+      toast({ title: t('اختر مصدر المخزون لكل تستر', 'Select the stock source for each tester'), variant: 'destructive' });
       return;
     }
 
@@ -310,7 +365,7 @@ export default function AdminGiftingIssues() {
     const validLines = form.lines.map(l => ({
       productId: Number(l.productId),
       quantity: Number(l.quantity),
-      stockSource: l.stockSource,
+      stockSource: l.stockSource === 'used_return' ? 'used_return' as const : 'normal' as const,
     }));
 
     const currentFormState = JSON.stringify(form);
@@ -336,6 +391,7 @@ export default function AdminGiftingIssues() {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] }),
           queryClient.invalidateQueries({ queryKey: ['/api/admin/inventory'] }),
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues/tester-availability'] }),
         ]);
         toast({ title: t('تم تسجيل الحركات بنجاح', 'Movements recorded successfully') });
       },
@@ -380,7 +436,16 @@ export default function AdminGiftingIssues() {
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               <div>
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('التصنيف', 'Category')} *</Label>
-                <Select value={form.category} onValueChange={(value) => setForm(f => ({ ...f, category: value as GiftingIssueInputCategory, lines: f.lines.map(line => ({ ...line, stockSource: value === 'TESTER' ? line.stockSource : 'normal' })) }))}>
+                <Select value={form.category} onValueChange={(value) => setForm(f => ({
+                  ...f,
+                  category: value as GiftingIssueInputCategory,
+                  lines: f.lines.map(line => ({
+                    ...line,
+                    stockSource: value === 'TESTER' || value === 'B2B_EVALUATION'
+                      ? (f.category === 'TESTER' || f.category === 'B2B_EVALUATION' ? line.stockSource : '')
+                      : 'normal',
+                  })),
+                }))}>
                   <SelectTrigger className="h-10">
                     <SelectValue placeholder={t('اختر التصنيف', 'Select category')} />
                   </SelectTrigger>
@@ -444,8 +509,8 @@ export default function AdminGiftingIssues() {
               <div className="p-4 space-y-3">
                 {form.lines.map((line, index) => {
                   const product = inventory?.items.find((item) => item.id === Number(line.productId));
-                  const productNeedsCost = Boolean(product && Number(product.averageCost) <= 0);
-                  const isDuplicate = form.lines.some((l, i) => i !== index && l.productId && l.productId === line.productId);
+                  const productNeedsCost = Boolean(product && line.stockSource !== 'used_return' && Number(product.averageCost) <= 0);
+                  const isDuplicate = form.lines.some((l, i) => i !== index && l.productId && l.productId === line.productId && l.stockSource === line.stockSource);
 
                   return (
                     <div key={index} className="flex flex-col sm:flex-row gap-3 p-3 bg-background rounded-lg border border-border/50 items-start sm:items-center shadow-sm">
@@ -465,14 +530,16 @@ export default function AdminGiftingIssues() {
                         {isDuplicate && <p className="mt-1 text-[11px] font-medium text-destructive">{t('هذا المنتج مكرر', 'This product is duplicated')}</p>}
                         {product && !isDuplicate && (
                           <p className={`mt-1.5 text-[11.5px] ${productNeedsCost ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>
-                             {productNeedsCost ? t('لا توجد تكلفة للوحدة. أدخلها من المخزون.', 'No unit cost. Enter it from Inventory.') : <>{t('المتاح', 'Available')}: <span className="font-mono">{formatInteger(product.stockQuantity, lang)}</span> · {t('متوسط التكلفة', 'Avg Cost')}: <span className="font-mono">{formatCurrency(product.averageCost, lang)}</span> SAR</>}
+                             {productNeedsCost ? t('لا توجد تكلفة للوحدة. أدخلها من المخزون.', 'No unit cost. Enter it from Inventory.') : <>{t('المخزون الرئيسي', 'Main stock')}: <span className="font-mono">{formatInteger(product.stockQuantity, lang)}</span> · {t('متوسط التكلفة', 'Avg Cost')}: <span className="font-mono">{formatCurrency(product.averageCost, lang)}</span> SAR</>}
                           </p>
                         )}
-                        {form.category === 'TESTER' && line.productId && (
+                        {isTesterMovement && line.productId && (
                           <TesterSourceSelector
                             productId={Number(line.productId)}
                             value={line.stockSource}
                             onChange={(value) => updateLine(index, 'stockSource', value)}
+                            quantity={line.quantity}
+                            onSplit={(available) => splitOpenedTesterLine(index, available)}
                             lang={lang}
                           />
                         )}
@@ -600,7 +667,12 @@ export default function AdminGiftingIssues() {
                       </TableCell>
                       <TableCell>
                         <div className="font-medium truncate max-w-[200px] text-sm" title={row.descriptionSnapshot}>{row.descriptionSnapshot}</div>
-                        <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{row.barcode}</div>
+                         <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{row.barcode}</div>
+                         {(row.category === 'B2B_EVALUATION' || row.category === 'TESTER') && (
+                           <div className="mt-1 text-[11px] text-muted-foreground">
+                             {row.stockSource === 'used_return' ? t('من تيستر مفتوح', 'From opened-tester stock') : t('من المخزون الرئيسي', 'From main stock')}
+                           </div>
+                         )}
                       </TableCell>
                       <TableCell>
                         <div className="text-sm font-medium">{row.recipientName || '—'}</div>
@@ -624,7 +696,7 @@ export default function AdminGiftingIssues() {
                              <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')} onClick={(event) => event.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
                                <DropdownMenuItem onClick={() => openEdit(row)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
-                               {row.category === 'B2B_EVALUATION' && row.returnedQuantity < row.quantity && <DropdownMenuItem onClick={() => { setReturning(row); setReturnForm({ quantity: String(row.quantity - row.returnedQuantity), condition: row.returnCondition ?? 'new' }); }}><RotateCcw className="h-4 w-4 mr-2" />{t('استرجاع', 'Return')}</DropdownMenuItem>}
+                                {row.category === 'B2B_EVALUATION' && row.returnedQuantity < row.quantity && <DropdownMenuItem onClick={() => openReturn(row)}><RotateCcw className="h-4 w-4 mr-2" />{t('استرجاع', 'Return')}</DropdownMenuItem>}
                                <DropdownMenuSeparator />
                                <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending} onClick={() => removeMovement(row)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
                              </DropdownMenuContent>
@@ -664,9 +736,9 @@ export default function AdminGiftingIssues() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>{t('التصنيف', 'Category')}</Label>
-                <Select value={editForm.category} onValueChange={(value) => setEditForm((current) => ({ ...current, category: value as GiftingIssueCategory }))}>
+                <Select value={editForm.category} disabled={editing?.category === 'B2B_EVALUATION'} onValueChange={(value) => setEditForm((current) => ({ ...current, category: value as GiftingIssueCategory }))}>
                   <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>{Object.entries(labels).map(([value, label]) => <SelectItem key={value} value={value}>{lang === 'ar' ? label.ar : label.en}</SelectItem>)}</SelectContent>
+                  <SelectContent>{Object.entries(labels).filter(([value]) => value !== 'B2B_EVALUATION' || editing?.category === 'B2B_EVALUATION').map(([value, label]) => <SelectItem key={value} value={value}>{lang === 'ar' ? label.ar : label.en}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
@@ -727,10 +799,15 @@ export default function AdminGiftingIssues() {
                 <Select value={returnForm.condition} onValueChange={(condition) => setReturnForm(current => ({ ...current, condition: condition as 'new' | 'used' }))}>
                   <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">{t('جديد — يعاد للمخزون الطبيعي', 'New — return to normal stock')}</SelectItem>
-                    <SelectItem value="used">{t('مستعمل — ينقل لمخزون المرتجعات', 'Used — move to used-return stock')}</SelectItem>
+                     <SelectItem value="new" disabled={returning.stockSource === 'used_return'}>{t('جديد — يعود للمخزون الرئيسي', 'New — return to main stock')}</SelectItem>
+                     <SelectItem value="used">{t('مفتوح — يعود لمخزون تيستر مفتوح', 'Opened — return to opened-tester stock')}</SelectItem>
                   </SelectContent>
                 </Select>
+                 {returning.stockSource === 'used_return' && (
+                   <p className="mt-1.5 text-xs text-muted-foreground">
+                     {t('هذا التستر صُرف أصلًا من المخزون المفتوح، لذلك لا يمكن إرجاعه كمنتج جديد.', 'This tester was issued from opened stock and cannot return as a new product.')}
+                   </p>
+                 )}
               </div>
               <div>
                 <Label>{t('الكمية المسترجعة', 'Returned quantity')}</Label>
@@ -748,27 +825,51 @@ export default function AdminGiftingIssues() {
   );
 }
 
-function TesterSourceSelector({ productId, value, onChange, lang }: {
+function TesterSourceSelector({ productId, value, onChange, quantity, onSplit, lang }: {
   productId: number;
-  value: 'normal' | 'used_return';
-  onChange: (value: 'normal' | 'used_return') => void;
+  value: StockSource | '';
+  onChange: (value: StockSource) => void;
+  quantity: string;
+  onSplit: (available: number) => void;
   lang: 'ar' | 'en';
 }) {
   const params = { productId };
-  const { data } = useGetAdminTesterAvailability(params, { query: { enabled: productId > 0, queryKey: getGetAdminTesterAvailabilityQueryKey(params) } });
+  const { data, isLoading } = useGetAdminTesterAvailability(params, { query: { enabled: productId > 0, queryKey: getGetAdminTesterAvailabilityQueryKey(params) } });
+  const requested = Number(quantity);
+  const openedAvailable = data?.usedReturnAvailable ?? 0;
+  const shortage = value === 'used_return' && Number.isSafeInteger(requested) && requested > openedAvailable && !!data;
+  const remainder = requested - openedAvailable;
+  const canUseMain = remainder <= (data?.normalAvailable ?? 0);
   return (
-    <div className="mt-2">
-      <Select value={value} onValueChange={(next) => onChange(next as 'normal' | 'used_return')}>
-        <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+    <div className="mt-2 space-y-2">
+      <Select value={value} onValueChange={(next) => onChange(next as StockSource)}>
+        <SelectTrigger className="h-9 text-xs"><SelectValue placeholder={lang === 'ar' ? 'اختر مصدر التستر' : 'Choose tester stock source'} /></SelectTrigger>
         <SelectContent>
           <SelectItem value="normal">
-            {lang === 'ar' ? 'المخزون الطبيعي' : 'Normal stock'} — {formatInteger(data?.normalAvailable ?? 0, lang)}
+            {lang === 'ar' ? 'المخزون الرئيسي (جديد)' : 'Main stock (new)'} — {isLoading ? '…' : formatInteger(data?.normalAvailable ?? 0, lang)}
           </SelectItem>
-          <SelectItem value="used_return" disabled={(data?.usedReturnAvailable ?? 0) <= 0}>
-            {lang === 'ar' ? 'مرتجعات مستعملة' : 'Used returns'} — {formatInteger(data?.usedReturnAvailable ?? 0, lang)}
+          <SelectItem value="used_return" disabled={!data}>
+            {lang === 'ar' ? 'مخزون تيستر مفتوح' : 'Opened tester stock'} — {isLoading ? '…' : formatInteger(openedAvailable, lang)}
           </SelectItem>
         </SelectContent>
       </Select>
+      <p className="text-[11px] text-muted-foreground">
+        {lang === 'ar' ? 'اختر المصدر يدويًا؛ التستر المفتوح لا يُحسب ضمن المخزون الرئيسي.' : 'Choose the source manually; opened testers are separate from main stock.'}
+      </p>
+      {shortage && (
+        <div role="alert" className="rounded-md border border-amber-400/50 bg-amber-50 p-2.5 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+          <p>{lang === 'ar'
+            ? `المطلوب ${formatInteger(requested, lang)}، والمتوفر من التيستر المفتوح ${formatInteger(openedAvailable, lang)}.`
+            : `Requested ${formatInteger(requested, lang)}; opened-tester stock has ${formatInteger(openedAvailable, lang)}.`}</p>
+          <Button type="button" variant="outline" size="sm" className="mt-2 h-auto whitespace-normal text-start"
+            disabled={!canUseMain} onClick={() => onSplit(openedAvailable)}>
+            {openedAvailable > 0
+              ? (lang === 'ar' ? `اصرف ${formatInteger(remainder, lang)} من المخزون الرئيسي` : `Issue ${formatInteger(remainder, lang)} from main stock`)
+              : (lang === 'ar' ? 'اصرف الكمية من المخزون الرئيسي' : 'Issue from main stock')}
+          </Button>
+          {!canUseMain && <p className="mt-1.5">{lang === 'ar' ? 'المخزون الرئيسي لا يكفي للكمية المتبقية؛ خفّض الكمية قبل الصرف.' : 'Main stock cannot cover the remainder; reduce the quantity first.'}</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -800,6 +901,13 @@ function Detail({ row, lang }: { row: GiftingIssue; lang: 'ar' | 'en' }) {
       <div>
         <div className="font-semibold text-foreground text-[15px]">{row.descriptionSnapshot}</div>
         <div className="text-xs text-muted-foreground mt-1 font-mono">{row.barcode}</div>
+        {(row.category === 'B2B_EVALUATION' || row.category === 'TESTER') && (
+          <div className="mt-1 text-xs text-muted-foreground">
+            {lang === 'ar' ? 'مصدر الصرف' : 'Issued from'}: {row.stockSource === 'used_return'
+              ? (lang === 'ar' ? 'مخزون تيستر مفتوح' : 'Opened-tester stock')
+              : (lang === 'ar' ? 'المخزون الرئيسي' : 'Main stock')}
+          </div>
+        )}
       </div>
 
       <div className="text-muted-foreground flex items-center gap-2 text-xs">
@@ -828,7 +936,7 @@ function Detail({ row, lang }: { row: GiftingIssue; lang: 'ar' | 'en' }) {
       {row.category === 'B2B_EVALUATION' && (
         <div className="rounded-lg border bg-muted/20 p-3 text-xs">
           {lang === 'ar' ? 'المسترجع' : 'Returned'}: {formatInteger(row.returnedQuantity, lang)} / {formatInteger(row.quantity, lang)}
-          {row.returnCondition ? ` · ${row.returnCondition === 'new' ? (lang === 'ar' ? 'جديد' : 'New') : (lang === 'ar' ? 'مستعمل' : 'Used')}` : ''}
+           {row.returnCondition ? ` · ${row.returnCondition === 'new' ? (lang === 'ar' ? 'جديد' : 'New') : row.returnCondition === 'used' ? (lang === 'ar' ? 'مفتوح' : 'Opened') : (lang === 'ar' ? 'جديد ومفتوح' : 'New and opened')}` : ''}
         </div>
       )}
 

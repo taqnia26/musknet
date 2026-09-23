@@ -25,7 +25,8 @@ export default function AdminInventoryCounts() {
   const { data: counts, isLoading } = useListInventoryCycleCounts();
   const { data: rawLocations } = useListInventoryLocations();
   const { data: inventory } = useAdminListInventory();
-  const locations = (rawLocations as unknown as Array<{ id: number; name: string; code: string }> | undefined) ?? [];
+  const locations = ((rawLocations as unknown as Array<{ id: number; name: string; code: string }> | undefined) ?? [])
+    .filter((location) => location.code !== 'B2B_USED_RETURN');
   const items = useMemo(
     () => sortProductsForSelection(inventory?.items ?? [], lang),
     [inventory, lang],

@@ -182,6 +182,7 @@ export default function AdminInventoryLocations() {
                     <TableCell className="font-medium">
                       {loc.name}
                       {loc.isDefault && <Badge variant="secondary" className="ms-2 text-[10px]">{t('أساسي', 'Default')}</Badge>}
+                      {loc.code === 'B2B_USED_RETURN' && <Badge variant="secondary" className="ms-2 text-[10px]">{t('مخصص للتستر', 'Tester only')}</Badge>}
                     </TableCell>
                     <TableCell>
                       {loc.type === 'warehouse' ? t('مستودع', 'Warehouse') : loc.type === 'store' ? t('معرض', 'Store') : t('افتراضي', 'Virtual')}
@@ -201,8 +202,12 @@ export default function AdminInventoryLocations() {
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => setViewing(loc)}><Eye className="h-4 w-4 mr-2" />{t('عرض', 'View')}</DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setEditing(loc)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={loc.isDefault || deleteMutation.isPending} onClick={() => removeLocation(loc)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
+                              {loc.code !== 'B2B_USED_RETURN' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => setEditing(loc)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={loc.isDefault || deleteMutation.isPending} onClick={() => removeLocation(loc)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
