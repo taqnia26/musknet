@@ -631,12 +631,27 @@ html.dark.admin-route .invoice-sheet {
 .invoice-sheet .invoice-logo-white { display: none; }
 html.dark.admin-route .invoice-sheet .invoice-logo-black { display: none; }
 html.dark.admin-route .invoice-sheet .invoice-logo-white { display: block; }
+@media (min-width: 640px) {
+  .invoice-sheet .invoice-heading {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.45fr);
+  }
+}
+.invoice-sheet .invoice-seller-name {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
 .invoice-sheet .invoice-footer {
   margin-top: auto;
-  padding-top: 4rem;
+  padding-top: 2.5rem;
   background-color: #fff !important;
 }
-.invoice-sheet .invoice-footer img { display: block; }
+.invoice-sheet .invoice-footer img {
+  display: block;
+  width: min(100%, 350px);
+  height: auto;
+  margin-inline: auto;
+}
 
 @media (max-width: 639px) {
   .invoice-sheet .invoice-heading-logo { order: -1; }
@@ -658,7 +673,7 @@ html.dark.admin-route .invoice-sheet .invoice-logo-white { display: block; }
     min-height: 267mm;
   }
   .invoice-sheet .invoice-heading {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.45fr);
   }
   .invoice-sheet .invoice-heading-logo { order: 0; }
   .invoice-sheet .invoice-footer { break-inside: avoid; }

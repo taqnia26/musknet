@@ -71,9 +71,9 @@ function InvoiceTemplate({
       `}</style>
       
       {/* Customer on the physical right, seller on the left, with the mark centered. */}
-      <div dir="rtl" className="invoice-heading grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1fr)] sm:items-start mb-7">
+      <div dir="rtl" className="invoice-heading grid gap-6 sm:items-start mb-7">
         <div data-testid="invoice-buyer" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-buyer min-w-0 pt-4 sm:pt-24">
-          <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('فاتورة إلى', 'Bill To')}</h3>
+          <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('بيانات العميل', 'Customer Details')}</h3>
           <p className="font-semibold text-lg text-[#292728]">{invoice.buyerName || invoice.distributorName || '-'}</p>
           {invoice.buyerAddress && <p className="text-xs sm:text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{invoice.buyerAddress}</p>}
           {invoice.buyerTaxNumber && <p className="text-xs sm:text-sm text-gray-600 mt-2">{t('الرقم الضريبي', 'VAT')}: <span className="font-mono text-gray-900">{invoice.buyerTaxNumber}</span></p>}
@@ -88,8 +88,8 @@ function InvoiceTemplate({
           <h1 data-testid="invoice-title" className="mt-2 text-xl font-semibold tracking-wide text-[#292728]">{t('فاتورة ضريبية', 'Tax Invoice')}</h1>
         </div>
         <div data-testid="invoice-seller" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-seller min-w-0 pt-4 sm:pt-24">
-          <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('بياناتنا', 'From')}</h3>
-          <p className="font-semibold text-lg text-[#292728]">{invoice.sellerName}</p>
+          <p className="invoice-seller-name font-semibold text-[#292728]">{invoice.sellerName}</p>
+          <p className="mt-2 text-xs text-stone-500">{t('السعودية، الرياض، حي السليمانية', 'Saudi Arabia, Riyadh, Al Sulimaniyah')}</p>
           <p className="mt-2 text-xs text-stone-500">{t('الرقم الضريبي', 'VAT Number')}: <span className="font-mono text-stone-700">{invoice.sellerVatNumber}</span></p>
         </div>
       </div>
@@ -181,7 +181,7 @@ function InvoiceTemplate({
         </div>
       </div>
       <footer className="invoice-footer" data-testid="invoice-footer">
-        <img src={`${import.meta.env.BASE_URL}site-assets/invoice-footer.jpg`} alt={t('muskellolo.com، العنوان وبيانات الشركة', 'muskellolo.com, company address and details')} className="w-full h-auto" />
+        <img src={`${import.meta.env.BASE_URL}site-assets/invoice-footer.jpg`} alt={t('شعار مسك اللولو الصغير وموقع muskellolo.com', 'Musk Ellolo small logo and muskellolo.com')} className="w-full h-auto" />
       </footer>
     </div>
   );

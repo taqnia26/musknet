@@ -27,6 +27,8 @@ describe("invoice email PDF", () => {
     const contents = pdf.toString("latin1");
     expect(contents.startsWith("%PDF-")).toBe(true);
     expect((contents.match(/\/Subtype \/Image/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect(contents).toContain("/Width 700");
+    expect(contents).toContain("/Height 145");
     expect(contents).toContain("/MediaBox [0 0 595.28 841.89]");
     expect(pdf.length).toBeGreaterThan(2000);
   });

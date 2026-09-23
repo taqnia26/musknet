@@ -72,7 +72,7 @@ test.beforeAll(async () => {
     creationKey: `invoice-display-${runId}`,
     sequenceNumber: 1_800_000_000 + (Date.now() % 100_000_000),
     invoiceNumber,
-    sellerName: "Musk Ellolo Test Seller",
+    sellerName: "مؤسسة مسك اللولو للتجارة",
     issueDatetime: new Date("2026-09-22T10:00:00.000Z"),
     sellerVatNumber: "300000000000003",
     buyerName: `Test buyer ${runId}`,
@@ -211,6 +211,29 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
         qr: get('[data-testid="invoice-qr-surface"]'),
         footer: get('[data-testid="invoice-footer"]'),
         footerLoaded: !!sheet.querySelector<HTMLImageElement>('[data-testid="invoice-footer"] img')?.naturalWidth,
+        footerImage: (() => {
+          const img = sheet.querySelector<HTMLImageElement>('[data-testid="invoice-footer"] img')!;
+          const imageBox = img.getBoundingClientRect();
+          const sheetBox = sheet.getBoundingClientRect();
+          return {
+            centerOffset: Math.abs((imageBox.left + imageBox.right) / 2 - (sheetBox.left + sheetBox.right) / 2),
+            insideSheet: imageBox.left >= sheetBox.left && imageBox.right <= sheetBox.right,
+            ratio: img.naturalWidth / img.naturalHeight,
+            alt: img.alt,
+          };
+        })(),
+        sellerName: (() => {
+          const name = sheet.querySelector<HTMLElement>(".invoice-seller-name")!;
+          const seller = sheet.querySelector<HTMLElement>('[data-testid="invoice-seller"]')!;
+          const nameBox = name.getBoundingClientRect();
+          const sellerBox = seller.getBoundingClientRect();
+          return {
+            height: nameBox.height,
+            lineHeight: parseFloat(getComputedStyle(name).lineHeight),
+            insideSeller: nameBox.left >= sellerBox.left && nameBox.right <= sellerBox.right,
+            textFits: name.scrollWidth <= name.clientWidth,
+          };
+        })(),
         buyerRight: sheet.querySelector('[data-testid="invoice-buyer"]')!.getBoundingClientRect().right,
         sellerRight: sheet.querySelector('[data-testid="invoice-seller"]')!.getBoundingClientRect().right,
         blackDisplay: get(".invoice-logo-black").display,
@@ -235,6 +258,13 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
     expect(colors.qrLoaded).toBe(true);
     expect(colors.footer.background).toBe("rgb(255, 255, 255)");
     expect(colors.footerLoaded).toBe(true);
+    expect(colors.footerImage.centerOffset).toBeLessThan(2);
+    expect(colors.footerImage.insideSheet).toBe(true);
+    expect(colors.footerImage.ratio).toBeGreaterThan(4);
+    expect(colors.footerImage.alt).toContain("muskellolo.com");
+    expect(colors.sellerName.height).toBeLessThanOrEqual(colors.sellerName.lineHeight + 1);
+    expect(colors.sellerName.insideSeller).toBe(true);
+    expect(colors.sellerName.textFits).toBe(true);
     expect(colors.buyerRight).toBeGreaterThan(colors.sellerRight);
     expect(colors.logoLoaded).toBe(true);
     expect(colors.logoRatio).toBeGreaterThan(3);
@@ -245,7 +275,11 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   };
   await expect(preview).toHaveAttribute("dir", "rtl");
   await expect(preview).toContainText("فاتورة ضريبية");
-  await expect(preview).toContainText("Musk Ellolo Test Seller");
+  await expect(preview.getByTestId("invoice-buyer")).toContainText("بيانات العميل");
+  await expect(preview.getByTestId("invoice-seller")).not.toContainText("بياناتنا");
+  await expect(preview.getByTestId("invoice-seller")).toContainText("مؤسسة مسك اللولو للتجارة");
+  await expect(preview.getByTestId("invoice-seller")).toContainText("السعودية، الرياض، حي السليمانية");
+  await expect(preview.getByTestId("invoice-seller")).toContainText("300000000000003");
   await expect(preview).toContainText(`Test buyer ${runId}`);
   await expect(preview).toContainText(productName);
   await expect(preview).toContainText("15.00");
@@ -264,6 +298,9 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await page.getByText("Preview Invoice", { exact: true }).click();
   await expect(page.getByTestId("invoice-template")).toHaveAttribute("dir", "ltr");
   await expect(page.getByTestId("invoice-template")).toContainText("Tax Invoice");
+  await expect(page.getByTestId("invoice-buyer")).toContainText("Customer Details");
+  await expect(page.getByTestId("invoice-seller")).not.toContainText("From");
+  await expect(page.getByTestId("invoice-seller")).toContainText("Saudi Arabia, Riyadh, Al Sulimaniyah");
   await expect(page.getByTestId("invoice-template")).toContainText(productName);
   await checkPalette(false);
   await page.locator('button[title="تغيير المظهر"], button[title="Toggle theme"]').evaluate((button: HTMLButtonElement) => button.click());
