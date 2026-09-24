@@ -38,3 +38,4 @@
 - [Uploaded contract approval](uploaded-contract-approval.md) — link by the chosen company ID, but require a one-time review of financial terms before invoices use scanned files.
 - [RTL contract date controls](rtl-contract-date-controls.md) — native date segments can overlap placeholders in Arabic dialogs; keep contract dates visibly ISO without changing submitted days.
 - [Perfume source fidelity](perfume-source-fidelity.md) — preserve bilingual source differences and textual prices without changing sales data.
+- [Product reference direction](product-reference-direction.md) — explicit desktop right-details/left-image requirement overrides the recording’s opposite orientation.

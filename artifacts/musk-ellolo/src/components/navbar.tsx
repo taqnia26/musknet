@@ -5,6 +5,7 @@ import { ShoppingBag, User, Search, Menu, X, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useGetCart, useListCategories } from '@workspace/api-client-react';
 import { RiyalSymbol } from '@/components/money';
+import { cn } from '@/lib/utils';
 
 const siteAsset = (filename: string) => `${import.meta.env.BASE_URL}site-assets/${filename}`;
 
@@ -14,6 +15,21 @@ export function Navbar() {
   const [location] = useLocation();
   const { data: cart } = useGetCart();
   const { data: categories } = useListCategories();
+
+  const isProductRoute = location.startsWith('/products/');
+
+  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
+
+  const currencies = [
+    { code: 'BHD', ar: 'دينار بحريني', en: 'BHD' },
+    { code: 'EUR', ar: 'يورو', en: 'EUR' },
+    { code: 'GBP', ar: 'جنيه استرليني', en: 'GBP' },
+    { code: 'KWD', ar: 'دينار كويتي', en: 'KWD' },
+    { code: 'OMR', ar: 'ريال عماني', en: 'OMR' },
+    { code: 'QAR', ar: 'ريال قطري', en: 'QAR' },
+    { code: 'SAR', ar: 'ريال سعودي', en: 'SAR' },
+    { code: 'USD', ar: 'دولار أمريكي', en: 'USD' },
+  ];
 
   const cartItemCount = cart?.itemCount || 0;
 
@@ -47,15 +63,15 @@ export function Navbar() {
   ];
 
   return (
-    <div className="w-full flex flex-col">
+    <div className={cn("w-full flex flex-col", isProductRoute && "product-navbar")}>
       {/* Top Bar */}
-      <div className="hidden w-full border-b border-gray-100 bg-white px-4 py-2 text-xs text-gray-500 md:flex md:items-center md:justify-between lg:px-8">
+      <div className={cn("w-full border-b border-gray-100 bg-white px-4 py-2 text-xs text-gray-500 md:flex md:items-center md:justify-between lg:px-8", isProductRoute ? "flex items-center justify-start" : "hidden")}>
         <div className="flex min-w-0 items-center">
           {topLinks.map((link, index) => (
             <Link
               key={link.href}
               href={link.href}
-              className={`inline-flex min-h-8 items-center justify-center px-3 text-center transition-colors hover:text-black ${
+              className={`hidden md:inline-flex min-h-8 items-center justify-center px-3 text-center transition-colors hover:text-black ${
                 index > 0 ? 'border-s border-gray-300' : ''
               }`}
             >
@@ -68,11 +84,20 @@ export function Navbar() {
           >
             {lang === 'ar' ? 'English' : 'العربية'}
           </button>
-          <span className="inline-flex min-h-8 items-center justify-center border-s border-gray-300 px-3 text-center">
-            <RiyalSymbol className="mx-1" /> {t('ريال سعودي', 'Saudi riyals')}
-          </span>
+          {isProductRoute ? (
+            <button 
+              onClick={() => setIsCurrencyOpen(true)}
+              className="inline-flex min-h-8 items-center justify-center border-s border-gray-300 px-3 text-center hover:text-black cursor-pointer"
+            >
+              <RiyalSymbol className="mx-1" /> {t('ريال سعودي', 'Saudi riyals')}
+            </button>
+          ) : (
+            <span className="inline-flex min-h-8 items-center justify-center border-s border-gray-300 px-3 text-center">
+              <RiyalSymbol className="mx-1" /> {t('ريال سعودي', 'Saudi riyals')}
+            </span>
+          )}
         </div>
-        <div className="ms-4 flex min-w-0 items-center gap-4">
+        <div className="ms-4 hidden md:flex min-w-0 items-center gap-4">
           <a href="mailto:info@muskellolo.com" className="hover:text-black transition-colors">
             info@muskellolo.com
           </a>
@@ -84,7 +109,7 @@ export function Navbar() {
         <div className="flex h-20 min-w-0 items-center justify-between px-4 md:h-24 lg:px-8">
           
           {/* Mobile Menu Button */}
-          <div className="order-3 flex min-w-0 flex-1 justify-end lg:hidden">
+          <div className={cn("flex min-w-0 flex-1 lg:hidden", isProductRoute ? "order-1 justify-start" : "order-3 justify-end")}>
             <Button
               variant="ghost"
               size="icon"
@@ -94,10 +119,11 @@ export function Navbar() {
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
+            {isProductRoute && <Link href="/products" aria-label={t('البحث عن المنتجات', 'Search products')} className="inline-flex h-11 w-11 items-center justify-center"><Search className="h-5 w-5" /></Link>}
           </div>
 
           {/* Logo */}
-          <div className="order-2 flex min-w-0 flex-1 justify-start lg:order-1">
+          <div className={cn("order-2 flex min-w-0 flex-1 lg:order-1", isProductRoute ? "justify-center lg:justify-start" : "justify-start")}>
             <Link href="/">
               <img 
                 src={siteAsset('Ca44RuZ7R2vL2wTsJKCO2bG6rWGMyqxB0CVdsvxb-63014f950a.png')} 
@@ -131,10 +157,10 @@ export function Navbar() {
           </nav>
 
           {/* Actions */}
-          <div className="order-1 flex min-w-0 flex-1 items-center justify-end gap-0 text-black md:gap-1 lg:order-3 lg:gap-3 xl:gap-5">
-            <button aria-label="Search" className="min-h-11 min-w-11 p-2 transition-opacity hover:opacity-70">
+          <div className={cn("flex min-w-0 flex-1 items-center justify-end gap-0 text-black md:gap-1 lg:order-3 lg:gap-3 xl:gap-5", isProductRoute ? "order-3" : "order-1")}>
+            <Link href="/products" aria-label="Search" className={cn("min-h-11 min-w-11 p-2 transition-opacity hover:opacity-70", isProductRoute && "hidden lg:inline-flex lg:items-center lg:justify-center")}>
               <Search className="h-5 w-5" />
-            </button>
+            </Link>
             <Link href="/account" aria-label="Account" className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 transition-opacity hover:opacity-70">
               <User className="h-5 w-5" />
             </Link>
@@ -181,6 +207,67 @@ export function Navbar() {
           </div>
         )}
       </header>
+
+      {/* Currency Bottom Sheet (Mobile) */}
+      {isCurrencyOpen && (
+        <div className="fixed inset-0 z-[60] flex flex-col justify-end items-center bg-black/50" onMouseDown={(e) => { if (e.target === e.currentTarget) setIsCurrencyOpen(false); }} onKeyDown={(e) => { if (e.key === 'Escape') setIsCurrencyOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="currency-title" className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-md flex flex-col max-h-[85dvh] md:mb-8 animate-in slide-in-from-bottom-full duration-300">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div className="w-8"></div>
+              <h2 id="currency-title" className="font-bold text-lg text-black">{t('العملة', 'Currency')}</h2>
+              <button 
+                autoFocus
+                onClick={() => setIsCurrencyOpen(false)}
+                aria-label={t('إغلاق', 'Close')}
+                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-black transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className="px-5 pt-3 text-sm text-gray-500">{t('الريال السعودي هو العملة الوحيدة المدعومة حالياً', 'SAR is the only currently supported currency')}</p>
+            <div className="overflow-y-auto p-2">
+              {currencies.map(c => (
+                <label 
+                  key={c.code} 
+                  className={cn(
+                    "flex items-center justify-between px-4 py-4 rounded-xl transition-colors",
+                    c.code === 'SAR' ? "bg-gray-50 cursor-pointer" : "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <span className={cn("text-base", c.code === 'SAR' ? "text-black font-bold" : "text-gray-600")}>
+                    {t(c.ar, c.en)} {c.code !== 'SAR' && <span className="text-xs">{t('(غير متاح)', '(Unavailable)')}</span>}
+                  </span>
+                  <div className={cn(
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                    c.code === 'SAR' ? "border-[#050f2c] bg-[#050f2c]" : "border-gray-300"
+                  )}>
+                    {c.code === 'SAR' && <div className="w-2 h-2 bg-white rounded-full" />}
+                  </div>
+                  <input 
+                    type="radio" 
+                    name="currency" 
+                    value={c.code} 
+                    checked={c.code === 'SAR'}
+                    disabled={c.code !== 'SAR'}
+                    onChange={() => {}}
+                    className="sr-only"
+                  />
+                </label>
+              ))}
+            </div>
+            
+            <div className="p-5 border-t border-gray-100">
+              <Button 
+                className="w-full bg-[#050f2c] text-white hover:bg-black font-bold h-14 rounded-xl text-lg" 
+                onClick={() => setIsCurrencyOpen(false)}
+              >
+                {t('تأكيد', 'Confirm')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

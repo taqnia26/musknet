@@ -799,3 +799,13 @@ html.dark.admin-route .invoice-sheet .invoice-logo-white { display: block; }
   html.dark.admin-route .invoice-sheet .invoice-logo-white { display: none; }
 }
 }
+
+@layer utilities {
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
