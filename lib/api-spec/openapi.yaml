@@ -981,6 +981,27 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Allocation or stock conflict, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/{id}/pdf/{language}:
+    get:
+      operationId: adminDownloadInvoicePdf
+      summary: Generate and download a fresh invoice PDF in the selected language
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/AdminId"
+        - name: language
+          in: path
+          required: true
+          schema: { type: string, enum: [ar, en] }
+      responses:
+        "200":
+          description: Freshly generated invoice PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /admin/invoices/{id}:
     patch:
       operationId: adminUpdateInvoice
@@ -3757,6 +3778,7 @@ components:
       required: [recipient]
       properties:
         recipient: { type: string, pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", maxLength: 320 }
+        language: { type: string, enum: [ar, en], default: ar }
     InvoiceEmailDelivery:
       type: object
       required: [id, invoiceId, recipient, status, errorMessage, sentByAdminId, sentByName, attemptedAt]

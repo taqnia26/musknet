@@ -345,6 +345,12 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
 export const getListCategoriesUrl = () => {
 
 
@@ -415,13 +421,6 @@ export function useListCategories<TData = Awaited<ReturnType<typeof listCategori
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getListProductsUrl = (params?: ListProductsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -499,13 +498,6 @@ export function useListProducts<TData = Awaited<ReturnType<typeof listProducts>>
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
-
-
-
-
-
-
 export const getGetProductUrl = (slug: string,) => {
 
 
@@ -6450,6 +6442,88 @@ export const useAdminCreateExhibitionInvoice = <TError = ErrorType<BadRequestRes
       > => {
       return useMutation(getAdminCreateExhibitionInvoiceMutationOptions(options));
     }
+
+export const getAdminDownloadInvoicePdfUrl = (id: number,
+    language: 'ar' | 'en',) => {
+
+
+
+
+  return `/api/admin/invoices/${id}/pdf/${language}`
+}
+
+/**
+ * @summary Generate and download a fresh invoice PDF in the selected language
+ */
+export const adminDownloadInvoicePdf = async (id: number,
+    language: 'ar' | 'en', options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getAdminDownloadInvoicePdfUrl(id,language),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDownloadInvoicePdfQueryKey = (id: number,
+    language: 'ar' | 'en',) => {
+    return [
+    `/api/admin/invoices/${id}/pdf/${language}`
+    ] as const;
+    }
+
+
+export const getAdminDownloadInvoicePdfQueryOptions = <TData = Awaited<ReturnType<typeof adminDownloadInvoicePdf>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>>(id: number,
+    language: 'ar' | 'en', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminDownloadInvoicePdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminDownloadInvoicePdfQueryKey(id,language);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminDownloadInvoicePdf>>> = ({ signal }) => adminDownloadInvoicePdf(id,language, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && language !== null && language !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminDownloadInvoicePdf>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminDownloadInvoicePdfQueryResult = NonNullable<Awaited<ReturnType<typeof adminDownloadInvoicePdf>>>
+export type AdminDownloadInvoicePdfQueryError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>
+
+
+/**
+ * @summary Generate and download a fresh invoice PDF in the selected language
+ */
+
+export function useAdminDownloadInvoicePdf<TData = Awaited<ReturnType<typeof adminDownloadInvoicePdf>>, TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse>>(
+ id: number,
+    language: 'ar' | 'en', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminDownloadInvoicePdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminDownloadInvoicePdfQueryOptions(id,language,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getAdminUpdateInvoiceUrl = (id: number,) => {
 

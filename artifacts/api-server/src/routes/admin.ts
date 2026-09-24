@@ -1900,6 +1900,54 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
   res.json(Api.AdminListInvoicesResponse.parse(enriched));
 }));
 
+router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminDownloadInvoicePdfParams, req.params, res); if (!params) return;
+  const [invoice] = await db.select({
+    id: invoicesTable.id,
+    invoiceNumber: invoicesTable.invoiceNumber,
+    orderNumber: ordersTable.orderNumber,
+    sellerName: invoicesTable.sellerName,
+    sellerVatNumber: invoicesTable.sellerVatNumber,
+    taxTreatment: invoicesTable.taxTreatment,
+    vatRate: invoicesTable.vatRate,
+    contractDiscountPercent: invoicesTable.contractDiscountPercent,
+    buyerName: invoicesTable.buyerName,
+    buyerAddress: invoicesTable.buyerAddress,
+    buyerTaxNumber: invoicesTable.buyerTaxNumber,
+    buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
+    issueDatetime: invoicesTable.issueDatetime,
+    dueDate: invoicesTable.dueDate,
+    subtotal: invoicesTable.subtotal,
+    discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
+    shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
+    vatAmount: invoicesTable.vatAmount,
+    totalAmount: invoicesTable.totalAmount,
+    qrCodeData: invoicesTable.qrCodeData,
+  }).from(invoicesTable)
+    .leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
+    .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt)))
+    .limit(1);
+  if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
+  const items = await db.select().from(invoiceItemsTable)
+    .where(eq(invoiceItemsTable.invoiceId, invoice.id)).orderBy(invoiceItemsTable.id);
+  const payments = await db.select({ amount: receivablePaymentsTable.amount })
+    .from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoice.id));
+  const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
+  const pdf = await createInvoicePdf({
+    ...invoice,
+    vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
+    contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+    items,
+    paidAmount,
+    outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100),
+  }, params.language);
+  const safeInvoiceNumber = invoice.invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "-");
+  res.type("application/pdf")
+    .setHeader("Cache-Control", "no-store")
+    .setHeader("Content-Disposition", `attachment; filename="${safeInvoiceNumber}.pdf"`)
+    .send(pdf);
+}));
+
 router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateDistributorInvoiceBody, req.body, res); if (!body) return;
   try {
@@ -2024,7 +2072,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
      items, paidAmount, outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100),
    };
   try {
-    const pdf = await createInvoicePdf(emailInvoice);
+     const pdf = await createInvoicePdf(emailInvoice, body.language ?? "ar");
     const providerMessageId = await sendInvoiceEmail({ recipient: body.recipient, invoice: emailInvoice, pdf });
     const [delivery] = await db.insert(invoiceEmailDeliveriesTable).values({
       invoiceId: invoice.id, recipient: body.recipient.toLowerCase(), status: "sent", providerMessageId,

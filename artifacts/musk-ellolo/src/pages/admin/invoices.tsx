@@ -7,6 +7,7 @@ import {
   useAdminArchiveInvoice,
   useAdminListInvoiceEmailDeliveries,
   useAdminSendInvoiceEmail,
+  adminDownloadInvoicePdf,
   useGetAdminMe,
   getAdminListInvoiceEmailDeliveriesQueryKey,
   getAdminGetInvoiceQrQueryKey,
@@ -181,7 +182,7 @@ function InvoiceTemplate({
               </div>
               <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t(`خصم العقد (${invoice.contractDiscountPercent ?? 0}%)`, `Contract discount (${invoice.contractDiscountPercent ?? 0}%)`)}</span>
-                <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
+                <span className="font-mono"><Money value={-(invoice.discountAmount ?? 0)} lang={lang} fractionDigits={2} /></span>
               </div>
               {!internationalDistributor && <>
                 <div className="flex justify-between text-gray-600 px-2 text-sm">
@@ -221,7 +222,7 @@ function InvoiceTemplate({
               </div>}
               {(!inclusiveOrderSnapshot || internationalDistributor) && <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t('الخصم', 'Discount')}</span>
-                <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
+                 <span className="font-mono"><Money value={-(invoice.discountAmount ?? 0)} lang={lang} fractionDigits={2} /></span>
               </div>}
             </>
           )}
@@ -263,7 +264,9 @@ function InvoicePreviewDialog({
   onOpenChange: (o: boolean) => void;
   printOnReady?: boolean;
 }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const { toast } = useToast();
+  const [downloading, setDownloading] = useState(false);
   
   const { data: qrBlob } = useAdminGetInvoiceQr(
     invoice?.id as number,
@@ -300,12 +303,35 @@ function InvoicePreviewDialog({
     return () => window.clearTimeout(timer);
   }, [open, printOnReady, qrReady]);
 
+  const downloadPdf = async () => {
+    if (!invoice || downloading) return;
+    setDownloading(true);
+    try {
+      const pdf = await adminDownloadInvoicePdf(invoice.id, lang);
+      const url = URL.createObjectURL(pdf);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${invoice.invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, '-')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      toast({ title: t('تعذر تنزيل الفاتورة', 'Could not download invoice'), variant: 'destructive' });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-muted/20 border-none shadow-2xl sm:max-h-[90vh] flex flex-col">
          <div className="print-hide flex justify-between items-center p-4 pe-14 bg-background border-b shrink-0">
           <DialogTitle className="text-lg font-bold">{t('معاينة الفاتورة', 'Invoice Preview')} - {invoice?.invoiceNumber}</DialogTitle>
           <div className="flex gap-2">
+             <Button onClick={downloadPdf} variant="outline" size="sm" disabled={downloading || !invoice}>
+               {downloading ? t('جارٍ التنزيل...', 'Downloading...') : t('تنزيل PDF', 'Download PDF')}
+             </Button>
             <Button onClick={() => window.print()} variant="outline" size="sm" className="gap-2">
               <Printer className="w-4 h-4" />
               {t('طباعة', 'Print')}
@@ -454,7 +480,7 @@ function EmailInvoiceDialog({
       return;
     }
     setError(null);
-    mutation.mutate({ id: invoice.id, data: { recipient: email.trim() } }, {
+    mutation.mutate({ id: invoice.id, data: { recipient: email.trim(), language: lang } }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListInvoiceEmailDeliveriesQueryKey(invoice.id) });
         toast({ title: t('تم إرسال الفاتورة بنجاح', 'Invoice sent successfully'), description: email.trim() });

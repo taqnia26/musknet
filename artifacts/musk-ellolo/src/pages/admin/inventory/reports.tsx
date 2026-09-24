@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { BarChart3, AlertCircle, Clock, CheckSquare, Scale, Search, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
-import { formatCurrency, formatInteger } from '@/lib/formatters';
+import { formatInteger } from '@/lib/formatters';
 import { Money } from '@/components/money';
 import { Button } from '@/components/ui/button';
 

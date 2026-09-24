@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -316,15 +317,15 @@ export function CreateDistributorInvoiceDialog() {
             ))}
           </div>
           <div data-testid="distributor-invoice-totals" className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/20 p-4 text-center">
-            <div><p className="text-xs text-muted-foreground">{taxTreatment === 'international' ? t('الإجمالي قبل الخصم', 'Gross before discount') : t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</p><p className="font-semibold">{totals.grossSubtotal.toFixed(2)}</p></div>
-            <div><p className="text-xs text-muted-foreground">{t('الخصم', 'Discount')}{selectedSource ? ` (${discountPercent}%)` : ''}</p><p className="font-semibold">-{totals.discount.toFixed(2)}</p></div>
+            <div><p className="text-xs text-muted-foreground">{taxTreatment === 'international' ? t('الإجمالي قبل الخصم', 'Gross before discount') : t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</p><p className="font-semibold"><Money value={totals.grossSubtotal} lang={lang} fractionDigits={2} /></p></div>
+            <div><p className="text-xs text-muted-foreground">{t('الخصم', 'Discount')}{selectedSource ? ` (${discountPercent}%)` : ''}</p><p className="font-semibold"><Money value={-totals.discount} lang={lang} fractionDigits={2} /></p></div>
             {taxTreatment === 'international' ? (
-              <div><p className="text-xs text-muted-foreground">{t('الإجمالي بعد الخصم', 'Total after discount')}</p><p className="font-bold text-primary">{totals.total.toFixed(2)}</p></div>
+              <div><p className="text-xs text-muted-foreground">{t('الإجمالي بعد الخصم', 'Total after discount')}</p><p className="font-bold text-primary"><Money value={totals.total} lang={lang} fractionDigits={2} /></p></div>
             ) : (
               <>
-                <div><p className="text-xs text-muted-foreground">{t('صافي المبلغ قبل الضريبة', 'Net subtotal')}</p><p className="font-semibold">{totals.subtotal.toFixed(2)}</p></div>
-                <div><p className="text-xs text-muted-foreground">{vatRate ? t(`ضريبة القيمة المضافة المستخرجة (${vatRate}%)`, `VAT included (${vatRate}%)`) : t('ضريبة القيمة المضافة (0%)', 'VAT (0%)')}</p><p className="font-semibold">{totals.vat.toFixed(2)}</p></div>
-                <div><p className="text-xs text-muted-foreground">{t('الإجمالي', 'Total')}</p><p className="font-bold text-primary">{totals.total.toFixed(2)}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t('صافي المبلغ قبل الضريبة', 'Net subtotal')}</p><p className="font-semibold"><Money value={totals.subtotal} lang={lang} fractionDigits={2} /></p></div>
+                <div><p className="text-xs text-muted-foreground">{vatRate ? t(`ضريبة القيمة المضافة المستخرجة (${vatRate}%)`, `VAT included (${vatRate}%)`) : t('ضريبة القيمة المضافة (0%)', 'VAT (0%)')}</p><p className="font-semibold"><Money value={totals.vat} lang={lang} fractionDigits={2} /></p></div>
+                <div><p className="text-xs text-muted-foreground">{t('الإجمالي', 'Total')}</p><p className="font-bold text-primary"><Money value={totals.total} lang={lang} fractionDigits={2} /></p></div>
               </>
             )}
           </div>

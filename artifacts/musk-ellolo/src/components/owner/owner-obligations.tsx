@@ -11,9 +11,13 @@ import {
 import { useLanguage } from '@/hooks/use-language';
 import { Money } from '@/components/money';
 
-function Value({ value, lang }: { value?: number | string; lang: 'ar' | 'en' }) {
+function Value({ value, lang, isMoney = false }: { value?: number | string; lang: 'ar' | 'en'; isMoney?: boolean }) {
   if (value === undefined || value === '') return <span className="text-[#b2aea5]">—</span>;
-  return <>{typeof value === 'number' ? <Money value={value} lang={lang} /> : value}</>;
+  const numericValue = typeof value === 'number' ? value : Number(value.replace(/,/g, ''));
+  if (typeof value === 'number' || (isMoney && value.trim() !== '' && Number.isFinite(numericValue))) {
+    return <Money value={numericValue} lang={lang} />;
+  }
+  return <>{value}</>;
 }
 
 function NameAmountTable({
@@ -38,13 +42,13 @@ function NameAmountTable({
           {rows.map((row, index) => (
             <tr key={`${row.name}-${index}`} className="odd:bg-white even:bg-[#fcfbf8] dark:odd:bg-[#111214] dark:even:bg-[#171819]">
               <td className="border border-[#ebe7de] px-4 py-3 dark:border-[#2b2d31]">{row.name}</td>
-              <td className="border border-[#ebe7de] px-4 py-3 font-medium tabular-nums dark:border-[#2b2d31]"><Value value={row.amount} lang={lang} /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 font-medium tabular-nums dark:border-[#2b2d31]"><Value value={row.amount} lang={lang} isMoney /></td>
             </tr>
           ))}
           {total !== undefined && (
             <tr className="bg-[#f5edcf] font-bold text-[#6e5605] dark:bg-[#2d291b] dark:text-[#ebc94f]">
               <td className="border border-[#dfd4ad] px-4 py-3 dark:border-[#484027]">الإجمالي</td>
-              <td className="border border-[#dfd4ad] px-4 py-3 tabular-nums dark:border-[#484027]"><Value value={total} lang={lang} /></td>
+              <td className="border border-[#dfd4ad] px-4 py-3 tabular-nums dark:border-[#484027]"><Value value={total} lang={lang} isMoney /></td>
             </tr>
           )}
         </tbody>
@@ -67,9 +71,9 @@ function DetailTable({ rows, lang }: { rows: ObligationDetailRow[]; lang: 'ar' |
           {rows.map((row, index) => (
             <tr key={`${row.name}-${index}`} className="odd:bg-white even:bg-[#fcfbf8] dark:odd:bg-[#111214] dark:even:bg-[#171819]">
               <td className="border border-[#ebe7de] px-4 py-3 font-medium dark:border-[#2b2d31]">{row.name}</td>
-              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.amount} lang={lang} /></td>
-              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.paid} lang={lang} /></td>
-              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.remaining} lang={lang} /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.amount} lang={lang} isMoney /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.paid} lang={lang} isMoney /></td>
+              <td className="border border-[#ebe7de] px-4 py-3 tabular-nums dark:border-[#2b2d31]"><Value value={row.remaining} lang={lang} isMoney /></td>
               <td className="border border-[#ebe7de] px-4 py-3 dark:border-[#2b2d31]"><Value value={row.paymentAccount} lang={lang} /></td>
               <td className="border border-[#ebe7de] px-4 py-3 dark:border-[#2b2d31]"><Value value={row.due} lang={lang} /></td>
             </tr>

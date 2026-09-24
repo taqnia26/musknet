@@ -119,8 +119,8 @@ export function CreateExhibitionInvoiceDialog() {
         </div>)}
         {(exhibitionsError || allocationsError) && <p role="alert" className="text-sm text-destructive">{t('تعذر تحميل المعارض أو المنتجات المخصصة. حاول إعادة فتح النافذة.', 'Could not load exhibitions or allocations. Please reopen the form.')}</p>}
         <div className="grid grid-cols-3 gap-2 rounded-md border bg-muted/20 p-3 text-center text-sm">
-          <div>{t('المجموع قبل الضريبة', 'Subtotal before VAT')}<strong className="block">{totals.subtotal.toFixed(2)}</strong></div>
-          <div>{t('ضريبة القيمة المضافة المشمولة (15%)', 'VAT included (15%)')}<strong className="block">{totals.vat.toFixed(2)}</strong></div>
+          <div>{t('المجموع قبل الضريبة', 'Subtotal before VAT')}<strong className="block"><Money value={totals.subtotal} lang={lang} fractionDigits={2} /></strong></div>
+          <div>{t('ضريبة القيمة المضافة المشمولة (15%)', 'VAT included (15%)')}<strong className="block"><Money value={totals.vat} lang={lang} fractionDigits={2} /></strong></div>
           <div>{t('الإجمالي', 'Total')}<strong className="block"><Money value={totals.total} lang={lang} fractionDigits={2} /></strong></div>
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

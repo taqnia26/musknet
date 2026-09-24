@@ -28,7 +28,6 @@ import { Separator } from '@/components/ui/separator';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { formatCurrency } from '@/lib/formatters';
 import {
   Package,
   Truck,

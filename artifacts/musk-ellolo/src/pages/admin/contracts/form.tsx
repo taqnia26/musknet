@@ -6,6 +6,7 @@ import * as z from 'zod';
 import { useAdminGetContract, useAdminCreateContract, useAdminUpdateContract, adminPreviewContract, getAdminListContractsQueryKey, getAdminGetContractQueryKey, DistributorContractInput, ContractPreview, useAdminListSiteContent, getAdminListSiteContentQueryKey, useAdminListDistributors } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Money } from '@/components/money';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -631,7 +632,12 @@ export default function AdminContractForm() {
                   {section.paragraphs.map((paragraph, j) => <p key={j} className="mb-2 whitespace-pre-wrap">{paragraph}</p>)}
                   {section.heading.startsWith('الملحق (أ)') && <div className="overflow-x-auto"><table className="w-full text-sm border-collapse">
                     <thead><tr>{['الباركود', 'المنتج', 'السعر دون ضريبة', 'السعر شامل الضريبة'].map(label => <th key={label} className="border p-2">{label}</th>)}</tr></thead>
-                    <tbody>{preview.products.map(product => <tr key={product.barcode}>{[product.barcode, product.description, product.price, product.priceWithVat].map(cell => <td key={cell} className="border p-2">{cell}</td>)}</tr>)}</tbody>
+                    <tbody>{preview.products.map(product => <tr key={product.barcode}>
+                      <td className="border p-2">{product.barcode}</td>
+                      <td className="border p-2">{product.description}</td>
+                      <td className="border p-2"><Money value={Number(product.price.replace(/[^0-9.-]/g, ''))} lang="ar" /></td>
+                      <td className="border p-2"><Money value={Number(product.priceWithVat.replace(/[^0-9.-]/g, ''))} lang="ar" /></td>
+                    </tr>)}</tbody>
                   </table></div>}
                 </section>)}
               </>}

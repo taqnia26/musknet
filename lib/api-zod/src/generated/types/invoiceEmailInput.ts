@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { InvoiceEmailInputLanguage } from './invoiceEmailInputLanguage';
 
 export interface InvoiceEmailInput {
   /**
@@ -12,4 +13,5 @@ export interface InvoiceEmailInput {
      * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
      */
   recipient: string;
+  language?: InvoiceEmailInputLanguage;
 }

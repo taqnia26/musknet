@@ -35,7 +35,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { formatCurrency, formatInteger, formatPercent } from '@/lib/formatters';
+import { formatInteger, formatPercent } from '@/lib/formatters';
 
 type Performance = {
   orders?: number;

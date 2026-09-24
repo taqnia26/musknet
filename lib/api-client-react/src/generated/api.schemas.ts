@@ -1956,12 +1956,21 @@ export interface AdminInvoiceUpdate {
   buyerAddress?: string | null;
 }
 
+export type InvoiceEmailInputLanguage = typeof InvoiceEmailInputLanguage[keyof typeof InvoiceEmailInputLanguage];
+
+
+export const InvoiceEmailInputLanguage = {
+  ar: 'ar',
+  en: 'en',
+} as const;
+
 export interface InvoiceEmailInput {
   /**
      * @maxLength 320
      * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
      */
   recipient: string;
+  language?: InvoiceEmailInputLanguage;
 }
 
 export type InvoiceEmailDeliveryStatus = typeof InvoiceEmailDeliveryStatus[keyof typeof InvoiceEmailDeliveryStatus];

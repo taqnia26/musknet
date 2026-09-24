@@ -25,24 +25,29 @@ export function Money({
   value,
   lang = 'en',
   fractionDigits,
+  minimumFractionDigits,
+  maximumFractionDigits,
   className = '',
 }: {
   value: DisplayValue;
   lang?: 'ar' | 'en';
   fractionDigits?: number;
+  minimumFractionDigits?: number;
+  maximumFractionDigits?: number;
   className?: string;
 }) {
-  const formatted = fractionDigits === undefined
+  const formatted = fractionDigits === undefined && minimumFractionDigits === undefined && maximumFractionDigits === undefined
     ? formatCurrency(value, lang)
     : new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
+        minimumFractionDigits: fractionDigits ?? minimumFractionDigits ?? 0,
+        maximumFractionDigits: fractionDigits ?? maximumFractionDigits ?? 2,
       }).format(Number(value ?? 0));
   return (
     <span className={`inline-flex items-baseline gap-[0.2em] whitespace-nowrap ${className}`} dir="ltr"
       role="img" aria-label={`${formatted} ${lang === 'ar' ? 'ريال سعودي' : 'Saudi riyals'}`}>
+      {lang === 'ar' && <RiyalSymbol />}
       <span aria-hidden="true">{formatted}</span>
-      <RiyalSymbol />
+      {lang === 'en' && <span aria-hidden="true">SAR</span>}
     </span>
   );
 }

@@ -420,8 +420,8 @@ export default function AdminOrders() {
                                             </div>
                                           </TableCell>
                                           <TableCell className="text-center">{item.quantity}</TableCell>
-                                          <TableCell className="text-end">{item.unitPrice.toFixed(2)}</TableCell>
-                                          <TableCell className="text-end font-semibold">{item.totalPrice.toFixed(2)}</TableCell>
+                                          <TableCell className="text-end"><Money value={item.unitPrice} lang={lang} fractionDigits={2} /></TableCell>
+                                          <TableCell className="text-end font-semibold"><Money value={item.totalPrice} lang={lang} fractionDigits={2} /></TableCell>
                                         </TableRow>
                                       ))}
                                     </TableBody>

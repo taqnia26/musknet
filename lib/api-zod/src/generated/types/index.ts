@@ -290,6 +290,7 @@ export * from './inventoryValuationRow';
 export * from './invoiceEmailDelivery';
 export * from './invoiceEmailDeliveryStatus';
 export * from './invoiceEmailInput';
+export * from './invoiceEmailInputLanguage';
 export * from './journalEntry';
 export * from './journalEntryActor';
 export * from './journalEntryLine';

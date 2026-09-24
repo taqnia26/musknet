@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createInvoicePdf, getInvoiceTotalRows, invoiceBusinessIssueDate } from "./invoice-email";
+import { createInvoicePdf, getInvoiceTotalRows, invoiceBusinessIssueDate, invoiceMoneyLabel } from "./invoice-email";
 
 const baseInvoice = {
   invoiceNumber: "TEST-100",
@@ -70,6 +70,17 @@ describe("invoice email PDF", () => {
     ]);
   });
 
+  it("uses the official riyal symbol for Arabic and a trailing SAR label for English", async () => {
+    expect(invoiceMoneyLabel(123.45, "ar")).toBe("123.45");
+    expect(invoiceMoneyLabel(123.45, "en")).toBe("123.45 SAR");
+
+    const invoice = { ...baseInvoice };
+    const arabicPdf = await createInvoicePdf(invoice, "ar");
+    const englishPdf = await createInvoicePdf(invoice, "en");
+    expect(arabicPdf.toString("latin1")).not.toContain(" SAR");
+    expect(englishPdf.equals(arabicPdf)).toBe(false);
+  });
+
   it("embeds the invoice logo and ZATCA QR on a readable light page", async () => {
     const pdf = await createInvoicePdf({
       invoiceNumber: "TEST-100",
@@ -98,7 +109,6 @@ describe("invoice email PDF", () => {
     expect(contents).toContain("/Width 700");
     expect(contents).toContain("/Height 145");
     expect(contents).toContain("/MediaBox [0 0 595.28 841.89]");
-    expect(contents).not.toContain(" SAR");
     expect(pdf.length).toBeGreaterThan(2000);
   });
 });

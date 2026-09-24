@@ -866,6 +866,17 @@ describe.sequential("admin route authorization", () => {
       .expect(200);
     expect(Buffer.from(qr.body).subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
 
+    const downloadedPdf = await request(app)
+      .get(`/api/admin/invoices/${invoice.id}/pdf/en`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .expect("Content-Type", /application\/pdf/)
+      .expect(200);
+    expect(downloadedPdf.headers["content-disposition"]).toContain("attachment;");
+    expect(downloadedPdf.headers["cache-control"]).toBe("no-store");
+
+    await request(app).get(`/api/admin/invoices/${invoice.id}/pdf/fr`)
+      .set("Authorization", `Bearer ${superToken}`).expect(400);
+
     await request(app).get("/api/admin/invoices")
       .set("Authorization", `Bearer ${viewerToken}`).expect(403);
     await request(app).get(`/api/admin/invoices/${invoice.id}/qr`)
@@ -881,7 +892,7 @@ describe.sequential("admin route authorization", () => {
 
     await request(app).post(`/api/admin/invoices/${invoice.id}/email`)
       .set("Authorization", `Bearer ${superToken}`)
-      .send({ recipient: "client-success@example.com" })
+      .send({ recipient: "client-success@example.com", language: "en" })
       .expect(201);
     await request(app).post(`/api/admin/invoices/${invoice.id}/email`)
       .set("Authorization", `Bearer ${superToken}`)
@@ -896,6 +907,7 @@ describe.sequential("admin route authorization", () => {
       expect.objectContaining({ recipient: "client-retry@example.com", status: "failed", errorMessage: "provider unavailable", sentByAdminId: superId }),
     ]));
     expect(pdf).toHaveBeenCalledTimes(2);
+    expect(pdf.mock.calls.map((call) => call[1])).toEqual(["en", "ar"]);
     expect(send).toHaveBeenCalledTimes(2);
     pdf.mockRestore();
     send.mockRestore();

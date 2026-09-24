@@ -17,6 +17,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { BookOpen, ChevronDown, ChevronRight, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { hasPermission } from '@/lib/permissions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -53,8 +54,8 @@ const journalSchema = z.object({
 
 type JournalForm = z.infer<typeof journalSchema>;
 
-function money(value: string) {
-  return Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+function money(value: string | number, lang: 'ar' | 'en') {
+  return <Money value={value} lang={lang} minimumFractionDigits={2} maximumFractionDigits={4} />;
 }
 
 function errorMessage(error: unknown) {
@@ -105,7 +106,7 @@ function AccountsTab() {
 }
 
 function EntryDetails({ entry, accounts }: { entry: AdminJournalEntry; accounts: AccountingAccount[] }) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const byId = new Map(accounts.map((account) => [account.id, account]));
   return (
     <div className="space-y-3 bg-muted/30 p-4" data-testid={`details-journal-${entry.id}`}>
@@ -124,8 +125,8 @@ function EntryDetails({ entry, accounts }: { entry: AdminJournalEntry; accounts:
                 <TableCell>{line.lineNumber}</TableCell>
                 <TableCell>{account ? `${account.code} · ${account.nameAr} / ${account.nameEn}` : line.accountId}</TableCell>
                 <TableCell>{line.description || '—'}</TableCell>
-                <TableCell className="font-mono">{money(line.debit)}</TableCell>
-                <TableCell className="font-mono">{money(line.credit)}</TableCell>
+                <TableCell className="font-mono">{money(line.debit, lang)}</TableCell>
+                <TableCell className="font-mono">{money(line.credit, lang)}</TableCell>
               </TableRow>
             );
           })}
@@ -229,7 +230,7 @@ function EntriesTab({ canEdit }: { canEdit: boolean }) {
 }
 
 function ManualEntryTab() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: accounts = [] } = useAdminListAccountingAccounts();
@@ -283,7 +284,7 @@ function ManualEntryTab() {
               <Button type="button" variant="outline" onClick={() => append({ accountId: 0, description: '', debit: '0', credit: '0' })} data-testid="button-add-entry-line"><Plus className="me-2 h-4 w-4" />{t('إضافة سطر', 'Add line')}</Button>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-md bg-muted p-4">
-              <div className="flex gap-6 font-mono" data-testid="text-entry-totals"><span>{t('مدين', 'Debit')}: {money(String(totals.debit))}</span><span>{t('دائن', 'Credit')}: {money(String(totals.credit))}</span></div>
+               <div className="flex gap-6 font-mono" data-testid="text-entry-totals"><span>{t('مدين', 'Debit')}: {money(totals.debit, lang)}</span><span>{t('دائن', 'Credit')}: {money(totals.credit, lang)}</span></div>
               <Badge variant={totals.debit > 0 && totals.debit === totals.credit ? 'default' : 'destructive'}>{totals.debit > 0 && totals.debit === totals.credit ? t('متوازن', 'Balanced') : t('غير متوازن', 'Unbalanced')}</Badge>
             </div>
             <Button type="submit" disabled={mutation.isPending} data-testid="button-post-journal">{mutation.isPending ? t('جاري الترحيل...', 'Posting...') : t('ترحيل القيد', 'Post entry')}</Button>
@@ -295,7 +296,7 @@ function ManualEntryTab() {
 }
 
 function TrialBalanceTab() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [asOf, setAsOf] = useState(today());
   const trialParams = { as_of: asOf };
   const { data: balance, isLoading } = useAdminGetTrialBalance(trialParams, {
@@ -312,8 +313,8 @@ function TrialBalanceTab() {
           <TableBody>
             {isLoading || !balance ? <TableRow><TableCell colSpan={6} className="text-center" data-testid="status-trial-loading">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> : (
               <>
-                {balance.accounts.map((account) => <TableRow key={account.accountId} data-testid={`row-trial-account-${account.accountId}`}><TableCell><div>{account.accountCode} · {account.accountNameAr}</div><div className="text-xs text-muted-foreground">{account.accountNameEn}</div></TableCell><TableCell>{account.accountType}</TableCell><TableCell className="font-mono">{money(account.openingBalance)}</TableCell><TableCell className="font-mono">{money(account.totalDebit)}</TableCell><TableCell className="font-mono">{money(account.totalCredit)}</TableCell><TableCell className="font-mono">{money(account.closingBalance)}</TableCell></TableRow>)}
-                <TableRow className="font-bold"><TableCell colSpan={3}>{t('الإجمالي', 'Total')}</TableCell><TableCell data-testid="text-trial-total-debit">{money(balance.totalDebit)}</TableCell><TableCell data-testid="text-trial-total-credit">{money(balance.totalCredit)}</TableCell><TableCell><Badge variant={balance.isBalanced ? 'default' : 'destructive'}>{balance.isBalanced ? t('متوازن', 'Balanced') : t('غير متوازن', 'Unbalanced')}</Badge></TableCell></TableRow>
+                 {balance.accounts.map((account) => <TableRow key={account.accountId} data-testid={`row-trial-account-${account.accountId}`}><TableCell><div>{account.accountCode} · {account.accountNameAr}</div><div className="text-xs text-muted-foreground">{account.accountNameEn}</div></TableCell><TableCell>{account.accountType}</TableCell><TableCell className="font-mono">{money(account.openingBalance, lang)}</TableCell><TableCell className="font-mono">{money(account.totalDebit, lang)}</TableCell><TableCell className="font-mono">{money(account.totalCredit, lang)}</TableCell><TableCell className="font-mono">{money(account.closingBalance, lang)}</TableCell></TableRow>)}
+                 <TableRow className="font-bold"><TableCell colSpan={3}>{t('الإجمالي', 'Total')}</TableCell><TableCell data-testid="text-trial-total-debit">{money(balance.totalDebit, lang)}</TableCell><TableCell data-testid="text-trial-total-credit">{money(balance.totalCredit, lang)}</TableCell><TableCell><Badge variant={balance.isBalanced ? 'default' : 'destructive'}>{balance.isBalanced ? t('متوازن', 'Balanced') : t('غير متوازن', 'Unbalanced')}</Badge></TableCell></TableRow>
               </>
             )}
           </TableBody>

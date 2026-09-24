@@ -3280,6 +3280,17 @@ export const AdminCreateExhibitionInvoiceResponse = zod.object({
 
 
 /**
+ * @summary Generate and download a fresh invoice PDF in the selected language
+ */
+export const AdminDownloadInvoicePdfParams = zod.object({
+  "id": zod.coerce.number(),
+  "language": zod.enum(['ar', 'en'])
+})
+
+export const AdminDownloadInvoicePdfResponse = zod.unknown()
+
+
+/**
  * @summary Update editable buyer and due-date details on an issued invoice
  */
 export const AdminUpdateInvoiceParams = zod.object({
@@ -3384,10 +3395,11 @@ export const adminSendInvoiceEmailBodyRecipientMax = 320;
 
 
 export const adminSendInvoiceEmailBodyRecipientRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
-
+export const adminSendInvoiceEmailBodyLanguageDefault = `ar`;
 
 export const AdminSendInvoiceEmailBody = zod.object({
-  "recipient": zod.string().max(adminSendInvoiceEmailBodyRecipientMax).regex(adminSendInvoiceEmailBodyRecipientRegExp)
+  "recipient": zod.string().max(adminSendInvoiceEmailBodyRecipientMax).regex(adminSendInvoiceEmailBodyRecipientRegExp),
+  "language": zod.enum(['ar', 'en']).default(adminSendInvoiceEmailBodyLanguageDefault)
 })
 
 export const AdminSendInvoiceEmailResponse = zod.object({

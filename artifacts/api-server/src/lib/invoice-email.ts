@@ -31,7 +31,11 @@ type InvoiceForEmail = {
   items: Array<{ productName: string; quantity: number; unitPrice: number; totalAmount: number }>;
 };
 
+export type InvoiceLanguage = "ar" | "en";
+
 const money = (value: number) => value.toFixed(2);
+export const invoiceMoneyLabel = (value: number, language: InvoiceLanguage) =>
+  language === "en" ? `${money(value)} SAR` : money(value);
 export const invoiceBusinessIssueDate = (issueDatetime: Date) => saudiCalendarDate(issueDatetime);
 const invoiceLogo = [
   resolve(dirname(fileURLToPath(import.meta.url)), "../../musk-ellolo/public/site-assets/invoice-logo-black.png"),
@@ -57,6 +61,26 @@ function drawRiyalSymbol(document: PDFKit.PDFDocument, x: number, y: number, siz
   const drawing = document.save().translate(x, y).scale(size / 1124.14, size / 1124.14);
   for (const path of riyalSymbolPaths) drawing.path(path).fill("#231f20");
   drawing.restore();
+}
+
+function drawInvoiceMoney(
+  document: PDFKit.PDFDocument,
+  value: number,
+  language: InvoiceLanguage,
+  x: number,
+  y: number,
+  width: number,
+  fontSize: number,
+) {
+  if (language === "ar") {
+    const amount = money(value);
+    const amountWidth = document.widthOfString(amount);
+    const amountX = x + width - amountWidth;
+    drawRiyalSymbol(document, amountX - fontSize - 3, y, fontSize);
+    document.text(amount, amountX, y, { width: amountWidth + 1, lineBreak: false });
+    return;
+  }
+  document.text(invoiceMoneyLabel(value, language), x, y, { width, align: "right" });
 }
 
 export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, number]> {
@@ -93,7 +117,7 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
   return totalRows;
 }
 
-export async function createInvoicePdf(invoice: InvoiceForEmail) {
+export async function createInvoicePdf(invoice: InvoiceForEmail, language: InvoiceLanguage = "ar") {
   if (!invoiceLogo) throw new Error("Invoice brand logo is missing from the application assets");
   if (!invoiceFooter) throw new Error("Invoice footer is missing from the application assets");
   const qr = await QRCode.toBuffer(invoice.qrCodeData, { type: "png", errorCorrectionLevel: "M", margin: 2 });
@@ -142,8 +166,7 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
     if (y > 665) { document.addPage(); y = 50; }
     document.fillColor("#111827").font("Helvetica").fontSize(9).text(item.productName, 54, y + 7, { width: 230 });
     document.fillColor("#4b5563").text(String(item.quantity), 300, y + 7, { width: 45, align: "center" });
-    drawRiyalSymbol(document, 347, y + 7, 10);
-    document.text(money(item.unitPrice), 450, y + 7, { width: 90, align: "right" });
+    drawInvoiceMoney(document, item.unitPrice, language, 347, y + 7, 193, 10);
     document.moveTo(42, y + 25).lineTo(right, y + 25).strokeColor("#e5e7eb").stroke();
     y += 29;
   }
@@ -160,14 +183,13 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   const totalsX = 325;
   totalRows.forEach(([label, value], index) => {
     document.fillColor("#4b5563").font("Helvetica").fontSize(9).text(String(label), totalsX, y + index * 23, { width: 110 });
-    drawRiyalSymbol(document, 437, y + index * 23, 10);
-    document.text(money(Number(value)), 450, y + index * 23, { width: 90, align: "right" });
+    drawInvoiceMoney(document, Number(value), language, 437, y + index * 23, 103, 10);
   });
   const totalY = y + totalRows.length * 23 + 2;
   document.roundedRect(totalsX - 8, totalY, 223, 35, 4).fill("#f5f5f4");
   document.fillColor("#111827").font("Helvetica-Bold").fontSize(13).text("TOTAL", totalsX, totalY + 11);
-  drawRiyalSymbol(document, 432, totalY + 12, 13);
-  document.fillColor("#292728").text(money(invoice.totalAmount), 450, totalY + 11, { width: 90, align: "right" });
+  document.fillColor("#292728");
+  drawInvoiceMoney(document, invoice.totalAmount, language, 432, totalY + 11, 108, 13);
   const pages = document.bufferedPageRange();
   for (let index = pages.start; index < pages.start + pages.count; index++) {
     document.switchToPage(index);

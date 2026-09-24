@@ -117,7 +117,12 @@ function OverviewTab() {
                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
                  <XAxis dataKey="month" />
                  <YAxis width={80} />
-                 <ChartTooltip content={<ChartTooltipContent />} />
+                 <ChartTooltip content={<ChartTooltipContent formatter={(value, name, item) => (
+                   <div className="flex w-full items-center justify-between gap-3">
+                     <span className="text-muted-foreground">{chartConfig[item.dataKey as keyof typeof chartConfig]?.label ?? name}</span>
+                     <Money value={Number(value)} lang={lang} />
+                   </div>
+                 )} />} />
                  <ChartLegend content={<ChartLegendContent />} />
                  <Line type="monotone" dataKey="revenue" stroke="var(--color-revenue)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                  <Line type="monotone" dataKey="expenses" stroke="var(--color-expenses)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />

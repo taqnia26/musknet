@@ -16,7 +16,7 @@ import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getListInventoryCycleCountsQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
-import { formatCurrency, formatInteger } from '@/lib/formatters';
+import { formatInteger } from '@/lib/formatters';
 import { Money } from '@/components/money';
 
 export default function AdminInventoryCounts() {

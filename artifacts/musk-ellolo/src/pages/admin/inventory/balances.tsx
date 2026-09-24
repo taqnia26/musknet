@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
+import { Money } from '@/components/money';
 import { 
   useAdminListInventory, 
   useAdminCreateInventoryProduct, 
@@ -509,7 +510,7 @@ export default function AdminInventoryBalances() {
                    <TableCell>{item.operationalType} · {item.unitOfMeasure}{!item.sellable && <Badge variant="outline" className="ms-1">{t('غير قابل للبيع', 'Non-sellable')}</Badge>}</TableCell>
                     <TableCell className="font-bold">{item.stockQuantity}</TableCell>
                     <TableCell>{item.reorderPoint}</TableCell>
-                    <TableCell>{item.price}</TableCell>
+                    <TableCell><Money value={item.price} lang={lang} /></TableCell>
                     <TableCell>
                       <Badge variant={item.stockStatus === 'out' ? 'destructive' : item.stockStatus === 'low' ? 'outline' : 'secondary'}
                              className={item.stockStatus === 'low' ? 'border-amber-500 text-amber-500' : ''}>
