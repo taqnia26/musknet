@@ -1,0 +1,20 @@
+# AUDIT REQUEST — investigation only, do not modify anything
+
+## Context
+
+The previous audit (product-identity mismatch between development and production) showed that product identity — name, slug, SKU — is not centralized in one place: `perfume-description-manifest.ts` hardcodes its own copy, and we already know at least `gifting_issues.description_snapshot` and invoice/order line items store their own copy of a product's name at the time of the transaction.
+
+Before deciding how to handle product renames, catalog corrections, or any future data-correction script safely, we need a complete map of everywhere a product's name (Arabic or English), slug, or SKU is stored or hardcoded — not just the canonical `storefront_products` row.
+
+## What to investigate (read-only — do not edit any code, schema, or data)
+
+1. **Database**: every table/column that stores a product's name (`nameAr`/`nameEn`), `slug`, `sku`, or `barcode` — the canonical `storefront_products` row plus any snapshot or copy kept elsewhere (order items, invoice items, gifting issues, exhibition products, contracts, cart data, anywhere else).
+2. **Application code**: every place a product name, slug, or SKU is hardcoded as a literal string or object (like `perfume-description-manifest.ts`) rather than read from the database at request time — scripts, seed files, tests, fixtures, frontend constants.
+3. For each snapshot or duplicate found, say which kind it is:
+   - a **deliberate historical snapshot** that should stay frozen even after the live product is renamed (e.g., what a customer actually saw on their invoice at time of purchase), or
+   - a **stale copy** that is meant to track the live product but has no mechanism keeping it in sync.
+4. If we rename a product's `nameAr`, `nameEn`, `slug`, or `sku` in the live catalog today, list exactly what would go out of sync and where a customer or staff member could see the mismatch.
+
+## Report back
+
+A written report covering the four points above — a table or list is fine. No code changes, no database writes. We'll decide what, if anything, to fix once we see the full picture.
