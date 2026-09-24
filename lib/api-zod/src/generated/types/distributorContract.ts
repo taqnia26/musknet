@@ -17,6 +17,7 @@ export interface DistributorContract {
   status: DistributorContractStatus;
   /** @nullable */
   contractDate?: Date | null;
+  templateVersion?: number;
   /** @nullable */
   hijriDateStr?: string | null;
   /** @nullable */

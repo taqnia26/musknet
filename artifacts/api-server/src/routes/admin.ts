@@ -83,6 +83,7 @@ import {
 import { ObjectStorageConfigurationError, ObjectStorageService } from "../lib/object-storage";
 import { InvalidContractFileError, isLocalContractPath, LocalContractStorage } from "../lib/local-contract-storage";
 import { assertTransition, contractByDownloadToken, contractBySigningToken, createContractPdf, hashContractToken, newContractToken } from "../lib/contracts";
+import { renderContract } from "../lib/contract-template";
 import { approveOpeningBalanceImport, createOpeningBalanceImport, openingBalanceReconciliation, reviewOpeningBalanceImport, mapOpeningBalanceLine, createPurchaseReceipt, postPurchaseReceipt, createPurchaseReceiptPayment, addManufacturingInputs, approveManufacturingBatch, ensureDefaultInventoryLocation, listInventoryLocations, lookupInventoryBarcode, listInventoryBalances, transferInventory, sendInventoryTransfer, receiveInventoryTransfer, inventoryValueReport, inventoryCsv, createInventoryPurchaseOrder, receiveInventoryPurchaseOrder, createCycleCount, approveCycleCount, inventoryReorderSuggestions, inventoryMovementReport, inventoryAgingReport, inventoryValuationReport, inventoryAuditReport, inventoryReconciliationReport, adjustOperationalBalances } from "../lib/operations";
 import { createSmsaShippingLabel } from "../lib/shipping-carriers";
 import { nextIndividualOrderNumber } from "../lib/order-numbers";
@@ -437,6 +438,10 @@ router.get("/admin/contracts", permit("contracts", "view"), route(async (req, re
 }));
 router.post("/admin/contracts", permit("contracts", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateContractBody, req.body, res); if (!body) return;
+  if (body.contractType !== "عقد توريد أجل المملكة العربية السعودية") {
+    res.status(400).json({ error: "قالب وورد الحالي مخصص لعقد توريد آجل داخل المملكة العربية السعودية فقط" }); return;
+  }
+  const signedDate = body.contractDate ? new Date(body.contractDate) : new Date();
   if (body.distributorId != null) {
     const [distributor] = await db.select({ id: wholesaleDistributorsTable.id }).from(wholesaleDistributorsTable)
       .where(eq(wholesaleDistributorsTable.id, body.distributorId)).limit(1);
@@ -444,11 +449,18 @@ router.post("/admin/contracts", permit("contracts", "edit"), route(async (req, r
   }
   const [row] = await db.insert(distributorContractsTable).values({
     ...body,
+    templateVersion: 1,
+    contractDate: signedDate,
     contractNumber: body.contractNumber?.trim() || contractNumber(),
     createdBy: res.locals.admin.id,
     products: body.products ?? [],
   }).returning();
   res.status(201).json(Api.AdminCreateContractResponse.parse(contractPublic(row)));
+}));
+router.post("/admin/contracts/preview", permit("contracts", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminPreviewContractBody.partial(), req.body, res); if (!body) return;
+  const { contractNumber: _contractNumber, ...fields } = body;
+  res.json(Api.AdminPreviewContractResponse.parse(renderContract(fields)));
 }));
 router.get("/admin/contracts/:id", permit("contracts", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetContractParams, req.params, res); if (!params) return;
@@ -504,6 +516,9 @@ router.patch("/admin/contracts/:id", permit("contracts", "edit"), route(async (r
   if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
   if (existing.status !== "draft") { res.status(409).json({ error: "Only draft contracts can be edited" }); return; }
   const { contractNumber: requestedContractNumber, ...contractUpdate } = body;
+  if (existing.templateVersion === 1 && contractUpdate.contractType && contractUpdate.contractType !== "عقد توريد أجل المملكة العربية السعودية") {
+    res.status(400).json({ error: "قالب وورد الحالي مخصص لعقد توريد آجل داخل المملكة العربية السعودية فقط" }); return;
+  }
   const [row] = await db.update(distributorContractsTable).set({
     ...contractUpdate,
     ...(requestedContractNumber ? { contractNumber: requestedContractNumber } : {}),
@@ -526,6 +541,9 @@ router.post("/admin/contracts/:id/seller-sign", permit("contracts", "edit"), rou
   const [existing] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
   try { assertTransition(existing.status, "seller_signed"); } catch (error) { res.status(409).json({ error: (error as Error).message }); return; }
+  if (existing.templateVersion === 1 && renderContract(existing).missing.length) {
+    res.status(400).json({ error: `أكمل بيانات العقد قبل التوقيع: ${renderContract(existing).missing.join("، ")}` }); return;
+  }
   const [row] = await db.update(distributorContractsTable).set({
     status: "seller_signed", sellerSignaturePath: body.signaturePath, sellerSignedAt: new Date(),
     sellerSignedByUserId: res.locals.admin.id, sellerSignedBy: res.locals.admin.name, sellerSignedIp: req.ip,
@@ -691,15 +709,12 @@ router.post("/admin/contract-files/:id/terms", permit("contracts", "edit"), rout
     res.status(400).json({ error: "Contract startDate must be on or before endDate" }); return;
   }
   const confirmation = await db.transaction(async (tx) => {
-    // Read only the immutable owner routing keys to find the lock; all terms
-    // and owner state are re-read after obtaining the distributor-scoped lock.
     const [identity] = await tx.select({
       ownerType: uploadedContractFilesTable.ownerType,
       ownerId: uploadedContractFilesTable.ownerId,
     }).from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
     if (!identity) return { status: "not-found" as const };
     if (identity.ownerType !== "distributor") return { status: "not-distributor" as const };
-
     await lockDistributorContractSource(tx, identity.ownerId);
     const [existing] = await tx.select().from(uploadedContractFilesTable)
       .where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
@@ -1922,7 +1937,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
     buyerName: invoicesTable.buyerName, buyerAddress: invoicesTable.buyerAddress,
     buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
-     discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
+    discountAmount: sql<number>`coalesce(${ordersTable.discount}, 0)`,
     shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount, totalAmount: invoicesTable.totalAmount, qrCodeData: invoicesTable.qrCodeData,
   }).from(invoicesTable).leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
@@ -4004,6 +4019,13 @@ router.get("/public/contracts/by-token/:token/pdf", route(async (req, res) => {
   const base = process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`;
   const pdf = await createContractPdf(row, `${base}/api/public/contracts/by-token/${params.token}`);
   res.type("application/pdf").setHeader("Content-Disposition", `inline; filename="${row.contractNumber}.pdf"`).send(pdf);
+}));
+router.get("/public/contracts/by-download-token/:token", route(async (req, res) => {
+  const params = parse(Api.GetPublicContractPdfParams, req.params, res); if (!params) return;
+  const row = await contractByDownloadToken(params.token);
+  if (!row || row.status !== "final") { res.status(404).json({ error: "Verification link is invalid or expired" }); return; }
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ contractNumber: row.contractNumber, status: row.status, sellerSignedAt: row.sellerSignedAt, buyerSignedAt: row.buyerSignedAt });
 }));
 router.get("/public/contracts/by-download-token/:token/pdf", route(async (req, res) => {
   const params = parse(Api.DownloadPublicContractPdfParams, req.params, res); if (!params) return;

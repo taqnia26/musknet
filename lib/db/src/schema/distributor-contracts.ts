@@ -21,6 +21,7 @@ export const distributorContractsTable = pgTable("distributor_contracts", {
   contractNumber: text("contract_number").notNull(),
   distributorId: integer("distributor_id").references(() => wholesaleDistributorsTable.id, { onDelete: "set null" }),
   contractType: text("contract_type").notNull(),
+  templateVersion: integer("template_version").notNull().default(0),
   status: text("status").notNull().default("draft"),
   contractDate: timestamp("contract_date", { withTimezone: true }),
   hijriDateStr: text("hijri_date_str"),

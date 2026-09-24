@@ -552,6 +552,13 @@ paths:
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContractInput" } } } }
       responses: { "201": { description: Contract, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } } }
+  /admin/contracts/preview:
+    post:
+      operationId: adminPreviewContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContractInput" } } } }
+      responses: { "200": { description: Rendered contract, content: { application/json: { schema: { $ref: "#/components/schemas/ContractPreview" } } } } }
   /admin/contracts/{id}:
     get:
       operationId: adminGetContract
@@ -717,6 +724,25 @@ paths:
       tags: [admin]
       parameters: [{ name: token, in: path, required: true, schema: { type: string, minLength: 32 } }]
       responses: { "200": { description: PDF, content: { application/pdf: { schema: { type: string, format: binary } } } } }
+  /public/contracts/by-download-token/{token}:
+    get:
+      operationId: getPublicContractVerification
+      tags: [public]
+      parameters: [{ name: token, in: path, required: true, schema: { type: string } }]
+      responses:
+        "200":
+          description: Verified final contract
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [contractNumber, status]
+                properties:
+                  contractNumber: { type: string }
+                  status: { type: string, enum: [final] }
+                  sellerSignedAt: { type: [string, "null"], format: date-time }
+                  buyerSignedAt: { type: [string, "null"], format: date-time }
+        "404": { description: Invalid or expired verification link }
   /public/contracts/by-download-token/{token}/pdf:
     get:
       operationId: downloadPublicContractPdf
@@ -3184,6 +3210,7 @@ components:
             - عقد توريد نقد دول الخليج
         status: { type: string, enum: [draft, seller_signed, sent, final, cancelled] }
         contractDate: { type: [string, "null"], format: date-time }
+        templateVersion: { type: number }
         hijriDateStr: { type: [string, "null"] }
         gregorianDateStr: { type: [string, "null"] }
         contractDayName: { type: [string, "null"] }
@@ -3290,6 +3317,30 @@ components:
         paymentDays: { type: number }
         products: { type: array, items: {} }
         notes: { type: [string, "null"] }
+    ContractPreview:
+      type: object
+      required: [title, sections, missing, products]
+      properties:
+        title: { type: string }
+        missing: { type: array, items: { type: string } }
+        sections:
+          type: array
+          items:
+            type: object
+            required: [heading, paragraphs]
+            properties:
+              heading: { type: string }
+              paragraphs: { type: array, items: { type: string } }
+        products:
+          type: array
+          items:
+            type: object
+            required: [barcode, description, price, priceWithVat]
+            properties:
+              barcode: { type: string }
+              description: { type: string }
+              price: { type: string }
+              priceWithVat: { type: string }
     DistributorContractUpdate:
       allOf: [{ $ref: "#/components/schemas/DistributorContractInput" }]
     ContractSignatureInput:

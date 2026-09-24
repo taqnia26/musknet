@@ -331,7 +331,7 @@ export default function AdminContractDetail() {
             </CardHeader>
             <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
               <div>
-                <div className="text-muted-foreground mb-1">نسبة الخصم / الهامش</div>
+                 <div className="text-muted-foreground mb-1">نسبة الخصم</div>
                 <div className="font-medium">{contract.marginPercent ? `${contract.marginPercent}%` : '—'}</div>
               </div>
               <div>

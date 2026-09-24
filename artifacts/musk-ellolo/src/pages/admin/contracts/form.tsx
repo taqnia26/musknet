@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRoute, useLocation, Link } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAdminGetContract, useAdminCreateContract, useAdminUpdateContract, getAdminListContractsQueryKey, getAdminGetContractQueryKey, DistributorContractInput, useAdminListSiteContent, getAdminListSiteContentQueryKey, useAdminListDistributors } from '@workspace/api-client-react';
+import { useAdminGetContract, useAdminCreateContract, useAdminUpdateContract, adminPreviewContract, getAdminListContractsQueryKey, getAdminGetContractQueryKey, DistributorContractInput, ContractPreview, useAdminListSiteContent, getAdminListSiteContentQueryKey, useAdminListDistributors } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,9 @@ import { sellerDefaults, sellerNumberLabel, sellerProfile } from './seller-defau
 
 const contractSchema = z.object({
   contractType: z.string().min(1, 'مطلوب'),
-  contractDate: z.string().optional().nullable(),
+  contractDate: z.string(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
   hijriDateStr: z.string().optional().nullable(),
   gregorianDateStr: z.string().optional().nullable(),
   contractDayName: z.string().optional().nullable(),
@@ -90,11 +92,14 @@ export default function AdminContractForm() {
   
   const createMutation = useAdminCreateContract();
   const updateMutation = useAdminUpdateContract();
+  const [preview, setPreview] = useState<ContractPreview | null>(null);
+  const [previewError, setPreviewError] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(contractSchema),
     defaultValues: {
       contractType: 'عقد توريد أجل المملكة العربية السعودية',
+       contractDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Riyadh' }),
        distributorId: '',
        sellerName: sellerDefaults.sellerName,
        sellerCrNumber: sellerDefaults.sellerCrNumber,
@@ -104,8 +109,14 @@ export default function AdminContractForm() {
       sellerRepName: '',
       sellerRepTitle: '',
       buyerCompanyName: '',
+       marginPercent: '0',
+       minOrderValue: '3000',
+       deliveryDays: 15,
+       inspectionDays: 7,
+       warrantyMonths: 6,
+       paymentDays: 30,
       vatRate: '15',
-      latePaymentWeeklyRate: '1',
+       latePaymentWeeklyRate: '2',
       latePaymentCapRate: '10',
     }
   });
@@ -119,7 +130,9 @@ export default function AdminContractForm() {
       form.reset({
         contractType: contract.contractType,
         distributorId: contract.distributorId ? String(contract.distributorId) : '',
-        contractDate: contract.contractDate,
+         contractDate: contract.contractDate?.slice(0, 10) || '',
+        startDate: contract.startDate?.slice(0, 10) || '',
+        endDate: contract.endDate?.slice(0, 10) || '',
         hijriDateStr: contract.hijriDateStr,
         gregorianDateStr: contract.gregorianDateStr,
         contractDayName: contract.contractDayName,
@@ -171,14 +184,52 @@ export default function AdminContractForm() {
     }
   }, [isEditing, siteContent, form]);
 
+  const isLegacyDraft = isEditing && contract?.templateVersion === 0;
+  const values = form.watch();
+  const previewInput = JSON.stringify(values);
+  useEffect(() => {
+    if (isEditing && !contract) return;
+    if (isLegacyDraft) { setPreview(null); setPreviewError(false); return; }
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      const input = JSON.parse(previewInput) as FormValues;
+      const { distributorId, contractDate, startDate, endDate, ...fields } = input;
+      try {
+        const cleaned = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== '' && value !== null && value !== undefined));
+        const result = await adminPreviewContract({
+          ...cleaned,
+          ...(contractDate ? { contractDate: new Date(`${contractDate}T12:00:00+03:00`).toISOString() } : {}),
+          ...(startDate ? { startDate: new Date(`${startDate}T12:00:00+03:00`).toISOString() } : {}),
+          ...(endDate ? { endDate: new Date(`${endDate}T12:00:00+03:00`).toISOString() } : {}),
+          ...(distributorId ? { distributorId: Number(distributorId) } : {}),
+        } as DistributorContractInput);
+        if (active) { setPreview(result); setPreviewError(false); }
+      } catch {
+        if (active) setPreviewError(true);
+      }
+    }, 300);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [previewInput, contract, isEditing, isLegacyDraft]);
+
   const onSubmit = (values: FormValues) => {
+    if (!isLegacyDraft && !values.contractDate) {
+      form.setError('contractDate', { type: 'manual', message: 'حدد تاريخ العقد' });
+      return;
+    }
     if (!isEditing && !values.distributorId) {
       form.setError('distributorId', { type: 'manual', message: 'اختر الشركة/الموزع لربط العقد بالفواتير' });
       return;
     }
-    const { distributorId, ...contractValues } = values;
+    if (values.endDate && values.endDate <= (values.startDate || values.contractDate)) {
+      form.setError('endDate', { type: 'manual', message: 'يجب أن يلي تاريخ النهاية تاريخ البداية' });
+      return;
+    }
+    const { distributorId, startDate, endDate, ...contractValues } = values;
     const data = {
       ...contractValues,
+      contractDate: values.contractDate ? new Date(`${values.contractDate}T12:00:00+03:00`).toISOString() : null,
+      startDate: startDate ? new Date(`${startDate}T12:00:00+03:00`).toISOString() : null,
+      endDate: endDate ? new Date(`${endDate}T12:00:00+03:00`).toISOString() : null,
       distributorId: distributorId ? Number(distributorId) : null,
     } as DistributorContractInput;
     if (isEditing) {
@@ -235,6 +286,20 @@ export default function AdminContractForm() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card>
+            <CardHeader><CardTitle>تاريخ العقد</CardTitle><CardDescription>تبدأ مدة السنة من تاريخ العقد ما لم يُحدد خلاف ذلك.</CardDescription></CardHeader>
+            <CardContent>
+              <FormField control={form.control} name="contractDate" render={({ field }) => (
+                <FormItem><FormLabel>تاريخ التوقيع الميلادي {isLegacyDraft ? '(اختياري للعقد القديم)' : '*'}</FormLabel><FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                {(['startDate', 'endDate'] as const).map((name, index) => <FormField key={name} control={form.control} name={name} render={({ field }) => (
+                  <FormItem><FormLabel>{index ? 'نهاية العقد (اختياري؛ الافتراضي بعد سنة)' : 'بداية العقد (اختياري؛ الافتراضي تاريخ العقد)'}</FormLabel>
+                    <FormControl><Input type="date" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+                )} />)}
+              </div>
+            </CardContent>
+          </Card>
           
           {/* Seller details */}
           <Card>
@@ -383,7 +448,7 @@ export default function AdminContractForm() {
                 name="buyerCrNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>رقم السجل التجاري</FormLabel>
+                    <FormLabel>رقم السجل التجاري *</FormLabel>
                     <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -394,7 +459,7 @@ export default function AdminContractForm() {
                 name="buyerCrIssuer"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>مصدر السجل</FormLabel>
+                    <FormLabel>مصدر السجل *</FormLabel>
                     <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -405,7 +470,7 @@ export default function AdminContractForm() {
                 name="buyerRepName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>يمثلها</FormLabel>
+                    <FormLabel>يمثلها *</FormLabel>
                     <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -416,7 +481,7 @@ export default function AdminContractForm() {
                 name="buyerRepTitle"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الصفة</FormLabel>
+                    <FormLabel>الصفة *</FormLabel>
                     <FormControl><Input {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -427,7 +492,7 @@ export default function AdminContractForm() {
                 name="buyerEmail"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>البريد الإلكتروني</FormLabel>
+                    <FormLabel>البريد الإلكتروني *</FormLabel>
                     <FormControl><Input type="email" dir="ltr" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -438,12 +503,18 @@ export default function AdminContractForm() {
                 name="buyerPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الهاتف</FormLabel>
+                    <FormLabel>الهاتف *</FormLabel>
                     <FormControl><Input dir="ltr" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              {(['buyerNeighborhood', 'buyerCity', 'buyerPoBox', 'buyerPostalCode'] as const).map((name, index) => (
+                <FormField key={name} control={form.control} name={name} render={({ field }) => (
+                  <FormItem><FormLabel>{['حي المشتري', 'مدينة المشتري', 'صندوق البريد', 'الرمز البريدي'][index]}</FormLabel>
+                    <FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+              ))}
             </CardContent>
           </Card>
 
@@ -459,13 +530,18 @@ export default function AdminContractForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>نوع العقد</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
+                        {isLegacyDraft && <>
+                          <SelectItem value="موزع">موزع</SelectItem>
+                          <SelectItem value="امتياز">امتياز</SelectItem>
+                          <SelectItem value="وكالة">وكالة</SelectItem>
+                          <SelectItem value="عقد توريد نقد المملكة العربية السعودية">عقد توريد نقد المملكة العربية السعودية</SelectItem>
+                          <SelectItem value="عقد توريد أجل دول الخليج">عقد توريد أجل دول الخليج</SelectItem>
+                          <SelectItem value="عقد توريد نقد دول الخليج">عقد توريد نقد دول الخليج</SelectItem>
+                        </>}
                         <SelectItem value="عقد توريد أجل المملكة العربية السعودية">عقد توريد أجل المملكة العربية السعودية</SelectItem>
-                        <SelectItem value="عقد توريد نقد المملكة العربية السعودية">عقد توريد نقد المملكة العربية السعودية</SelectItem>
-                        <SelectItem value="عقد توريد أجل دول الخليج">عقد توريد أجل دول الخليج</SelectItem>
-                        <SelectItem value="عقد توريد نقد دول الخليج">عقد توريد نقد دول الخليج</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -540,6 +616,27 @@ export default function AdminContractForm() {
               />
             </CardContent>
           </Card>
+
+           {isLegacyDraft ? <Card dir="rtl"><CardHeader><CardTitle>مسودة بقالب العقد السابق</CardTitle>
+             <CardDescription>سيبقى نص العقد وملف PDF على القالب السابق بعد الحفظ والتوقيع. لن يحوّل تعديل البيانات هذه المسودة إلى قالب وورد الجديد.</CardDescription>
+           </CardHeader></Card> : <Card dir="rtl">
+            <CardHeader><CardTitle>معاينة العقد الكامل قبل الحفظ</CardTitle><CardDescription>هذه المعاينة تتحدث مع المدخلات. رقم العقد ورابط التحقق يظهران بعد الحفظ فقط.</CardDescription></CardHeader>
+            <CardContent className="space-y-5 max-h-[700px] overflow-y-auto text-right leading-8">
+              {previewError && <p role="alert" className="text-destructive">تعذر تحديث المعاينة؛ تحقق من البيانات وحاول مجدداً.</p>}
+              {preview && <>
+                {preview.missing.length > 0 && <div role="alert" className="rounded-md border border-amber-400 p-3 text-amber-800">نواقص يجب إكمالها قبل التوقيع: {preview.missing.join('، ')}</div>}
+                <h2 className="text-xl font-bold text-center">{preview.title}</h2>
+                {preview.sections.map((section, i) => <section key={i} className="break-inside-avoid">
+                  <h3 className="font-bold text-lg mb-2">{section.heading}</h3>
+                  {section.paragraphs.map((paragraph, j) => <p key={j} className="mb-2 whitespace-pre-wrap">{paragraph}</p>)}
+                  {section.heading.startsWith('الملحق (أ)') && <div className="overflow-x-auto"><table className="w-full text-sm border-collapse">
+                    <thead><tr>{['الباركود', 'المنتج', 'السعر دون ضريبة', 'السعر شامل الضريبة'].map(label => <th key={label} className="border p-2">{label}</th>)}</tr></thead>
+                    <tbody>{preview.products.map(product => <tr key={product.barcode}>{[product.barcode, product.description, product.price, product.priceWithVat].map(cell => <td key={cell} className="border p-2">{cell}</td>)}</tr>)}</tbody>
+                  </table></div>}
+                </section>)}
+              </>}
+            </CardContent>
+           </Card>}
 
           <div className="flex justify-end gap-3 sticky bottom-4">
             <Link href={isEditing ? `/admin/contracts/${id}` : "/admin/contracts"}>

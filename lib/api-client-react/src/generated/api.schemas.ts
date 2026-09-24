@@ -950,6 +950,7 @@ export interface DistributorContract {
   status: DistributorContractStatus;
   /** @nullable */
   contractDate?: string | null;
+  templateVersion?: number;
   /** @nullable */
   hijriDateStr?: string | null;
   /** @nullable */
@@ -1117,6 +1118,10 @@ export interface DistributorContractInput {
   notes?: string | null;
 }
 
+export type ContractPreviewSectionsItem = {
+  heading: string;
+  paragraphs: string[];
+};
 export type DistributorContractUpdate = DistributorContractInput;
 
 export interface ContractSignatureInput {
@@ -4452,6 +4457,7 @@ export type AdminListContractsParams = {
 search?: AdminSearchParameter;
 };
 
+export type GetPublicContractVerification200Status = typeof GetPublicContractVerification200Status[keyof typeof GetPublicContractVerification200Status];
 export type GetAdminAnalyticsDashboardParams = {
 rangeDays?: GetAdminAnalyticsDashboardRangeDays;
 };
@@ -4778,3 +4784,30 @@ export const GetInventoryAuditReportFormat = {
   csv: 'csv',
 } as const;
 
+
+export type ContractPreviewProductsItem = {
+  barcode: string;
+  description: string;
+  price: string;
+  priceWithVat: string;
+};
+
+export interface ContractPreview {
+  title: string;
+  missing: string[];
+  sections: ContractPreviewSectionsItem[];
+  products: ContractPreviewProductsItem[];
+}
+
+export const GetPublicContractVerification200Status = {
+  final: 'final',
+} as const;
+
+export type GetPublicContractVerification200 = {
+  contractNumber: string;
+  status: GetPublicContractVerification200Status;
+  /** @nullable */
+  sellerSignedAt?: string | null;
+  /** @nullable */
+  buyerSignedAt?: string | null;
+};
