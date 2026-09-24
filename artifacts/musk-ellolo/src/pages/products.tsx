@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { Money } from '@/components/money';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 export default function Products() {
   const params = useParams();
@@ -16,7 +17,7 @@ export default function Products() {
   const searchParams = new URLSearchParams(searchString);
   const sortParam = searchParams.get('sort') as any;
 
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   
   const [sort, setSort] = useState<any>(sortParam || 'featured');
 
@@ -26,6 +27,10 @@ export default function Products() {
     sort,
     limit: 48
   });
+  const displayedProducts = useMemo(
+    () => sort === 'featured' ? sortProductsForSelection(products ?? [], lang) : products ?? [],
+    [products, sort, lang],
+  );
 
   const categoryName = useMemo(() => {
     if (!categorySlug || !categories) return t('المنتجات', 'Products');
@@ -81,8 +86,8 @@ export default function Products() {
                 <Skeleton className="h-4 w-1/2 mx-auto bg-gray-100" />
               </div>
             ))
-          ) : products?.length ? (
-            products.map((product) => (
+          ) : displayedProducts.length ? (
+            displayedProducts.map((product) => (
               <ProductGridCard key={product.id} product={product} />
             ))
           ) : (

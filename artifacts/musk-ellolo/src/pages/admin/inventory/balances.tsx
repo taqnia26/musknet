@@ -29,6 +29,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { BarcodeScanner } from '@/components/admin/inventory/barcode-scanner';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 export function RowActions({
   item, 
@@ -502,7 +503,7 @@ export default function AdminInventoryBalances() {
               ) : !data?.items?.length ? (
                 <TableRow><TableCell colSpan={9} className="text-center py-8">{t('لا توجد أصناف', 'No items found')}</TableCell></TableRow>
               ) : (
-                data.items.map(item => (
+                sortProductsForSelection(data.items, lang).map(item => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{lang === 'ar' ? item.nameAr : item.nameEn}</TableCell>
                     <TableCell className="font-mono text-sm">{item.sku || '-'}</TableCell>

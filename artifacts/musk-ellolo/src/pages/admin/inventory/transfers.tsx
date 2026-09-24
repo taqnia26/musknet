@@ -93,7 +93,7 @@ export default function AdminInventoryTransfers() {
                 {lines.map((line, index) => <div className="grid grid-cols-[1fr_8rem_auto] items-end gap-3 mb-3" key={index}>
                   <div>
                     <Label>{t('الصنف', 'Item')}</Label>
-                    <Select value={line.productId} onValueChange={(value) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, productId: value } : entry))}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر الصنف', 'Select item')} /></SelectTrigger><SelectContent>{items.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.sku || item.id} · {item.nameEn}</SelectItem>)}</SelectContent></Select>
+                    <Select value={line.productId} onValueChange={(value) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, productId: value } : entry))}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر الصنف', 'Select item')} /></SelectTrigger><SelectContent>{items.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.sku || item.id} · {lang === 'ar' ? item.nameAr : item.nameEn}</SelectItem>)}</SelectContent></Select>
                   </div>
                   <div>
                     <Label>{t('الكمية', 'Quantity')}</Label>

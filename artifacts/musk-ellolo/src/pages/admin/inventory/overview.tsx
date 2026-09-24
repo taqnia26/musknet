@@ -6,6 +6,7 @@ import { useAdminListInventory, useListInventoryAlerts, useListInventoryLocation
 import { Boxes, CircleDollarSign, AlertTriangle, XCircle, MapPin } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useMemo } from 'react';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 export default function AdminInventoryOverview() {
   const { t, lang } = useLanguage();
@@ -19,7 +20,7 @@ export default function AdminInventoryOverview() {
   const items = inventoryData?.items ?? [];
 
   const chartData = useMemo(() => 
-    items.slice(0, 10).map((item) => ({ 
+    sortProductsForSelection(items, lang).slice(0, 10).map((item) => ({
       name: lang === 'ar' ? item.nameAr : item.nameEn, 
       current: item.stockQuantity, 
       reorder: item.reorderPoint, 

@@ -18,7 +18,8 @@ const preferredProductOrder = [
   'بيتش موس',
 ];
 
-const normalizeProductName = (value: string) => value.trim().toLocaleLowerCase();
+const normalizeProductName = (value: string) =>
+  value.trim().toLocaleLowerCase().replace(/[\u064b-\u065f\u0670\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/\s+/g, ' ');
 const preferredProductRanks = new Map(
   preferredProductOrder.map((name, index) => [normalizeProductName(name), index]),
 );

@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 export default function AdminDistributorCatalog() {
   const { data: catalog, isLoading } = useAdminListDistributorCatalog();
@@ -24,7 +25,7 @@ export default function AdminDistributorCatalog() {
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredCatalog = catalog?.filter(item => {
+  const filteredCatalog = sortProductsForSelection((catalog ?? []).filter(item => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -32,7 +33,7 @@ export default function AdminDistributorCatalog() {
       item.nameEn?.toLowerCase().includes(q) ||
       item.distributorNameOverride?.toLowerCase().includes(q)
     );
-  });
+  }), 'ar');
 
   const startEditing = (item: any) => {
     setEditingId(item.id);

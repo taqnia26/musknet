@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 type Line = { productId: string; quantity: number; unitPrice: number };
 const emptyLine = (): Line => ({ productId: '', quantity: 1, unitPrice: 0 });
@@ -111,7 +112,7 @@ export function CreateExhibitionInvoiceDialog() {
             updateLine(index, { productId: e.target.value, unitPrice: allocation?.productPrice ?? 0 });
           }} disabled={!exhibitionId || loadingAllocations}>
             <option value="">{t('اختر المنتج المخصص', 'Select allocated product')}</option>
-            {allocations?.filter(a => a.quantityAllocated > a.quantitySold).map(a => <option key={a.id} value={a.productId} disabled={lines.some((l, i) => i !== index && l.productId === String(a.productId))}>{lang === 'ar' ? a.productNameAr : a.productNameEn} ({a.quantityAllocated - a.quantitySold})</option>)}
+            {sortProductsForSelection((allocations ?? []).filter(a => a.quantityAllocated > a.quantitySold).map(a => ({ ...a, nameAr: a.productNameAr, nameEn: a.productNameEn })), lang).map(a => <option key={a.id} value={a.productId} disabled={lines.some((l, i) => i !== index && l.productId === String(a.productId))}>{lang === 'ar' ? a.productNameAr : a.productNameEn} ({a.quantityAllocated - a.quantitySold})</option>)}
           </select>
           <Input type="number" min="1" step="1" aria-label={t('الكمية', 'Quantity')} value={line.quantity} onChange={e => updateLine(index, { quantity: Number(e.target.value) })} />
           <Input type="number" min="0.01" step="0.01" aria-label={t('سعر الوحدة شامل الضريبة', 'Unit price including VAT')} value={line.unitPrice || ''} onChange={e => updateLine(index, { unitPrice: Number(e.target.value) })} />

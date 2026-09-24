@@ -34,6 +34,7 @@ import {
    EyeOff,
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { sortProductsForSelection } from '@/lib/product-sort';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -369,14 +370,14 @@ export default function AdminProducts() {
   // Apply local filters since the list hook might not support status/categoryId yet
   const products = useMemo(() => {
     if (!allProducts) return [];
-    return allProducts.filter(p => {
+    return sortProductsForSelection(allProducts.filter(p => {
       if (statusFilter === 'active' && !p.isActive) return false;
       if (statusFilter === 'inactive' && p.isActive) return false;
        if (statusFilter === 'sellable' && (!p.sellable || !p.isActive)) return false;
       if (categoryFilter !== 'all' && p.categoryId.toString() !== categoryFilter) return false;
       return true;
-    });
-  }, [allProducts, statusFilter, categoryFilter]);
+    }), lang);
+  }, [allProducts, statusFilter, categoryFilter, lang]);
 
   const createMutation = useAdminCreateProduct();
   const updateMutation = useAdminUpdateProduct();

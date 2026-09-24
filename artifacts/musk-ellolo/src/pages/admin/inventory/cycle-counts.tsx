@@ -138,7 +138,7 @@ export default function AdminInventoryCounts() {
                 {lines.map((line, index) => <div className="mb-3 grid grid-cols-[minmax(0,1fr)_5.5rem_auto] items-end gap-2" key={index}>
                   <div className="min-w-0">
                     <Label>{t('الصنف', 'Item')}</Label>
-                    <Select value={line.productId} onValueChange={(value) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, productId: value } : entry))}><SelectTrigger className="mt-1 h-10 w-full"><SelectValue placeholder={t('اختر الصنف', 'Select item')} /></SelectTrigger><SelectContent>{items.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.sku || item.id} · {item.nameEn}</SelectItem>)}</SelectContent></Select>
+                    <Select value={line.productId} onValueChange={(value) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, productId: value } : entry))}><SelectTrigger className="mt-1 h-10 w-full"><SelectValue placeholder={t('اختر الصنف', 'Select item')} /></SelectTrigger><SelectContent>{items.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.sku || item.id} · {lang === 'ar' ? item.nameAr : item.nameEn}</SelectItem>)}</SelectContent></Select>
                   </div>
                   <div className="w-[5.5rem]">
                     <Label className="whitespace-nowrap text-xs">{t('الكمية', 'Qty')}</Label>

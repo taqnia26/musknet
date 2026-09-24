@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { FaApplePay } from 'react-icons/fa';
 import { Money } from '@/components/money';
+import { sortProductsForSelection } from '@/lib/product-sort';
 
 const siteAsset = (filename: string) => `${import.meta.env.BASE_URL}site-assets/${filename}`;
 
@@ -200,7 +201,7 @@ export default function ProductDetails() {
             <h2 className="text-xl font-bold text-black">{t('منتجات قد تعجبك', 'You May Also Like')}</h2>
           </div>
           <div className="grid min-w-0 grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4 md:gap-8">
-            {relatedProducts.slice(0, 4).map((p) => (
+            {sortProductsForSelection(relatedProducts, lang).slice(0, 4).map((p) => (
               <RelatedProductCard key={p.id} product={p} />
             ))}
           </div>
