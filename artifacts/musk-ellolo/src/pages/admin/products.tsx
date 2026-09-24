@@ -14,7 +14,7 @@ import {
   useGetAdminMe,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -356,6 +356,7 @@ export default function AdminProducts() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [originalNames, setOriginalNames] = useState<{ ar: string; en: string } | null>(null);
   const [productImages, setProductImages] = useState<AdminProductImage[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -385,9 +386,14 @@ export default function AdminProducts() {
     resolver: zodResolver(productSchema),
     defaultValues: emptyProduct,
   });
+  const [nameAr, nameEn] = useWatch({ control: form.control, name: ['nameAr', 'nameEn'] });
+  const editingName = lang === 'ar'
+    ? nameAr?.trim() || originalNames?.ar
+    : nameEn?.trim() || originalNames?.en;
 
   const resetDialog = () => {
     setEditingId(null);
+    setOriginalNames(null);
     setProductImages([]);
     setUploadError(null);
     form.reset({
@@ -449,6 +455,7 @@ export default function AdminProducts() {
 
   const handleEdit = (product: AdminProduct) => {
     setEditingId(product.id);
+    setOriginalNames({ ar: product.nameAr, en: product.nameEn });
     setProductImages(product.images || []);
     setUploadError(null);
     form.reset({
@@ -584,7 +591,16 @@ export default function AdminProducts() {
             </DialogTrigger>
             <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto p-0">
               <DialogHeader className="px-6 py-4 border-b sticky top-0 bg-background z-10">
-                <DialogTitle>{editingId ? t('تعديل المنتج', 'Edit Product') : t('إضافة منتج جديد', 'Add New Product')}</DialogTitle>
+                <DialogTitle className="px-0">{editingId !== null ? t('تعديل المنتج', 'Edit Product') : t('إضافة منتج جديد', 'Add New Product')}</DialogTitle>
+                {editingId !== null && editingName && (
+                  <p
+                    data-testid="editing-product-name"
+                    dir={lang === 'ar' ? 'rtl' : 'ltr'}
+                    className="text-sm font-medium text-muted-foreground break-words [overflow-wrap:anywhere]"
+                  >
+                    {editingName}
+                  </p>
+                )}
               </DialogHeader>
 
               <Form {...form}>
