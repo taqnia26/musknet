@@ -344,6 +344,13 @@
       "when": 1790239307976,
       "tag": "0048_rare_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1790240245382,
+      "tag": "0049_panoramic_mentallo",
+      "breakpoints": true
     }
   ]
 }

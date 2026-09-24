@@ -3,7 +3,7 @@ import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
   accountingAccountsTable, adminUsersTable, categoriesTable, customersTable, db, inventoryBalancesTable, inventoryMovementsTable,
   invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryAuditTable,
-  journalEntryLinesTable, operationEventsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
+  journalEntryLinesTable, operationEventsTable, orderItemsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
 } from "@workspace/db";
 import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, updateOrderAndIssueInvoice } from "./invoices";
 
@@ -110,6 +110,24 @@ afterAll(async () => {
   await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
   await db.delete(productsTable).where(eq(productsTable.id, productId));
   await db.delete(invoicesTable).where(inArray(invoicesTable.orderId, orderIds));
+  await db.delete(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
+  await db.delete(operationEventsTable).where(and(
+    inArray(operationEventsTable.sourceType, ["order", "order_cancellation"]),
+    inArray(operationEventsTable.sourceId, orderIds.map(String)),
+  ));
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`set local session_replication_role = 'replica'`);
+    const entries = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable).where(and(
+      inArray(journalEntriesTable.sourceId, orderIds.map(String)),
+      inArray(journalEntriesTable.sourceType, ["order", "sale_cogs", "sale_revenue_reversal", "sale_cogs_reversal"]),
+    ));
+    if (entries.length) {
+      const entryIds = entries.map((entry) => entry.id);
+      await tx.delete(journalEntryAuditTable).where(inArray(journalEntryAuditTable.journalEntryId, entryIds));
+      await tx.delete(journalEntryLinesTable).where(inArray(journalEntryLinesTable.journalEntryId, entryIds));
+      await tx.delete(journalEntriesTable).where(inArray(journalEntriesTable.id, entryIds));
+    }
+  });
   await db.delete(ordersTable).where(inArray(ordersTable.id, orderIds));
   await db.delete(customersTable).where(eq(customersTable.id, customerId));
 });
@@ -159,8 +177,55 @@ describe.sequential("atomic invoice issuance", () => {
       totalAmount: 130,
       vatAmount: 15,
       taxTreatment: "international",
-      vatRate: "15",
     });
+    expect(Number(invoice.vatRate)).toBe(15);
+  });
+
+  it("cancels legacy and inclusive orders by reversing the posted journal lines", async () => {
+    for (const orderId of [orderIds[0], orderIds[3]]) {
+      await updateOrderAndIssueInvoice(orderId, { paymentStatus: "paid" }, {
+        VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
+        VAT_REGISTRATION_NUMBER: "300000000000003",
+      }, actorId);
+      await db.insert(orderItemsTable).values({
+        orderId, productId, productName: "Cancellation fixture", quantity: 1,
+        unitPrice: 10, totalPrice: 10, costSnapshot: "4.0000",
+      });
+      await db.insert(inventoryMovementsTable).values({
+        productId, movementType: "decrease", quantityChange: -1, quantityBefore: 10, quantityAfter: 9,
+        reason: `Fulfillment fixture ${orderId}`, unitCost: "4.0000", totalCost: "4.0000",
+        sourceType: "order", sourceId: String(orderId), eventKey: `invoice-cancel-fixture:${orderId}`,
+      });
+      const [saleJournal] = await db.select().from(journalEntriesTable).where(and(
+        eq(journalEntriesTable.sourceType, "order"), eq(journalEntriesTable.sourceId, String(orderId)),
+      ));
+      const originalLines = await db.select({
+        accountCode: accountingAccountsTable.code,
+        debit: journalEntryLinesTable.debit,
+        credit: journalEntryLinesTable.credit,
+      }).from(journalEntryLinesTable)
+        .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+        .where(eq(journalEntryLinesTable.journalEntryId, saleJournal.id))
+        .orderBy(journalEntryLinesTable.lineNumber);
+
+      await updateOrderAndIssueInvoice(orderId, { status: "cancelled" }, process.env, actorId);
+      const [reversal] = await db.select().from(journalEntriesTable).where(and(
+        eq(journalEntriesTable.sourceType, "sale_revenue_reversal"), eq(journalEntriesTable.sourceId, String(orderId)),
+      ));
+      const reversedLines = await db.select({
+        accountCode: accountingAccountsTable.code,
+        debit: journalEntryLinesTable.debit,
+        credit: journalEntryLinesTable.credit,
+      }).from(journalEntryLinesTable)
+        .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+        .where(eq(journalEntryLinesTable.journalEntryId, reversal.id))
+        .orderBy(journalEntryLinesTable.lineNumber);
+      expect(reversedLines).toEqual(originalLines.map((line) => ({
+        accountCode: line.accountCode, debit: line.credit, credit: line.debit,
+      })));
+      await db.update(productsTable).set({ stockQuantity: 10, averageCost: "4.0000" }).where(eq(productsTable.id, productId));
+      await db.update(inventoryBalancesTable).set({ available: 10, averageCost: "4.0000" }).where(eq(inventoryBalancesTable.productId, productId));
+    }
   });
 });
 
@@ -342,6 +407,7 @@ describe.sequential("distributor invoice issuance", () => {
     await db.update(wholesaleDistributorsTable).set({ countryCode: "AE" })
       .where(eq(wholesaleDistributorsTable.id, distributorId));
     const invoice = await createDistributorInvoice(request, actorId, env);
-    expect(invoice).toMatchObject({ taxTreatment: "international", vatRate: "0", vatAmount: 0 });
+    expect(invoice).toMatchObject({ taxTreatment: "international", vatAmount: 0 });
+    expect(Number(invoice.vatRate)).toBe(0);
   });
 });

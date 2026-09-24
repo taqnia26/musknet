@@ -243,6 +243,7 @@ describe.sequential("exact double-entry accounting", () => {
       total: 110,
       tax: 14.35,
       createdAt: new Date(`${mixedPostingDate}T12:00:00.000Z`),
+      address: JSON.stringify({ country: "SA", taxTreatment: "domestic" }),
     }, actorId, tx));
     const [entry] = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
       .where(and(eq(journalEntriesTable.sourceType, "order"), eq(journalEntriesTable.sourceId, String(saleId))));
@@ -263,6 +264,38 @@ describe.sequential("exact double-entry accounting", () => {
     const debits = lines.reduce((sum, line) => sum + Number(line.debit), 0);
     const credits = lines.reduce((sum, line) => sum + Number(line.credit), 0);
     expect(debits).toBeCloseTo(credits, 4);
+  });
+
+  it("posts international inclusive orders with zero VAT without reducing product revenue", async () => {
+    const saleId = 1_800_000_000 + ((suffix + 1) % 99_999_999);
+    await db.transaction((tx) => postSalesJournal({
+      id: saleId,
+      orderNumber: `ACC-INTERNATIONAL-SALE-${suffix}`,
+      subtotal: 398,
+      shippingCost: 30,
+      discount: 0,
+      total: 428,
+      tax: 0,
+      createdAt: new Date(`${mixedPostingDate}T12:00:00.000Z`),
+      address: JSON.stringify({ country: "AE", taxTreatment: "international" }),
+    }, actorId, tx));
+    const [entry] = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "order"), eq(journalEntriesTable.sourceId, String(saleId))));
+    const lines = await db.select({
+      accountCode: accountingAccountsTable.code,
+      debit: journalEntryLinesTable.debit,
+      credit: journalEntryLinesTable.credit,
+    }).from(journalEntryLinesTable)
+      .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+      .where(eq(journalEntryLinesTable.journalEntryId, entry.id));
+    expect(lines).toEqual(expect.arrayContaining([
+      { accountCode: "1120", debit: "428.0000", credit: "0.0000" },
+      { accountCode: "4100", debit: "0.0000", credit: "398.0000" },
+      { accountCode: "4110", debit: "0.0000", credit: "30.0000" },
+    ]));
+    expect(lines.some((line) => line.accountCode === "2120")).toBe(false);
+    expect(lines.reduce((sum, line) => sum + Number(line.debit), 0))
+      .toBe(lines.reduce((sum, line) => sum + Number(line.credit), 0));
   });
 
   it("posts owner-paid purchases to owner payable and is idempotent", async () => {

@@ -60,6 +60,22 @@ function isoDate(value: string | Date) {
   return value instanceof Date ? value.toISOString().slice(0, 10) : value.slice(0, 10);
 }
 
+function salesVatRate(order: { tax: number; address?: string }) {
+  if (scaled(order.tax) > 0n) return 15;
+  let address: Record<string, unknown> = {};
+  try {
+    const parsed = order.address ? JSON.parse(order.address) as Record<string, unknown> : {};
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) address = parsed;
+  } catch {
+    // Older rows can contain non-JSON address text; retain the domestic default.
+  }
+  if (address.taxTreatment === "international") return 0;
+  if (address.taxTreatment === "domestic") return 15;
+  const country = String(address.countryCode ?? address.country ?? "").trim().toUpperCase();
+  if (!country || ["SA", "SAUDI ARABIA", "السعودية", "المملكة العربية السعودية"].includes(country)) return 15;
+  return 0;
+}
+
 export async function ensureStandardAccountingChart() {
   await seedStandardRetailChart(db);
 }
@@ -374,7 +390,7 @@ export async function createPayrollWithJournal(values: typeof payrollRecordsTabl
 export async function postSalesJournal(
   order: {
     id: number; orderNumber: string; subtotal: number; shippingCost: number;
-    discount: number; total: number; tax: number; createdAt: Date;
+    discount: number; total: number; tax: number; createdAt: Date; address?: string;
   },
   actorId: number,
   executor: Executor,
@@ -390,10 +406,22 @@ export async function postSalesJournal(
     (!legacyTotals && !inclusiveTotals)) {
     throw new AccountingValidationError("Order totals must satisfy total + discount = subtotal + shipping + tax");
   }
-  const inclusiveProductRevenue = (subtotal * 100n + 57n) / 115n;
-  const inclusiveProductRevenueAfterDiscount = ((subtotal - discount) * 100n + 57n) / 115n;
+  const toCents = (amount: bigint) => (amount + 50n) / 100n;
+  const exactMoneyFromCents = (amount: bigint) => exactMoneyFromScaled(amount * 100n);
+  const inclusiveSubtotalCents = toCents(subtotal);
+  const inclusiveDiscountCents = toCents(discount);
+  const inclusiveTotalCents = toCents(total);
+  const inclusiveTaxCents = toCents(tax);
+  const inclusiveVatRate = salesVatRate(order);
+  const inclusiveVatDenominator = BigInt(100 + inclusiveVatRate);
+  const netFromGrossCents = (grossCents: bigint) => inclusiveVatRate === 0
+    ? grossCents
+    : (grossCents * 100n + inclusiveVatDenominator / 2n) / inclusiveVatDenominator;
+  const inclusiveProductRevenue = netFromGrossCents(inclusiveSubtotalCents);
+  const inclusiveProductRevenueAfterDiscount = netFromGrossCents(inclusiveSubtotalCents - inclusiveDiscountCents);
   const inclusiveDiscount = inclusiveProductRevenue - inclusiveProductRevenueAfterDiscount;
-  const inclusiveShippingRevenue = total - tax - inclusiveProductRevenueAfterDiscount;
+  const inclusiveShippingRevenue =
+    inclusiveTotalCents - inclusiveTaxCents - inclusiveProductRevenueAfterDiscount;
   if (inclusiveTotals && !legacyTotals && inclusiveShippingRevenue < 0n) {
     throw new AccountingValidationError("Inclusive order tax allocation exceeds the shipping and product gross");
   }
@@ -404,19 +432,22 @@ export async function postSalesJournal(
     sourceType: "order",
     sourceId: String(order.id),
     lines: [
-      { accountCode: "1120", debit: exactMoneyFromScaled(total) },
+      { accountCode: "1120", debit: inclusiveTotals && !legacyTotals
+        ? exactMoneyFromCents(inclusiveTotalCents)
+        : exactMoneyFromScaled(total) },
       ...(inclusiveTotals && !legacyTotals
         ? [
-          ...(inclusiveProductRevenue > 0n ? [{ accountCode: "4100", credit: exactMoneyFromScaled(inclusiveProductRevenue) }] : []),
-          ...(inclusiveShippingRevenue > 0n ? [{ accountCode: "4110", credit: exactMoneyFromScaled(inclusiveShippingRevenue) }] : []),
-          ...(inclusiveDiscount > 0n ? [{ accountCode: "4190", debit: exactMoneyFromScaled(inclusiveDiscount) }] : []),
+          ...(inclusiveProductRevenue > 0n ? [{ accountCode: "4100", credit: exactMoneyFromCents(inclusiveProductRevenue) }] : []),
+          ...(inclusiveShippingRevenue > 0n ? [{ accountCode: "4110", credit: exactMoneyFromCents(inclusiveShippingRevenue) }] : []),
+          ...(inclusiveDiscount > 0n ? [{ accountCode: "4190", debit: exactMoneyFromCents(inclusiveDiscount) }] : []),
+          ...(inclusiveTaxCents > 0n ? [{ accountCode: "2120", credit: exactMoneyFromCents(inclusiveTaxCents) }] : []),
         ]
         : [
           ...(subtotal > 0n ? [{ accountCode: "4100", credit: exactMoneyFromScaled(subtotal) }] : []),
           ...(shipping > 0n ? [{ accountCode: "4110", credit: exactMoneyFromScaled(shipping) }] : []),
           ...(discount > 0n ? [{ accountCode: "4190", debit: exactMoneyFromScaled(discount) }] : []),
+          ...(tax > 0n ? [{ accountCode: "2120", credit: exactMoneyFromScaled(tax) }] : []),
         ]),
-      ...(tax > 0n ? [{ accountCode: "2120", credit: exactMoneyFromScaled(tax) }] : []),
     ],
   });
 }

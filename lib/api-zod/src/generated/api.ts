@@ -4158,6 +4158,7 @@ export const AdminListDistributorsResponseItem = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string(),
   "city": zod.string().nullish(),
+  "countryCode": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
   "commercialRegistrationNumber": zod.string().nullish(),
@@ -4174,6 +4175,7 @@ export const AdminListDistributorsResponse = zod.array(AdminListDistributorsResp
 
 
 export const adminCreateDistributorBodyPhoneRegExp = new RegExp('^(?=(?:\\D*\\d){8,15}\\D*$)\\+?[\\d\\s().-]+$');
+export const adminCreateDistributorBodyCountryCodeRegExp = new RegExp('^[A-Za-z]{2}$');
 
 
 export const AdminCreateDistributorBody = zod.object({
@@ -4182,6 +4184,7 @@ export const AdminCreateDistributorBody = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string().min(1).regex(adminCreateDistributorBodyPhoneRegExp),
   "city": zod.string().nullish(),
+  "countryCode": zod.string().regex(adminCreateDistributorBodyCountryCodeRegExp).nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
   "commercialRegistrationNumber": zod.string().nullish(),
@@ -4196,6 +4199,7 @@ export const AdminCreateDistributorResponse = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string(),
   "city": zod.string().nullish(),
+  "countryCode": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
   "commercialRegistrationNumber": zod.string().nullish(),
@@ -4215,6 +4219,7 @@ export const AdminUpdateDistributorParams = zod.object({
 
 
 export const adminUpdateDistributorBodyOnePhoneRegExp = new RegExp('^(?=(?:\\D*\\d){8,15}\\D*$)\\+?[\\d\\s().-]+$');
+export const adminUpdateDistributorBodyOneCountryCodeRegExp = new RegExp('^[A-Za-z]{2}$');
 
 
 export const AdminUpdateDistributorBody = zod.object({
@@ -4223,6 +4228,7 @@ export const AdminUpdateDistributorBody = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string().min(1).regex(adminUpdateDistributorBodyOnePhoneRegExp),
   "city": zod.string().nullish(),
+  "countryCode": zod.string().regex(adminUpdateDistributorBodyOneCountryCodeRegExp).nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
   "commercialRegistrationNumber": zod.string().nullish(),
@@ -4237,6 +4243,7 @@ export const AdminUpdateDistributorResponse = zod.object({
   "email": zod.string().nullish(),
   "phone": zod.string(),
   "city": zod.string().nullish(),
+  "countryCode": zod.string().nullish(),
   "address": zod.string().nullish(),
   "taxNumber": zod.string().nullish(),
   "commercialRegistrationNumber": zod.string().nullish(),

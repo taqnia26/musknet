@@ -56,6 +56,9 @@ describe("admin validation contracts", () => {
   it("accepts practical phone formats but rejects alphabetic or implausible values", () => {
     const valid = { companyName: "شركة اختبار", contactName: "مسؤول", phone: "+966 (50) 123-4567" };
     expect(Api.AdminCreateDistributorBody.safeParse(valid).success).toBe(true);
+    expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, countryCode: "AE" }).success).toBe(true);
+    expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, countryCode: null }).success).toBe(true);
+    expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, countryCode: "ARE" }).success).toBe(false);
     expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, phone: "0550ABC123" }).success).toBe(false);
     expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, phone: "123" }).success).toBe(false);
     expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, phone: "1234567890123456" }).success).toBe(false);
@@ -502,6 +505,7 @@ describe.sequential("admin route authorization", () => {
   });
 
   it("creates an admin order and records the inventory decrease", async () => {
+    await db.update(productsTable).set({ price: 199 }).where(eq(productsTable.id, productId));
     const response = await request(app)
       .post("/api/admin/orders")
       .set("Authorization", `Bearer ${superToken}`)
@@ -511,7 +515,6 @@ describe.sequential("admin route authorization", () => {
         orderAddress: {
           label: "Office",
           city: "Riyadh",
-          country: "SA",
           district: "Olaya",
           street: "King Fahd Road",
           buildingNo: "20",
@@ -537,10 +540,10 @@ describe.sequential("admin route authorization", () => {
     expect(legacyOrder.body.some((row: { id: number }) => row.id === orderId)).toBe(true);
     expect(response.body).toMatchObject({
       userId: customerId,
-      subtotal: 200,
+      subtotal: 398,
       shippingCost: 20,
-      tax: 28.7,
-      total: 220,
+      tax: 54.52,
+      total: 418,
       paymentStatus: "pending",
     });
 
@@ -563,7 +566,7 @@ describe.sequential("admin route authorization", () => {
       performedBy: superId,
     });
     // Keep this test isolated from the inventory-adjustment cases below.
-    await db.update(productsTable).set({ stockQuantity: 5 }).where(eq(productsTable.id, productId));
+    await db.update(productsTable).set({ stockQuantity: 5, price: 100 }).where(eq(productsTable.id, productId));
     await db.update(inventoryBalancesTable).set({ available: 5 })
       .where(eq(inventoryBalancesTable.productId, productId));
   });

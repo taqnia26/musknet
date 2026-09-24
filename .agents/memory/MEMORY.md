@@ -33,3 +33,4 @@
 - [WhatsApp LID identity](whatsapp-lid-identity.md) — do not infer a phone or shopper identity from an opaque LID; require a verified mapping before linking.
 - [Opened tester pool](opened-tester-pool.md) — reuse the separate B2B tester balance, distinguish sellable stock from asset value, and key partial returns per event.
 - [Word letterhead footer art](word-letterhead-footer-art.md) — the brand's Word footer artwork lives inside its full-page header image, not the document's empty footer section.
+- [Historical order VAT semantics](historical-order-vat-semantics.md) — paid orders span tax-added and tax-inclusive eras; infer each record's arithmetic before issuing or reversing its invoice.

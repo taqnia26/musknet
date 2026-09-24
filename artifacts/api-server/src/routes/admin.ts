@@ -1402,29 +1402,39 @@ router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => 
 }));
 router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
-  const country = body.orderAddress.country?.trim() || null;
-  const domestic = country?.toUpperCase() === "SA";
+  const suppliedCountry = body.orderAddress.country?.trim() || null;
+  const country = suppliedCountry?.toUpperCase() ?? null;
+  const domestic = country === null || country === "SA";
+  const saudiAddress = country === "SA";
   const city = body.orderAddress.city.trim();
   const district = body.orderAddress.district.trim();
   const street = body.orderAddress.street.trim();
   const buildingNo = body.orderAddress.buildingNo.trim();
   const shortCode = body.orderAddress.nationalAddressShortCode?.trim() || null;
-  if (!city || (domestic ? !shortCode : !district || !street || !buildingNo) ||
-      (country && !domestic && shortCode)) {
-    res.status(400).json({ error: domestic
+  if (country !== null) {
+    const countryName = /^[A-Z]{2}$/.test(country)
+      ? new Intl.DisplayNames(["en"], { type: "region" }).of(country)
+      : undefined;
+    if (!countryName || countryName === country || countryName === "Unknown Region") {
+      res.status(400).json({ error: "Country must be a valid ISO 3166-1 alpha-2 code" });
+      return;
+    }
+  }
+  if (!city || (saudiAddress ? !shortCode : !district || !street || !buildingNo) ||
+      (country !== null && !domestic && shortCode)) {
+    res.status(400).json({ error: saudiAddress
       ? "City and national address short code are required for Saudi Arabia"
       : "City, district, street, and building number are required for international addresses; short code is only for Saudi Arabia" });
     return;
   }
-  // Older API callers omit country and keep their existing detailed-address behavior.
   const cleanedAddress = {
     ...body.orderAddress, city, country,
     taxTreatment: domestic ? "domestic" : "international",
-    nationalAddressShortCode: domestic ? shortCode : null,
-    district: domestic ? "" : district,
-    street: domestic ? "" : street,
-    buildingNo: domestic ? "" : buildingNo,
-    additionalInfo: domestic ? null : body.orderAddress.additionalInfo?.trim() || null,
+    nationalAddressShortCode: saudiAddress ? shortCode : null,
+    district: saudiAddress ? "" : district,
+    street: saudiAddress ? "" : street,
+    buildingNo: saudiAddress ? "" : buildingNo,
+    additionalInfo: saudiAddress ? null : body.orderAddress.additionalInfo?.trim() || null,
   };
   const duplicateProductIds = body.items
     .map((item) => item.productId)
@@ -1461,7 +1471,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         0,
       ) * 100) / 100;
       const shippingCost = body.shippingCost ?? (
-         (domestic || !country) && /الرياض|riyadh/i.test(city) ? 20 : 30
+         domestic && /الرياض|riyadh/i.test(city) ? 20 : 30
       );
       const grossTotalCents = Math.round((subtotal + shippingCost) * 100);
       const tax = domestic ? extractVatFromGross(grossTotalCents, 15).vatCents / 100 : 0;
@@ -1496,15 +1506,15 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       await tx.insert(shipmentsTable).values({
         channel: "online",
         orderId: created.id,
-        shippingScope: country && !domestic ? "international" : "domestic",
+        shippingScope: domestic ? "domestic" : "international",
         destinationCity: city,
-        destinationCountry: country,
+        destinationCountry: country ?? (domestic ? "SA" : null),
         nationalAddressShortCode: cleanedAddress.nationalAddressShortCode,
-        destinationDistrict: country && !domestic ? district : null,
-        destinationStreet: country && !domestic ? street : null,
-        destinationBuildingNumber: country && !domestic ? buildingNo : null,
-        destinationAdditionalDetails: country && !domestic ? cleanedAddress.additionalInfo : null,
-        destinationAddress: domestic ? shortCode : [district, street, buildingNo].filter(Boolean).join(", "),
+        destinationDistrict: !saudiAddress ? district : null,
+        destinationStreet: !saudiAddress ? street : null,
+        destinationBuildingNumber: !saudiAddress ? buildingNo : null,
+        destinationAdditionalDetails: !saudiAddress ? cleanedAddress.additionalInfo : null,
+        destinationAddress: saudiAddress ? shortCode : [district, street, buildingNo].filter(Boolean).join(", "),
         serviceMethod: body.shippingMethod,
         status: "pending",
         collectedCost: shippingCost,

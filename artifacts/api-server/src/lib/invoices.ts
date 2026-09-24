@@ -381,17 +381,18 @@ export async function createDistributorInvoice(
         performedBy: actorId,
       });
     }
-    await postJournalEntry({
+    const saleLines = [
+      ...(totalAmount > 0 ? [{ accountCode: "1130", debit: totalAmount }] : []),
+      ...(subtotal > 0 ? [{ accountCode: "4100", credit: subtotal }] : []),
+      ...(vatAmount > 0 ? [{ accountCode: "2120", credit: vatAmount }] : []),
+    ];
+    if (saleLines.length) await postJournalEntry({
       entryDate: issueDatetime.toISOString().slice(0, 10),
       description: `Distributor sale ${invoiceNumber}`,
       createdBy: actorId,
       sourceType: "distributor_invoice",
       sourceId: String(invoice.id),
-      lines: [
-        { accountCode: "1130", debit: totalAmount },
-        { accountCode: "4100", credit: subtotal },
-        { accountCode: "2120", credit: vatAmount },
-      ],
+      lines: saleLines,
     }, tx);
     if (totalCost > 0) {
       await postJournalEntry({

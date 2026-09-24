@@ -57,6 +57,40 @@ function drawRiyalSymbol(document: PDFKit.PDFDocument, x: number, y: number, siz
   drawing.restore();
 }
 
+export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, number]> {
+  const vatRate = invoice.vatRate ?? (invoice.taxTreatment === "international" ? 0 : 15);
+  const vatLabel = invoice.vatAmount > 0
+    ? vatRate > 0 ? `VAT (${vatRate}%)` : "VAT (historical amount)"
+    : vatRate === 0 ? "VAT (0%)" : `VAT (${vatRate}%)`;
+  const companyContractInvoice = !invoice.orderNumber &&
+    invoice.contractDiscountPercent !== null && invoice.contractDiscountPercent !== undefined;
+  const inclusiveOrderSnapshot = Boolean(invoice.orderNumber) &&
+    Math.round(invoice.subtotal * 100) + Math.round(invoice.vatAmount * 100) === Math.round(invoice.totalAmount * 100);
+  const totalRows: Array<[string, number]> = [];
+  if (companyContractInvoice) {
+    const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    totalRows.push(
+      ["Gross before discount (VAT included)", grossBeforeDiscount],
+      [`Contract discount (${invoice.contractDiscountPercent}%)`, -(invoice.discountAmount ?? 0)],
+      ["Net subtotal after discount", invoice.subtotal],
+      [vatLabel, invoice.vatAmount],
+    );
+  } else {
+    totalRows.push(["Subtotal", invoice.subtotal], [vatLabel, invoice.vatAmount]);
+  }
+  if ((invoice.shippingAmount ?? 0) > 0 && !inclusiveOrderSnapshot) totalRows.push(["Shipping", invoice.shippingAmount!]);
+  if (!inclusiveOrderSnapshot && !companyContractInvoice) {
+    totalRows.push(["Discount", -(invoice.discountAmount ?? 0)]);
+  }
+  if (invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount) {
+    totalRows.push(["Amount Paid", invoice.paidAmount]);
+    if (invoice.outstandingAmount > 0 && invoice.outstandingAmount < invoice.totalAmount) {
+      totalRows.push(["Amount Due", invoice.outstandingAmount]);
+    }
+  }
+  return totalRows;
+}
+
 export async function createInvoicePdf(invoice: InvoiceForEmail) {
   if (!invoiceLogo) throw new Error("Invoice brand logo is missing from the application assets");
   if (!invoiceFooter) throw new Error("Invoice footer is missing from the application assets");
@@ -113,22 +147,7 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   }
 
   y += 18;
-  const vatRate = invoice.vatRate ?? (invoice.taxTreatment === "international" ? 0 : 15);
-  const vatLabel = vatRate === 0 ? "VAT (0%)" : `VAT (${vatRate}%)`;
-  const totalRows: Array<[string, number]> = [["Subtotal", invoice.subtotal], [vatLabel, invoice.vatAmount]];
-  const legacyOrderArithmetic = Math.round(invoice.totalAmount * 100) + Math.round((invoice.discountAmount ?? 0) * 100) ===
-    Math.round(invoice.subtotal * 100) + Math.round((invoice.shippingAmount ?? 0) * 100) + Math.round(invoice.vatAmount * 100);
-  const inclusiveSnapshot = invoice.vatRate !== null && invoice.vatRate !== undefined && !legacyOrderArithmetic;
-  if ((invoice.shippingAmount ?? 0) > 0 && !(inclusiveSnapshot && invoice.orderNumber)) totalRows.push(["Shipping", invoice.shippingAmount!]);
-  if (!(inclusiveSnapshot && (invoice.orderNumber || (invoice.contractDiscountPercent ?? 0) > 0))) {
-    totalRows.push(["Discount", -(invoice.discountAmount ?? 0)]);
-  }
-  if (invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount) {
-    totalRows.push(["Amount Paid", invoice.paidAmount]);
-    if (invoice.outstandingAmount > 0 && invoice.outstandingAmount < invoice.totalAmount) {
-      totalRows.push(["Amount Due", invoice.outstandingAmount]);
-    }
-  }
+  const totalRows = getInvoiceTotalRows(invoice);
   if (Math.max(y, 535) + totalRows.length * 23 + 42 > 738) {
     document.addPage();
     y = 52;
@@ -159,9 +178,14 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
 export async function sendInvoiceEmail(input: { recipient: string; invoice: InvoiceForEmail; pdf: Buffer }) {
   const from = process.env.INVOICE_FROM_EMAIL?.trim() || "Musk Ellolo <onboarding@resend.dev>";
   const emailVatRate = input.invoice.vatRate ?? (input.invoice.taxTreatment === "international" ? 0 : 15);
-  const vatDescription = input.invoice.taxTreatment === "international" && emailVatRate === 0
-    ? "ضريبة القيمة المضافة (0% - معاملة دولية)"
-    : `ضريبة القيمة المضافة (${emailVatRate}%${input.invoice.taxTreatment === "international" ? " - وفق الحساب التاريخي" : ""})`;
+  const hasHistoricalVatAmount = input.invoice.vatAmount > 0;
+  const vatDescription = hasHistoricalVatAmount
+    ? emailVatRate > 0
+      ? `ضريبة القيمة المضافة (${emailVatRate}%${input.invoice.taxTreatment === "international" ? " - وفق الحساب التاريخي" : ""})`
+      : "ضريبة القيمة المضافة (مبلغ تاريخي)"
+    : input.invoice.taxTreatment === "international" && emailVatRate === 0
+      ? "ضريبة القيمة المضافة (0% - معاملة دولية)"
+      : `ضريبة القيمة المضافة (${emailVatRate}%${input.invoice.taxTreatment === "international" ? " - وفق الحساب التاريخي" : ""})`;
   const body = {
       from,
       to: [input.recipient],

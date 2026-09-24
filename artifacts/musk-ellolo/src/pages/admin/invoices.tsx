@@ -51,6 +51,17 @@ function InvoiceTemplate({
 }) {
   const { t, lang } = useLanguage();
   const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const inclusiveOrderSnapshot = Boolean(invoice.orderNumber) &&
+    Math.round(invoice.subtotal * 100) + Math.round(invoice.vatAmount * 100) === Math.round(invoice.totalAmount * 100);
+  const vatLabel = invoice.vatAmount > 0
+    ? invoice.vatRate !== null && invoice.vatRate !== undefined && invoice.vatRate > 0
+      ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
+      : t('ضريبة القيمة المضافة (مبلغ تاريخي)', 'VAT (historical amount)')
+    : invoice.taxTreatment === 'international'
+      ? t('ضريبة القيمة المضافة (دولي - 0%)', 'VAT (International — 0%)')
+      : invoice.vatRate !== null && invoice.vatRate !== undefined
+        ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
+        : t('ضريبة القيمة المضافة (15%)', 'VAT (15%)');
   return (
     <div id="invoice-print-area" data-testid="invoice-template" className="invoice-sheet bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <style>{`
@@ -160,11 +171,7 @@ function InvoiceTemplate({
                 <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
               </div>
               <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{invoice.taxTreatment === 'international'
-                  ? t('ضريبة القيمة المضافة (دولي - 0%)', 'VAT (International — 0%)')
-                  : invoice.taxTreatment === 'domestic' && invoice.vatRate !== null
-                    ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
-                    : t('ضريبة القيمة المضافة (15%)', 'VAT (15%)')}</span>
+                <span>{vatLabel}</span>
                 <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
               </div>
               {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
@@ -179,21 +186,17 @@ function InvoiceTemplate({
                 <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
               </div>
               <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{invoice.taxTreatment === 'international'
-                  ? t('ضريبة القيمة المضافة (دولي - 0%)', 'VAT (International — 0%)')
-                  : invoice.taxTreatment === 'domestic' && invoice.vatRate !== null
-                    ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
-                    : t('ضريبة القيمة المضافة (15%)', 'VAT (15%)')}</span>
+                <span>{vatLabel}</span>
                 <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
               </div>
-              {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
+              {!inclusiveOrderSnapshot && (invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t('الشحن', 'Shipping')}</span>
                 <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
               </div>}
-              <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
+              {!inclusiveOrderSnapshot && <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t('الخصم', 'Discount')}</span>
                 <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
-              </div>
+              </div>}
             </>
           )}
            {invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount && (

@@ -1,0 +1,1 @@
+ALTER TABLE "wholesale_distributors" ADD COLUMN "country_code" text;

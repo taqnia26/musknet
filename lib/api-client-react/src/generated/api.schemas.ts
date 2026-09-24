@@ -2856,6 +2856,8 @@ export interface AdminDistributor {
   /** @nullable */
   city?: string | null;
   /** @nullable */
+  countryCode?: string | null;
+  /** @nullable */
   address?: string | null;
   /** @nullable */
   taxNumber?: string | null;
@@ -2882,6 +2884,11 @@ export interface AdminDistributorInput {
   phone: string;
   /** @nullable */
   city?: string | null;
+  /**
+     * @nullable
+     * @pattern ^[A-Za-z]{2}$
+     */
+  countryCode?: string | null;
   /** @nullable */
   address?: string | null;
   /** @nullable */
