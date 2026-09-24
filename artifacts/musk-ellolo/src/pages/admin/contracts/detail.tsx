@@ -7,7 +7,11 @@ import {
   useAdminRequestContractSignatureUpload,
   useAdminSendContract,
   useAdminCancelContract,
-  DistributorContractStatus
+  DistributorContractStatus,
+  useAdminListDistributors,
+  useAdminLinkDistributorContract,
+  getAdminListDistributorsQueryKey,
+  getAdminListContractsQueryKey,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -17,6 +21,7 @@ import { Loader2, ArrowRight, FileText, CheckCircle, Clock, Ban, Download, PenTo
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sellerNumberLabel } from './seller-defaults';
 import { downloadContractPdf, pdfDownloadError } from './download-pdf';
 
@@ -28,6 +33,11 @@ const statusMap: Record<DistributorContractStatus, { label: string, variant: 'de
   cancelled: { label: 'ملغى', variant: 'destructive', icon: Ban, color: 'text-destructive' },
 };
 
+const normalizeLegalName = (value: string | null | undefined) =>
+  value?.normalize('NFKC').trim().toLocaleLowerCase().replace(/\s+/g, ' ') ?? '';
+const normalizeCommercialRegistration = (value: string | null | undefined) =>
+  value?.normalize('NFKC').replace(/\s+/g, '').toLocaleUpperCase() ?? '';
+
 export default function AdminContractDetail() {
   const [, params] = useRoute('/admin/contracts/:id');
   const id = parseInt(params?.id || '0', 10);
@@ -38,6 +48,8 @@ export default function AdminContractDetail() {
   const signContract = useAdminSignContract();
   const sendContract = useAdminSendContract();
   const cancelContract = useAdminCancelContract();
+  const { data: activeDistributors, isLoading: distributorsLoading, isError: distributorsError } = useAdminListDistributors({ status: 'active' });
+  const linkDistributor = useAdminLinkDistributorContract();
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -46,6 +58,8 @@ export default function AdminContractDetail() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [signingUrl, setSigningUrl] = useState<string | null>(null);
+  const [linkDistributorId, setLinkDistributorId] = useState('');
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   if (isLoading) {
     return <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -57,6 +71,38 @@ export default function AdminContractDetail() {
 
   const statusInfo = statusMap[contract.status as DistributorContractStatus] || statusMap.draft;
   const StatusIcon = statusInfo.icon;
+  const matchingDistributors = (activeDistributors ?? []).filter((distributor) => {
+    const exactNameMatch = normalizeLegalName(contract.buyerCompanyName) !== '' &&
+      normalizeLegalName(contract.buyerCompanyName) === normalizeLegalName(distributor.companyName);
+    const contractCr = normalizeCommercialRegistration(contract.buyerCrNumber);
+    const distributorCr = normalizeCommercialRegistration(distributor.commercialRegistrationNumber);
+    const exactCrMatch = contractCr !== '' && distributorCr !== '' && contractCr === distributorCr;
+    return exactNameMatch || exactCrMatch;
+  });
+  const selectedMatchingDistributor = matchingDistributors.find((distributor) => String(distributor.id) === linkDistributorId);
+
+  const handleLinkDistributor = () => {
+    if (contract.status !== 'final' || contract.distributorId || !selectedMatchingDistributor) return;
+    const confirmed = window.confirm(
+      `ربط العقد النهائي ${contract.contractNumber} بالشركة النشطة "${selectedMatchingDistributor.companyName}"؟\n\nسيُحدّث هذا الربط فقط، ولن يغيّر أي محتوى موقّع في العقد.`,
+    );
+    if (!confirmed) return;
+    setLinkError(null);
+    linkDistributor.mutate({ id, data: { distributorId: selectedMatchingDistributor.id } }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getAdminGetContractQueryKey(id) });
+        queryClient.invalidateQueries({ queryKey: getAdminListContractsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getAdminListDistributorsQueryKey() });
+        toast({ title: 'تم الربط', description: `تم ربط العقد بالشركة ${selectedMatchingDistributor.companyName} دون تغيير محتواه الموقع` });
+        setLinkDistributorId('');
+      },
+      onError: (err) => {
+        const message = err instanceof Error ? err.message : 'تعذر ربط العقد بالشركة';
+        setLinkError(message);
+        toast({ title: 'تعذر ربط العقد', description: message, variant: 'destructive' });
+      },
+    });
+  };
 
   const handleDownloadPdf = async () => {
     try {
@@ -250,6 +296,31 @@ export default function AdminContractDetail() {
               <div className="col-span-2 md:col-span-1">
                 <div className="text-muted-foreground mb-1">البريد الإلكتروني</div>
                 <div className="font-medium font-mono">{contract.buyerEmail || '—'}</div>
+              </div>
+              <div className="col-span-2 border-t pt-4">
+                <div className="text-muted-foreground mb-1">الشركة المرتبطة بالفواتير</div>
+                {contract.distributorId ? (
+                  <div className="font-medium">{activeDistributors?.find((distributor) => distributor.id === contract.distributorId)?.companyName ?? contract.buyerCompanyName}</div>
+                ) : contract.status === 'final' ? (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">هذا العقد النهائي غير مرتبط بشركة. يمكن ربطه فقط بشركة نشطة تطابق الاسم القانوني أو رقم السجل التجاري تماماً؛ لن يتغير محتوى العقد الموقع.</p>
+                    {distributorsLoading ? <p className="text-sm text-muted-foreground">جاري تحميل الشركات النشطة...</p> : distributorsError ? (
+                      <p role="alert" className="text-sm text-destructive">تعذر تحميل الشركات النشطة، أعد تحميل الصفحة وحاول مجدداً.</p>
+                    ) : matchingDistributors.length ? (
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Select value={linkDistributorId} onValueChange={(value) => { setLinkDistributorId(value); setLinkError(null); }}>
+                          <SelectTrigger className="sm:max-w-md"><SelectValue placeholder="اختر الشركة المطابقة" /></SelectTrigger>
+                          <SelectContent>{matchingDistributors.map((distributor) => <SelectItem key={distributor.id} value={String(distributor.id)}>{distributor.companyName}{distributor.commercialRegistrationNumber ? ` · ${distributor.commercialRegistrationNumber}` : ''}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Button type="button" onClick={handleLinkDistributor} disabled={!selectedMatchingDistributor || linkDistributor.isPending}>
+                          {linkDistributor.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
+                          ربط الشركة
+                        </Button>
+                      </div>
+                    ) : <p className="text-sm text-amber-700">لا توجد شركة نشطة تطابق الاسم القانوني أو رقم السجل التجاري لهذا العقد.</p>}
+                    {linkError && <p role="alert" className="text-sm text-destructive">{linkError}</p>}
+                  </div>
+                ) : <div className="font-medium text-muted-foreground">غير مرتبط</div>}
               </div>
             </CardContent>
           </Card>

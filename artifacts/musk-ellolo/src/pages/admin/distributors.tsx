@@ -17,6 +17,13 @@ import { getAdminListDistributorsQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
+const COUNTRY_CODES = `AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW`.split(' ');
+const GCC_COUNTRY_CODES = ['SA', 'AE', 'BH', 'KW', 'OM', 'QA'];
+const countryLabel = (code: string, lang: string) => {
+  const name = new Intl.DisplayNames([lang], { type: 'region' }).of(code);
+  return `${name && name !== code ? name : code} (${code})`;
+};
+
 const normalizePhone = (value: string) => value
   .trim()
   .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
@@ -37,12 +44,15 @@ const distributorSchema = z.object({
   address: z.string().nullable().optional(),
   taxNumber: z.string().nullable().optional(),
   commercialRegistrationNumber: z.string().nullable().optional(),
+  countryCode: z.string().refine((value) => value === '' || /^[A-Z]{2}$/.test(value), {
+    message: 'اختر رمز دولة مكوّناً من حرفين كبيرين / Choose a two-letter uppercase country code',
+  }),
   notes: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
 });
 
 export default function AdminDistributors() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -79,7 +89,7 @@ export default function AdminDistributors() {
 
   const form = useForm<z.infer<typeof distributorSchema>>({
     resolver: zodResolver(distributorSchema),
-    defaultValues: { companyName: '', contactName: '', phone: '', email: null, city: null, address: null, taxNumber: null, commercialRegistrationNumber: null, notes: null, isActive: true }
+    defaultValues: { companyName: '', contactName: '', phone: '', email: null, city: null, address: null, taxNumber: null, commercialRegistrationNumber: null, countryCode: 'SA', notes: null, isActive: true }
   });
 
   const onSubmit = (data: z.infer<typeof distributorSchema>) => {
@@ -93,6 +103,7 @@ export default function AdminDistributors() {
       address: normalizeOptional(data.address),
       taxNumber: normalizeOptional(data.taxNumber),
       commercialRegistrationNumber: normalizeOptional(data.commercialRegistrationNumber),
+      countryCode: data.countryCode || null,
       notes: normalizeOptional(data.notes),
     };
     if (editingId) {
@@ -138,6 +149,7 @@ export default function AdminDistributors() {
       address: distributor.address,
       taxNumber: distributor.taxNumber,
       commercialRegistrationNumber: distributor.commercialRegistrationNumber,
+      countryCode: distributor.countryCode ?? '',
       notes: distributor.notes,
       isActive: distributor.isActive
     });
@@ -193,6 +205,29 @@ export default function AdminDistributors() {
                 </div>
                 <FormField control={form.control} name="commercialRegistrationNumber" render={({ field }) => (
                   <FormItem><FormLabel>{t('رقم السجل التجاري', 'Commercial Registration Number')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                )} />
+                <FormField control={form.control} name="countryCode" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('الدولة / رمز ISO-2', 'Country / ISO-2 code')}</FormLabel>
+                    <FormControl>
+                      <select
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                      >
+                        <option value="">{t('غير محددة', 'Unspecified')}</option>
+                        <optgroup label={t('دول مجلس التعاون الخليجي', 'Gulf Cooperation Council')}>
+                          {GCC_COUNTRY_CODES.map((code) => <option key={code} value={code}>{countryLabel(code, lang)}</option>)}
+                        </optgroup>
+                        <optgroup label={t('دول أخرى', 'Other countries')}>
+                          {COUNTRY_CODES.filter((code) => !GCC_COUNTRY_CODES.includes(code)).sort().map((code) => (
+                            <option key={code} value={code}>{countryLabel(code, lang)}</option>
+                          ))}
+                        </optgroup>
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )} />
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="phone" render={({ field }) => (

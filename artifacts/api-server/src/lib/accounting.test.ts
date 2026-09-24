@@ -232,6 +232,39 @@ describe.sequential("exact double-entry accounting", () => {
     });
   });
 
+  it("preserves inclusive checkout product, shipping, and net discount classifications", async () => {
+    const saleId = 1_800_000_000 + (suffix % 99_999_999);
+    await db.transaction((tx) => postSalesJournal({
+      id: saleId,
+      orderNumber: `ACC-INCLUSIVE-SALE-${suffix}`,
+      subtotal: 100,
+      shippingCost: 20,
+      discount: 10,
+      total: 110,
+      tax: 14.35,
+      createdAt: new Date(`${mixedPostingDate}T12:00:00.000Z`),
+    }, actorId, tx));
+    const [entry] = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "order"), eq(journalEntriesTable.sourceId, String(saleId))));
+    const lines = await db.select({
+      accountCode: accountingAccountsTable.code,
+      debit: journalEntryLinesTable.debit,
+      credit: journalEntryLinesTable.credit,
+    }).from(journalEntryLinesTable)
+      .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+      .where(eq(journalEntryLinesTable.journalEntryId, entry.id));
+    expect(lines).toEqual(expect.arrayContaining([
+      { accountCode: "1120", debit: "110.0000", credit: "0.0000" },
+      { accountCode: "4100", debit: "0.0000", credit: "86.9600" },
+      { accountCode: "4110", debit: "0.0000", credit: "17.3900" },
+      { accountCode: "4190", debit: "8.7000", credit: "0.0000" },
+      { accountCode: "2120", debit: "0.0000", credit: "14.3500" },
+    ]));
+    const debits = lines.reduce((sum, line) => sum + Number(line.debit), 0);
+    const credits = lines.reduce((sum, line) => sum + Number(line.credit), 0);
+    expect(debits).toBeCloseTo(credits, 4);
+  });
+
   it("posts owner-paid purchases to owner payable and is idempotent", async () => {
     const values = {
       title: `Owner oils ${suffix}`,

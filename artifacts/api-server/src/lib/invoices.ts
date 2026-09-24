@@ -1,8 +1,10 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db, adminUsersTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable } from "@workspace/db";
+import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, distributorContractsTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 import { adjustOperationalBalances } from "./operations";
+import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType, type TaxTreatment } from "./vat";
+import { defaultCompanyDueDate, dueDateFromContract } from "./invoice-dates";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
 
@@ -15,10 +17,75 @@ const stableJson = (value: unknown): string => JSON.stringify(value, (_key, item
     : item);
 
 const dateOnly = (value: string | Date) => value instanceof Date ? value.toISOString().slice(0, 10) : value;
+function orderInvoiceTaxSnapshot(order: typeof ordersTable.$inferSelect) {
+  let address: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(order.address) as Record<string, unknown>;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) address = parsed;
+  } catch {
+    // Old rows occasionally contain non-JSON address text; preserve their legacy totals.
+  }
+  const storedTreatment = address.taxTreatment;
+  const country = String(address.countryCode ?? address.country ?? "").trim().toUpperCase();
+  const destinationTreatment: TaxTreatment = storedTreatment === "domestic" || storedTreatment === "international"
+    ? storedTreatment
+    : !country || ["SA", "SAUDI ARABIA", "السعودية", "المملكة العربية السعودية"].includes(country)
+      ? "domestic"
+      : "international";
+  const totalCents = cents(order.total);
+  const subtotalCents = cents(order.subtotal);
+  const shippingCents = cents(order.shippingCost);
+  const discountCents = cents(order.discount);
+  const taxCents = cents(order.tax);
+  const legacyArithmetic = totalCents + discountCents === subtotalCents + shippingCents + taxCents;
+  const inclusiveArithmetic = totalCents === subtotalCents - discountCents + shippingCents;
+  const inclusive = inclusiveArithmetic && (storedTreatment === "domestic" || storedTreatment === "international" || !legacyArithmetic);
+  const legacy = !inclusive;
+  return {
+    legacy,
+    taxTreatment: destinationTreatment,
+    vatRate: legacy ? (taxCents > 0 ? 15 : 0) : (destinationTreatment === "domestic" ? 15 : 0),
+  };
+}
+
 export class DistributorInvoiceValidationError extends Error {}
 export class DistributorInvoiceConflictError extends Error {}
 
 export class ReceivablePaymentNotFoundError extends Error {}
+
+async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoicesTable.$inferSelect, input: {
+  creationKey: string;
+  distributorId: number;
+  contractId?: number;
+  taxTreatment?: TaxTreatment;
+  dueDate?: string | Date;
+  items: Array<{ productId: number; quantity: number; unitPrice: number }>;
+}) {
+  if (previous.distributorId !== input.distributorId) throw new DistributorInvoiceConflictError("Creation key already used for a different distributor invoice");
+  const [event] = await tx.select().from(operationEventsTable)
+    .where(eq(operationEventsTable.eventKey, `distributor-invoice:${previous.id}`)).limit(1);
+  if (event) {
+    const recordedRequest = (event.payload as { request?: unknown } | null)?.request;
+    if (stableJson(recordedRequest) !== stableJson(input)) {
+      throw new DistributorInvoiceConflictError("Creation key already used for different invoice details");
+    }
+    return;
+  }
+  const previousItems = await tx.select().from(invoiceItemsTable)
+    .where(eq(invoiceItemsTable.invoiceId, previous.id)).orderBy(invoiceItemsTable.id);
+  const requestedItems = input.items.map((item) => ({
+    productId: item.productId, quantity: item.quantity, unitPriceCents: cents(item.unitPrice),
+  })).sort((a, b) => a.productId - b.productId);
+  const recordedItems = previousItems.map((item: typeof invoiceItemsTable.$inferSelect) => ({
+    productId: item.productId, quantity: item.quantity, unitPriceCents: cents(item.unitPrice),
+  })).sort((a: { productId: number }, b: { productId: number }) => a.productId - b.productId);
+  const mismatch = (input.contractId !== undefined && input.contractId !== previous.contractId) ||
+    (input.taxTreatment !== undefined && input.taxTreatment !== previous.taxTreatment) ||
+    (input.dueDate !== undefined && previous.dueDate !== dateOnly(input.dueDate)) ||
+    stableJson(requestedItems) !== stableJson(recordedItems);
+  if (mismatch) throw new DistributorInvoiceConflictError("Creation key already used for different invoice details");
+}
+
 export async function createExhibitionInvoice(
   input: { creationKey: string; exhibitionId: number; saleDate: string; buyerName: string; buyerAddress?: string | null; buyerTaxNumber?: string | null; buyerCommercialRegistrationNumber?: string | null; paymentMethod: "cash" | "bank_transfer"; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
@@ -60,10 +127,10 @@ export async function createExhibitionInvoice(
       if (!allocation || !product || !product.isActive) throw new DistributorInvoiceConflictError(`Product ${item.productId} is not available at this exhibition`);
       if (allocation.quantityAllocated - allocation.quantitySold < item.quantity) throw new DistributorInvoiceConflictError(`Insufficient exhibition allocation for ${product.nameAr}`);
       if (product.stockQuantity < item.quantity) throw new DistributorInvoiceConflictError(`Insufficient stock for ${product.nameAr}`);
-      const subtotalCents = cents(item.unitPrice) * item.quantity;
-      const vatCents = Math.round(subtotalCents * 0.15);
+      const grossCents = cents(item.unitPrice) * item.quantity;
+      const amounts = extractVatFromGross(grossCents, 15);
       lines.push({ productId: item.productId, productName: product.nameAr || product.nameEn, sku: product.sku, quantity: item.quantity, unitPrice: item.unitPrice,
-        subtotal: fromCents(subtotalCents), vatAmount: fromCents(vatCents), totalAmount: fromCents(subtotalCents + vatCents),
+        subtotal: fromCents(amounts.netCents), vatAmount: fromCents(amounts.vatCents), totalAmount: fromCents(amounts.grossCents),
         stockBefore: product.stockQuantity, unitCost: product.averageCost, allocationId: allocation.id, soldBefore: allocation.quantitySold });
       totalCost += Number(product.averageCost) * item.quantity;
     }
@@ -81,7 +148,7 @@ export async function createExhibitionInvoice(
       sellerName: configuration.sellerName, sellerVatNumber: configuration.vatRegistrationNumber, issueDatetime: issuedAt,
       buyerName: input.buyerName.trim(), buyerAddress: input.buyerAddress?.trim() || null, buyerTaxNumber: input.buyerTaxNumber?.trim() || null,
       buyerCommercialRegistrationNumber: input.buyerCommercialRegistrationNumber?.trim() || null,
-      subtotal, vatAmount, totalAmount,
+      subtotal, discountAmount: 0, vatAmount, totalAmount, taxTreatment: "domestic", vatRate: "15",
       qrCodeData: zatcaPhaseOneBase64({ ...configuration, timestamp: issuedAt.toISOString(), invoiceTotal: money(totalAmount), vatTotal: money(vatAmount) }),
     }).returning();
     const items = await tx.insert(invoiceItemsTable).values(lines.map(({ stockBefore, unitCost, allocationId, soldBefore, ...line }) => ({ ...line, invoiceId: invoice.id }))).returning();
@@ -115,7 +182,7 @@ export async function createExhibitionInvoice(
 }
 
 export async function createDistributorInvoice(
-  input: { creationKey: string; distributorId: number; dueDate?: string | Date; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  input: { creationKey: string; distributorId: number; contractId?: number; taxTreatment?: TaxTreatment; dueDate?: string | Date; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
   environment: NodeJS.ProcessEnv = process.env,
 ) {
@@ -133,6 +200,7 @@ export async function createDistributorInvoice(
   return db.transaction(async (tx) => {
     const [previous] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (previous) {
+      await assertDistributorInvoiceReplay(tx, previous, input);
       const previousItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, previous.id)).orderBy(invoiceItemsTable.id);
       const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, previous.id)).orderBy(receivablePaymentsTable.paymentDate);
       const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
@@ -142,6 +210,52 @@ export async function createDistributorInvoice(
       .where(eq(wholesaleDistributorsTable.id, input.distributorId)).limit(1);
     if (!distributor) throw new DistributorInvoiceValidationError("Distributor not found");
     if (!distributor.isActive) throw new DistributorInvoiceConflictError("Distributor is inactive");
+
+    const today = new Date();
+    const todayDate = today.toISOString().slice(0, 10);
+    const currentContracts = await tx.select().from(distributorContractsTable).where(and(
+      eq(distributorContractsTable.distributorId, distributor.id),
+      eq(distributorContractsTable.status, "final"),
+      sql`(${distributorContractsTable.startDate} is null or ${distributorContractsTable.startDate}::date <= ${todayDate}::date)`,
+      sql`(${distributorContractsTable.endDate} is null or ${distributorContractsTable.endDate}::date >= ${todayDate}::date)`,
+    ));
+    let contract: typeof distributorContractsTable.$inferSelect | undefined;
+    if (input.contractId !== undefined) {
+      contract = currentContracts.find((row) => row.id === input.contractId);
+      if (!contract) throw new DistributorInvoiceConflictError("Selected contract is not a current final contract linked to this distributor");
+    } else if (currentContracts.length > 1) {
+      throw new DistributorInvoiceConflictError("Multiple current final contracts are linked to this distributor; select contractId explicitly");
+    } else {
+      contract = currentContracts[0];
+    }
+    const contractTreatment = contract ? taxTreatmentForContractType(contract.contractType) : null;
+    if (contract && input.taxTreatment === undefined) {
+      throw new DistributorInvoiceValidationError("taxTreatment is required for a contract-linked company invoice");
+    }
+    const taxTreatment: TaxTreatment = input.taxTreatment ?? "domestic";
+    if (contractTreatment && taxTreatment !== contractTreatment) {
+      throw new DistributorInvoiceConflictError(`Contract tax treatment must be ${contractTreatment}`);
+    }
+    const countryCode = distributor.countryCode?.trim().toUpperCase() || null;
+    if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) {
+      throw new DistributorInvoiceConflictError("Distributor countryCode must be an ISO 3166-1 alpha-2 code");
+    }
+    if (taxTreatment === "international" && (!countryCode || countryCode === "SA")) {
+      throw new DistributorInvoiceValidationError("International company invoices require a distributor countryCode other than SA");
+    }
+    if (contractTreatment === "domestic" && countryCode && countryCode !== "SA") {
+      throw new DistributorInvoiceConflictError("Saudi contract type cannot be invoiced to a non-Saudi distributor");
+    }
+    if (contractTreatment === "international" && countryCode === "SA") {
+      throw new DistributorInvoiceConflictError("Gulf contract type cannot be invoiced to a Saudi distributor");
+    }
+    const rawVatRate = contract ? Number(contract.vatRate) : 15;
+    const vatRate = taxTreatment === "international" ? 0 : Number.isFinite(rawVatRate) && rawVatRate >= 0 && rawVatRate <= 100 ? rawVatRate : 15;
+    const rawDiscount = contract ? Number(contract.marginPercent) : 0;
+    if (!Number.isFinite(rawDiscount) || rawDiscount < 0 || rawDiscount > 100) {
+      throw new DistributorInvoiceConflictError("Contract discount must be between 0 and 100 percent");
+    }
+    const contractDiscountPercent = contract ? rawDiscount : 0;
 
     const sortedProductIds = [...productIds].sort((a, b) => a - b);
     for (const productId of sortedProductIds) {
@@ -163,26 +277,30 @@ export async function createDistributorInvoice(
     }
 
     const lines = input.items.map((item, index) => {
-      const subtotalCents = cents(item.unitPrice) * item.quantity;
-      const vatCents = Math.round(subtotalCents * 0.15);
+      const listGrossCents = cents(item.unitPrice) * item.quantity;
+      const grossCents = discountedGrossCents(listGrossCents, contractDiscountPercent);
+      const amounts = extractVatFromGross(grossCents, vatRate);
       return {
         productId: item.productId,
         productName: products[index].nameAr || products[index].nameEn,
         sku: products[index].sku,
         quantity: item.quantity,
         unitPrice: fromCents(cents(item.unitPrice)),
-        subtotal: fromCents(subtotalCents),
-        vatAmount: fromCents(vatCents),
-        totalAmount: fromCents(subtotalCents + vatCents),
+        subtotal: fromCents(amounts.netCents),
+        vatAmount: fromCents(amounts.vatCents),
+        totalAmount: fromCents(amounts.grossCents),
       };
     });
+    const listSubtotal = fromCents(input.items.reduce((sum, item) => sum + cents(item.unitPrice) * item.quantity, 0));
     const subtotal = fromCents(lines.reduce((sum, line) => sum + cents(line.subtotal), 0));
     const vatAmount = fromCents(lines.reduce((sum, line) => sum + cents(line.vatAmount), 0));
-    const totalAmount = fromCents(cents(subtotal) + cents(vatAmount));
+    const totalAmount = fromCents(lines.reduce((sum, line) => sum + cents(line.totalAmount), 0));
+    const discountAmount = fromCents(cents(listSubtotal) - cents(totalAmount));
 
     await tx.execute(sql`select pg_advisory_xact_lock(${INVOICE_NUMBER_LOCK})`);
     const [afterLock] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (afterLock) {
+      await assertDistributorInvoiceReplay(tx, afterLock, input);
       const afterLockItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, afterLock.id)).orderBy(invoiceItemsTable.id);
       const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, afterLock.id)).orderBy(receivablePaymentsTable.paymentDate);
       const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
@@ -208,13 +326,23 @@ export async function createDistributorInvoice(
       invoiceNumber,
       sellerName: configuration.sellerName,
       issueDatetime,
-      dueDate: input.dueDate ? dateOnly(input.dueDate) : defaultDueDate(),
+      dueDate: contract
+        ? dueDateFromContract(issueDatetime, contract.contractType, contract.paymentDays)
+        : input.dueDate ? dateOnly(input.dueDate) : defaultCompanyDueDate(),
       sellerVatNumber: configuration.vatRegistrationNumber,
       buyerName: distributor.companyName,
       buyerTaxNumber: distributor.taxNumber,
       buyerCommercialRegistrationNumber: distributor.commercialRegistrationNumber,
       buyerAddress: [distributor.address, distributor.city].filter(Boolean).join(", ") || null,
+      contractId: contract?.id ?? null,
+      contractNumber: contract?.contractNumber ?? null,
+      contractType: contract?.contractType ?? null,
+      contractDiscountPercent: contract ? String(contractDiscountPercent) : null,
+      paymentDays: contract?.paymentDays ?? null,
+      taxTreatment,
+      vatRate: String(vatRate),
       subtotal,
+      discountAmount,
       vatAmount,
       totalAmount,
       qrCodeData,
@@ -278,6 +406,15 @@ export async function createDistributorInvoice(
         ],
       }, tx);
     }
+    await tx.insert(operationEventsTable).values({
+      eventKey: `distributor-invoice:${invoice.id}`,
+      kind: "sale_fulfillment",
+      status: "posted",
+      sourceType: "distributor_invoice",
+      sourceId: String(invoice.id),
+      actorId,
+      payload: { request: input },
+    });
     return { ...invoice, orderNumber: null, distributorName: distributor.companyName, exhibitionName: null, paidAmount: 0, outstandingAmount: invoice.totalAmount, paymentStatus: "unpaid" as const, payments: [], items: createdItems };
   });
 }
@@ -402,6 +539,7 @@ export async function updateOrderAndIssueInvoice(
           const invoiceNumber = `INV-${String(sequenceNumber).padStart(6, "0")}`;
           const total = values.total ?? order.total;
           const vatTotal = values.tax ?? order.tax;
+          const orderTaxSnapshot = orderInvoiceTaxSnapshot(order);
           const qrCodeBase64 = zatcaPhaseOneBase64({
             ...configuration,
             timestamp: issuedAt.toISOString(),
@@ -415,9 +553,12 @@ export async function updateOrderAndIssueInvoice(
             sellerName: configuration.sellerName,
             issueDatetime: issuedAt,
             sellerVatNumber: configuration.vatRegistrationNumber,
-            subtotal: values.subtotal ?? order.subtotal,
+              subtotal: orderTaxSnapshot.legacy ? (values.subtotal ?? order.subtotal) : fromCents(cents(total) - cents(vatTotal)),
+              discountAmount: values.discount ?? order.discount,
             totalAmount: total,
             vatAmount: vatTotal,
+              taxTreatment: orderTaxSnapshot.taxTreatment,
+              vatRate: String(orderTaxSnapshot.vatRate),
             qrCodeData: qrCodeBase64,
           });
         }
@@ -460,25 +601,47 @@ export async function updateOrderAndIssueInvoice(
         }
         const [cogsJournal] = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
           .where(and(eq(journalEntriesTable.sourceType, "sale_cogs"), eq(journalEntriesTable.sourceId, String(order.id)))).limit(1);
-        if (reversalCost > 0 && cogsJournal) await postJournalEntry({
-          entryDate: new Date().toISOString().slice(0, 10), description: `Reverse COGS ${order.orderNumber}`,
-          createdBy: actorId, sourceType: "sale_cogs_reversal", sourceId: String(order.id),
-          lines: [{ accountCode: "1140", debit: reversalCost }, { accountCode: "5100", credit: reversalCost }],
-        }, tx);
+        if (reversalCost > 0 && cogsJournal) {
+          const postedLines = await tx.select({
+            accountCode: accountingAccountsTable.code,
+            debit: journalEntryLinesTable.debit,
+            credit: journalEntryLinesTable.credit,
+            description: journalEntryLinesTable.description,
+          }).from(journalEntryLinesTable)
+            .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+            .where(eq(journalEntryLinesTable.journalEntryId, cogsJournal.id))
+            .orderBy(journalEntryLinesTable.lineNumber);
+          if (postedLines.length) await postJournalEntry({
+            entryDate: new Date().toISOString().slice(0, 10), description: `Reverse COGS ${order.orderNumber}`,
+            createdBy: actorId, sourceType: "sale_cogs_reversal", sourceId: String(order.id),
+            lines: postedLines.map((line) => ({
+              accountCode: line.accountCode, debit: line.credit, credit: line.debit,
+              ...(line.description ? { description: line.description } : {}),
+            })),
+          }, tx);
+        }
         if (order.paymentStatus === "paid") {
           const [saleJournal] = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
             .where(and(eq(journalEntriesTable.sourceType, "order"), eq(journalEntriesTable.sourceId, String(order.id)))).limit(1);
-          if (saleJournal) await postJournalEntry({
-            entryDate: new Date().toISOString().slice(0, 10), description: `Reverse sale ${order.orderNumber}`,
-            createdBy: actorId, sourceType: "sale_revenue_reversal", sourceId: String(order.id),
-            lines: [
-              { accountCode: "1120", credit: order.total },
-              ...(order.subtotal > 0 ? [{ accountCode: "4100", debit: order.subtotal }] : []),
-              ...(order.shippingCost > 0 ? [{ accountCode: "4110", debit: order.shippingCost }] : []),
-              ...(order.discount > 0 ? [{ accountCode: "4190", credit: order.discount }] : []),
-              ...(order.tax > 0 ? [{ accountCode: "2120", debit: order.tax }] : []),
-            ],
-          }, tx);
+          if (saleJournal) {
+            const postedLines = await tx.select({
+              accountCode: accountingAccountsTable.code,
+              debit: journalEntryLinesTable.debit,
+              credit: journalEntryLinesTable.credit,
+              description: journalEntryLinesTable.description,
+            }).from(journalEntryLinesTable)
+              .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+              .where(eq(journalEntryLinesTable.journalEntryId, saleJournal.id))
+              .orderBy(journalEntryLinesTable.lineNumber);
+            if (postedLines.length) await postJournalEntry({
+              entryDate: new Date().toISOString().slice(0, 10), description: `Reverse sale ${order.orderNumber}`,
+              createdBy: actorId, sourceType: "sale_revenue_reversal", sourceId: String(order.id),
+              lines: postedLines.map((line) => ({
+                accountCode: line.accountCode, debit: line.credit, credit: line.debit,
+                ...(line.description ? { description: line.description } : {}),
+              })),
+            }, tx);
+          }
         }
         await tx.update(operationEventsTable).set({ status: "posted" }).where(eq(operationEventsTable.id, event.id));
       }
@@ -490,8 +653,3 @@ export async function updateOrderAndIssueInvoice(
   });
 }
 
-const defaultDueDate = () => {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() + 30);
-  return date.toISOString().slice(0, 10);
-};

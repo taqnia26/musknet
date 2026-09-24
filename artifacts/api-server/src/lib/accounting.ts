@@ -384,9 +384,18 @@ export async function postSalesJournal(
   const shipping = scaled(order.shippingCost);
   const discount = scaled(order.discount);
   const tax = scaled(order.tax);
-  if (total < 0n || subtotal < 0n || shipping < 0n || discount < 0n || tax < 0n ||
-    total + discount !== subtotal + shipping + tax) {
+  const legacyTotals = total + discount === subtotal + shipping + tax;
+  const inclusiveTotals = total === subtotal - discount + shipping;
+  if (total < 0n || subtotal < 0n || shipping < 0n || discount < 0n || discount > subtotal || tax < 0n ||
+    (!legacyTotals && !inclusiveTotals)) {
     throw new AccountingValidationError("Order totals must satisfy total + discount = subtotal + shipping + tax");
+  }
+  const inclusiveProductRevenue = (subtotal * 100n + 57n) / 115n;
+  const inclusiveProductRevenueAfterDiscount = ((subtotal - discount) * 100n + 57n) / 115n;
+  const inclusiveDiscount = inclusiveProductRevenue - inclusiveProductRevenueAfterDiscount;
+  const inclusiveShippingRevenue = total - tax - inclusiveProductRevenueAfterDiscount;
+  if (inclusiveTotals && !legacyTotals && inclusiveShippingRevenue < 0n) {
+    throw new AccountingValidationError("Inclusive order tax allocation exceeds the shipping and product gross");
   }
   return postInTransaction(executor, {
     entryDate: isoDate(order.createdAt),
@@ -396,9 +405,17 @@ export async function postSalesJournal(
     sourceId: String(order.id),
     lines: [
       { accountCode: "1120", debit: exactMoneyFromScaled(total) },
-      ...(subtotal > 0n ? [{ accountCode: "4100", credit: exactMoneyFromScaled(subtotal) }] : []),
-      ...(shipping > 0n ? [{ accountCode: "4110", credit: exactMoneyFromScaled(shipping) }] : []),
-      ...(discount > 0n ? [{ accountCode: "4190", debit: exactMoneyFromScaled(discount) }] : []),
+      ...(inclusiveTotals && !legacyTotals
+        ? [
+          ...(inclusiveProductRevenue > 0n ? [{ accountCode: "4100", credit: exactMoneyFromScaled(inclusiveProductRevenue) }] : []),
+          ...(inclusiveShippingRevenue > 0n ? [{ accountCode: "4110", credit: exactMoneyFromScaled(inclusiveShippingRevenue) }] : []),
+          ...(inclusiveDiscount > 0n ? [{ accountCode: "4190", debit: exactMoneyFromScaled(inclusiveDiscount) }] : []),
+        ]
+        : [
+          ...(subtotal > 0n ? [{ accountCode: "4100", credit: exactMoneyFromScaled(subtotal) }] : []),
+          ...(shipping > 0n ? [{ accountCode: "4110", credit: exactMoneyFromScaled(shipping) }] : []),
+          ...(discount > 0n ? [{ accountCode: "4190", debit: exactMoneyFromScaled(discount) }] : []),
+        ]),
       ...(tax > 0n ? [{ accountCode: "2120", credit: exactMoneyFromScaled(tax) }] : []),
     ],
   });

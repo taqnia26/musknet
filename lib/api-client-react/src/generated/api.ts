@@ -101,6 +101,7 @@ import type {
   Category,
   CheckoutQuote,
   CheckoutQuoteInput,
+  ConflictResponse,
   ContractFileUploadRequest,
   ContractSendResponse,
   ContractSignatureInput,
@@ -115,6 +116,7 @@ import type {
   DistributorCatalogUpdate,
   DistributorContract,
   DistributorContractInput,
+  DistributorContractLinkInput,
   DistributorContractUpdate,
   DistributorInvoiceInput,
   Employee,
@@ -3194,6 +3196,72 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminDeleteContractMutationOptions(options));
+    }
+
+export const getAdminLinkDistributorContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}/link-distributor`
+}
+
+export const adminLinkDistributorContract = async (id: number,
+    distributorContractLinkInput: DistributorContractLinkInput, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getAdminLinkDistributorContractUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(distributorContractLinkInput)
+  }
+);}
+
+
+
+
+
+export const getAdminLinkDistributorContractMutationOptions = <TError = ErrorType<BadRequestResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLinkDistributorContract>>, TError,{id: number;data: BodyType<DistributorContractLinkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminLinkDistributorContract>>, TError,{id: number;data: BodyType<DistributorContractLinkInput>}, TContext> => {
+
+const mutationKey = ['adminLinkDistributorContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminLinkDistributorContract>>, {id: number;data: BodyType<DistributorContractLinkInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminLinkDistributorContract(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminLinkDistributorContractMutationResult = NonNullable<Awaited<ReturnType<typeof adminLinkDistributorContract>>>
+    export type AdminLinkDistributorContractMutationBody = BodyType<DistributorContractLinkInput>
+    export type AdminLinkDistributorContractMutationError = ErrorType<BadRequestResponse | NotFoundResponse | ConflictResponse>
+
+    export const useAdminLinkDistributorContract = <TError = ErrorType<BadRequestResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminLinkDistributorContract>>, TError,{id: number;data: BodyType<DistributorContractLinkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminLinkDistributorContract>>,
+        TError,
+        {id: number;data: BodyType<DistributorContractLinkInput>},
+        TContext
+      > => {
+      return useMutation(getAdminLinkDistributorContractMutationOptions(options));
     }
 
 export const getAdminSignContractUrl = (id: number,) => {

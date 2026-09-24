@@ -3,7 +3,7 @@ import { useRoute, useLocation, Link } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useAdminGetContract, useAdminCreateContract, useAdminUpdateContract, getAdminListContractsQueryKey, getAdminGetContractQueryKey, DistributorContractInput, useAdminListSiteContent, getAdminListSiteContentQueryKey } from '@workspace/api-client-react';
+import { useAdminGetContract, useAdminCreateContract, useAdminUpdateContract, getAdminListContractsQueryKey, getAdminGetContractQueryKey, DistributorContractInput, useAdminListSiteContent, getAdminListSiteContentQueryKey, useAdminListDistributors } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ const contractSchema = z.object({
   hijriDateStr: z.string().optional().nullable(),
   gregorianDateStr: z.string().optional().nullable(),
   contractDayName: z.string().optional().nullable(),
+  distributorId: z.string().optional().nullable(),
   
   sellerName: z.string().min(1, 'مطلوب'),
   sellerCrNumber: z.string().min(1, 'مطلوب'),
@@ -48,7 +49,9 @@ const contractSchema = z.object({
   showroomLocation: z.string().optional().nullable(),
   showroomCity: z.string().optional().nullable(),
   
-  marginPercent: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
+  marginPercent: z.string().optional().nullable()
+    .refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' })
+    .refine(val => !val || Number(val) <= 100, { message: 'يجب ألا تتجاوز النسبة 100%' }),
   minOrderValue: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
   
   vatRate: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
@@ -79,6 +82,7 @@ export default function AdminContractForm() {
   const { data: contract, isLoading } = useAdminGetContract(id, { 
     query: { enabled: isEditing && !!id, queryKey: getAdminGetContractQueryKey(id) } 
   });
+  const { data: activeDistributors } = useAdminListDistributors({ status: 'active' });
   
    const { data: siteContent, isLoading: isSiteContentLoading, isError: isSiteContentError, refetch: refetchSiteContent } = useAdminListSiteContent({
     query: { enabled: !isEditing, queryKey: getAdminListSiteContentQueryKey() }
@@ -91,6 +95,7 @@ export default function AdminContractForm() {
     resolver: zodResolver(contractSchema),
     defaultValues: {
       contractType: 'عقد توريد أجل المملكة العربية السعودية',
+       distributorId: '',
        sellerName: sellerDefaults.sellerName,
        sellerCrNumber: sellerDefaults.sellerCrNumber,
        sellerCrDate: sellerDefaults.sellerCrDate,
@@ -113,6 +118,7 @@ export default function AdminContractForm() {
       initializedForId.current = contract.id;
       form.reset({
         contractType: contract.contractType,
+        distributorId: contract.distributorId ? String(contract.distributorId) : '',
         contractDate: contract.contractDate,
         hijriDateStr: contract.hijriDateStr,
         gregorianDateStr: contract.gregorianDateStr,
@@ -166,8 +172,17 @@ export default function AdminContractForm() {
   }, [isEditing, siteContent, form]);
 
   const onSubmit = (values: FormValues) => {
+    if (!isEditing && !values.distributorId) {
+      form.setError('distributorId', { type: 'manual', message: 'اختر الشركة/الموزع لربط العقد بالفواتير' });
+      return;
+    }
+    const { distributorId, ...contractValues } = values;
+    const data = {
+      ...contractValues,
+      distributorId: distributorId ? Number(distributorId) : null,
+    } as DistributorContractInput;
     if (isEditing) {
-      updateMutation.mutate({ id, data: values as any }, {
+      updateMutation.mutate({ id, data }, {
         onSuccess: (updated) => {
           queryClient.invalidateQueries({ queryKey: getAdminListContractsQueryKey() });
           toast({ title: 'تم الحفظ', description: 'تم تحديث العقد بنجاح' });
@@ -178,7 +193,7 @@ export default function AdminContractForm() {
         }
       });
     } else {
-      createMutation.mutate({ data: values as any }, {
+      createMutation.mutate({ data }, {
         onSuccess: (created) => {
           queryClient.invalidateQueries({ queryKey: getAdminListContractsQueryKey() });
           toast({ title: 'تم الإنشاء', description: 'تم إنشاء العقد بنجاح' });
@@ -324,15 +339,41 @@ export default function AdminContractForm() {
           <Card>
             <CardHeader>
               <CardTitle>الطرف الثاني (المشتري / الموزع)</CardTitle>
+              {!isEditing && <CardDescription>اختيار شركة نشطة مطلوب لربط العقد بالفواتير.</CardDescription>}
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="distributorId"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>الشركة / الموزع النشط{!isEditing ? ' *' : ''}</FormLabel>
+                    <Select
+                      value={field.value || ''}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        const distributor = activeDistributors?.find((candidate) => String(candidate.id) === value);
+                        if (distributor) form.setValue('buyerCompanyName', distributor.companyName, { shouldDirty: true, shouldValidate: true });
+                      }}
+                    >
+                      <FormControl><SelectTrigger><SelectValue placeholder="اختر الشركة/الموزع" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {(activeDistributors ?? []).map((distributor) => (
+                          <SelectItem key={distributor.id} value={String(distributor.id)}>{distributor.companyName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="buyerCompanyName"
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
                     <FormLabel>اسم الشركة/المؤسسة *</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+                    <FormControl><Input {...field} readOnly /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -436,8 +477,8 @@ export default function AdminContractForm() {
                 name="marginPercent"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>نسبة الخصم / الهامش (%)</FormLabel>
-                    <FormControl><Input type="number" min="0" step="0.01" {...field} value={field.value || ''} /></FormControl>
+                    <FormLabel>نسبة الخصم (%)</FormLabel>
+                    <FormControl><Input type="number" min="0" max="100" step="0.01" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

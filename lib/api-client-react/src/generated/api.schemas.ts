@@ -1023,6 +1023,11 @@ export interface DistributorContract {
   updatedAt: string;
 }
 
+export interface DistributorContractLinkInput {
+  /** @minimum 1 */
+  distributorId: number;
+}
+
 export type DistributorContractInputContractType = typeof DistributorContractInputContractType[keyof typeof DistributorContractInputContractType];
 
 
@@ -1697,6 +1702,17 @@ export interface AdminOrderInput {
   adminNotes?: string | null;
 }
 
+/**
+ * @nullable
+ */
+export type AdminInvoiceTaxTreatment = typeof AdminInvoiceTaxTreatment[keyof typeof AdminInvoiceTaxTreatment] | null;
+
+
+export const AdminInvoiceTaxTreatment = {
+  domestic: 'domestic',
+  international: 'international',
+} as const;
+
 export type AdminInvoicePaymentStatus = typeof AdminInvoicePaymentStatus[keyof typeof AdminInvoicePaymentStatus];
 
 
@@ -1750,6 +1766,20 @@ export interface AdminInvoice {
   /** @nullable */
   distributorName: string | null;
   /** @nullable */
+  contractId: number | null;
+  /** @nullable */
+  contractNumber: string | null;
+  /** @nullable */
+  contractType: string | null;
+  /** @nullable */
+  contractDiscountPercent: number | null;
+  /** @nullable */
+  paymentDays: number | null;
+  /** @nullable */
+  taxTreatment: AdminInvoiceTaxTreatment;
+  /** @nullable */
+  vatRate: number | null;
+  /** @nullable */
   exhibitionId: number | null;
   /** @nullable */
   exhibitionName: string | null;
@@ -1769,7 +1799,7 @@ export interface AdminInvoice {
   /** @nullable */
   buyerAddress: string | null;
   subtotal: number;
-  discountAmount?: number;
+  discountAmount: number;
   shippingAmount?: number;
   vatAmount: number;
   totalAmount: number;
@@ -1791,6 +1821,14 @@ export interface DistributorInvoiceLineInput {
   unitPrice: number;
 }
 
+export type DistributorInvoiceInputTaxTreatment = typeof DistributorInvoiceInputTaxTreatment[keyof typeof DistributorInvoiceInputTaxTreatment];
+
+
+export const DistributorInvoiceInputTaxTreatment = {
+  domestic: 'domestic',
+  international: 'international',
+} as const;
+
 export interface DistributorInvoiceInput {
   /**
      * @minLength 16
@@ -1799,7 +1837,10 @@ export interface DistributorInvoiceInput {
   creationKey: string;
   /** @minimum 1 */
   distributorId: number;
-  dueDate: string;
+  /** @minimum 1 */
+  contractId?: number;
+  taxTreatment?: DistributorInvoiceInputTaxTreatment;
+  dueDate?: string;
   /**
      * @minItems 1
      * @maxItems 100
@@ -3394,6 +3435,114 @@ export interface Purchase {
 }
 
 export type AdminBillingSettingsPreferredPaymentMethod = typeof AdminBillingSettingsPreferredPaymentMethod[keyof typeof AdminBillingSettingsPreferredPaymentMethod];
+
+
+export const AdminBillingSettingsPreferredPaymentMethod = {
+  not_set: 'not_set',
+  bank_transfer: 'bank_transfer',
+} as const;
+
+export interface AdminBillingSettings {
+  /** @nullable */
+  invoiceEmail: string | null;
+  /** @nullable */
+  companyName: string | null;
+  /** @nullable */
+  streetAddress: string | null;
+  /** @nullable */
+  city: string | null;
+  /** @nullable */
+  country: string | null;
+  /** @nullable */
+  taxNumber: string | null;
+  /** @nullable */
+  bankName: string | null;
+  /** @nullable */
+  accountHolder: string | null;
+  /**
+     * Masked for finance view-only users
+     * @nullable
+     */
+  accountNumber: string | null;
+  /**
+     * Masked for finance view-only users
+     * @nullable
+     */
+  iban: string | null;
+  preferredPaymentMethod: AdminBillingSettingsPreferredPaymentMethod;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
+export type AdminBillingSettingsUpdatePreferredPaymentMethod = typeof AdminBillingSettingsUpdatePreferredPaymentMethod[keyof typeof AdminBillingSettingsUpdatePreferredPaymentMethod];
+
+
+export const AdminBillingSettingsUpdatePreferredPaymentMethod = {
+  not_set: 'not_set',
+  bank_transfer: 'bank_transfer',
+} as const;
+
+export interface AdminBillingSettingsUpdate {
+  /**
+     * @maxLength 254
+     * @nullable
+     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
+     */
+  invoiceEmail?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     * @nullable
+     */
+  companyName?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     * @nullable
+     */
+  streetAddress?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     * @nullable
+     */
+  city?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     * @nullable
+     */
+  country?: string | null;
+  /**
+     * @nullable
+     * @pattern ^[0-9]{15}$
+     */
+  taxNumber?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     * @nullable
+     */
+  bankName?: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     * @nullable
+     */
+  accountHolder?: string | null;
+  /**
+     * @nullable
+     * @pattern ^[0-9]{6,24}$
+     */
+  accountNumber?: string | null;
+  /**
+     * @nullable
+     * @pattern ^SA[0-9]{22}$
+     */
+  iban?: string | null;
+  preferredPaymentMethod?: AdminBillingSettingsUpdatePreferredPaymentMethod;
+}
+
 export type PurchaseInputCategory = typeof PurchaseInputCategory[keyof typeof PurchaseInputCategory];
 
 
@@ -4162,6 +4311,11 @@ export type ServiceUnavailableResponse = Error;
 export type NotFoundResponse = Error;
 
 /**
+ * Resource conflict
+ */
+export type ConflictResponse = Error;
+
+/**
  * Too many requests
  */
 export type RateLimitedResponse = Error;
@@ -4539,107 +4693,3 @@ export const GetInventoryAuditReportFormat = {
   csv: 'csv',
 } as const;
 
-export interface AdminBillingSettingsUpdate {
-  /**
-     * @maxLength 254
-     * @nullable
-     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
-     */
-  invoiceEmail?: string | null;
-  /**
-     * @minLength 1
-     * @maxLength 160
-     * @nullable
-     */
-  companyName?: string | null;
-  /**
-     * @minLength 1
-     * @maxLength 300
-     * @nullable
-     */
-  streetAddress?: string | null;
-  /**
-     * @minLength 1
-     * @maxLength 120
-     * @nullable
-     */
-  city?: string | null;
-  /**
-     * @minLength 1
-     * @maxLength 120
-     * @nullable
-     */
-  country?: string | null;
-  /**
-     * @nullable
-     * @pattern ^[0-9]{15}$
-     */
-  taxNumber?: string | null;
-  /**
-     * @minLength 1
-     * @maxLength 120
-     * @nullable
-     */
-  bankName?: string | null;
-  /**
-     * @minLength 1
-     * @maxLength 160
-     * @nullable
-     */
-  accountHolder?: string | null;
-  /**
-     * @nullable
-     * @pattern ^[0-9]{6,24}$
-     */
-  accountNumber?: string | null;
-  /**
-     * @nullable
-     * @pattern ^SA[0-9]{22}$
-     */
-  iban?: string | null;
-  preferredPaymentMethod?: AdminBillingSettingsUpdatePreferredPaymentMethod;
-}
-
-export const AdminBillingSettingsPreferredPaymentMethod = {
-  not_set: 'not_set',
-  bank_transfer: 'bank_transfer',
-} as const;
-
-export interface AdminBillingSettings {
-  /** @nullable */
-  invoiceEmail: string | null;
-  /** @nullable */
-  companyName: string | null;
-  /** @nullable */
-  streetAddress: string | null;
-  /** @nullable */
-  city: string | null;
-  /** @nullable */
-  country: string | null;
-  /** @nullable */
-  taxNumber: string | null;
-  /** @nullable */
-  bankName: string | null;
-  /** @nullable */
-  accountHolder: string | null;
-  /**
-     * Masked for finance view-only users
-     * @nullable
-     */
-  accountNumber: string | null;
-  /**
-     * Masked for finance view-only users
-     * @nullable
-     */
-  iban: string | null;
-  preferredPaymentMethod: AdminBillingSettingsPreferredPaymentMethod;
-  /** @nullable */
-  updatedAt: string | null;
-}
-
-export type AdminBillingSettingsUpdatePreferredPaymentMethod = typeof AdminBillingSettingsUpdatePreferredPaymentMethod[keyof typeof AdminBillingSettingsUpdatePreferredPaymentMethod];
-
-export const AdminBillingSettingsUpdatePreferredPaymentMethod = {
-  not_set: 'not_set',
-  bank_transfer: 'bank_transfer',
-} as const;

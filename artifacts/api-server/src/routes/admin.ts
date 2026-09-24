@@ -88,6 +88,7 @@ import { createSmsaShippingLabel } from "../lib/shipping-carriers";
 import { nextIndividualOrderNumber } from "../lib/order-numbers";
 import { createInvoicePdf, sendInvoiceEmail } from "../lib/invoice-email";
 import { assertShippingStatusTransition, canApplyCarrierShippingStatus, ShippingStatusTransitionError } from "../lib/shipping-status";
+import { extractVatFromGross } from "../lib/vat";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -454,6 +455,42 @@ router.get("/admin/contracts/:id", permit("contracts", "view"), route(async (req
   const [row] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
   if (!row) { res.status(404).json({ error: "Contract not found" }); return; }
   res.json(Api.AdminGetContractResponse.parse(contractPublic(row)));
+}));
+
+router.post("/admin/contracts/:id/link-distributor", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminLinkDistributorContractParams, req.params, res);
+  const body = parse(Api.AdminLinkDistributorContractBody, req.body, res);
+  if (!params || !body) return;
+  const [contract] = await db.select().from(distributorContractsTable)
+    .where(eq(distributorContractsTable.id, params.id)).limit(1);
+  if (!contract) { res.status(404).json({ error: "Contract not found" }); return; }
+  if (contract.status !== "final") { res.status(409).json({ error: "Only final contracts can be linked" }); return; }
+  if (contract.distributorId !== null && contract.distributorId !== body.distributorId) {
+    res.status(409).json({ error: "Contract is already linked to another distributor" }); return;
+  }
+  const [distributor] = await db.select().from(wholesaleDistributorsTable)
+    .where(eq(wholesaleDistributorsTable.id, body.distributorId)).limit(1);
+  if (!distributor) { res.status(404).json({ error: "Distributor not found" }); return; }
+  const normalizeName = (value: string | null | undefined) =>
+    value?.normalize("NFKC").trim().toLocaleLowerCase().replace(/\s+/g, " ") ?? "";
+  const normalizeCr = (value: string | null | undefined) =>
+    value?.normalize("NFKC").replace(/\s+/g, "").toLocaleUpperCase() ?? "";
+  const exactNameMatch = normalizeName(contract.buyerCompanyName) !== "" &&
+    normalizeName(contract.buyerCompanyName) === normalizeName(distributor.companyName);
+  const contractCr = normalizeCr(contract.buyerCrNumber);
+  const distributorCr = normalizeCr(distributor.commercialRegistrationNumber);
+  const exactCrMatch = contractCr !== "" && distributorCr !== "" && contractCr === distributorCr;
+  if (!exactNameMatch && !exactCrMatch) {
+    res.status(409).json({ error: "Distributor does not exactly match the contract legal name or commercial registration number" });
+    return;
+  }
+  const [linked] = contract.distributorId === body.distributorId
+    ? [contract]
+    : await db.update(distributorContractsTable).set({ distributorId: distributor.id })
+      .where(and(eq(distributorContractsTable.id, contract.id), eq(distributorContractsTable.status, "final"), isNull(distributorContractsTable.distributorId)))
+      .returning();
+  if (!linked) { res.status(409).json({ error: "Contract could not be linked; refresh and retry" }); return; }
+  res.json(Api.AdminLinkDistributorContractResponse.parse(contractPublic(linked)));
 }));
 router.post("/admin/contracts/signatures/upload-url", permit("contracts", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminRequestContractSignatureUploadBody, req.body, res); if (!body) return;
@@ -1366,7 +1403,7 @@ router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => 
 router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
   const country = body.orderAddress.country?.trim() || null;
-  const domestic = country === "SA";
+  const domestic = country?.toUpperCase() === "SA";
   const city = body.orderAddress.city.trim();
   const district = body.orderAddress.district.trim();
   const street = body.orderAddress.street.trim();
@@ -1382,6 +1419,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
   // Older API callers omit country and keep their existing detailed-address behavior.
   const cleanedAddress = {
     ...body.orderAddress, city, country,
+    taxTreatment: domestic ? "domestic" : "international",
     nationalAddressShortCode: domestic ? shortCode : null,
     district: domestic ? "" : district,
     street: domestic ? "" : street,
@@ -1425,8 +1463,9 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       const shippingCost = body.shippingCost ?? (
          (domestic || !country) && /الرياض|riyadh/i.test(city) ? 20 : 30
       );
-      const tax = Math.round(subtotal * 0.15 * 100) / 100;
-      const total = Math.round((subtotal + shippingCost + tax) * 100) / 100;
+      const grossTotalCents = Math.round((subtotal + shippingCost) * 100);
+      const tax = domestic ? extractVatFromGross(grossTotalCents, 15).vatCents / 100 : 0;
+      const total = Math.round((subtotal + shippingCost) * 100) / 100;
       const orderNumber = await nextIndividualOrderNumber(tx);
       const [created] = await tx.insert(ordersTable).values({
         userId: body.userId,
@@ -1593,6 +1632,13 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     orderNumber: ordersTable.orderNumber,
     distributorId: invoicesTable.distributorId,
     distributorName: invoicesTable.buyerName,
+    contractId: invoicesTable.contractId,
+    contractNumber: invoicesTable.contractNumber,
+    contractType: invoicesTable.contractType,
+    contractDiscountPercent: invoicesTable.contractDiscountPercent,
+    paymentDays: invoicesTable.paymentDays,
+    taxTreatment: invoicesTable.taxTreatment,
+    vatRate: invoicesTable.vatRate,
     exhibitionId: invoicesTable.exhibitionId,
     exhibitionName: exhibitionsTable.name,
     sequenceNumber: invoicesTable.sequenceNumber,
@@ -1606,7 +1652,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     buyerAddress: invoicesTable.buyerAddress,
     subtotal: invoicesTable.subtotal,
-    discountAmount: sql<number>`coalesce(${ordersTable.discount}, 0)`,
+    discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
     shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount,
     totalAmount: invoicesTable.totalAmount,
@@ -1646,7 +1692,12 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
     const outstandingAmount = Math.max(0, Math.round((row.totalAmount - paidAmount) * 100) / 100);
     const paymentStatus = outstandingAmount === 0 ? "paid" as const : paidAmount > 0 ? "partial" as const : "unpaid" as const;
-    return { ...row, paidAmount, outstandingAmount, paymentStatus, payments, items: itemRows.filter((item) => item.invoiceId === row.id) };
+    return {
+      ...row,
+      contractDiscountPercent: row.contractDiscountPercent === null ? null : Number(row.contractDiscountPercent),
+      vatRate: row.vatRate === null ? null : Number(row.vatRate),
+      paidAmount, outstandingAmount, paymentStatus, payments, items: itemRows.filter((item) => item.invoiceId === row.id),
+    };
   }).filter((invoice) => {
     if (!query.receivableStatus || query.receivableStatus === "all") return true;
     if (query.receivableStatus === "paid") return invoice.paymentStatus === "paid";
@@ -1660,7 +1711,11 @@ router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res
   const body = parse(Api.AdminCreateDistributorInvoiceBody, req.body, res); if (!body) return;
   try {
     const invoice = await createDistributorInvoice(body, res.locals.admin.id);
-    res.status(201).json(Api.AdminCreateDistributorInvoiceResponse.parse(invoice));
+    res.status(201).json(Api.AdminCreateDistributorInvoiceResponse.parse({
+      ...invoice,
+      contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+      vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
+    }));
   } catch (error) {
     if (error instanceof DistributorInvoiceValidationError) {
       res.status(400).json({ error: error.message }); return;
@@ -1755,6 +1810,8 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
   const [invoice] = await db.select({
     id: invoicesTable.id, invoiceNumber: invoicesTable.invoiceNumber, orderNumber: ordersTable.orderNumber,
     sellerName: invoicesTable.sellerName, sellerVatNumber: invoicesTable.sellerVatNumber,
+     taxTreatment: invoicesTable.taxTreatment, vatRate: invoicesTable.vatRate,
+     contractDiscountPercent: invoicesTable.contractDiscountPercent,
     buyerName: invoicesTable.buyerName, buyerAddress: invoicesTable.buyerAddress,
     buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
@@ -1767,7 +1824,12 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
   const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id)).orderBy(invoiceItemsTable.id);
   const payments = await db.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoice.id));
   const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
-  const emailInvoice = { ...invoice, items, paidAmount, outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100) };
+   const emailInvoice = {
+     ...invoice,
+     vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
+     contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+     items, paidAmount, outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100),
+   };
   try {
     const pdf = await createInvoicePdf(emailInvoice);
     const providerMessageId = await sendInvoiceEmail({ recipient: body.recipient, invoice: emailInvoice, pdf });
@@ -3081,13 +3143,17 @@ router.get("/admin/distributors", permit("distributors", "view"), route(async (r
 }));
 router.post("/admin/distributors", permit("distributors", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateDistributorBody, req.body, res); if (!body) return;
-  const [row] = await db.insert(wholesaleDistributorsTable).values(body).returning();
+  const [row] = await db.insert(wholesaleDistributorsTable).values({
+    ...body, countryCode: body.countryCode?.toUpperCase() ?? null,
+  }).returning();
   res.status(201).json(Api.AdminCreateDistributorResponse.parse(row));
 }));
 router.patch("/admin/distributors/:id", permit("distributors", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateDistributorParams, req.params, res);
   const body = parse(Api.AdminUpdateDistributorBody.partial(), req.body, res); if (!params || !body) return;
-  const [row] = await db.update(wholesaleDistributorsTable).set(body).where(eq(wholesaleDistributorsTable.id, params.id)).returning();
+  const [row] = await db.update(wholesaleDistributorsTable).set({
+    ...body, ...(body.countryCode !== undefined ? { countryCode: body.countryCode?.toUpperCase() ?? null } : {}),
+  }).where(eq(wholesaleDistributorsTable.id, params.id)).returning();
   if (!row) { res.status(404).json({ error: "Distributor not found" }); return; }
   res.json(Api.AdminUpdateDistributorResponse.parse(row));
 }));

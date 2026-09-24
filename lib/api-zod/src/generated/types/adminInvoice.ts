@@ -7,6 +7,7 @@
  */
 import type { AdminInvoiceItem } from './adminInvoiceItem';
 import type { AdminInvoicePaymentStatus } from './adminInvoicePaymentStatus';
+import type { AdminInvoiceTaxTreatment } from './adminInvoiceTaxTreatment';
 import type { ReceivablePayment } from './receivablePayment';
 
 export interface AdminInvoice {
@@ -19,6 +20,20 @@ export interface AdminInvoice {
   distributorId: number | null;
   /** @nullable */
   distributorName: string | null;
+  /** @nullable */
+  contractId: number | null;
+  /** @nullable */
+  contractNumber: string | null;
+  /** @nullable */
+  contractType: string | null;
+  /** @nullable */
+  contractDiscountPercent: number | null;
+  /** @nullable */
+  paymentDays: number | null;
+  /** @nullable */
+  taxTreatment: AdminInvoiceTaxTreatment;
+  /** @nullable */
+  vatRate: number | null;
   /** @nullable */
   exhibitionId: number | null;
   /** @nullable */
@@ -39,7 +54,7 @@ export interface AdminInvoice {
   /** @nullable */
   buyerAddress: string | null;
   subtotal: number;
-  discountAmount?: number;
+  discountAmount: number;
   shippingAmount?: number;
   vatAmount: number;
   totalAmount: number;

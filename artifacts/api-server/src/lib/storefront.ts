@@ -25,6 +25,7 @@ import { postFulfillmentCogs, updateOrderAndIssueInvoice } from "./invoices";
 import { adjustOperationalBalances } from "./operations";
 import { ensureStandardAccountingChart } from "./accounting";
 import { nextIndividualOrderNumber } from "./order-numbers";
+import { extractVatFromGross } from "./vat";
 
 type ProductSeed = {
   id: number;
@@ -772,13 +773,14 @@ export async function getQuote(userId: number, city: string, couponCode?: string
   const coupon = couponCode ? await getCoupon(couponCode, cart.subtotal) : { discount: 0 };
   const shippingCost = city.trim().toLowerCase().includes("الرياض") || city.trim().toLowerCase().includes("riyadh") ? 20 : 30;
   const net = Math.max(0, cart.subtotal - coupon.discount);
-  const tax = Math.round(net * 0.15 * 100) / 100;
+  const taxableGrossCents = Math.round((net + shippingCost) * 100);
+  const tax = extractVatFromGross(taxableGrossCents, 15).vatCents / 100;
   return {
     subtotal: cart.subtotal,
     shippingCost,
     discount: coupon.discount,
     tax,
-    total: Math.round((net + shippingCost + tax) * 100) / 100,
+    total: Math.round((net + shippingCost) * 100) / 100,
     shippingMethods: [
       { id: "storage-station-standard", name: "توصيل قياسي", description: "عبر Storage Station", price: shippingCost, estimatedDays: "2–4 أيام عمل" },
     ],
@@ -855,8 +857,9 @@ export async function createOrderForUser(
     const shippingCost = details.address.city.trim().toLowerCase().includes("الرياض") ||
       details.address.city.trim().toLowerCase().includes("riyadh") ? 20 : 30;
     const net = Math.max(0, subtotal - coupon.discount);
-    const tax = Math.round(net * 0.15 * 100) / 100;
-    const total = Math.round((net + shippingCost + tax) * 100) / 100;
+    const taxableGrossCents = Math.round((net + shippingCost) * 100);
+    const tax = extractVatFromGross(taxableGrossCents, 15).vatCents / 100;
+    const total = Math.round((net + shippingCost) * 100) / 100;
     const orderNumber = await nextIndividualOrderNumber(tx);
     const [created] = await tx.insert(ordersTable).values({
       userId,
@@ -869,7 +872,7 @@ export async function createOrderForUser(
       couponDiscountValue: couponRecord?.discountValue ?? null,
       tax,
       total,
-      address: JSON.stringify(details.address),
+      address: JSON.stringify({ ...details.address, taxTreatment: "domestic" }),
       shippingMethod: details.shippingMethod,
       paymentMethod: details.paymentMethod,
     }).returning();

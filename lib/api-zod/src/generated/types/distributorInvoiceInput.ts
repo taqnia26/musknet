@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { DistributorInvoiceInputTaxTreatment } from './distributorInvoiceInputTaxTreatment';
 import type { DistributorInvoiceLineInput } from './distributorInvoiceLineInput';
 
 export interface DistributorInvoiceInput {
@@ -15,7 +16,10 @@ export interface DistributorInvoiceInput {
   creationKey: string;
   /** @minimum 1 */
   distributorId: number;
-  dueDate: Date;
+  /** @minimum 1 */
+  contractId?: number;
+  taxTreatment?: DistributorInvoiceInputTaxTreatment;
+  dueDate?: Date;
   /**
      * @minItems 1
      * @maxItems 100

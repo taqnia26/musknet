@@ -572,6 +572,22 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       responses: { "204": { description: Contract deleted } }
+  /admin/contracts/{id}/link-distributor:
+    post:
+      operationId: adminLinkDistributorContract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DistributorContractLinkInput" }
+      responses:
+        "200": { description: Linked contract, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /admin/contracts/{id}/seller-sign:
     post:
       operationId: adminSignContract
@@ -2273,6 +2289,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     RateLimited:
       description: Too many requests
       content:
@@ -3193,6 +3215,11 @@ components:
         createdBy: { type: number }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    DistributorContractLinkInput:
+      type: object
+      required: [distributorId]
+      properties:
+        distributorId: { type: number, minimum: 1, multipleOf: 1 }
     DistributorContractInput:
       type: object
       required: [contractType, sellerName, sellerCrNumber, sellerCrDate, sellerCrIssuer, sellerAddress, sellerRepName, sellerRepTitle, buyerCompanyName]
@@ -3538,13 +3565,20 @@ components:
         adminNotes: { type: [string, "null"] }
     AdminInvoice:
       type: object
-      required: [id, orderId, orderNumber, distributorId, distributorName, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
+      required: [id, orderId, orderNumber, distributorId, distributorName, contractId, contractNumber, contractType, contractDiscountPercent, paymentDays, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
       properties:
         id: { type: number }
         orderId: { type: [number, "null"] }
         orderNumber: { type: [string, "null"] }
         distributorId: { type: [number, "null"] }
         distributorName: { type: [string, "null"] }
+        contractId: { type: [number, "null"] }
+        contractNumber: { type: [string, "null"] }
+        contractType: { type: [string, "null"] }
+        contractDiscountPercent: { type: [number, "null"] }
+        paymentDays: { type: [number, "null"] }
+        taxTreatment: { type: [string, "null"], enum: [domestic, international, null] }
+        vatRate: { type: [number, "null"] }
         exhibitionId: { type: [number, "null"] }
         exhibitionName: { type: [string, "null"] }
         sequenceNumber: { type: number }
@@ -3591,10 +3625,12 @@ components:
         unitPrice: { type: number, exclusiveMinimum: 0 }
     DistributorInvoiceInput:
       type: object
-      required: [creationKey, distributorId, dueDate, items]
+      required: [creationKey, distributorId, items]
       properties:
         creationKey: { type: string, minLength: 16, maxLength: 100 }
         distributorId: { type: number, minimum: 1, multipleOf: 1 }
+        contractId: { type: number, minimum: 1, multipleOf: 1 }
+        taxTreatment: { type: string, enum: [domestic, international] }
         dueDate: { type: string, format: date }
         items:
           type: array
@@ -4162,6 +4198,7 @@ components:
         email: { type: [string, "null"] }
         phone: { type: string }
         city: { type: [string, "null"] }
+        countryCode: { type: [string, "null"] }
         address: { type: [string, "null"] }
         taxNumber: { type: [string, "null"] }
         commercialRegistrationNumber: { type: [string, "null"] }
@@ -4178,6 +4215,7 @@ components:
         email: { type: [string, "null"] }
         phone: { type: string, minLength: 1, pattern: '^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$' }
         city: { type: [string, "null"] }
+        countryCode: { type: [string, "null"], pattern: '^[A-Za-z]{2}$' }
         address: { type: [string, "null"] }
         taxNumber: { type: [string, "null"] }
         commercialRegistrationNumber: { type: [string, "null"] }

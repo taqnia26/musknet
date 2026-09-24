@@ -5,11 +5,11 @@ import {
   invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryAuditTable,
   journalEntryLinesTable, operationEventsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
 } from "@workspace/db";
-import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, updateOrderAndIssueInvoice } from "./invoices";
+import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, updateOrderAndIssueInvoice } from "./invoices";
 
 const base = 1_700_000_000 + (Date.now() % 100_000_000);
 const customerId = base;
-const orderIds = [base + 1, base + 2, base + 3];
+const orderIds = [base + 1, base + 2, base + 3, base + 4];
 let distributorId: number;
 let inactiveDistributorId: number;
 let productId: number;
@@ -35,7 +35,10 @@ beforeAll(async () => {
   if (!actor) throw new Error("Invoice tests require a seeded administrator");
   actorId = actor.id;
   await db.insert(customersTable).values({ id: customerId, phone: `9665${String(base).slice(-8)}`, name: "Invoice Test" });
-  await db.insert(ordersTable).values(orderIds.map(order));
+  await db.insert(ordersTable).values([
+    ...orderIds.slice(0, 3).map(order),
+    { ...order(orderIds[3]), total: 130, address: JSON.stringify({ country: "AE" }) },
+  ]);
   let [category] = await db.select({ id: categoriesTable.id }).from(categoriesTable).limit(1);
   if (!category) {
     [category] = await db.insert(categoriesTable).values({
@@ -96,6 +99,10 @@ afterAll(async () => {
       }
     });
     await db.delete(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, invoiceIds));
+    await db.delete(operationEventsTable).where(and(
+      eq(operationEventsTable.sourceType, "distributor_invoice"),
+      inArray(operationEventsTable.sourceId, invoiceIds.map(String)),
+    ));
     await db.delete(invoicesTable).where(inArray(invoicesTable.id, invoiceIds));
   }
   await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, [distributorId, inactiveDistributorId]));
@@ -140,6 +147,21 @@ describe.sequential("atomic invoice issuance", () => {
     expect(new Set(rows.map((row) => row.invoiceNumber)).size).toBe(3);
     expect(rows.every((row) => /^INV-[0-9]+$/.test(row.invoiceNumber))).toBe(true);
   });
+
+  it("preserves legacy totals and destination treatment on late invoice issuance", async () => {
+    await updateOrderAndIssueInvoice(orderIds[3], { paymentStatus: "paid" }, {
+      VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
+      VAT_REGISTRATION_NUMBER: "300000000000003",
+    }, actorId);
+    const [invoice] = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, orderIds[3]));
+    expect(invoice).toMatchObject({
+      subtotal: 100,
+      totalAmount: 130,
+      vatAmount: 15,
+      taxTreatment: "international",
+      vatRate: "15",
+    });
+  });
 });
 
 describe.sequential("distributor invoice issuance", () => {
@@ -183,21 +205,33 @@ describe.sequential("distributor invoice issuance", () => {
       }, actorId, env),
     ]);
     expect(retriedInvoice.id).toBe(invoice.id);
+    const request = { creationKey, distributorId, items: [{ productId, quantity: 3, unitPrice: 19.99 }] };
+    await expect(createDistributorInvoice({ ...request, distributorId: inactiveDistributorId }, actorId, env))
+      .rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await expect(createDistributorInvoice({ ...request, contractId: 999_999 }, actorId, env))
+      .rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await expect(createDistributorInvoice({ ...request, taxTreatment: "international" }, actorId, env))
+      .rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await expect(createDistributorInvoice({ ...request, dueDate: "2030-01-01" }, actorId, env))
+      .rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await expect(createDistributorInvoice({
+      ...request, items: [{ productId, quantity: 3, unitPrice: 20 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
     expect(invoice.invoiceNumber).toMatch(/^LC-[0-9]+$/);
     expect(retriedInvoice.invoiceNumber).toBe(invoice.invoiceNumber);
     const [persisted] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
     expect(persisted.invoiceNumber).toBe(invoice.invoiceNumber);
     successfulInvoiceId = invoice.id;
-    expect(invoice.subtotal).toBe(59.97);
-    expect(invoice.vatAmount).toBe(9);
-    expect(invoice.totalAmount).toBe(68.97);
+    expect(invoice.subtotal).toBe(52.15);
+    expect(invoice.vatAmount).toBe(7.82);
+    expect(invoice.totalAmount).toBe(59.97);
     expect(invoice.buyerName).toBe("موزع اختبار");
     expect(invoice.buyerTaxNumber).toBe("310000000000003");
     expect(invoice.buyerCommercialRegistrationNumber).toBe(`CR-${base}`);
     expect(invoice.items).toHaveLength(1);
     expect(invoice.items[0]).toMatchObject({
       productId, productName: "منتج فاتورة موزع", quantity: 3, unitPrice: 19.99,
-      subtotal: 59.97, vatAmount: 9, totalAmount: 68.97,
+      subtotal: 52.15, vatAmount: 7.82, totalAmount: 59.97,
     });
     const [product] = await db.select({ stockQuantity: productsTable.stockQuantity }).from(productsTable).where(eq(productsTable.id, productId));
     expect(product.stockQuantity).toBe(7);
@@ -219,9 +253,9 @@ describe.sequential("distributor invoice issuance", () => {
       .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
       .where(eq(journalEntryLinesTable.journalEntryId, saleJournal.id));
     expect(saleLines).toEqual(expect.arrayContaining([
-      expect.objectContaining({ accountCode: "1130", debit: "68.9700", credit: "0.0000" }),
-      expect.objectContaining({ accountCode: "4100", debit: "0.0000", credit: "59.9700" }),
-      expect.objectContaining({ accountCode: "2120", debit: "0.0000", credit: "9.0000" }),
+      expect.objectContaining({ accountCode: "1130", debit: "59.9700", credit: "0.0000" }),
+      expect.objectContaining({ accountCode: "4100", debit: "0.0000", credit: "52.1500" }),
+      expect.objectContaining({ accountCode: "2120", debit: "0.0000", credit: "7.8200" }),
     ]));
   });
 
@@ -260,12 +294,12 @@ describe.sequential("distributor invoice issuance", () => {
     const full = await createReceivablePayment(successfulInvoiceId, {
       paymentKey: `full-${base}-payment`,
       paymentDate: "2026-09-21",
-      amount: 48.97,
+      amount: 39.97,
       paymentMethod: "cash",
     }, actorId);
-    expect(full.amount).toBe(48.97);
+    expect(full.amount).toBe(39.97);
     const rows = await db.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, successfulInvoiceId));
-    expect(rows.map((row) => row.amount).sort()).toEqual([20, 48.97]);
+    expect(rows.map((row) => row.amount).sort()).toEqual([20, 39.97]);
     const events = await db.select().from(operationEventsTable).where(and(
       eq(operationEventsTable.sourceType, "receivable_payment"),
       inArray(operationEventsTable.sourceId, rows.map((row) => String(row.id))),
@@ -288,8 +322,26 @@ describe.sequential("distributor invoice issuance", () => {
     expect(collectionLines).toEqual(expect.arrayContaining([
       expect.objectContaining({ journalEntryId: partialJournalId, accountCode: "1120", debit: "20.0000", credit: "0.0000" }),
       expect.objectContaining({ journalEntryId: partialJournalId, accountCode: "1130", debit: "0.0000", credit: "20.0000" }),
-      expect.objectContaining({ journalEntryId: fullJournalId, accountCode: "1110", debit: "48.9700", credit: "0.0000" }),
-      expect.objectContaining({ journalEntryId: fullJournalId, accountCode: "1130", debit: "0.0000", credit: "48.9700" }),
+      expect.objectContaining({ journalEntryId: fullJournalId, accountCode: "1110", debit: "39.9700", credit: "0.0000" }),
+      expect.objectContaining({ journalEntryId: fullJournalId, accountCode: "1130", debit: "0.0000", credit: "39.9700" }),
     ]));
+  });
+
+  it("requires an explicit non-Saudi country for international invoices", async () => {
+    const creationKey = `international-${base}-invoice`;
+    const request = {
+      creationKey, distributorId, taxTreatment: "international" as const,
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    };
+    await expect(createDistributorInvoice(request, actorId, env))
+      .rejects.toBeInstanceOf(DistributorInvoiceValidationError);
+    await db.update(wholesaleDistributorsTable).set({ countryCode: "SA" })
+      .where(eq(wholesaleDistributorsTable.id, distributorId));
+    await expect(createDistributorInvoice(request, actorId, env))
+      .rejects.toBeInstanceOf(DistributorInvoiceValidationError);
+    await db.update(wholesaleDistributorsTable).set({ countryCode: "AE" })
+      .where(eq(wholesaleDistributorsTable.id, distributorId));
+    const invoice = await createDistributorInvoice(request, actorId, env);
+    expect(invoice).toMatchObject({ taxTreatment: "international", vatRate: "0", vatAmount: 0 });
   });
 });

@@ -20,6 +20,9 @@ type InvoiceForEmail = {
   discountAmount?: number;
   shippingAmount?: number;
   vatAmount: number;
+  taxTreatment?: string | null;
+  vatRate?: number | null;
+  contractDiscountPercent?: number | null;
   totalAmount: number;
   paidAmount: number;
   outstandingAmount: number;
@@ -110,9 +113,16 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   }
 
   y += 18;
-  const totalRows: Array<[string, number]> = [["Subtotal", invoice.subtotal], ["VAT (15%)", invoice.vatAmount]];
-  if ((invoice.shippingAmount ?? 0) > 0) totalRows.push(["Shipping", invoice.shippingAmount!]);
-  totalRows.push(["Discount", -(invoice.discountAmount ?? 0)]);
+  const vatRate = invoice.vatRate ?? (invoice.taxTreatment === "international" ? 0 : 15);
+  const vatLabel = vatRate === 0 ? "VAT (0%)" : `VAT (${vatRate}%)`;
+  const totalRows: Array<[string, number]> = [["Subtotal", invoice.subtotal], [vatLabel, invoice.vatAmount]];
+  const legacyOrderArithmetic = Math.round(invoice.totalAmount * 100) + Math.round((invoice.discountAmount ?? 0) * 100) ===
+    Math.round(invoice.subtotal * 100) + Math.round((invoice.shippingAmount ?? 0) * 100) + Math.round(invoice.vatAmount * 100);
+  const inclusiveSnapshot = invoice.vatRate !== null && invoice.vatRate !== undefined && !legacyOrderArithmetic;
+  if ((invoice.shippingAmount ?? 0) > 0 && !(inclusiveSnapshot && invoice.orderNumber)) totalRows.push(["Shipping", invoice.shippingAmount!]);
+  if (!(inclusiveSnapshot && (invoice.orderNumber || (invoice.contractDiscountPercent ?? 0) > 0))) {
+    totalRows.push(["Discount", -(invoice.discountAmount ?? 0)]);
+  }
   if (invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount) {
     totalRows.push(["Amount Paid", invoice.paidAmount]);
     if (invoice.outstandingAmount > 0 && invoice.outstandingAmount < invoice.totalAmount) {
@@ -148,11 +158,15 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
 
 export async function sendInvoiceEmail(input: { recipient: string; invoice: InvoiceForEmail; pdf: Buffer }) {
   const from = process.env.INVOICE_FROM_EMAIL?.trim() || "Musk Ellolo <onboarding@resend.dev>";
+  const emailVatRate = input.invoice.vatRate ?? (input.invoice.taxTreatment === "international" ? 0 : 15);
+  const vatDescription = input.invoice.taxTreatment === "international" && emailVatRate === 0
+    ? "ضريبة القيمة المضافة (0% - معاملة دولية)"
+    : `ضريبة القيمة المضافة (${emailVatRate}%${input.invoice.taxTreatment === "international" ? " - وفق الحساب التاريخي" : ""})`;
   const body = {
       from,
       to: [input.recipient],
       subject: `Tax Invoice ${input.invoice.invoiceNumber} - Musk Ellolo`,
-      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>فاتورة ضريبية ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة الضريبية مرفقة بصيغة PDF.</p><p>الإجمالي: <strong>${money(input.invoice.totalAmount)} ريال سعودي</strong></p><p>الرصيد المستحق: <strong>${money(input.invoice.outstandingAmount)} ريال سعودي</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
+      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>فاتورة ضريبية ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة الضريبية مرفقة بصيغة PDF.</p><p>${vatDescription}: <strong>${money(input.invoice.vatAmount)} ريال سعودي</strong></p><p>الإجمالي: <strong>${money(input.invoice.totalAmount)} ريال سعودي</strong></p><p>الرصيد المستحق: <strong>${money(input.invoice.outstandingAmount)} ريال سعودي</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
       attachments: [{ filename: `${input.invoice.invoiceNumber}.pdf`, content: input.pdf.toString("base64") }],
   };
   const apiKey = process.env.RESEND_API_KEY?.trim();

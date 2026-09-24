@@ -9,6 +9,7 @@ export const wholesaleDistributorsTable = pgTable("wholesale_distributors", {
   email: text("email"),
   phone: text("phone").notNull(),
   city: text("city"),
+  countryCode: text("country_code"),
   address: text("address"),
   taxNumber: text("tax_number"),
   commercialRegistrationNumber: text("commercial_registration_number"),

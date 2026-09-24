@@ -1,4 +1,4 @@
-import { check, date, doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { check, date, doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex, numeric } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -6,11 +6,19 @@ import { ordersTable } from "./orders";
 import { wholesaleDistributorsTable } from "./wholesale-distributors";
 import { productsTable } from "./products";
 import { exhibitionsTable } from "./exhibitions";
+import { distributorContractsTable } from "./distributor-contracts";
 
 export const taxInvoicesTable = pgTable("tax_invoices", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "restrict" }),
   distributorId: integer("distributor_id").references(() => wholesaleDistributorsTable.id, { onDelete: "restrict" }),
+  contractId: integer("contract_id").references(() => distributorContractsTable.id, { onDelete: "set null" }),
+  contractNumber: text("contract_number"),
+  contractType: text("contract_type"),
+  contractDiscountPercent: numeric("contract_discount_percent", { precision: 5, scale: 2 }),
+  paymentDays: integer("payment_days"),
+  taxTreatment: text("tax_treatment"),
+  vatRate: numeric("vat_rate", { precision: 5, scale: 2 }),
   exhibitionId: integer("exhibition_id").references(() => exhibitionsTable.id, { onDelete: "restrict" }),
   creationKey: text("creation_key"),
   sequenceNumber: integer("sequence_number").notNull(),
@@ -24,6 +32,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   buyerCommercialRegistrationNumber: text("buyer_commercial_registration_number"),
   buyerAddress: text("buyer_address"),
   subtotal: doublePrecision("subtotal").notNull(),
+  discountAmount: doublePrecision("discount_amount").notNull().default(0),
   vatAmount: doublePrecision("vat_amount").notNull(),
   totalAmount: doublePrecision("total_amount").notNull(),
   qrCodeData: text("qr_code_data").notNull(),

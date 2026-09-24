@@ -511,6 +511,7 @@ describe.sequential("admin route authorization", () => {
         orderAddress: {
           label: "Office",
           city: "Riyadh",
+          country: "SA",
           district: "Olaya",
           street: "King Fahd Road",
           buildingNo: "20",
@@ -538,8 +539,8 @@ describe.sequential("admin route authorization", () => {
       userId: customerId,
       subtotal: 200,
       shippingCost: 20,
-      tax: 30,
-      total: 250,
+      tax: 28.7,
+      total: 220,
       paymentStatus: "pending",
     });
 
@@ -591,6 +592,7 @@ describe.sequential("admin route authorization", () => {
     try {
       const sa = await request(app).post(url).set(auth).send(payload(address)).expect(201);
       created.push(sa.body.id);
+      expect(sa.body).toMatchObject({ subtotal: 100, shippingCost: 30, tax: 16.96, total: 130 });
       const saDetail = await request(app).get(`${url}/${sa.body.id}`).set(auth).expect(200);
       expect(saDetail.body.orderAddress).toMatchObject({
         city: "جدة", country: "SA", nationalAddressShortCode: "JEDH1234",
@@ -608,6 +610,7 @@ describe.sequential("admin route authorization", () => {
         district: "Deira", street: "Al Maktoum", buildingNo: "25", additionalInfo: "Unit 7",
       })).expect(201);
       created.push(intl.body.id);
+      expect(intl.body).toMatchObject({ subtotal: 100, shippingCost: 30, tax: 0, total: 130 });
       const intlDetail = await request(app).get(`${url}/${intl.body.id}`).set(auth).expect(200);
       expect(intlDetail.body.orderAddress).toMatchObject({
         country: "AE", city: "Dubai", nationalAddressShortCode: null,

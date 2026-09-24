@@ -50,6 +50,7 @@ function InvoiceTemplate({
   onQrLoad?: () => void;
 }) {
   const { t, lang } = useLanguage();
+  const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   return (
     <div id="invoice-print-area" data-testid="invoice-template" className="invoice-sheet bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <style>{`
@@ -99,6 +100,7 @@ function InvoiceTemplate({
           <dl className="space-y-3 text-sm">
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
             {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
+            {invoice.contractId && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('العقد', 'Contract')}</dt><dd>{invoice.contractNumber || '-'}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</dd></div>
             <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
           </dl>
@@ -143,22 +145,57 @@ function InvoiceTemplate({
           )}
         </div>
         <div className="w-full sm:w-80 space-y-4">
-          <div className="flex justify-between text-gray-600 px-2 text-sm">
-            <span>{t('المجموع الفرعي', 'Subtotal')}</span>
-            <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
-          </div>
-          <div className="flex justify-between text-gray-600 px-2 text-sm">
-            <span>{t('ضريبة القيمة المضافة (15%)', 'VAT (15%)')}</span>
-            <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
-          </div>
-          {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
-            <span>{t('الشحن', 'Shipping')}</span>
-            <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
-          </div>}
-          <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
-            <span>{t('الخصم', 'Discount')}</span>
-            <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
-          </div>
+          {invoice.contractId ? (
+            <>
+              <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</span>
+                <span className="font-mono"><Money value={grossBeforeDiscount} lang={lang} fractionDigits={2} /></span>
+              </div>
+              <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t(`خصم العقد (${invoice.contractDiscountPercent ?? 0}%)`, `Contract discount (${invoice.contractDiscountPercent ?? 0}%)`)}</span>
+                <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
+              </div>
+              <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('صافي المجموع الفرعي بعد الخصم', 'Net subtotal after discount')}</span>
+                <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
+              </div>
+              <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{invoice.taxTreatment === 'international'
+                  ? t('ضريبة القيمة المضافة (دولي - 0%)', 'VAT (International — 0%)')
+                  : invoice.taxTreatment === 'domestic' && invoice.vatRate !== null
+                    ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
+                    : t('ضريبة القيمة المضافة (15%)', 'VAT (15%)')}</span>
+                <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
+              </div>
+              {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('الشحن', 'Shipping')}</span>
+                <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
+              </div>}
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('المجموع الفرعي', 'Subtotal')}</span>
+                <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
+              </div>
+              <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{invoice.taxTreatment === 'international'
+                  ? t('ضريبة القيمة المضافة (دولي - 0%)', 'VAT (International — 0%)')
+                  : invoice.taxTreatment === 'domestic' && invoice.vatRate !== null
+                    ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
+                    : t('ضريبة القيمة المضافة (15%)', 'VAT (15%)')}</span>
+                <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
+              </div>
+              {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('الشحن', 'Shipping')}</span>
+                <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
+              </div>}
+              <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('الخصم', 'Discount')}</span>
+                <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
+              </div>
+            </>
+          )}
            {invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount && (
             <div className="pt-2 space-y-2 px-2 text-xs sm:text-sm">
               <div className="flex justify-between text-stone-600 font-medium">
@@ -708,7 +745,12 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
                 <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                   <TableCell>{invoice.orderNumber ?? <span className="text-muted-foreground">-</span>}</TableCell>
-                  <TableCell>{channel === 'online' ? (invoice.buyerName ?? '-') : (invoice.distributorName ?? <span className="text-muted-foreground">-</span>)}</TableCell>
+                  <TableCell>{channel === 'online' ? (invoice.buyerName ?? '-') : (
+                    <div>
+                      <span>{invoice.distributorName ?? <span className="text-muted-foreground">-</span>}</span>
+                      {invoice.contractId && <span className="mt-1 block text-xs text-muted-foreground">{invoice.contractNumber}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</span>}
+                    </div>
+                  )}</TableCell>
                   <TableCell className={invoice.dueDate && invoice.outstandingAmount > 0 && invoice.dueDate < new Date().toISOString().slice(0, 10) ? 'font-semibold text-destructive' : ''}>{invoice.dueDate ?? '-'}</TableCell>
                   <TableCell className="text-end font-semibold text-primary"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></TableCell>
                   <TableCell className="text-end text-emerald-600"><Money value={invoice.paidAmount} lang={lang} fractionDigits={2} /></TableCell>

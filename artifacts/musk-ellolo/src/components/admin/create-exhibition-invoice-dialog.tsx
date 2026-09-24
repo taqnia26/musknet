@@ -35,9 +35,13 @@ export function CreateExhibitionInvoiceDialog() {
   const mutation = useAdminCreateExhibitionInvoice();
   const exhibition = exhibitions?.find(e => String(e.id) === exhibitionId);
   const totals = useMemo(() => {
-    const subtotal = round(lines.reduce((sum, line) => sum + round(line.unitPrice) * line.quantity, 0));
-    const vat = round(lines.reduce((sum, line) => sum + round(round(line.unitPrice) * line.quantity * 0.15), 0));
-    return { subtotal, vat, total: round(subtotal + vat) };
+    const grossTotal = round(lines.reduce((sum, line) => sum + round(line.unitPrice * line.quantity), 0));
+    const subtotal = round(lines.reduce((sum, line) => {
+      const grossLine = round(line.unitPrice * line.quantity);
+      return sum + round(grossLine / 1.15);
+    }, 0));
+    const vat = round(grossTotal - subtotal);
+    return { subtotal, vat, total: grossTotal };
   }, [lines]);
   const reset = () => {
     setExhibitionId(''); setBuyerName(''); setBuyerAddress(''); setBuyerTaxNumber(''); setBuyerCR('');
@@ -110,13 +114,13 @@ export function CreateExhibitionInvoiceDialog() {
             {allocations?.filter(a => a.quantityAllocated > a.quantitySold).map(a => <option key={a.id} value={a.productId} disabled={lines.some((l, i) => i !== index && l.productId === String(a.productId))}>{lang === 'ar' ? a.productNameAr : a.productNameEn} ({a.quantityAllocated - a.quantitySold})</option>)}
           </select>
           <Input type="number" min="1" step="1" aria-label={t('الكمية', 'Quantity')} value={line.quantity} onChange={e => updateLine(index, { quantity: Number(e.target.value) })} />
-          <Input type="number" min="0.01" step="0.01" aria-label={t('سعر الوحدة', 'Unit price')} value={line.unitPrice || ''} onChange={e => updateLine(index, { unitPrice: Number(e.target.value) })} />
+          <Input type="number" min="0.01" step="0.01" aria-label={t('سعر الوحدة شامل الضريبة', 'Unit price including VAT')} value={line.unitPrice || ''} onChange={e => updateLine(index, { unitPrice: Number(e.target.value) })} />
           <Button type="button" size="icon" variant="ghost" aria-label={t('حذف البند', 'Remove item')} disabled={lines.length === 1} onClick={() => setLines(current => current.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></Button>
         </div>)}
         {(exhibitionsError || allocationsError) && <p role="alert" className="text-sm text-destructive">{t('تعذر تحميل المعارض أو المنتجات المخصصة. حاول إعادة فتح النافذة.', 'Could not load exhibitions or allocations. Please reopen the form.')}</p>}
         <div className="grid grid-cols-3 gap-2 rounded-md border bg-muted/20 p-3 text-center text-sm">
-          <div>{t('قبل الضريبة', 'Subtotal')}<strong className="block">{totals.subtotal.toFixed(2)}</strong></div>
-          <div>{t('الضريبة 15%', 'VAT 15%')}<strong className="block">{totals.vat.toFixed(2)}</strong></div>
+          <div>{t('المجموع قبل الضريبة', 'Subtotal before VAT')}<strong className="block">{totals.subtotal.toFixed(2)}</strong></div>
+          <div>{t('ضريبة القيمة المضافة المشمولة (15%)', 'VAT included (15%)')}<strong className="block">{totals.vat.toFixed(2)}</strong></div>
           <div>{t('الإجمالي', 'Total')}<strong className="block"><Money value={totals.total} lang={lang} fractionDigits={2} /></strong></div>
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
