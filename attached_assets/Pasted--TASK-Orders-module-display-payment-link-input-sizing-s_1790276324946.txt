@@ -1,0 +1,32 @@
+# TASK — Orders module: display, payment link, input sizing, status set
+
+## 1. Show name + "new" badge
+In the orders list, show the customer's name alongside a visible "new" icon/badge for orders in the `new` status, so a fresh order is obviously distinguishable at a glance. (Assumption: the name isn't currently shown in the list, only order number/phone — confirm and adjust if that's wrong.)
+
+## 2. Manual order creation — "send payment link" for unpaid orders
+When staff create an order manually from the admin panel, add an option for "payment not yet received" that, instead of marking the order paid, generates and sends the customer a payment link via the payment gateway already integrated for this store, so they can complete payment themselves. The order sits in the "بانتظار الدفع" (Pending Payment) status (see status list below) until the gateway confirms payment, then moves forward automatically like a normal online order.
+
+## 3. Quantity input is too large — system-wide
+The quantity input box in the manual order-creation form is visually oversized; fix its width/sizing. This is not order-specific — audit every other quantity input across the admin panel (inventory adjustments, purchase receipts, gifting issues, cycle counts, etc.) for the same oversized styling and correct all of them to a consistent, reasonably compact width.
+
+## 4. Order status set — full replacement, strict migration required
+Replace the order status set with exactly these values (pick sensible English enum keys, Arabic labels as given):
+- ملغي (Cancelled)
+- مسترجع (Returned)
+- بانتظار المراجعة (Pending Review)
+- جاري تجهيز الطلب (Preparing)
+- جاري التوصيل (Out for Delivery)
+- تم التوصيل (Delivered)
+- بانتظار الدفع (Pending Payment)
+
+This is a breaking change to an existing enum (current values: `new, processing, ready, completed, shipped, delivered, cancelled`). Before touching anything:
+1. Report every place in the codebase that reads, writes, or branches on an order status value (status transition guards, invoice issuance triggers, shipping-status sync, dashboard counters, customer-facing order tracking, notification triggers, WhatsApp/email templates, analytics/reports), so nothing is silently left checking for an old value that no longer exists.
+2. Propose an explicit old→new status mapping (e.g. `new` → بانتظار المراجعة; `processing`/`ready` → جاري تجهيز الطلب; `shipped` → جاري التوصيل; `completed`/`delivered` → تم التوصيل; `cancelled` → ملغي) and get it confirmed before writing the migration.
+3. Write a migration that updates every existing order to its mapped new status — no order may end up with a null, blank, or unmapped status.
+4. بانتظار الدفع (Pending Payment) is the status used by the new "send payment link" flow from item 2.
+
+## Verification checklist
+- [ ] Orders list shows customer name and a "new" badge for new orders
+- [ ] Manual order creation offers "send payment link", generates and sends it, order sits in "بانتظار الدفع" until paid
+- [ ] All quantity inputs across the admin panel are consistently sized, not just the orders one
+- [ ] Every current order has a valid, mapped status after migration; every place that reads order status was checked and updated

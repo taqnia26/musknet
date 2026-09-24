@@ -1,0 +1,34 @@
+# TASK — Inventory module: item form, reports layout, terminology, revenue symbol
+
+## 1. Inventory item form — CONFIRM SCOPE BEFORE BUILDING
+Replace/extend the "add item" form with these fields:
+- اسم الصنف | Item Name
+- نوع الصنف | Item Type
+- كود الصنف | SKU / Item Code
+- وحدة القياس | Unit of Measure (UOM)
+- رقم الباركود | GTIN (Barcode Number)
+- الحد الأدنى للمخزون | Minimum Stock Level
+- موقع التخزين | Storage Location
+- حالة الصنف | Status
+- ملاحظات | Notes
+
+These fields (Item Type, UOM, GTIN, Minimum Stock Level) describe a general warehouse/inventory item, not specifically a sellable perfume product with a display name and price. Confirm which of these is intended before writing any code:
+(a) these fields are added to the *existing* `storefront_products` create/edit form, alongside the name/price/description fields already there, or
+(b) this is a *new, separate* "inventory item" entity for things tracked in the warehouse that are not necessarily sellable storefront products (e.g. raw materials, packaging, components used in manufacturing) — distinct from `storefront_products`, linked to it only where a product is actually made from tracked items.
+
+Do not start building until this is confirmed — the two interpretations produce a materially different data model.
+
+## 2. Inventory reports layout — RTL bug
+Inventory report tables are visually scattered/misaligned, with data reversed left-to-right instead of following proper RTL layout. Fix the table layout so columns and cell data render correctly right-to-left, consistent with the rest of the Arabic admin panel.
+
+## 3. Terminology: "رقم الجوال" not "رقم الهاتف"
+Replace every occurrence of "رقم الهاتف" (phone number) with "رقم الجوال" (mobile number) across the entire system — labels, placeholders, validation messages, exported reports, everywhere this term appears, not only in Inventory.
+
+## 4. Revenue Analytics — wrong symbol shown
+On the detailed Revenue Analytics page, at least one amount is showing a warehouse/location code instead of the correct currency symbol. This system already has a single shared Riyal-symbol component (`saudi-riyal-symbol.svg` / the `Money` component) built and used across the storefront, admin, and invoices — find where Revenue Analytics is displaying a warehouse code where a currency amount belongs, and fix it to use that same shared component like every other page. Report back the exact field/column where this was happening.
+
+## Verification checklist
+- [ ] Reported back on which inventory-item interpretation applies before building the form
+- [ ] Inventory reports render correctly right-to-left, no scattered/reversed columns
+- [ ] "رقم الهاتف" no longer appears anywhere in the system; "رقم الجوال" is used consistently
+- [ ] Revenue Analytics shows the correct Riyal symbol everywhere, no stray warehouse code

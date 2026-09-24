@@ -1,0 +1,41 @@
+# TASK — Products module: naming, categories, movement log, editing
+
+## 1. Three distinct name fields + rich text
+Add three separate name fields per product, replacing the single current name field:
+- Internal name (اسم داخلي) — staff-only, used for internal identification. Never shown to customers.
+- Display name (اسم عرض المنتج) — the customer-facing name shown on the storefront and product pages.
+- Invoice name (اسم الفاتورة) — the exact name printed on tax invoices and PDFs. May differ from the display name (e.g. a formal/legal variant).
+
+All three are separate database columns, required, bilingual (Arabic + English) like existing name fields.
+
+The product's existing rich-text description editor (RichBlock/RichSpan, `descriptionRichAr`/`descriptionRichEn`) already supports bold, italic, underline, links, alignment and animation effects — reuse that exact component and schema; do not build a second rich-text implementation. Confirm which of the three new name fields, if any, should also support rich-text formatting — the safest default is: names stay plain text (short labels), and only the description keeps rich text as it already does today. State this assumption back before implementing if it's wrong.
+
+## 2. Categories: allow deletion
+The product Categories section currently has no delete action. Add one, following the existing deletion-guard pattern already in this codebase: never hard-delete a category that still has products or orders referencing it — either block deletion with a clear error, or offer to reassign/deactivate instead, exactly like the inventory-locations deletion guard already protects locations referenced by inventory operations.
+
+## 3. Product Movements — allow returns for influencer gifts
+The `gifting-issues` return endpoint (`POST /admin/gifting-issues/:id/return`) currently only allows returns for the `B2B_EVALUATION` category — it explicitly rejects any other category with "Only B2B evaluation issues can be returned." Extend it to also allow returns for gifts issued to influencers (confirm the exact category value from `gifting-issues-config.ts`).
+
+This must reuse the same safeguards already built for B2B evaluation returns, not a simplified version:
+- idempotent per return event (its own `gifting_issue_returns` row, not a mutable field on the parent issue)
+- explicit choice of return condition (new vs. used) per return
+- partial returns and the "mixed" condition state
+- correct accounting reversal and correct inventory destination (new → normal stock; used → the existing "Opened Testers" pool — do not create a second pool)
+
+Also fix the field ordering in the Product Movements list/detail view — the name and note/comment fields currently display in a confusing order; reorder them for clarity.
+
+## 4. Product Movements — full-record edit
+Editing a product movement currently only allows changing one field at a time; there is no way to open the full record and edit everything in one pass. Add a single edit dialog exposing every editable field on that movement (quantity, category, recipient, occasion, reason, date, etc. — matching what the create form already exposes) and save all changes in one submit. Keep every existing validation rule that currently blocks specific changes (e.g. quantity cannot be edited once a return exists; category cannot cross the returnable/non-returnable boundary once returns exist) — the single-dialog UI must not bypass these.
+
+## 5. "Opened Tester" — CONFIRM BEFORE BUILDING
+The request lists "لم يتم إضافة التستر المفتوح" (Opened Tester hasn't been added) as still missing. As of today, this system already has a separate "Opened Testers" (تيستر مفتوح) virtual inventory location, populated when a B2B evaluation tester is returned in "used" condition, kept fully separate from normal sellable stock and from normal COGS accounting.
+
+Before doing any work on this specific item: confirm with the owner whether this is describing a gap in how the pool is *surfaced* (e.g. no dedicated menu item or report to browse it directly) rather than the pool itself being absent, or whether something genuinely different is meant. Do not rebuild or duplicate the existing pool.
+
+## Verification checklist
+- [ ] Product edit form shows and saves all three name fields, bilingual
+- [ ] Categories list has a working delete action with the reference-guard behavior described
+- [ ] An influencer-category gift can be returned end to end (new and used condition, partial return)
+- [ ] Product Movements field ordering (name/note) is fixed
+- [ ] A product movement can be fully edited in one dialog, respecting existing edit locks
+- [ ] Reported back on the Opened Tester question before building anything for it

@@ -1,0 +1,17 @@
+# TASK — Sales module: scope and historical invoice backfill
+
+## 1. Scope the Sales section to invoicing only
+The Sales section should contain only: issuing invoices, collecting/recording payment against invoices, and uploading invoices for individuals and companies. Audit everything currently under the Sales menu and report anything outside this scope before removing or moving it — do not delete or relocate anything without confirming it first, since some of it may be relied on elsewhere.
+
+## 2. Backfill historical distributor invoices
+Add a way to record distributor/company invoices that were already issued earlier this year outside the system (so this year's full invoice history is in the system), with:
+- Entry of the invoice's real original details (number, date, buyer, items, amounts) rather than forcing today's date or a new auto-generated number where a real historical one already exists.
+- A collection-status option per invoice supporting partial collection — some of the invoice amount collected, some still outstanding — not just a binary paid/unpaid flag.
+
+This must not bypass the accounting and invoice-integrity rules already in place for normal invoice creation (unique creation key/idempotency, the single-invoice-source constraint, correct journal postings for revenue and any payments recorded against it, correct sequence-number handling so backfilled invoices don't collide with or corrupt the live sequence). Report your approach for keeping backfilled invoices consistent with these constraints before implementing.
+
+## Verification checklist
+- [ ] Report of anything under Sales outside the stated scope, with no removal until confirmed
+- [ ] A historical distributor invoice can be entered with its real original number/date/amounts
+- [ ] Partial collection against a backfilled invoice works and is reflected correctly in outstanding balance and accounting
+- [ ] Backfilled invoices do not break invoice sequence numbering or accounting integrity
