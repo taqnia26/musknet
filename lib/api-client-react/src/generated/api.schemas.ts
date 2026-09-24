@@ -389,6 +389,14 @@ export const RichBlockEffect = {
   none: 'none',
   fade: 'fade',
   zoom: 'zoom',
+  rise: 'rise',
+  drop: 'drop',
+  'slide-left': 'slide-left',
+  'slide-right': 'slide-right',
+  blur: 'blur',
+  rotate: 'rotate',
+  flip: 'flip',
+  bounce: 'bounce',
 } as const;
 
 export type RichSpanColor = typeof RichSpanColor[keyof typeof RichSpanColor];
@@ -419,6 +427,11 @@ export interface RichBlock {
   type: RichBlockType;
   align: RichBlockAlign;
   effect: RichBlockEffect;
+  /**
+     * @minimum 0.5
+     * @maximum 2
+     */
+  effectSpeed?: number;
   /** @maxItems 100 */
   content: RichSpan[];
 }

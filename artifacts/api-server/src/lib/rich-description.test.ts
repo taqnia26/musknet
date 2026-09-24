@@ -25,6 +25,21 @@ const validDescription = {
 } as const;
 
 describe("rich product descriptions", () => {
+  it("accepts all ten motion effects and bounded per-block speeds without breaking older blocks", () => {
+    const effects = ["fade", "zoom", "rise", "drop", "slide-left", "slide-right", "blur", "rotate", "flip", "bounce"];
+    for (const effect of effects) {
+      expect(richDescriptionSchema.safeParse({
+        blocks: [{ ...validDescription.blocks[0], effect, effectSpeed: 0.5 }],
+      }).success).toBe(true);
+    }
+    expect(richDescriptionSchema.safeParse(validDescription).success).toBe(true);
+    for (const effectSpeed of [0, 0.6, 2.25, "1", null]) {
+      expect(richDescriptionSchema.safeParse({
+        blocks: [{ ...validDescription.blocks[0], effectSpeed }],
+      }).success).toBe(false);
+    }
+  });
+
   it("accepts the strict supported rich-description format and derives plain text", () => {
     const parsed = richDescriptionSchema.parse(validDescription);
     expect(richDescriptionToPlainText(parsed)).toBe("A scent\nTop notes");

@@ -13,4 +13,12 @@ export const RichBlockEffect = {
   none: 'none',
   fade: 'fade',
   zoom: 'zoom',
+  rise: 'rise',
+  drop: 'drop',
+  'slide-left': 'slide-left',
+  'slide-right': 'slide-right',
+  blur: 'blur',
+  rotate: 'rotate',
+  flip: 'flip',
+  bounce: 'bounce',
 } as const;

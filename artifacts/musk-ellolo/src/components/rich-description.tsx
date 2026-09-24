@@ -12,8 +12,10 @@ type RichColor = RichSpanColor;
 const emptyBlock = (): RichBlock => ({ type: 'paragraph', align: 'start', effect: 'none', content: [{ text: '' }] });
 const allowedTypes: RichBlockType[] = ['paragraph', 'heading2', 'heading3', 'bullet', 'ordered'];
 const allowedAlignments: RichAlign[] = ['start', 'center', 'end'];
-const allowedEffects: RichEffect[] = ['none', 'fade', 'zoom'];
+const allowedEffects: RichEffect[] = ['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce'];
 const allowedColors: RichColor[] = ['default', 'red', 'blue', 'gold'];
+const validEffectSpeed = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0.5 && value <= 2 && value * 4 % 1 === 0;
 
 export function normalizeRichDescription(value: unknown): RichDescription | null {
   if (!value || typeof value !== 'object' || !Array.isArray((value as { blocks?: unknown }).blocks)) return null;
@@ -38,6 +40,7 @@ export function normalizeRichDescription(value: unknown): RichDescription | null
       type: allowedTypes.includes(block.type as RichBlockType) ? block.type as RichBlockType : 'paragraph',
       align: allowedAlignments.includes(block.align as RichAlign) ? block.align as RichAlign : 'start',
       effect: allowedEffects.includes(block.effect as RichEffect) ? block.effect as RichEffect : 'none',
+      ...(validEffectSpeed(block.effectSpeed) ? { effectSpeed: block.effectSpeed } : {}),
       content: content.length ? content : [{ text: '' }],
     }];
   });
@@ -174,7 +177,9 @@ function mountEditableContent(root: HTMLElement, spans: RichSpan[]) {
 }
 
 const alignmentClass: Record<RichAlign, string> = { start: 'text-start', center: 'text-center', end: 'text-end' };
-const effectClass: Record<RichEffect, string> = { none: '', fade: 'rich-description-effect rich-description-effect--fade', zoom: 'rich-description-effect rich-description-effect--zoom' };
+const effectClass: Record<RichEffect, string> = Object.fromEntries(
+  allowedEffects.map((effect) => [effect, effect === 'none' ? '' : `rich-description-effect rich-description-effect--${effect}`]),
+) as Record<RichEffect, string>;
 
 export function RichDescriptionRenderer({ description, className }: { description: RichDescription; className?: string }) {
   const blocks = normalizeRichDescription(description)?.blocks ?? [];
@@ -186,6 +191,7 @@ export function RichDescriptionRenderer({ description, className }: { descriptio
       const attrs = {
         className: cn(alignmentClass[block.align], effectClass[block.effect], 'whitespace-pre-wrap break-words'),
         'data-description-effect': block.effect,
+        style: { '--rich-effect-duration': `${1800 / (block.effectSpeed ?? 1)}ms` } as React.CSSProperties,
       };
       if (block.type === 'heading2') return <h2 key={index} {...attrs} className={cn(attrs.className, 'text-xl font-semibold')}>{content}</h2>;
       if (block.type === 'heading3') return <h3 key={index} {...attrs} className={cn(attrs.className, 'text-lg font-semibold')}>{content}</h3>;
@@ -231,7 +237,7 @@ function EditorBlock({ block, index, lang, onChange, onRemove, canRemove }: {
   }, []);
   const selectionRef = useRef<{ editable: HTMLDivElement; range: Range } | null>(null);
   const latestBlockRef = useRef(block);
-  if (latestBlockRef.current.type !== block.type || latestBlockRef.current.align !== block.align || latestBlockRef.current.effect !== block.effect) {
+  if (latestBlockRef.current.type !== block.type || latestBlockRef.current.align !== block.align || latestBlockRef.current.effect !== block.effect || latestBlockRef.current.effectSpeed !== block.effectSpeed) {
     latestBlockRef.current = { ...block, content: latestBlockRef.current.content };
   }
   const [linkUrl, setLinkUrl] = useState('');
@@ -327,6 +333,11 @@ function EditorBlock({ block, index, lang, onChange, onRemove, canRemove }: {
     latestBlockRef.current = updated;
     onChange(index, updated);
   };
+  const editSpeed = (speed: number) => {
+    const updated = { ...latestBlockRef.current, effectSpeed: speed };
+    latestBlockRef.current = updated;
+    onChange(index, updated);
+  };
 
   const buttons = [
     { label: label('غامق', 'Bold'), icon: <Bold className="h-4 w-4" />, action: () => applyCommand('bold') },
@@ -348,8 +359,18 @@ function EditorBlock({ block, index, lang, onChange, onRemove, canRemove }: {
         <option value="start">{label('بداية السطر', 'Start')}</option><option value="center">{label('توسيط', 'Center')}</option><option value="end">{label('نهاية السطر', 'End')}</option>
       </select>
       <label className="sr-only" htmlFor={`rich-effect-${lang}-${index}`}>{label('تأثير الحركة', 'Motion effect')}</label>
-      <select id={`rich-effect-${lang}-${index}`} aria-label={label('تأثير الحركة', 'Motion effect')} value={block.effect} onChange={(event) => editBlock('effect', event.target.value)} className="h-9 max-w-[125px] rounded-md border bg-white px-2 text-xs">
-        <option value="none">{label('بدون تأثير', 'No effect')}</option><option value="fade">{label('تلاشي', 'Fade')}</option><option value="zoom">{label('تكبير', 'Zoom')}</option>
+      <select id={`rich-effect-${lang}-${index}`} aria-label={label('تأثير الحركة', 'Motion effect')} value={block.effect} onChange={(event) => editBlock('effect', event.target.value)} className="h-9 max-w-[145px] rounded-md border bg-white px-2 text-xs">
+        <option value="none">{label('بدون تأثير', 'No effect')}</option>
+        <option value="fade">{label('تلاشي', 'Fade')}</option>
+        <option value="zoom">{label('تكبير', 'Zoom')}</option>
+        <option value="rise">{label('صعود', 'Rise')}</option>
+        <option value="drop">{label('هبوط', 'Drop')}</option>
+        <option value="slide-left">{label('انزلاق من اليسار', 'Slide from left')}</option>
+        <option value="slide-right">{label('انزلاق من اليمين', 'Slide from right')}</option>
+        <option value="blur">{label('إزالة الضبابية', 'Unblur')}</option>
+        <option value="rotate">{label('دوران خفيف', 'Soft rotate')}</option>
+        <option value="flip">{label('تقليب', 'Flip')}</option>
+        <option value="bounce">{label('ارتداد', 'Bounce')}</option>
       </select>
       <label className="sr-only" htmlFor={`rich-color-${lang}-${index}`}>{label('لون النص المحدد', 'Selected text color')}</label>
       <select id={`rich-color-${lang}-${index}`} defaultValue="default" onMouseDown={saveSelection} onKeyDown={saveSelection} onChange={(event) => applyColor(event.target.value as RichColor)} aria-label={label('لون النص المحدد', 'Selected text color')} className="h-9 max-w-[105px] rounded-md border bg-white px-2 text-xs">
@@ -358,6 +379,13 @@ function EditorBlock({ block, index, lang, onChange, onRemove, canRemove }: {
       <span className="ms-auto" />
       <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-destructive" aria-label={label('حذف الفقرة', 'Remove block')} title={label('حذف الفقرة', 'Remove block')} disabled={!canRemove} onClick={() => onRemove(index)}><Minus className="h-4 w-4" /></Button>
     </div>
+    {block.effect !== 'none' && <div className="flex flex-wrap items-center gap-3 border-b bg-slate-50 px-4 py-2 text-xs">
+      <label htmlFor={`rich-effect-speed-${lang}-${index}`} className="font-medium">{label('سرعة التأثير', 'Effect speed')}</label>
+      <span className="text-slate-500">{label('أبطأ', 'Slower')}</span>
+      <input id={`rich-effect-speed-${lang}-${index}`} type="range" min="0.5" max="2" step="0.25" value={block.effectSpeed ?? 1} onChange={(event) => editSpeed(Number(event.target.value))} className="min-w-[120px] flex-1 accent-[#35c3a4]" />
+      <span className="text-slate-500">{label('أسرع', 'Faster')}</span>
+      <output htmlFor={`rich-effect-speed-${lang}-${index}`} className="min-w-[3rem] text-center font-semibold tabular-nums" dir="ltr">{(block.effectSpeed ?? 1).toFixed(2)}×</output>
+    </div>}
     <div
       ref={editableRef}
       contentEditable
@@ -391,6 +419,7 @@ const StableEditorBlock = memo(EditorBlock, (previous, next) =>
   && previous.block.type === next.block.type
   && previous.block.align === next.block.align
   && previous.block.effect === next.block.effect
+  && previous.block.effectSpeed === next.block.effectSpeed
   && previous.onChange === next.onChange
   && previous.onRemove === next.onRemove
 );
@@ -438,7 +467,9 @@ export function RichDescriptionEditor({ value, onChange, lang, label, sessionKey
     </div>
     <div className="rounded-lg border bg-white p-4 sm:p-5">
       <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-[#35c3a4]" />{t('معاينة مباشرة', 'Live preview')}</div>
-      <div className="prose prose-sm max-w-none text-slate-700"><RichDescriptionRenderer description={value} /></div>
+      <div className="prose prose-sm max-w-none text-slate-700">
+        <AnimatedRichDescriptionRenderer key={value.blocks.map((block) => `${block.effect}:${block.effectSpeed ?? 1}`).join('|')} description={value} />
+      </div>
     </div>
   </section>;
 }

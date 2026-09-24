@@ -11,7 +11,8 @@ export type RichDescriptionValue = {
   blocks: Array<{
     type: "paragraph" | "heading2" | "heading3" | "bullet" | "ordered";
     align: "start" | "center" | "end";
-    effect: "none" | "fade" | "zoom";
+    effect: "none" | "fade" | "zoom" | "rise" | "drop" | "slide-left" | "slide-right" | "blur" | "rotate" | "flip" | "bounce";
+    effectSpeed?: number;
     content: RichSpanValue[];
   }>;
 };
@@ -40,17 +41,19 @@ function validateRichDescription(value: unknown): ValidationResult {
   } else {
     const types = ["paragraph", "heading2", "heading3", "bullet", "ordered"];
     const aligns = ["start", "center", "end"];
-    const effects = ["none", "fade", "zoom"];
+    const effects = ["none", "fade", "zoom", "rise", "drop", "slide-left", "slide-right", "blur", "rotate", "flip", "bounce"];
     const colors = ["default", "red", "blue", "gold"];
     value.blocks.forEach((block) => {
       if (!isRecord(block)) {
         fail("Each block must be an object");
         return;
       }
-      exactKeys(block, ["type", "align", "effect", "content"], ["type", "align", "effect", "content"]);
+      exactKeys(block, ["type", "align", "effect", "content"], ["type", "align", "effect", "effectSpeed", "content"]);
       if (!types.includes(String(block.type))) fail("Unsupported block type");
       if (!aligns.includes(String(block.align))) fail("Unsupported text alignment");
       if (!effects.includes(String(block.effect))) fail("Unsupported text effect");
+      if (block.effectSpeed !== undefined && (typeof block.effectSpeed !== "number" || !Number.isFinite(block.effectSpeed)
+        || block.effectSpeed < 0.5 || block.effectSpeed > 2 || block.effectSpeed * 4 % 1 !== 0)) fail("Effect speed must be between 0.5 and 2 in 0.25 increments");
       if (!Array.isArray(block.content) || block.content.length > 100) {
         fail("Block content must be an array with at most 100 items");
         return;

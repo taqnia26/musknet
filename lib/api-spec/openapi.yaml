@@ -2677,7 +2677,8 @@ components:
       properties:
         type: { type: string, enum: [paragraph, heading2, heading3, bullet, ordered] }
         align: { type: string, enum: [start, center, end] }
-        effect: { type: string, enum: [none, fade, zoom] }
+        effect: { type: string, enum: [none, fade, zoom, rise, drop, slide-left, slide-right, blur, rotate, flip, bounce] }
+        effectSpeed: { type: number, minimum: 0.5, maximum: 2, multipleOf: 0.25 }
         content:
           type: array
           maxItems: 100

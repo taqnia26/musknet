@@ -38,7 +38,8 @@ export type RichSpan = {
 export type RichBlock = {
   type: "paragraph" | "heading2" | "heading3" | "bullet" | "ordered";
   align: "start" | "center" | "end";
-  effect: "none" | "fade" | "zoom";
+  effect: "none" | "fade" | "zoom" | "rise" | "drop" | "slide-left" | "slide-right" | "blur" | "rotate" | "flip" | "bounce";
+  effectSpeed?: number;
   content: RichSpan[];
 };
 

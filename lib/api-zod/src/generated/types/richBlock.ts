@@ -14,6 +14,11 @@ export interface RichBlock {
   type: RichBlockType;
   align: RichBlockAlign;
   effect: RichBlockEffect;
+  /**
+     * @minimum 0.5
+     * @maximum 2
+     */
+  effectSpeed?: number;
   /** @maxItems 100 */
   content: RichSpan[];
 }

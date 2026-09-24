@@ -10,6 +10,23 @@ import {
 } from './rich-description';
 
 describe('rich product descriptions', () => {
+  it('preserves each effect and speed in the rendered description and defaults old speeds', () => {
+    const effects = ['fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce'];
+    const rich = normalizeRichDescription({
+      blocks: effects.map((effect) => ({
+        type: 'paragraph', align: 'start', effect, effectSpeed: 0.5, content: [{ text: effect }],
+      })),
+    });
+    expect(rich?.blocks).toHaveLength(10);
+    const markup = renderToStaticMarkup(<RichDescriptionRenderer description={rich!} />);
+    for (const effect of effects) {
+      expect(markup).toContain(`rich-description-effect--${effect}`);
+    }
+    expect(markup).toContain('3600ms');
+    const old = normalizeRichDescription({ blocks: [{ type: 'paragraph', align: 'start', effect: 'fade', content: [{ text: 'old' }] }] });
+    expect(renderToStaticMarkup(<RichDescriptionRenderer description={old!} />)).toContain('1800ms');
+  });
+
   it('accepts only complete HTTP(S) and mailto links', () => {
     expect(isValidRichDescriptionHref('https://example.com/products/rose')).toBe(true);
     expect(isValidRichDescriptionHref('http://example.com')).toBe(true);

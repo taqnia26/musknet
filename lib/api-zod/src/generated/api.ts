@@ -76,6 +76,10 @@ export const GetProductParams = zod.object({
   "slug": zod.coerce.string()
 })
 
+export const getProductResponseTwoDescriptionRichArOneBlocksItemEffectSpeedMin = 0.5;
+export const getProductResponseTwoDescriptionRichArOneBlocksItemEffectSpeedMax = 2;
+export const getProductResponseTwoDescriptionRichArOneBlocksItemEffectSpeedMultipleOf = 0.25;
+
 export const getProductResponseTwoDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
 
 export const getProductResponseTwoDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
@@ -85,6 +89,10 @@ export const getProductResponseTwoDescriptionRichArOneBlocksItemContentItemHrefR
 export const getProductResponseTwoDescriptionRichArOneBlocksItemContentMax = 100;
 
 export const getProductResponseTwoDescriptionRichArOneBlocksMax = 100;
+
+export const getProductResponseTwoDescriptionRichEnOneBlocksItemEffectSpeedMin = 0.5;
+export const getProductResponseTwoDescriptionRichEnOneBlocksItemEffectSpeedMax = 2;
+export const getProductResponseTwoDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf = 0.25;
 
 export const getProductResponseTwoDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
 
@@ -119,7 +127,8 @@ export const GetProductResponse = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(getProductResponseTwoDescriptionRichArOneBlocksItemEffectSpeedMin).max(getProductResponseTwoDescriptionRichArOneBlocksItemEffectSpeedMax).multipleOf(getProductResponseTwoDescriptionRichArOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(getProductResponseTwoDescriptionRichArOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -134,7 +143,8 @@ export const GetProductResponse = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(getProductResponseTwoDescriptionRichEnOneBlocksItemEffectSpeedMin).max(getProductResponseTwoDescriptionRichEnOneBlocksItemEffectSpeedMax).multipleOf(getProductResponseTwoDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(getProductResponseTwoDescriptionRichEnOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2204,6 +2214,10 @@ export const AdminListProductsQueryParams = zod.object({
   "status": zod.enum(['active', 'inactive', 'all']).default(adminListProductsQueryStatusDefault)
 })
 
+export const adminListProductsResponseDescriptionRichArOneBlocksItemEffectSpeedMin = 0.5;
+export const adminListProductsResponseDescriptionRichArOneBlocksItemEffectSpeedMax = 2;
+export const adminListProductsResponseDescriptionRichArOneBlocksItemEffectSpeedMultipleOf = 0.25;
+
 export const adminListProductsResponseDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
 
 export const adminListProductsResponseDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
@@ -2213,6 +2227,10 @@ export const adminListProductsResponseDescriptionRichArOneBlocksItemContentItemH
 export const adminListProductsResponseDescriptionRichArOneBlocksItemContentMax = 100;
 
 export const adminListProductsResponseDescriptionRichArOneBlocksMax = 100;
+
+export const adminListProductsResponseDescriptionRichEnOneBlocksItemEffectSpeedMin = 0.5;
+export const adminListProductsResponseDescriptionRichEnOneBlocksItemEffectSpeedMax = 2;
+export const adminListProductsResponseDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf = 0.25;
 
 export const adminListProductsResponseDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
 
@@ -2272,7 +2290,8 @@ export const AdminListProductsResponseItem = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminListProductsResponseDescriptionRichArOneBlocksItemEffectSpeedMin).max(adminListProductsResponseDescriptionRichArOneBlocksItemEffectSpeedMax).multipleOf(adminListProductsResponseDescriptionRichArOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminListProductsResponseDescriptionRichArOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2287,7 +2306,8 @@ export const AdminListProductsResponseItem = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminListProductsResponseDescriptionRichEnOneBlocksItemEffectSpeedMin).max(adminListProductsResponseDescriptionRichEnOneBlocksItemEffectSpeedMax).multipleOf(adminListProductsResponseDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminListProductsResponseDescriptionRichEnOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2351,6 +2371,10 @@ export const AdminListProductsResponse = zod.array(AdminListProductsResponseItem
 
 export const adminCreateProductBodyDescriptionArDefault = ``;
 export const adminCreateProductBodyDescriptionEnDefault = ``;
+export const adminCreateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMin = 0.5;
+export const adminCreateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMax = 2;
+export const adminCreateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMultipleOf = 0.25;
+
 export const adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
 
 export const adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
@@ -2360,6 +2384,10 @@ export const adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemHref
 export const adminCreateProductBodyDescriptionRichArOneBlocksItemContentMax = 100;
 
 export const adminCreateProductBodyDescriptionRichArOneBlocksMax = 100;
+
+export const adminCreateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMin = 0.5;
+export const adminCreateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMax = 2;
+export const adminCreateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf = 0.25;
 
 export const adminCreateProductBodyDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
 
@@ -2431,7 +2459,8 @@ export const AdminCreateProductBody = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminCreateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMin).max(adminCreateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMax).multipleOf(adminCreateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2446,7 +2475,8 @@ export const AdminCreateProductBody = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminCreateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMin).max(adminCreateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMax).multipleOf(adminCreateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminCreateProductBodyDescriptionRichEnOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2501,6 +2531,10 @@ export const AdminCreateProductBody = zod.object({
   "distributorImageOverride": zod.string().nullish()
 })
 
+export const adminCreateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMin = 0.5;
+export const adminCreateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMax = 2;
+export const adminCreateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMultipleOf = 0.25;
+
 export const adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
 
 export const adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
@@ -2510,6 +2544,10 @@ export const adminCreateProductResponseDescriptionRichArOneBlocksItemContentItem
 export const adminCreateProductResponseDescriptionRichArOneBlocksItemContentMax = 100;
 
 export const adminCreateProductResponseDescriptionRichArOneBlocksMax = 100;
+
+export const adminCreateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMin = 0.5;
+export const adminCreateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMax = 2;
+export const adminCreateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf = 0.25;
 
 export const adminCreateProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
 
@@ -2569,7 +2607,8 @@ export const AdminCreateProductResponse = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminCreateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMin).max(adminCreateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMax).multipleOf(adminCreateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2584,7 +2623,8 @@ export const AdminCreateProductResponse = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminCreateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMin).max(adminCreateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMax).multipleOf(adminCreateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminCreateProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2666,6 +2706,10 @@ export const AdminGetProductParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminGetProductResponseDescriptionRichArOneBlocksItemEffectSpeedMin = 0.5;
+export const adminGetProductResponseDescriptionRichArOneBlocksItemEffectSpeedMax = 2;
+export const adminGetProductResponseDescriptionRichArOneBlocksItemEffectSpeedMultipleOf = 0.25;
+
 export const adminGetProductResponseDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
 
 export const adminGetProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
@@ -2675,6 +2719,10 @@ export const adminGetProductResponseDescriptionRichArOneBlocksItemContentItemHre
 export const adminGetProductResponseDescriptionRichArOneBlocksItemContentMax = 100;
 
 export const adminGetProductResponseDescriptionRichArOneBlocksMax = 100;
+
+export const adminGetProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMin = 0.5;
+export const adminGetProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMax = 2;
+export const adminGetProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf = 0.25;
 
 export const adminGetProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
 
@@ -2734,7 +2782,8 @@ export const AdminGetProductResponse = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminGetProductResponseDescriptionRichArOneBlocksItemEffectSpeedMin).max(adminGetProductResponseDescriptionRichArOneBlocksItemEffectSpeedMax).multipleOf(adminGetProductResponseDescriptionRichArOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminGetProductResponseDescriptionRichArOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2749,7 +2798,8 @@ export const AdminGetProductResponse = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminGetProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMin).max(adminGetProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMax).multipleOf(adminGetProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminGetProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2814,6 +2864,10 @@ export const AdminUpdateProductParams = zod.object({
 
 
 
+export const adminUpdateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMin = 0.5;
+export const adminUpdateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMax = 2;
+export const adminUpdateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMultipleOf = 0.25;
+
 export const adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
 
 export const adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
@@ -2823,6 +2877,10 @@ export const adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemHref
 export const adminUpdateProductBodyDescriptionRichArOneBlocksItemContentMax = 100;
 
 export const adminUpdateProductBodyDescriptionRichArOneBlocksMax = 100;
+
+export const adminUpdateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMin = 0.5;
+export const adminUpdateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMax = 2;
+export const adminUpdateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf = 0.25;
 
 export const adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
 
@@ -2885,7 +2943,8 @@ export const AdminUpdateProductBody = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminUpdateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMin).max(adminUpdateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMax).multipleOf(adminUpdateProductBodyDescriptionRichArOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2900,7 +2959,8 @@ export const AdminUpdateProductBody = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminUpdateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMin).max(adminUpdateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMax).multipleOf(adminUpdateProductBodyDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -2954,6 +3014,10 @@ export const AdminUpdateProductBody = zod.object({
   "seoDescriptionAr": zod.string().max(adminUpdateProductBodySeoDescriptionArMax).nullish()
 })
 
+export const adminUpdateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMin = 0.5;
+export const adminUpdateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMax = 2;
+export const adminUpdateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMultipleOf = 0.25;
+
 export const adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
 
 export const adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
@@ -2963,6 +3027,10 @@ export const adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItem
 export const adminUpdateProductResponseDescriptionRichArOneBlocksItemContentMax = 100;
 
 export const adminUpdateProductResponseDescriptionRichArOneBlocksMax = 100;
+
+export const adminUpdateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMin = 0.5;
+export const adminUpdateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMax = 2;
+export const adminUpdateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf = 0.25;
 
 export const adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
 
@@ -3022,7 +3090,8 @@ export const AdminUpdateProductResponse = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminUpdateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMin).max(adminUpdateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMax).multipleOf(adminUpdateProductResponseDescriptionRichArOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
@@ -3037,7 +3106,8 @@ export const AdminUpdateProductResponse = zod.object({
   "blocks": zod.array(zod.object({
   "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
   "align": zod.enum(['start', 'center', 'end']),
-  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "effect": zod.enum(['none', 'fade', 'zoom', 'rise', 'drop', 'slide-left', 'slide-right', 'blur', 'rotate', 'flip', 'bounce']),
+  "effectSpeed": zod.number().min(adminUpdateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMin).max(adminUpdateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMax).multipleOf(adminUpdateProductResponseDescriptionRichEnOneBlocksItemEffectSpeedMultipleOf).optional(),
   "content": zod.array(zod.object({
   "text": zod.string().max(adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax),
   "bold": zod.boolean().optional(),
