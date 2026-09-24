@@ -30,6 +30,8 @@ import {
   X,
   Settings2,
   Check,
+   Eye,
+   EyeOff,
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
 import { hasPermission } from '@/lib/permissions';
@@ -141,6 +143,7 @@ function ProductRow({
 }) {
   const queryClient = useQueryClient();
   const updateMutation = useAdminUpdateProduct();
+  const visibilityMutation = useAdminUpdateProduct();
   const disableMutation = useAdminDisableProduct();
   
   const [draftPrice, setDraftPrice] = useState(product.price.toString());
@@ -150,6 +153,8 @@ function ProductRow({
 
   const hasChanges = draftPrice !== product.price.toString() || draftCategory !== String(product.categoryId);
   const canEdit = hasPermission(currentUser, 'products', 'edit');
+  const isVisible = product.isActive && product.sellable;
+  const isBusy = isSaving || visibilityMutation.isPending;
 
   useEffect(() => {
     setDraftPrice(String(product.price));
@@ -194,6 +199,17 @@ function ProductRow({
     });
   };
 
+  const handleToggleVisibility = () => {
+    setErrorMsg(null);
+    visibilityMutation.mutate({
+      id: product.id,
+      data: isVisible ? { sellable: false } : { isActive: true, sellable: true },
+    }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getAdminListProductsQueryKey() }),
+      onError: (err) => setErrorMsg(err instanceof Error ? err.message : t('تعذر تحديث ظهور المنتج', 'Could not update product visibility')),
+    });
+  };
+
   const image = product.images?.[0];
 
   return (
@@ -222,7 +238,7 @@ function ProductRow({
                 {product.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
               </Badge>
               <Badge variant="outline" className={cn("font-normal text-[10px] h-4 px-1 rounded-sm border-transparent", product.sellable ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10" : "bg-muted text-muted-foreground")}>
-                {product.sellable ? t('للبيع', 'Sellable') : t('غير معروض', 'Hidden')}
+                {isVisible ? t('معروض', 'Visible') : t('مخفي', 'Hidden')}
               </Badge>
             </div>
           </div>
@@ -243,12 +259,12 @@ function ProductRow({
               step="0.01"
               value={draftPrice}
               onChange={(e) => { setDraftPrice(e.target.value); setErrorMsg(null); }}
-              disabled={!canEdit || isSaving}
+               disabled={!canEdit || isBusy}
             />
           </div>
           <div className="flex items-center gap-1.5 min-w-[140px] flex-1">
             <span className="text-xs text-muted-foreground shrink-0">{t('القسم', 'Category')}</span>
-            <Select value={draftCategory} onValueChange={(value) => { setDraftCategory(value); setErrorMsg(null); }} disabled={!canEdit || isSaving}>
+             <Select value={draftCategory} onValueChange={(value) => { setDraftCategory(value); setErrorMsg(null); }} disabled={!canEdit || isBusy}>
               <SelectTrigger data-testid={`select-product-category-${product.id}`} className="h-8 text-xs bg-background">
                 <SelectValue />
               </SelectTrigger>
@@ -277,7 +293,7 @@ function ProductRow({
             size="sm" 
             className="hidden sm:flex h-8 gap-1.5 text-xs text-muted-foreground"
             onClick={() => onEdit(product)}
-            disabled={isSaving}
+             disabled={isBusy}
           >
             <Settings2 className="h-3.5 w-3.5" />
             {t('بيانات المنتج', 'Details')}
@@ -285,7 +301,7 @@ function ProductRow({
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={isSaving}>
+               <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label={t('إجراءات المنتج', 'Product actions')} data-testid={`button-product-actions-${product.id}`} disabled={isBusy}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -293,6 +309,12 @@ function ProductRow({
               {canEdit && (
                 <DropdownMenuItem onClick={() => onEdit(product)} className="gap-2 text-sm">
                   <Edit2 className="h-4 w-4" />{t('تعديل كامل', 'Full Edit')}
+                </DropdownMenuItem>
+              )}
+              {canEdit && (
+                <DropdownMenuItem onClick={handleToggleVisibility} className="gap-2 text-sm" data-testid={`menu-product-visibility-${product.id}`}>
+                  {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {isVisible ? t('إخفاء المنتج', 'Hide product') : t('عرض المنتج', 'Show product')}
                 </DropdownMenuItem>
               )}
               {hasPermission(currentUser, 'products', 'delete') && product.isActive && (
@@ -307,7 +329,7 @@ function ProductRow({
             <Button 
               size="sm" 
               className={cn("h-8 px-4 transition-all", hasChanges ? "bg-[#35c3a4] hover:bg-[#2da389] text-white" : "bg-muted text-muted-foreground opacity-50")}
-              disabled={!hasChanges || isSaving}
+               disabled={!hasChanges || isBusy}
               onClick={handleSave}
                data-testid={`button-save-product-${product.id}`}
             >
@@ -349,7 +371,7 @@ export default function AdminProducts() {
     return allProducts.filter(p => {
       if (statusFilter === 'active' && !p.isActive) return false;
       if (statusFilter === 'inactive' && p.isActive) return false;
-      if (statusFilter === 'sellable' && !p.sellable) return false;
+       if (statusFilter === 'sellable' && (!p.sellable || !p.isActive)) return false;
       if (categoryFilter !== 'all' && p.categoryId.toString() !== categoryFilter) return false;
       return true;
     });
@@ -661,12 +683,12 @@ export default function AdminProducts() {
                       )} />
                     </div>
 
-                    <div className="grid gap-5 sm:grid-cols-2">
+                     <div className="space-y-5">
                       <FormField control={form.control} name="descriptionAr" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الوصف بالعربية', 'Description (AR)')}</FormLabel><FormControl><Textarea className="resize-none min-h-[100px]" {...field} /></FormControl><FormMessage /></FormItem>
+                         <FormItem><FormLabel>{t('الوصف بالعربية', 'Description (AR)')}</FormLabel><FormControl><Textarea className="min-h-[200px] resize-y" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="descriptionEn" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الوصف بالإنجليزية', 'Description (EN)')}</FormLabel><FormControl><Textarea className="resize-none min-h-[100px]" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+                         <FormItem><FormLabel>{t('الوصف بالإنجليزية', 'Description (EN)')}</FormLabel><FormControl><Textarea className="min-h-[200px] resize-y" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                   </section>
@@ -780,57 +802,6 @@ export default function AdminProducts() {
                     </div>
                   </section>
 
-                  <section className="space-y-4">
-                    <div className="mb-2 border-b pb-2"><h3 className="text-lg font-semibold">{t('قنوات العرض والخيارات', 'Channels & Options')}</h3></div>
-                    <p className="text-xs text-muted-foreground">{t('خيارا المرفقات وملاحظات العميل يُحفظان ضمن بيانات المنتج، ولم يُفعّلا في صفحة الطلب بعد.', 'Attachment and customer-note settings are saved on the product, but are not enabled at checkout yet.')}</p>
-                    
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <FormField control={form.control} name="isActive" render={({ field }) => (
-                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/10">
-                           <div className="space-y-0.5">
-                             <FormLabel>{t('المنتج نشط', 'Product is Active')}</FormLabel>
-                             <FormDescription>{t('المنتج مفعل في النظام', 'Product is globally active')}</FormDescription>
-                           </div>
-                           <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                         </FormItem>
-                      )} />
-                      <FormField control={form.control} name="sellable" render={({ field }) => (
-                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/10">
-                           <div className="space-y-0.5">
-                             <FormLabel>{t('عرض في المتجر (محلي)', 'Show on Storefront')}</FormLabel>
-                             <FormDescription>{t('المنتج متاح للبيع للأفراد', 'Available for individual purchase')}</FormDescription>
-                           </div>
-                           <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                         </FormItem>
-                      )} />
-                      <FormField control={form.control} name="showOnDistributors" render={({ field }) => (
-                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/10">
-                           <div className="space-y-0.5">
-                             <FormLabel>{t('عرض في قناة B2B', 'Show on B2B Channel')}</FormLabel>
-                             <FormDescription>{t('متاح للموزعين والشركات', 'Available for distributors')}</FormDescription>
-                           </div>
-                           <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                         </FormItem>
-                      )} />
-                      <FormField control={form.control} name="allowOrderAttachment" render={({ field }) => (
-                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/10">
-                           <div className="space-y-0.5">
-                             <FormLabel className="text-sm font-semibold">{t('إرفاق ملف عند الطلب', 'Allow Attachment')}</FormLabel>
-                           </div>
-                           <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                         </FormItem>
-                      )} />
-                      <FormField control={form.control} name="allowCustomerNote" render={({ field }) => (
-                         <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-muted/10">
-                           <div className="space-y-0.5">
-                             <FormLabel className="text-sm font-semibold">{t('إمكانية كتابة ملاحظة', 'Allow Customer Note')}</FormLabel>
-                           </div>
-                           <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                         </FormItem>
-                      )} />
-                    </div>
-                  </section>
-                  
                   <section className="space-y-4">
                     <div className="mb-2 border-b pb-2"><h3 className="text-lg font-semibold">{t('تحسينات محركات البحث (SEO)', 'SEO Improvements')}</h3></div>
                     <p className="text-xs text-muted-foreground">{t('عدّل رابط صفحة المنتج في البيانات الأساسية. تُحفظ بيانات SEO هنا لكنها لا تغيّر عنوان الصفحة العامة حاليًا.', 'Edit the product URL in Basic Information. SEO fields are saved here but do not change the public page metadata yet.')}</p>
