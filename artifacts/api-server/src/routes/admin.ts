@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { open } from "node:fs/promises";
 import { constants } from "node:fs";
 import { suggestContractSignedDate } from "../lib/contract-signed-date";
+import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
 import {
   adminPermissionsTable,
@@ -59,6 +60,7 @@ import {
   inventoryCycleCountsTable, inventoryCycleCountLinesTable,
   inventoryLocationsTable,
   inventoryTransfersTable, inventoryPurchaseOrdersTable, inventoryPurchaseOrderLinesTable,
+  type InsertProduct,
 } from "@workspace/db";
 import {
   adminFromToken,
@@ -1464,6 +1466,8 @@ router.get("/admin/products", permit("products", "view"), route(async (req, res)
 }));
 router.post("/admin/products", permit("products", "edit"), route(async (req, res) => {
   if (res.headersSent) return;
+  const richDescriptionError = validateRawRichDescriptionFields(req.body);
+  if (richDescriptionError) { res.status(400).json({ error: richDescriptionError }); return; }
   const body = parse(Api.AdminCreateProductBody, req.body, res); if (!body) return;
   if (body.discountPrice !== null && body.discountPrice !== undefined && body.discountPrice > body.price) {
     res.status(400).json({ error: "Discount price must not exceed regular price" }); return;
@@ -1473,8 +1477,9 @@ router.post("/admin/products", permit("products", "edit"), route(async (req, res
     .where(eq(categoriesTable.id, body.categoryId))
     .limit(1);
   if (!category) { res.status(400).json({ error: "Category not found" }); return; }
+  const productValues = prepareProductDescriptionCreate(body as unknown as Record<string, unknown>);
   const row = await db.transaction(async (tx) => {
-    const [created] = await tx.insert(productsTable).values(body).returning();
+    const [created] = await tx.insert(productsTable).values(productValues as InsertProduct).returning();
     if (created.stockQuantity > 0) {
       await tx.insert(inventoryMovementsTable).values({
         productId: created.id, movementType: "increase", quantityChange: created.stockQuantity,
@@ -1515,6 +1520,8 @@ router.get("/admin/products/:id", permit("products", "view"), route(async (req, 
 router.patch("/admin/products/:id", permit("products", "edit"), route(async (req, res) => {
   if (res.headersSent) return;
   const params = parse(Api.AdminUpdateProductParams, req.params, res);
+  const richDescriptionError = validateRawRichDescriptionFields(req.body);
+  if (richDescriptionError) { res.status(400).json({ error: richDescriptionError }); return; }
   const body = parse(Api.AdminUpdateProductBody, req.body, res); if (!params || !body) return;
   const [existingProduct] = await db.select()
     .from(productsTable)
@@ -1537,7 +1544,11 @@ router.patch("/admin/products/:id", permit("products", "edit"), route(async (req
       .limit(1);
     if (!category) { res.status(400).json({ error: "Category not found" }); return; }
   }
-  const [row] = await db.update(productsTable).set(body).where(eq(productsTable.id, params.id)).returning();
+  const productValues = prepareProductDescriptionUpdate(
+    body as unknown as Record<string, unknown>,
+    existingProduct,
+  );
+  const [row] = await db.update(productsTable).set(productValues as Partial<InsertProduct>).where(eq(productsTable.id, params.id)).returning();
   res.json(Api.AdminUpdateProductResponse.parse(row));
 }));
 router.delete("/admin/products/:id", permit("products", "delete"), route(async (req, res) => {

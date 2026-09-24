@@ -351,6 +351,7 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+
 export const getListCategoriesUrl = () => {
 
 
@@ -421,6 +422,13 @@ export function useListCategories<TData = Awaited<ReturnType<typeof listCategori
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getListProductsUrl = (params?: ListProductsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -498,6 +506,13 @@ export function useListProducts<TData = Awaited<ReturnType<typeof listProducts>>
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
 export const getGetProductUrl = (slug: string,) => {
 
 
@@ -16361,3 +16376,10 @@ export function useListInventoryAlerts<TData = Awaited<ReturnType<typeof listInv
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+

@@ -7,6 +7,7 @@
  */
 import type { AdminProductImage } from './adminProductImage';
 import type { FragranceNote } from './fragranceNote';
+import type { RichDescription } from './richDescription';
 
 export interface AdminProductUpdate {
   /** @minLength 1 */
@@ -15,6 +16,8 @@ export interface AdminProductUpdate {
   nameEn?: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  descriptionRichAr?: RichDescription | null;
+  descriptionRichEn?: RichDescription | null;
   /** @minLength 1 */
   slug?: string;
   /** @minimum 0 */

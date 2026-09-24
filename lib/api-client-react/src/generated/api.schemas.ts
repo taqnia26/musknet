@@ -362,6 +362,72 @@ export interface Product {
   stock: number;
 }
 
+export type RichBlockType = typeof RichBlockType[keyof typeof RichBlockType];
+
+
+export const RichBlockType = {
+  paragraph: 'paragraph',
+  heading2: 'heading2',
+  heading3: 'heading3',
+  bullet: 'bullet',
+  ordered: 'ordered',
+} as const;
+
+export type RichBlockAlign = typeof RichBlockAlign[keyof typeof RichBlockAlign];
+
+
+export const RichBlockAlign = {
+  start: 'start',
+  center: 'center',
+  end: 'end',
+} as const;
+
+export type RichBlockEffect = typeof RichBlockEffect[keyof typeof RichBlockEffect];
+
+
+export const RichBlockEffect = {
+  none: 'none',
+  fade: 'fade',
+  zoom: 'zoom',
+} as const;
+
+export type RichSpanColor = typeof RichSpanColor[keyof typeof RichSpanColor];
+
+
+export const RichSpanColor = {
+  default: 'default',
+  red: 'red',
+  blue: 'blue',
+  gold: 'gold',
+} as const;
+
+export interface RichSpan {
+  /** @maxLength 2000 */
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  color?: RichSpanColor;
+  /**
+     * @maxLength 2048
+     * @pattern ^(https?://|mailto:)[^\s<>]*$
+     */
+  href?: string;
+}
+
+export interface RichBlock {
+  type: RichBlockType;
+  align: RichBlockAlign;
+  effect: RichBlockEffect;
+  /** @maxItems 100 */
+  content: RichSpan[];
+}
+
+export interface RichDescription {
+  /** @maxItems 100 */
+  blocks: RichBlock[];
+}
+
 export type FragranceNoteType = typeof FragranceNoteType[keyof typeof FragranceNoteType];
 
 
@@ -377,13 +443,15 @@ export interface FragranceNote {
   nameEn: string;
 }
 
-export type ProductDetails = Product & {
+export type ProductDetails = Product & ({
   descriptionAr: string;
   descriptionEn: string;
+  descriptionRichAr: RichDescription | null;
+  descriptionRichEn: RichDescription | null;
   images: string[];
   notes: FragranceNote[];
   relatedProducts: Product[];
-};
+});
 
 export interface HomeContent {
   heroTitleAr: string;
@@ -1235,6 +1303,8 @@ export interface AdminProduct {
   nameEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  descriptionRichAr: RichDescription | null;
+  descriptionRichEn: RichDescription | null;
   slug: string;
   price: number;
   /** @nullable */
@@ -1368,6 +1438,8 @@ export interface AdminProductInput {
   nameEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  descriptionRichAr?: RichDescription | null;
+  descriptionRichEn?: RichDescription | null;
   /** @minLength 1 */
   slug: string;
   /** @minimum 0 */
@@ -1472,6 +1544,8 @@ export interface AdminProductUpdate {
   nameEn?: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  descriptionRichAr?: RichDescription | null;
+  descriptionRichEn?: RichDescription | null;
   /** @minLength 1 */
   slug?: string;
   /** @minimum 0 */
@@ -4842,3 +4916,4 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
+

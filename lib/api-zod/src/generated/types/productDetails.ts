@@ -7,11 +7,14 @@
  */
 import type { FragranceNote } from './fragranceNote';
 import type { Product } from './product';
+import type { RichDescription } from './richDescription';
 
-export type ProductDetails = Product & {
+export type ProductDetails = Product & ({
   descriptionAr: string;
   descriptionEn: string;
+  descriptionRichAr: RichDescription | null;
+  descriptionRichEn: RichDescription | null;
   images: string[];
   notes: FragranceNote[];
   relatedProducts: Product[];
-};
+});

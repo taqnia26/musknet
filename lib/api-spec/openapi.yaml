@@ -2634,12 +2634,20 @@ components:
       allOf:
         - $ref: "#/components/schemas/Product"
         - type: object
-          required: [descriptionAr, descriptionEn, images, notes, relatedProducts]
+          required: [descriptionAr, descriptionEn, descriptionRichAr, descriptionRichEn, images, notes, relatedProducts]
           properties:
             descriptionAr:
               type: string
             descriptionEn:
               type: string
+            descriptionRichAr:
+              oneOf:
+                - $ref: "#/components/schemas/RichDescription"
+                - type: "null"
+            descriptionRichEn:
+              oneOf:
+                - $ref: "#/components/schemas/RichDescription"
+                - type: "null"
             images:
               type: array
               items:
@@ -2652,6 +2660,40 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/Product"
+    RichDescription:
+      type: object
+      additionalProperties: false
+      required: [blocks]
+      properties:
+        blocks:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/RichBlock"
+    RichBlock:
+      type: object
+      additionalProperties: false
+      required: [type, align, effect, content]
+      properties:
+        type: { type: string, enum: [paragraph, heading2, heading3, bullet, ordered] }
+        align: { type: string, enum: [start, center, end] }
+        effect: { type: string, enum: [none, fade, zoom] }
+        content:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/RichSpan"
+    RichSpan:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: { type: string, maxLength: 2000 }
+        bold: { type: boolean }
+        italic: { type: boolean }
+        underline: { type: boolean }
+        color: { type: string, enum: [default, red, blue, gold] }
+        href: { type: string, maxLength: 2048, pattern: '^(https?://|mailto:)[^\s<>]*$' }
     FragranceNote:
       type: object
       required: [type, nameAr, nameEn]
@@ -3450,13 +3492,21 @@ components:
         distributorImageOverride: { type: [string, "null"] }
     AdminProduct:
       type: object
-      required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, averageCost, sku, barcode, sellable, isActive, isFeatured, isBestseller, showOnDistributors, weightKg, costPrice, discountPrice, discountEndsOn, mpn, brand, subtitleAr, promotionalTitleAr, maxPerCustomer, requiresShipping, allowOrderAttachment, allowCustomerNote, taxable, registrationNumber, tags, seoTitleAr, seoDescriptionAr, createdAt, updatedAt]
+      required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, averageCost, sku, barcode, sellable, isActive, isFeatured, isBestseller, showOnDistributors, weightKg, costPrice, discountPrice, discountEndsOn, mpn, brand, subtitleAr, promotionalTitleAr, maxPerCustomer, requiresShipping, allowOrderAttachment, allowCustomerNote, taxable, registrationNumber, tags, seoTitleAr, seoDescriptionAr, descriptionRichAr, descriptionRichEn, createdAt, updatedAt]
       properties:
         id: { type: number }
         nameAr: { type: string }
         nameEn: { type: string }
         descriptionAr: { type: string }
         descriptionEn: { type: string }
+        descriptionRichAr:
+          oneOf:
+            - $ref: "#/components/schemas/RichDescription"
+            - type: "null"
+        descriptionRichEn:
+          oneOf:
+            - $ref: "#/components/schemas/RichDescription"
+            - type: "null"
         slug: { type: string }
         price: { type: number }
         compareAtPrice: { type: [number, "null"] }
@@ -3523,6 +3573,14 @@ components:
         nameEn: { type: string, minLength: 1 }
         descriptionAr: { type: string, default: "" }
         descriptionEn: { type: string, default: "" }
+        descriptionRichAr:
+          oneOf:
+            - $ref: "#/components/schemas/RichDescription"
+            - type: "null"
+        descriptionRichEn:
+          oneOf:
+            - $ref: "#/components/schemas/RichDescription"
+            - type: "null"
         slug: { type: string, minLength: 1 }
         price: { type: number, minimum: 0 }
         compareAtPrice: { type: [number, "null"] }
@@ -3565,6 +3623,14 @@ components:
         nameEn: { type: string, minLength: 1 }
         descriptionAr: { type: string }
         descriptionEn: { type: string }
+        descriptionRichAr:
+          oneOf:
+            - $ref: "#/components/schemas/RichDescription"
+            - type: "null"
+        descriptionRichEn:
+          oneOf:
+            - $ref: "#/components/schemas/RichDescription"
+            - type: "null"
         slug: { type: string, minLength: 1 }
         price: { type: number, minimum: 0 }
         compareAtPrice: { type: [number, "null"], minimum: 0 }

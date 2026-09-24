@@ -19,6 +19,7 @@ import {
   influencerCouponsTable,
   orderAttributionsTable,
   shipmentsTable,
+  type RichDescription,
 } from "@workspace/db";
 import { ensureAdminSeeded } from "./admin-auth";
 import { postFulfillmentCogs, updateOrderAndIssueInvoice } from "./invoices";
@@ -43,6 +44,8 @@ type ProductSeed = {
   stock: number;
   descriptionAr: string;
   descriptionEn: string;
+  descriptionRichAr?: RichDescription | null;
+  descriptionRichEn?: RichDescription | null;
   images: string[];
   notes: Array<{ type: "top" | "heart" | "base"; nameAr: string; nameEn: string }>;
 };
@@ -314,6 +317,8 @@ export function toProduct(product: ProductSeed) {
   const {
     descriptionAr: _descriptionAr,
     descriptionEn: _descriptionEn,
+    descriptionRichAr: _descriptionRichAr,
+    descriptionRichEn: _descriptionRichEn,
     images: _images,
     notes: _notes,
     ...summary
@@ -404,6 +409,8 @@ function mapDatabaseProduct(
     stock: product.stockQuantity,
     descriptionAr: product.descriptionAr,
     descriptionEn: product.descriptionEn,
+    descriptionRichAr: product.descriptionRichAr,
+    descriptionRichEn: product.descriptionRichEn,
     images: imageUrls,
     notes: product.notes,
   };

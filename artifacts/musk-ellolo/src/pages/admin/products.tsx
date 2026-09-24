@@ -46,6 +46,13 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import {
+  type RichDescription,
+  RichDescriptionEditor,
+  legacyTextToRichDescription,
+  normalizeRichDescription,
+  richDescriptionToPlainText,
+} from '@/components/rich-description';
 
 const MAX_IMAGES = 6;
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
@@ -58,6 +65,8 @@ const productSchema = z.object({
   nameEn: z.string().min(1, 'Required / مطلوب'),
   descriptionAr: z.string().optional(),
   descriptionEn: z.string().optional(),
+  descriptionRichAr: z.custom<RichDescription>().optional(),
+  descriptionRichEn: z.custom<RichDescription>().optional(),
   slug: z.string().min(1, 'Required / مطلوب'),
   price: z.coerce.number().min(0),
   compareAtPrice: z.union([z.literal('').transform(() => null), z.coerce.number().min(0), z.null()]).optional(),
@@ -96,6 +105,8 @@ const emptyProduct: ProductFormValues = {
   nameEn: '',
   descriptionAr: '',
   descriptionEn: '',
+  descriptionRichAr: legacyTextToRichDescription(''),
+  descriptionRichEn: legacyTextToRichDescription(''),
   slug: '',
   price: 0,
   compareAtPrice: null,
@@ -357,6 +368,7 @@ export default function AdminProducts() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [descriptionEditorSession, setDescriptionEditorSession] = useState(0);
   const [originalNames, setOriginalNames] = useState<{ ar: string; en: string } | null>(null);
   const [productImages, setProductImages] = useState<AdminProductImage[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -394,6 +406,7 @@ export default function AdminProducts() {
 
   const resetDialog = () => {
     setEditingId(null);
+    setDescriptionEditorSession((session) => session + 1);
     setOriginalNames(null);
     setProductImages([]);
     setUploadError(null);
@@ -426,8 +439,10 @@ export default function AdminProducts() {
       registrationNumber: stringToNull(data.registrationNumber),
       seoTitleAr: stringToNull(data.seoTitleAr),
       seoDescriptionAr: stringToNull(data.seoDescriptionAr),
-      descriptionAr: data.descriptionAr || '',
-      descriptionEn: data.descriptionEn || '',
+      descriptionAr: data.descriptionRichAr ? richDescriptionToPlainText(data.descriptionRichAr) : data.descriptionAr || '',
+      descriptionEn: data.descriptionRichEn ? richDescriptionToPlainText(data.descriptionRichEn) : data.descriptionEn || '',
+      descriptionRichAr: data.descriptionRichAr?.blocks.some((block) => block.content.some((span) => span.text.trim())) ? data.descriptionRichAr : null,
+      descriptionRichEn: data.descriptionRichEn?.blocks.some((block) => block.content.some((span) => span.text.trim())) ? data.descriptionRichEn : null,
       tags,
     };
     
@@ -456,6 +471,7 @@ export default function AdminProducts() {
 
   const handleEdit = (product: AdminProduct) => {
     setEditingId(product.id);
+    setDescriptionEditorSession((session) => session + 1);
     setOriginalNames({ ar: product.nameAr, en: product.nameEn });
     setProductImages(product.images || []);
     setUploadError(null);
@@ -464,6 +480,10 @@ export default function AdminProducts() {
       nameEn: product.nameEn,
       descriptionAr: product.descriptionAr || '',
       descriptionEn: product.descriptionEn || '',
+      descriptionRichAr: normalizeRichDescription(product.descriptionRichAr)
+        ?? legacyTextToRichDescription(product.descriptionAr),
+      descriptionRichEn: normalizeRichDescription(product.descriptionRichEn)
+        ?? legacyTextToRichDescription(product.descriptionEn),
       slug: product.slug,
       price: product.price,
       compareAtPrice: product.compareAtPrice,
@@ -701,11 +721,29 @@ export default function AdminProducts() {
                     </div>
 
                      <div className="space-y-5">
-                      <FormField control={form.control} name="descriptionAr" render={({ field }) => (
-                         <FormItem><FormLabel>{t('الوصف بالعربية', 'Description (AR)')}</FormLabel><FormControl><Textarea className="min-h-[200px] resize-y" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormField control={form.control} name="descriptionRichAr" render={({ field }) => (
+                        <FormItem><FormLabel>{t('الوصف بالعربية', 'Description (AR)')}</FormLabel><FormControl><RichDescriptionEditor
+                          lang="ar"
+                          sessionKey={descriptionEditorSession}
+                          label={t('محرر الوصف العربي', 'Arabic description editor')}
+                          value={normalizeRichDescription(field.value) ?? legacyTextToRichDescription(form.getValues('descriptionAr'))}
+                          onChange={(rich) => {
+                            field.onChange(rich);
+                            form.setValue('descriptionAr', richDescriptionToPlainText(rich), { shouldDirty: true });
+                          }}
+                        /></FormControl><FormMessage /></FormItem>
                       )} />
-                      <FormField control={form.control} name="descriptionEn" render={({ field }) => (
-                         <FormItem><FormLabel>{t('الوصف بالإنجليزية', 'Description (EN)')}</FormLabel><FormControl><Textarea className="min-h-[200px] resize-y" dir="ltr" {...field} /></FormControl><FormMessage /></FormItem>
+                      <FormField control={form.control} name="descriptionRichEn" render={({ field }) => (
+                        <FormItem><FormLabel>{t('الوصف بالإنجليزية', 'Description (EN)')}</FormLabel><FormControl><RichDescriptionEditor
+                          lang="en"
+                          sessionKey={descriptionEditorSession}
+                          label={t('محرر الوصف الإنجليزي', 'English description editor')}
+                          value={normalizeRichDescription(field.value) ?? legacyTextToRichDescription(form.getValues('descriptionEn'))}
+                          onChange={(rich) => {
+                            field.onChange(rich);
+                            form.setValue('descriptionEn', richDescriptionToPlainText(rich), { shouldDirty: true });
+                          }}
+                        /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                   </section>

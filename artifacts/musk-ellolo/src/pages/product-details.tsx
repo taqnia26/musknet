@@ -10,6 +10,11 @@ import { cn } from '@/lib/utils';
 import { FaApplePay } from 'react-icons/fa';
 import { Money } from '@/components/money';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import {
+  AnimatedRichDescriptionRenderer,
+  legacyTextToRichDescription,
+  normalizeRichDescription,
+} from '@/components/rich-description';
 
 const siteAsset = (filename: string) => `${import.meta.env.BASE_URL}site-assets/${filename}`;
 
@@ -43,6 +48,13 @@ export default function ProductDetails() {
   }
 
   const imageUrl = product.imageUrl || siteAsset('0baf6eb1-352a-4922-b307-04b102ef837f-500x500-Z4GiN6OWeqiNXcuKcHQ85XOrA-3b8eeacb9c.jpg');
+  const localizedRich = lang === 'ar'
+    ? product.descriptionRichAr
+    : product.descriptionRichEn;
+  const localizedPlain = lang === 'ar'
+    ? product.descriptionAr || '.ليس عطرًا… بل أسطورة تُهمس، لا تُقال .\n\nيلامسك دون أن يطلب الإذن، ويتسلل كقصيدة خالدة تُروى في اللحظة .\n\nالهرم العطري\nالقمة: قرفة، برتقال، شوكولاتة\nالقلب: مُرّ، جلد، فانيليا\nالقاعدة: تونكا، خشب الصندل، عنبر'
+    : product.descriptionEn || 'Not just a perfume... but a whispered legend.\n\nTouches you without asking permission, sneaking in like a timeless poem.\n\nFragrance Pyramid\nTop: Cinnamon, Orange, Chocolate\nHeart: Myrrh, Leather, Vanilla\nBase: Tonka, Sandalwood, Amber';
+  const productDescription = normalizeRichDescription(localizedRich) ?? legacyTextToRichDescription(localizedPlain);
 
   const handleAddToCart = () => {
     addItemMutation.mutate({ data: { productId: product.id, quantity } }, {
@@ -111,14 +123,10 @@ export default function ProductDetails() {
             </div>
 
             {/* Description */}
-            <div className="prose prose-sm text-gray-700 max-w-none mb-10 leading-loose">
-              {t(
-                product.descriptionAr || '.ليس عطرًا… بل أسطورة تُهمس، لا تُقال .\n\nيلامسك دون أن يطلب الإذن، ويتسلل كقصيدة خالدة تُروى في اللحظة .\n\nالهرم العطري\nالقمة: قرفة، برتقال، شوكولاتة\nالقلب: مُرّ، جلد، فانيليا\nالقاعدة: تونكا، خشب الصندل، عنبر',
-                product.descriptionEn || 'Not just a perfume... but a whispered legend.\n\nTouches you without asking permission, sneaking in like a timeless poem.\n\nFragrance Pyramid\nTop: Cinnamon, Orange, Chocolate\nHeart: Myrrh, Leather, Vanilla\nBase: Tonka, Sandalwood, Amber'
-              ).split('\n').map((line, i) => (
-                <p key={i} className="mb-4">{line}</p>
-              ))}
-            </div>
+            <AnimatedRichDescriptionRenderer
+              description={productDescription}
+              className="prose prose-sm mb-10 max-w-none leading-loose text-gray-700"
+            />
 
             <div className="border-t border-gray-100 my-8"></div>
 

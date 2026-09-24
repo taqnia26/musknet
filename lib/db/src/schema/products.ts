@@ -26,12 +26,34 @@ export type ProductNote = {
   nameEn: string;
 };
 
+export type RichSpan = {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  color?: "default" | "red" | "blue" | "gold";
+  href?: string;
+};
+
+export type RichBlock = {
+  type: "paragraph" | "heading2" | "heading3" | "bullet" | "ordered";
+  align: "start" | "center" | "end";
+  effect: "none" | "fade" | "zoom";
+  content: RichSpan[];
+};
+
+export type RichDescription = {
+  blocks: RichBlock[];
+};
+
 export const productsTable = pgTable("storefront_products", {
   id: serial("id").primaryKey(),
   nameAr: text("name_ar").notNull(),
   nameEn: text("name_en").notNull(),
   descriptionAr: text("description_ar").notNull().default(""),
   descriptionEn: text("description_en").notNull().default(""),
+  descriptionRichAr: jsonb("description_rich_ar").$type<RichDescription>(),
+  descriptionRichEn: jsonb("description_rich_en").$type<RichDescription>(),
   slug: text("slug").notNull(),
   price: doublePrecision("price").notNull(),
   compareAtPrice: doublePrecision("compare_at_price"),

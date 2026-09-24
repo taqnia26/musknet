@@ -7,6 +7,7 @@
  */
 import type { AdminProductImage } from './adminProductImage';
 import type { FragranceNote } from './fragranceNote';
+import type { RichDescription } from './richDescription';
 
 export interface AdminProduct {
   id: number;
@@ -14,6 +15,8 @@ export interface AdminProduct {
   nameEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  descriptionRichAr: RichDescription | null;
+  descriptionRichEn: RichDescription | null;
   slug: string;
   price: number;
   /** @nullable */

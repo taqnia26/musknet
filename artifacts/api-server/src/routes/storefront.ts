@@ -149,7 +149,12 @@ router.get("/products/:slug", asyncRoute(async (req, res) => {
   const relatedProducts = (await listCatalogProducts())
     .filter((entry) => entry.categorySlug === product.categorySlug && entry.id !== product.id)
     .map(toProduct);
-  res.json(GetProductResponse.parse({ ...product, relatedProducts }));
+  res.json(GetProductResponse.parse({
+    ...product,
+    descriptionRichAr: product.descriptionRichAr ?? null,
+    descriptionRichEn: product.descriptionRichEn ?? null,
+    relatedProducts,
+  }));
 }));
 
 router.get("/products/:slug/related", asyncRoute(async (req, res) => {

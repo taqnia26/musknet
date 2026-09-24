@@ -76,6 +76,28 @@ export const GetProductParams = zod.object({
   "slug": zod.coerce.string()
 })
 
+export const getProductResponseTwoDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
+
+export const getProductResponseTwoDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const getProductResponseTwoDescriptionRichArOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const getProductResponseTwoDescriptionRichArOneBlocksItemContentMax = 100;
+
+export const getProductResponseTwoDescriptionRichArOneBlocksMax = 100;
+
+export const getProductResponseTwoDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
+
+export const getProductResponseTwoDescriptionRichEnOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const getProductResponseTwoDescriptionRichEnOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const getProductResponseTwoDescriptionRichEnOneBlocksItemContentMax = 100;
+
+export const getProductResponseTwoDescriptionRichEnOneBlocksMax = 100;
+
+
+
 export const GetProductResponse = zod.object({
   "id": zod.number(),
   "nameAr": zod.string(),
@@ -93,6 +115,36 @@ export const GetProductResponse = zod.object({
 }).and(zod.object({
   "descriptionAr": zod.string(),
   "descriptionEn": zod.string(),
+  "descriptionRichAr": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(getProductResponseTwoDescriptionRichArOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(getProductResponseTwoDescriptionRichArOneBlocksItemContentItemHrefMax).regex(getProductResponseTwoDescriptionRichArOneBlocksItemContentItemHrefRegExp).optional()
+})).max(getProductResponseTwoDescriptionRichArOneBlocksItemContentMax)
+})).max(getProductResponseTwoDescriptionRichArOneBlocksMax)
+}),zod.null()]),
+  "descriptionRichEn": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(getProductResponseTwoDescriptionRichEnOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(getProductResponseTwoDescriptionRichEnOneBlocksItemContentItemHrefMax).regex(getProductResponseTwoDescriptionRichEnOneBlocksItemContentItemHrefRegExp).optional()
+})).max(getProductResponseTwoDescriptionRichEnOneBlocksItemContentMax)
+})).max(getProductResponseTwoDescriptionRichEnOneBlocksMax)
+}),zod.null()]),
   "images": zod.array(zod.string()),
   "notes": zod.array(zod.object({
   "type": zod.enum(['top', 'heart', 'base']),
@@ -2152,6 +2204,26 @@ export const AdminListProductsQueryParams = zod.object({
   "status": zod.enum(['active', 'inactive', 'all']).default(adminListProductsQueryStatusDefault)
 })
 
+export const adminListProductsResponseDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
+
+export const adminListProductsResponseDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminListProductsResponseDescriptionRichArOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminListProductsResponseDescriptionRichArOneBlocksItemContentMax = 100;
+
+export const adminListProductsResponseDescriptionRichArOneBlocksMax = 100;
+
+export const adminListProductsResponseDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
+
+export const adminListProductsResponseDescriptionRichEnOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminListProductsResponseDescriptionRichEnOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminListProductsResponseDescriptionRichEnOneBlocksItemContentMax = 100;
+
+export const adminListProductsResponseDescriptionRichEnOneBlocksMax = 100;
+
 export const adminListProductsResponseWeightKgDefault = 0;
 export const adminListProductsResponseWeightKgMin = 0;
 
@@ -2196,6 +2268,36 @@ export const AdminListProductsResponseItem = zod.object({
   "nameEn": zod.string(),
   "descriptionAr": zod.string().optional(),
   "descriptionEn": zod.string().optional(),
+  "descriptionRichAr": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminListProductsResponseDescriptionRichArOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminListProductsResponseDescriptionRichArOneBlocksItemContentItemHrefMax).regex(adminListProductsResponseDescriptionRichArOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminListProductsResponseDescriptionRichArOneBlocksItemContentMax)
+})).max(adminListProductsResponseDescriptionRichArOneBlocksMax)
+}),zod.null()]),
+  "descriptionRichEn": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminListProductsResponseDescriptionRichEnOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminListProductsResponseDescriptionRichEnOneBlocksItemContentItemHrefMax).regex(adminListProductsResponseDescriptionRichEnOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminListProductsResponseDescriptionRichEnOneBlocksItemContentMax)
+})).max(adminListProductsResponseDescriptionRichEnOneBlocksMax)
+}),zod.null()]),
   "slug": zod.string(),
   "price": zod.number(),
   "compareAtPrice": zod.number().nullish(),
@@ -2249,6 +2351,27 @@ export const AdminListProductsResponse = zod.array(AdminListProductsResponseItem
 
 export const adminCreateProductBodyDescriptionArDefault = ``;
 export const adminCreateProductBodyDescriptionEnDefault = ``;
+export const adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
+
+export const adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminCreateProductBodyDescriptionRichArOneBlocksItemContentMax = 100;
+
+export const adminCreateProductBodyDescriptionRichArOneBlocksMax = 100;
+
+export const adminCreateProductBodyDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
+
+export const adminCreateProductBodyDescriptionRichEnOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminCreateProductBodyDescriptionRichEnOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminCreateProductBodyDescriptionRichEnOneBlocksItemContentMax = 100;
+
+export const adminCreateProductBodyDescriptionRichEnOneBlocksMax = 100;
+
+
 export const adminCreateProductBodyPriceMin = 0;
 
 export const adminCreateProductBodyWeightKgDefault = 0;
@@ -2304,6 +2427,36 @@ export const AdminCreateProductBody = zod.object({
   "nameEn": zod.string().min(1),
   "descriptionAr": zod.string().default(adminCreateProductBodyDescriptionArDefault),
   "descriptionEn": zod.string().default(adminCreateProductBodyDescriptionEnDefault),
+  "descriptionRichAr": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemHrefMax).regex(adminCreateProductBodyDescriptionRichArOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminCreateProductBodyDescriptionRichArOneBlocksItemContentMax)
+})).max(adminCreateProductBodyDescriptionRichArOneBlocksMax)
+}),zod.null()]).optional(),
+  "descriptionRichEn": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminCreateProductBodyDescriptionRichEnOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminCreateProductBodyDescriptionRichEnOneBlocksItemContentItemHrefMax).regex(adminCreateProductBodyDescriptionRichEnOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminCreateProductBodyDescriptionRichEnOneBlocksItemContentMax)
+})).max(adminCreateProductBodyDescriptionRichEnOneBlocksMax)
+}),zod.null()]).optional(),
   "slug": zod.string().min(1),
   "price": zod.number().min(adminCreateProductBodyPriceMin),
   "compareAtPrice": zod.number().nullish(),
@@ -2347,6 +2500,26 @@ export const AdminCreateProductBody = zod.object({
   "distributorNameOverride": zod.string().nullish(),
   "distributorImageOverride": zod.string().nullish()
 })
+
+export const adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
+
+export const adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminCreateProductResponseDescriptionRichArOneBlocksItemContentMax = 100;
+
+export const adminCreateProductResponseDescriptionRichArOneBlocksMax = 100;
+
+export const adminCreateProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
+
+export const adminCreateProductResponseDescriptionRichEnOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminCreateProductResponseDescriptionRichEnOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminCreateProductResponseDescriptionRichEnOneBlocksItemContentMax = 100;
+
+export const adminCreateProductResponseDescriptionRichEnOneBlocksMax = 100;
 
 export const adminCreateProductResponseWeightKgDefault = 0;
 export const adminCreateProductResponseWeightKgMin = 0;
@@ -2392,6 +2565,36 @@ export const AdminCreateProductResponse = zod.object({
   "nameEn": zod.string(),
   "descriptionAr": zod.string().optional(),
   "descriptionEn": zod.string().optional(),
+  "descriptionRichAr": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax).regex(adminCreateProductResponseDescriptionRichArOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminCreateProductResponseDescriptionRichArOneBlocksItemContentMax)
+})).max(adminCreateProductResponseDescriptionRichArOneBlocksMax)
+}),zod.null()]),
+  "descriptionRichEn": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminCreateProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminCreateProductResponseDescriptionRichEnOneBlocksItemContentItemHrefMax).regex(adminCreateProductResponseDescriptionRichEnOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminCreateProductResponseDescriptionRichEnOneBlocksItemContentMax)
+})).max(adminCreateProductResponseDescriptionRichEnOneBlocksMax)
+}),zod.null()]),
   "slug": zod.string(),
   "price": zod.number(),
   "compareAtPrice": zod.number().nullish(),
@@ -2463,6 +2666,26 @@ export const AdminGetProductParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminGetProductResponseDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
+
+export const adminGetProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminGetProductResponseDescriptionRichArOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminGetProductResponseDescriptionRichArOneBlocksItemContentMax = 100;
+
+export const adminGetProductResponseDescriptionRichArOneBlocksMax = 100;
+
+export const adminGetProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
+
+export const adminGetProductResponseDescriptionRichEnOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminGetProductResponseDescriptionRichEnOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminGetProductResponseDescriptionRichEnOneBlocksItemContentMax = 100;
+
+export const adminGetProductResponseDescriptionRichEnOneBlocksMax = 100;
+
 export const adminGetProductResponseWeightKgDefault = 0;
 export const adminGetProductResponseWeightKgMin = 0;
 
@@ -2507,6 +2730,36 @@ export const AdminGetProductResponse = zod.object({
   "nameEn": zod.string(),
   "descriptionAr": zod.string().optional(),
   "descriptionEn": zod.string().optional(),
+  "descriptionRichAr": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminGetProductResponseDescriptionRichArOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminGetProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax).regex(adminGetProductResponseDescriptionRichArOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminGetProductResponseDescriptionRichArOneBlocksItemContentMax)
+})).max(adminGetProductResponseDescriptionRichArOneBlocksMax)
+}),zod.null()]),
+  "descriptionRichEn": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminGetProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminGetProductResponseDescriptionRichEnOneBlocksItemContentItemHrefMax).regex(adminGetProductResponseDescriptionRichEnOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminGetProductResponseDescriptionRichEnOneBlocksItemContentMax)
+})).max(adminGetProductResponseDescriptionRichEnOneBlocksMax)
+}),zod.null()]),
   "slug": zod.string(),
   "price": zod.number(),
   "compareAtPrice": zod.number().nullish(),
@@ -2561,6 +2814,26 @@ export const AdminUpdateProductParams = zod.object({
 
 
 
+export const adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
+
+export const adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminUpdateProductBodyDescriptionRichArOneBlocksItemContentMax = 100;
+
+export const adminUpdateProductBodyDescriptionRichArOneBlocksMax = 100;
+
+export const adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
+
+export const adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentMax = 100;
+
+export const adminUpdateProductBodyDescriptionRichEnOneBlocksMax = 100;
+
 
 export const adminUpdateProductBodyPriceMin = 0;
 
@@ -2608,6 +2881,36 @@ export const AdminUpdateProductBody = zod.object({
   "nameEn": zod.string().min(1).optional(),
   "descriptionAr": zod.string().optional(),
   "descriptionEn": zod.string().optional(),
+  "descriptionRichAr": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemHrefMax).regex(adminUpdateProductBodyDescriptionRichArOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminUpdateProductBodyDescriptionRichArOneBlocksItemContentMax)
+})).max(adminUpdateProductBodyDescriptionRichArOneBlocksMax)
+}),zod.null()]).optional(),
+  "descriptionRichEn": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentItemHrefMax).regex(adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminUpdateProductBodyDescriptionRichEnOneBlocksItemContentMax)
+})).max(adminUpdateProductBodyDescriptionRichEnOneBlocksMax)
+}),zod.null()]).optional(),
   "slug": zod.string().min(1).optional(),
   "price": zod.number().min(adminUpdateProductBodyPriceMin).optional(),
   "compareAtPrice": zod.number().min(adminUpdateProductBodyCompareAtPriceMin).nullish(),
@@ -2650,6 +2953,26 @@ export const AdminUpdateProductBody = zod.object({
   "seoTitleAr": zod.string().max(adminUpdateProductBodySeoTitleArMax).nullish(),
   "seoDescriptionAr": zod.string().max(adminUpdateProductBodySeoDescriptionArMax).nullish()
 })
+
+export const adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemTextMax = 2000;
+
+export const adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminUpdateProductResponseDescriptionRichArOneBlocksItemContentMax = 100;
+
+export const adminUpdateProductResponseDescriptionRichArOneBlocksMax = 100;
+
+export const adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax = 2000;
+
+export const adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentItemHrefMax = 2048;
+
+
+export const adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentItemHrefRegExp = new RegExp('^(https?://|mailto:)[^\\s<>]*$');
+export const adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentMax = 100;
+
+export const adminUpdateProductResponseDescriptionRichEnOneBlocksMax = 100;
 
 export const adminUpdateProductResponseWeightKgDefault = 0;
 export const adminUpdateProductResponseWeightKgMin = 0;
@@ -2695,6 +3018,36 @@ export const AdminUpdateProductResponse = zod.object({
   "nameEn": zod.string(),
   "descriptionAr": zod.string().optional(),
   "descriptionEn": zod.string().optional(),
+  "descriptionRichAr": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemHrefMax).regex(adminUpdateProductResponseDescriptionRichArOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminUpdateProductResponseDescriptionRichArOneBlocksItemContentMax)
+})).max(adminUpdateProductResponseDescriptionRichArOneBlocksMax)
+}),zod.null()]),
+  "descriptionRichEn": zod.union([zod.object({
+  "blocks": zod.array(zod.object({
+  "type": zod.enum(['paragraph', 'heading2', 'heading3', 'bullet', 'ordered']),
+  "align": zod.enum(['start', 'center', 'end']),
+  "effect": zod.enum(['none', 'fade', 'zoom']),
+  "content": zod.array(zod.object({
+  "text": zod.string().max(adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentItemTextMax),
+  "bold": zod.boolean().optional(),
+  "italic": zod.boolean().optional(),
+  "underline": zod.boolean().optional(),
+  "color": zod.enum(['default', 'red', 'blue', 'gold']).optional(),
+  "href": zod.string().max(adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentItemHrefMax).regex(adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentItemHrefRegExp).optional()
+})).max(adminUpdateProductResponseDescriptionRichEnOneBlocksItemContentMax)
+})).max(adminUpdateProductResponseDescriptionRichEnOneBlocksMax)
+}),zod.null()]),
   "slug": zod.string(),
   "price": zod.number(),
   "compareAtPrice": zod.number().nullish(),
@@ -7822,3 +8175,5 @@ export const ListInventoryAlertsResponseItem = zod.object({
   "status": zod.enum(['out', 'low', 'ok'])
 })
 export const ListInventoryAlertsResponse = zod.array(ListInventoryAlertsResponseItem)
+
+
