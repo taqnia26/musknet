@@ -34,3 +34,4 @@
 - [Opened tester pool](opened-tester-pool.md) — reuse the separate B2B tester balance, distinguish sellable stock from asset value, and key partial returns per event.
 - [Word letterhead footer art](word-letterhead-footer-art.md) — the brand's Word footer artwork lives inside its full-page header image, not the document's empty footer section.
 - [Historical order VAT semantics](historical-order-vat-semantics.md) — paid orders span tax-added and tax-inclusive eras; infer each record's arithmetic before issuing or reversing its invoice.
+- [Invoice print verification](invoice-print-verification.md) — explicitly select print media before PDF capture; modal translation can survive transform resets.

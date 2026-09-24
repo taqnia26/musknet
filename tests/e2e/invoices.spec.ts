@@ -175,6 +175,55 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText(/معاينة الفاتورة|Preview Invoice/, { exact: true }).click();
   const preview = page.getByTestId("invoice-template");
+  const checkLayout = async (print = false, long = false) => {
+    await page.emulateMedia({ media: print ? "print" : "screen" });
+    const boxes = await preview.evaluate((sheet) => {
+      const box = (selector: string) => {
+        const element = sheet.querySelector(selector);
+        if (!element) throw new Error(`Missing invoice element: ${selector}`);
+        const { left, right, top, bottom, width, height } = element.getBoundingClientRect();
+        return { left, right, top, bottom, width, height };
+      };
+      return {
+        sheet: (() => {
+          const { left, right, top, bottom, width, height } = sheet.getBoundingClientRect();
+          return { left, right, top, bottom, width, height };
+        })(),
+        buyer: box('[data-testid="invoice-buyer"]'),
+        seller: box('[data-testid="invoice-seller"]'),
+        sellerColumn: box(".invoice-heading-seller"),
+        logo: box(".invoice-heading-logo"),
+        card: box('[data-testid="invoice-info-card"]'),
+        table: box('[data-testid="invoice-items"]'),
+        summary: box('[data-testid="invoice-summary"]'),
+        footer: box('[data-testid="invoice-footer"]'),
+        footerImage: box('[data-testid="invoice-footer"] img'),
+        tableScrollWidth: sheet.querySelector<HTMLElement>('[data-testid="invoice-items"]')!.scrollWidth,
+        cardScrollWidth: sheet.querySelector<HTMLElement>('[data-testid="invoice-info-card"]')!.scrollWidth,
+        printHeaderDisplay: getComputedStyle(document.querySelector('[role="dialog"] > .print-hide')!).display,
+      };
+    });
+    expect(Math.abs(boxes.sellerColumn.left - boxes.card.left)).toBeLessThan(2);
+    expect(Math.abs(boxes.sellerColumn.right - boxes.card.right)).toBeLessThan(2);
+    expect(Math.abs(boxes.seller.left - boxes.card.left)).toBeLessThan(2);
+    expect(boxes.card.top).toBeGreaterThanOrEqual(boxes.seller.bottom + 10);
+    expect(boxes.table.top).toBeGreaterThanOrEqual(boxes.card.bottom);
+    expect(boxes.table.top - Math.max(boxes.buyer.bottom, boxes.card.bottom, boxes.logo.bottom)).toBeLessThan(50);
+    expect(boxes.summary.top).toBeGreaterThanOrEqual(boxes.table.bottom);
+    expect(boxes.footer.top).toBeGreaterThanOrEqual(boxes.summary.bottom);
+    expect(boxes.footer.top - boxes.summary.bottom).toBeLessThan(50);
+    expect(boxes.sheet.bottom - boxes.footer.bottom).toBeLessThan(print ? 20 : 45);
+    expect(boxes.footerImage.bottom).toBeLessThanOrEqual(boxes.footer.bottom + 2);
+    expect(boxes.tableScrollWidth).toBeLessThanOrEqual(boxes.table.width + 2);
+    expect(boxes.cardScrollWidth).toBeLessThanOrEqual(boxes.card.width + 2);
+    if (print) expect(boxes.printHeaderDisplay).toBe("none");
+    if (!long && (print || boxes.sheet.width > 600)) expect(boxes.sheet.height).toBeLessThan(print ? 850 : 950);
+    if (print || boxes.sheet.width > 600) {
+      expect(boxes.seller.right).toBeLessThan(boxes.logo.left + 2);
+      expect(boxes.logo.right).toBeLessThan(boxes.buyer.left + 2);
+    }
+    await page.emulateMedia({ media: "screen" });
+  };
   const checkPalette = async (dark: boolean, print = false) => {
     await page.emulateMedia({ media: print ? "print" : "screen" });
     const colors = await preview.evaluate((sheet) => {
@@ -262,7 +311,6 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
     expect(colors.footerImage.insideSheet).toBe(true);
     expect(colors.footerImage.ratio).toBeGreaterThan(4);
     expect(colors.footerImage.alt).toContain("muskellolo.com");
-    expect(colors.sellerName.height).toBeLessThanOrEqual(colors.sellerName.lineHeight + 1);
     expect(colors.sellerName.insideSeller).toBe(true);
     expect(colors.sellerName.textFits).toBe(true);
     expect(colors.buyerRight).toBeGreaterThan(colors.sellerRight);
@@ -271,6 +319,7 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
     expect(colors.blackDisplay === "none").toBe(dark && !print);
     expect(colors.whiteDisplay === "none").toBe(!dark || print);
     expect(dark && !print ? colors.logoLuminance : 255 - colors.logoLuminance).toBeGreaterThan(200);
+     await checkLayout(print);
     await page.emulateMedia({ media: "screen" });
   };
   await expect(preview).toHaveAttribute("dir", "rtl");
@@ -289,9 +338,16 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await expect.poll(async () => page.getByTestId("invoice-qr").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   await checkPalette(true);
   await checkPalette(true, true);
+  await page.emulateMedia({ media: "print" });
+  const shortPdf = await page.pdf({ format: "A4", printBackground: true });
+  expect((shortPdf.toString("latin1").match(/\/Type\s*\/Page\b/g) ?? []).length).toBe(1);
+  await page.emulateMedia({ media: "screen" });
   await page.locator('button[title="تغيير المظهر"], button[title="Toggle theme"]').evaluate((button: HTMLButtonElement) => button.click());
   await checkPalette(false);
   await checkPalette(false, true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await checkLayout();
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("button", { name: "Close", exact: true }).last().click();
   await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
@@ -306,6 +362,9 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await page.locator('button[title="تغيير المظهر"], button[title="Toggle theme"]').evaluate((button: HTMLButtonElement) => button.click());
   await checkPalette(true);
   await checkPalette(true, true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await checkLayout();
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("button", { name: "Close", exact: true }).last().click();
   await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
 
@@ -326,6 +385,31 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await expect(page.getByTestId("invoice-template")).toContainText(invoiceNumber);
   await expect(page.getByTestId("invoice-qr")).toBeVisible();
   await expect.poll(() => printCalls).toBe(1);
+  // Stress the rendered document without changing saved invoice amounts or fixture data.
+  await preview.evaluate((sheet) => {
+    const buyer = sheet.querySelector<HTMLElement>('[data-testid="invoice-buyer"]')!;
+    const address = document.createElement("p");
+    address.textContent = "Long customer address ".repeat(18);
+    buyer.append(address);
+    const tbody = sheet.querySelector<HTMLTableSectionElement>('[data-testid="invoice-table-body"]')!;
+    sheet.querySelector<HTMLElement>('[data-testid="invoice-info-card"] dd')!.textContent = "E2E-LONG-INVOICE-NUMBER-".repeat(8);
+    const row = tbody.querySelector("tr")!;
+    for (let i = 0; i < 28; i++) {
+      const copy = row.cloneNode(true) as HTMLTableRowElement;
+      copy.querySelector("td")!.textContent = `Multi-line product description ${i} `.repeat(5);
+      tbody.append(copy);
+    }
+  });
+  await checkLayout(false, true);
+  await checkLayout(true, true);
+  await page.emulateMedia({ media: "print" });
+  const multipagePdf = await page.pdf({ format: "A4", printBackground: true });
+  expect(multipagePdf.subarray(0, 4).toString()).toBe("%PDF");
+  expect((multipagePdf.toString("latin1").match(/\/Type\s*\/Page\b/g) ?? []).length).toBeGreaterThan(1);
+  await page.emulateMedia({ media: "screen" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await checkLayout(false, true);
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole("button", { name: "Close", exact: true }).last().click();
 
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();

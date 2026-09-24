@@ -63,19 +63,22 @@ function InvoiceTemplate({
         ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
         : t('ضريبة القيمة المضافة (15%)', 'VAT (15%)');
   return (
-    <div id="invoice-print-area" data-testid="invoice-template" className="invoice-sheet bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative overflow-hidden" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <div id="invoice-print-area" data-testid="invoice-template" className="invoice-sheet bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <style>{`
         @media print {
-          body, html { height: auto !important; overflow: visible !important; }
+          body, html { height: auto !important; overflow: visible !important; background: #fff !important; }
+          body > #root { display: none !important; }
           body * { visibility: hidden !important; }
-          [data-radix-portal], [role="dialog"], [data-radix-portal] > div, [role="dialog"] > div {
-            position: static !important; transform: none !important; overflow: visible !important;
+          [data-radix-portal], [role="dialog"], [data-radix-portal] > div {
+            position: static !important; transform: none !important; translate: none !important; overflow: visible !important;
             max-height: none !important; height: auto !important; display: block !important; inset: auto !important;
           }
+          [role="dialog"] { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
           #invoice-print-area, #invoice-print-area * { visibility: visible !important; }
-          #invoice-print-area { 
-            position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; 
-            margin: 0 !important; padding: 0 !important; border: none !important; box-shadow: none !important; border-radius: 0 !important;
+          #invoice-print-area {
+            position: relative !important; left: auto !important; top: auto !important; width: 100% !important; max-width: none !important;
+            margin: 0 !important; padding: 4mm !important; border: none !important; box-shadow: none !important; border-radius: 0 !important;
+            overflow: visible !important;
             -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
           }
           .print-hide { display: none !important; }
@@ -84,8 +87,8 @@ function InvoiceTemplate({
       `}</style>
       
       {/* Customer on the physical right, seller on the left, with the mark centered. */}
-      <div dir="rtl" className="invoice-heading grid gap-6 sm:items-start mb-7">
-        <div data-testid="invoice-buyer" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-buyer min-w-0 pt-4 sm:pt-24">
+      <div dir="rtl" className="invoice-heading grid gap-5 sm:gap-6 items-start mb-6">
+        <div data-testid="invoice-buyer" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-buyer min-w-0">
           <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('بيانات العميل', 'Customer Details')}</h3>
           <p className="font-semibold text-lg text-[#292728]">{invoice.buyerName || invoice.distributorName || '-'}</p>
           {invoice.buyerAddress && <p className="text-xs sm:text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{invoice.buyerAddress}</p>}
@@ -100,27 +103,27 @@ function InvoiceTemplate({
           </div>
           <h1 data-testid="invoice-title" className="mt-2 text-xl font-semibold tracking-wide text-[#292728]">{t('فاتورة ضريبية', 'Tax Invoice')}</h1>
         </div>
-        <div data-testid="invoice-seller" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-seller min-w-0 pt-4 sm:pt-24">
-          <p className="invoice-seller-name font-semibold text-[#292728]">{invoice.sellerName}</p>
-          <p className="mt-2 text-xs text-stone-500">{t('السعودية، الرياض، حي السليمانية', 'Saudi Arabia, Riyadh, Al Sulimaniyah')}</p>
-          <p className="mt-2 text-xs text-stone-500">{t('الرقم الضريبي', 'VAT Number')}: <span className="font-mono text-stone-700">{invoice.sellerVatNumber}</span></p>
-        </div>
-      </div>
-      <div dir="rtl" className="flex justify-end mb-8">
-        <div data-testid="invoice-info-card" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="w-full sm:w-[46%] rounded-md border border-stone-200 bg-stone-100 p-4 sm:p-5">
-          <dl className="space-y-3 text-sm">
-            <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
-            {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
-            {invoice.contractId && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('العقد', 'Contract')}</dt><dd>{invoice.contractNumber || '-'}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
-            <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</dd></div>
-            <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
-          </dl>
+        <div className="invoice-heading-seller min-w-0">
+          <div data-testid="invoice-seller" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-w-0">
+            <p className="invoice-seller-name font-semibold text-[#292728]">{invoice.sellerName}</p>
+            <p className="mt-2 text-xs text-stone-500">{t('السعودية، الرياض، حي السليمانية', 'Saudi Arabia, Riyadh, Al Sulimaniyah')}</p>
+            <p className="mt-2 text-xs text-stone-500">{t('الرقم الضريبي', 'VAT Number')}: <span className="font-mono text-stone-700">{invoice.sellerVatNumber}</span></p>
+          </div>
+          <div data-testid="invoice-info-card" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-info-card mt-5 rounded-md border border-stone-200 bg-stone-100 p-4">
+            <dl className="space-y-3 text-sm">
+              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
+              {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
+              {invoice.contractId && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('العقد', 'Contract')}</dt><dd>{invoice.contractNumber || '-'}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
+              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</dd></div>
+              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
+            </dl>
+          </div>
         </div>
       </div>
 
       {/* Items Table */}
-      <div className="rounded-xl overflow-x-auto border border-gray-200 mb-8">
-        <table className="w-full text-xs sm:text-sm min-w-[500px]">
+      <div data-testid="invoice-items" className="invoice-items rounded-xl overflow-x-auto border border-gray-200 mb-6">
+        <table className="w-full text-xs sm:text-sm">
            <thead data-testid="invoice-table-head" className="bg-gray-50">
             <tr>
               <th className="text-start py-3 px-4 sm:px-6 font-bold text-gray-900">{t('المنتج', 'Product')}</th>
@@ -147,7 +150,7 @@ function InvoiceTemplate({
       </div>
 
       {/* Totals & QR */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-6">
+      <div data-testid="invoice-summary" className="invoice-summary flex flex-col sm:flex-row justify-between sm:items-end gap-6">
          <div data-testid="invoice-qr-surface" className="invoice-qr-surface w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
           {qrUrl ? (
             <img src={qrUrl} alt="ZATCA QR" data-testid="invoice-qr" onLoad={onQrLoad} className="w-full h-full object-contain" />

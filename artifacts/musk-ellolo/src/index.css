@@ -582,7 +582,7 @@ html.dark.admin-route {
   border-color: var(--invoice-border) !important;
   display: flex;
   flex-direction: column;
-  min-height: 960px;
+   min-height: 0;
 }
 
 /* The sheet itself also carries bg-white; the admin rule for that utility is
@@ -636,14 +636,33 @@ html.dark.admin-route .invoice-sheet .invoice-logo-white { display: block; }
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.45fr);
   }
 }
+.invoice-sheet .invoice-heading,
+.invoice-sheet .invoice-info-card,
+.invoice-sheet .invoice-items td {
+  overflow-wrap: anywhere;
+}
+.invoice-sheet .invoice-heading-seller {
+  text-align: left;
+}
+.invoice-sheet .invoice-heading-seller [dir="rtl"] {
+  text-align: right;
+}
+.invoice-sheet .invoice-info-card dl > div > * {
+  min-width: 0;
+}
+.invoice-sheet .invoice-items table {
+  table-layout: fixed;
+}
+.invoice-sheet .invoice-items th:first-child { width: 50%; }
+.invoice-sheet .invoice-items th:nth-child(2) { width: 15%; }
+.invoice-sheet .invoice-items th:last-child { width: 35%; }
 .invoice-sheet .invoice-seller-name {
   font-size: 0.875rem;
   line-height: 1.5;
-  white-space: nowrap;
 }
 .invoice-sheet .invoice-footer {
-  margin-top: auto;
-  padding-top: 2.5rem;
+  margin-top: 1.5rem;
+  padding-top: 0;
   background-color: #fff !important;
 }
 .invoice-sheet .invoice-footer img {
@@ -655,6 +674,8 @@ html.dark.admin-route .invoice-sheet .invoice-logo-white { display: block; }
 
 @media (max-width: 639px) {
   .invoice-sheet .invoice-heading-logo { order: -1; }
+  .invoice-sheet .invoice-items th,
+  .invoice-sheet .invoice-items td { padding-inline: 0.375rem; }
 }
 
 @media print {
@@ -670,12 +691,17 @@ html.dark.admin-route .invoice-sheet .invoice-logo-white { display: block; }
     color: #292728 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-    min-height: 267mm;
+    min-height: 0;
   }
   .invoice-sheet .invoice-heading {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1.45fr);
   }
   .invoice-sheet .invoice-heading-logo { order: 0; }
+  .invoice-sheet .invoice-items { overflow: visible; }
+  .invoice-sheet .invoice-items thead { display: table-header-group; }
+  .invoice-sheet .invoice-items tr,
+  .invoice-sheet .invoice-heading,
+  .invoice-sheet .invoice-summary,
   .invoice-sheet .invoice-footer { break-inside: avoid; }
   html.dark.admin-route .invoice-sheet .invoice-logo-black { display: block; }
   html.dark.admin-route .invoice-sheet .invoice-logo-white { display: none; }
