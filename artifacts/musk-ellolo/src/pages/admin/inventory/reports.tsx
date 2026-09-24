@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 
 export default function AdminInventoryReports() {
   const { t, lang } = useLanguage();
+  const direction = lang === 'ar' ? 'rtl' : 'ltr';
   const [activeTab, setActiveTab] = useState('valuation');
 
   // Hooks for various reports
@@ -73,7 +74,7 @@ export default function AdminInventoryReports() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6" dir={direction}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
@@ -90,8 +91,9 @@ export default function AdminInventoryReports() {
         </Button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-3xl h-auto">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir={direction}>
+        <div className="max-w-3xl overflow-x-auto">
+          <TabsList className="grid w-full min-w-[620px] grid-cols-4 h-auto">
           <TabsTrigger value="valuation" className="py-2.5" data-testid="tab-valuation">
             <FileText className="h-4 w-4 mr-2 rtl:ml-2 rtl:mr-0" />
             {t('تقييم المخزون', 'Valuation')}
@@ -108,7 +110,8 @@ export default function AdminInventoryReports() {
             <Scale className="h-4 w-4 mr-2 rtl:ml-2 rtl:mr-0" />
             {t('مطابقة المخزون', 'Reconciliation')}
           </TabsTrigger>
-        </TabsList>
+          </TabsList>
+        </div>
 
         {/* Valuation Tab */}
         <TabsContent value="valuation" className="mt-6 space-y-4">
@@ -125,8 +128,8 @@ export default function AdminInventoryReports() {
               ) : !valuationData || valuationData.length === 0 ? (
                 <div className="h-40 flex items-center justify-center text-muted-foreground">{t('لا توجد بيانات', 'No data')}</div>
               ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table>
+                <div className="min-w-0 rounded-md border">
+                  <Table className="min-w-[680px] text-start" dir={direction}>
                     <TableHeader className="bg-muted/40">
                       <TableRow>
                         <TableHead>{t('رمز الموقع', 'Location ID')}</TableHead>
@@ -139,16 +142,16 @@ export default function AdminInventoryReports() {
                     <TableBody>
                       {valuationData.map((row, i) => (
                         <TableRow key={i} data-testid={`row-valuation-${row.locationId}`}>
-                          <TableCell className="font-mono">{row.locationId}</TableCell>
+                          <TableCell className="font-mono"><span dir="ltr" className="inline-block">{row.locationId}</span></TableCell>
                           <TableCell className="font-medium">{row.location}</TableCell>
                           <TableCell>{row.operationalType}</TableCell>
-                          <TableCell className="text-end font-bold">{formatInteger(row.quantity)}</TableCell>
+                          <TableCell className="text-end font-bold"><span dir="ltr" className="inline-block">{formatInteger(row.quantity)}</span></TableCell>
                           <TableCell className="text-end font-bold text-primary">{money(row.value)}</TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="bg-muted/20 font-bold">
                         <TableCell colSpan={3}>{t('الإجمالي الكلي', 'Grand Total')}</TableCell>
-                        <TableCell className="text-end">{formatInteger(valuationData.reduce((sum, r) => sum + r.quantity, 0))}</TableCell>
+                        <TableCell className="text-end"><span dir="ltr" className="inline-block">{formatInteger(valuationData.reduce((sum, r) => sum + r.quantity, 0))}</span></TableCell>
                         <TableCell className="text-end text-primary">
                            {money(valuationData.reduce((sum, r) => sum + r.value, 0))}
                         </TableCell>
@@ -176,8 +179,8 @@ export default function AdminInventoryReports() {
               ) : !agingData || agingData.length === 0 ? (
                 <div className="h-40 flex items-center justify-center text-muted-foreground">{t('لا توجد بيانات راكدة', 'No stagnant data')}</div>
               ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table>
+                <div className="min-w-0 rounded-md border">
+                  <Table className="min-w-[700px] text-start" dir={direction}>
                     <TableHeader className="bg-muted/40">
                       <TableRow>
                         <TableHead>{t('المنتج', 'Product ID')}</TableHead>
@@ -190,11 +193,11 @@ export default function AdminInventoryReports() {
                     <TableBody>
                       {agingData.map((row, i) => (
                         <TableRow key={i} data-testid={`row-aging-${row.productId}`}>
-                          <TableCell className="font-mono font-medium">#{row.productId}</TableCell>
-                          <TableCell className="font-mono">{row.locationId}</TableCell>
-                          <TableCell className="text-end">{row.available}</TableCell>
+                          <TableCell className="font-mono font-medium"><span dir="ltr" className="inline-block">#{row.productId}</span></TableCell>
+                          <TableCell className="font-mono"><span dir="ltr" className="inline-block">{row.locationId}</span></TableCell>
+                          <TableCell className="text-end"><span dir="ltr" className="inline-block">{row.available}</span></TableCell>
                           <TableCell className="text-end text-muted-foreground text-sm">
-                            {format(new Date(row.updatedAt), 'yyyy-MM-dd')}
+                            <span dir="ltr" className="inline-block whitespace-nowrap">{format(new Date(row.updatedAt), 'yyyy-MM-dd')}</span>
                           </TableCell>
                           <TableCell className="text-end">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -202,7 +205,7 @@ export default function AdminInventoryReports() {
                               row.ageDays > 90 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-500' :
                               'bg-muted text-foreground'
                             }`}>
-                              {row.ageDays} {t('يوم', 'days')}
+                              <span dir="ltr" className="inline-block">{row.ageDays}</span> {t('يوم', 'days')}
                             </span>
                           </TableCell>
                         </TableRow>
@@ -230,8 +233,8 @@ export default function AdminInventoryReports() {
               ) : !auditData || auditData.items.length === 0 ? (
                 <div className="h-40 flex items-center justify-center text-muted-foreground">{t('لا توجد بيانات', 'No data')}</div>
               ) : (
-                <div className="overflow-x-auto rounded-md border">
-                  <Table>
+                <div className="min-w-0 rounded-md border">
+                  <Table className="min-w-[860px] text-start" dir={direction}>
                     <TableHeader className="bg-muted/40">
                       <TableRow>
                         <TableHead>{t('المعرف', 'ID')}</TableHead>
@@ -245,21 +248,21 @@ export default function AdminInventoryReports() {
                     <TableBody>
                       {auditData.items.map((row) => (
                         <TableRow key={row.id} data-testid={`row-audit-${row.id}`}>
-                          <TableCell className="font-mono text-xs text-muted-foreground">#{row.id}</TableCell>
-                          <TableCell className="whitespace-nowrap text-sm">{format(new Date(row.createdAt), 'yyyy-MM-dd HH:mm')}</TableCell>
-                          <TableCell className="font-mono">#{row.productId}</TableCell>
+                          <TableCell className="font-mono text-xs text-muted-foreground"><span dir="ltr" className="inline-block">#{row.id}</span></TableCell>
+                          <TableCell className="whitespace-nowrap text-sm"><span dir="ltr" className="inline-block">{format(new Date(row.createdAt), 'yyyy-MM-dd HH:mm')}</span></TableCell>
+                          <TableCell className="font-mono"><span dir="ltr" className="inline-block">#{row.productId}</span></TableCell>
                           <TableCell className={`font-bold font-mono ${row.quantityChange > 0 ? 'text-success' : row.quantityChange < 0 ? 'text-destructive' : ''}`}>
-                            {row.quantityChange > 0 ? '+' : ''}{row.quantityChange}
+                            <span dir="ltr" className="inline-block">{row.quantityChange > 0 ? '+' : ''}{row.quantityChange}</span>
                           </TableCell>
                           <TableCell>
                             {row.sourceType ? (
-                              <span className="text-xs px-2 py-1 rounded bg-muted/50 border">
+                              <span dir="ltr" className="inline-block whitespace-nowrap text-xs px-2 py-1 rounded bg-muted/50 border">
                                 {row.sourceType} {row.sourceId && `#${row.sourceId}`}
                               </span>
                             ) : '—'}
                           </TableCell>
                           <TableCell className="text-sm">
-                            {row.performerName || (row.performedBy ? `#${row.performedBy}` : t('نظام', 'System'))}
+                            {row.performerName ? <bdi>{row.performerName}</bdi> : row.performedBy ? <span dir="ltr" className="inline-block">#{row.performedBy}</span> : t('نظام', 'System')}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -312,12 +315,12 @@ export default function AdminInventoryReports() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-lg border bg-muted/20 p-4">
                       <h3 className="font-semibold mb-2">{t('حركات مخزون غير مرتبطة بقيود', 'Unlinked Movements')}</h3>
-                      <div className="text-3xl font-bold">{reconciliationData.unlinkedMovements?.length || 0}</div>
+                       <div className="text-3xl font-bold"><span dir="ltr" className="inline-block">{reconciliationData.unlinkedMovements?.length || 0}</span></div>
                       <p className="text-sm text-muted-foreground mt-1">{t('حركات لم تنعكس محاسبياً', 'Movements not reflected in accounting')}</p>
                     </div>
                     <div className="rounded-lg border bg-muted/20 p-4">
                       <h3 className="font-semibold mb-2">{t('قيود مخزون غير مرتبطة بحركات', 'Unlinked Journals')}</h3>
-                      <div className="text-3xl font-bold">{reconciliationData.unlinkedInventoryJournals?.length || 0}</div>
+                       <div className="text-3xl font-bold"><span dir="ltr" className="inline-block">{reconciliationData.unlinkedInventoryJournals?.length || 0}</span></div>
                       <p className="text-sm text-muted-foreground mt-1">{t('قيود محاسبية بدون أثر تشغيلي', 'Journals without operational trace')}</p>
                     </div>
                   </div>
