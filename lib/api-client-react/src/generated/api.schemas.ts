@@ -565,8 +565,17 @@ export interface CouponResult {
   code?: string | null;
 }
 
+export type CheckoutQuoteInputShippingMethod = typeof CheckoutQuoteInputShippingMethod[keyof typeof CheckoutQuoteInputShippingMethod];
+
+
+export const CheckoutQuoteInputShippingMethod = {
+  refrigerated: 'refrigerated',
+  regular: 'regular',
+} as const;
+
 export interface CheckoutQuoteInput {
   city: string;
+  shippingMethod: CheckoutQuoteInputShippingMethod;
   /** @nullable */
   couponCode?: string | null;
 }
@@ -605,6 +614,14 @@ export interface CheckoutQuote {
   paymentMethods: PaymentMethod[];
 }
 
+export type OrderInputShippingMethod = typeof OrderInputShippingMethod[keyof typeof OrderInputShippingMethod];
+
+
+export const OrderInputShippingMethod = {
+  refrigerated: 'refrigerated',
+  regular: 'regular',
+} as const;
+
 export type OrderInputPaymentMethod = typeof OrderInputPaymentMethod[keyof typeof OrderInputPaymentMethod];
 
 
@@ -627,7 +644,7 @@ export interface AddressInput {
 
 export interface OrderInput {
   address: AddressInput;
-  shippingMethod: string;
+  shippingMethod: OrderInputShippingMethod;
   paymentMethod: OrderInputPaymentMethod;
   /** @nullable */
   couponCode?: string | null;
@@ -2382,6 +2399,12 @@ export interface Shipment {
   invoiceId: number | null;
   referenceNumber: string;
   partyName: string;
+  /** @nullable */
+  companyName?: string | null;
+  /** @nullable */
+  recipientName?: string | null;
+  /** @nullable */
+  recipientPhone?: string | null;
   destinationCity: string;
   /** @nullable */
   destinationAddress: string | null;
@@ -2461,6 +2484,21 @@ export interface ShipmentInput {
   channel: ShipmentInputChannel;
   shippingScope?: ShipmentInputShippingScope;
   sourceId: number;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  companyName?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  recipientName?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  recipientPhone?: string | null;
   /** @minLength 1 */
   destinationCity: string;
   /** @nullable */
@@ -2539,6 +2577,21 @@ export const ShipmentUpdateStatus = {
 } as const;
 
 export interface ShipmentUpdate {
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  companyName?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  recipientName?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  recipientPhone?: string | null;
   shippingScope?: ShipmentUpdateShippingScope;
   /** @minLength 1 */
   destinationCity?: string;

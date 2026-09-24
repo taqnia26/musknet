@@ -126,6 +126,9 @@ const shipmentAddressSchema = {
 };
 
 const baseShipmentSchemaObj = z.object({
+  companyName: z.string().nullable().optional(),
+  recipientName: z.string().nullable().optional(),
+  recipientPhone: z.string().nullable().optional(),
   shippingScope: z.enum(['domestic', 'international']).default('domestic'),
   destinationCity: z.string().nullable().optional(),
   destinationAddress: z.string().nullable().optional(),
@@ -172,6 +175,15 @@ const refineShipmentSchema = (val: any, ctx: z.RefinementCtx) => {
   }
 };
 
+const companyContactValidation = (val: any, ctx: z.RefinementCtx) => {
+  for (const key of ['companyName', 'recipientName'] as const) {
+    if (!val[key]?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: [key] });
+  }
+  if (!/^\+?[0-9]{8,15}$/.test(val.recipientPhone?.trim() || '')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Valid mobile number required', path: ['recipientPhone'] });
+  }
+};
+
 const shipmentUpdateSchema = baseShipmentSchemaObj.superRefine(refineShipmentSchema);
 
 type ShipmentUpdateValues = z.infer<typeof shipmentUpdateSchema>;
@@ -186,6 +198,9 @@ function mapFormValuesToShipmentData(values: ShipmentInputValues | ShipmentUpdat
   const carrier = values.carrierSelection === 'storage_station' ? 'Storage Station' : values.customCarrier;
   return {
     shippingScope: values.shippingScope,
+    companyName: values.companyName?.trim() || null,
+    recipientName: values.recipientName?.trim() || null,
+    recipientPhone: values.recipientPhone?.trim() || null,
     destinationCity: values.destinationCity?.trim() || (values.shippingScope === 'domestic' ? 'المملكة العربية السعودية' : ''),
     destinationAddress: values.destinationAddress,
     carrier,
@@ -213,12 +228,14 @@ function ShipmentFormFields({
   form, 
   t, 
   isCreate = false, 
-  sourceLabel = '' 
+  sourceLabel = '',
+  isB2B = false,
 }: { 
   form: UseFormReturn<any>; 
   t: any; 
   isCreate?: boolean; 
   sourceLabel?: string; 
+  isB2B?: boolean;
 }) {
   const shippingScope = form.watch('shippingScope');
   const carrierSelection = form.watch('carrierSelection');
@@ -274,6 +291,27 @@ function ShipmentFormFields({
       </div>
       
       <Separator />
+
+      {isB2B && (
+        <div className="space-y-4">
+          <h3 className="font-semibold text-lg">{t('بيانات مستلم الشركة', 'Company delivery contact')}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {([
+              ['companyName', t('اسم الشركة', 'Company name')],
+              ['recipientName', t('اسم المستلم', 'Recipient name')],
+              ['recipientPhone', t('رقم الجوال', 'Mobile number')],
+            ] as const).map(([name, label]) => (
+              <FormField key={name} control={form.control} name={name} render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{label}</FormLabel>
+                  <FormControl><Input {...field} value={field.value || ''} dir={name === 'recipientPhone' ? 'ltr' : undefined} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Carrier Info */}
       <div className="space-y-4">
@@ -364,7 +402,7 @@ function ShipmentFormFields({
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="domestic">{t('داخلي', 'Domestic')}</SelectItem>
-                      <SelectItem value="international">{t('خارجي', 'International')}</SelectItem>
+                      <SelectItem value="international">{t('دولي', 'International')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -734,6 +772,9 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
     editForm.reset({
       shippingScope: shipment.shippingScope || 'domestic',
       destinationCity: shipment.destinationCity || '',
+      companyName: shipment.companyName,
+      recipientName: shipment.recipientName,
+      recipientPhone: shipment.recipientPhone,
       destinationAddress: shipment.destinationAddress,
       carrierSelection,
       customCarrier,
@@ -757,6 +798,14 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
 
   const onEditSubmit = (values: ShipmentUpdateValues) => {
     if (!selectedShipment) return;
+    if (isB2B && (values.companyName || values.recipientName || values.recipientPhone)) {
+      const ctxIssues: Array<{ path: (string | number)[]; message: string }> = [];
+      companyContactValidation(values, { path: [], addIssue: (issue: any) => { ctxIssues.push(issue); } });
+      if (ctxIssues.length) {
+        ctxIssues.forEach((issue) => editForm.setError(issue.path[0] as keyof ShipmentUpdateValues, { message: issue.message }));
+        return;
+      }
+    }
     
     const mappedData = mapFormValuesToShipmentData(values);
     
@@ -767,6 +816,14 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
   };
 
   const onRegisterSubmit = (values: ShipmentInputValues) => {
+    if (isB2B) {
+      const issues: Array<{ path: (string | number)[]; message: string }> = [];
+      companyContactValidation(values, { path: [], addIssue: (issue: any) => { issues.push(issue); } });
+      if (issues.length) {
+        issues.forEach((issue) => registerForm.setError(issue.path[0] as keyof ShipmentInputValues, { message: issue.message }));
+        return;
+      }
+    }
     const mappedData = mapFormValuesToShipmentData(values);
     
     createShipment.mutate({
@@ -824,7 +881,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                 <Form {...registerForm}>
                   <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
-                      <ShipmentFormFields form={registerForm} t={t} isCreate={true} sourceLabel={sourceLabel} />
+                      <ShipmentFormFields form={registerForm} t={t} isCreate={true} sourceLabel={sourceLabel} isB2B={isB2B} />
                     </div>
                     <div className="shrink-0 border-t bg-muted/30 px-6 py-4">
                       <DialogFooter>
@@ -1171,7 +1228,9 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                           {shipment.referenceNumber}
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium">{shipment.partyName}</div>
+                          <div className="font-medium">{shipment.companyName || shipment.partyName}</div>
+                          {isB2B && shipment.recipientName && <div className="text-xs text-muted-foreground">{t('المستلم', 'Recipient')}: {shipment.recipientName}</div>}
+                          {isB2B && shipment.recipientPhone && <div className="text-xs text-muted-foreground" dir="ltr">{shipment.recipientPhone}</div>}
                           <div className="text-xs text-muted-foreground flex gap-1 items-center mt-0.5">
                             {shipment.orderId ? `Order #${shipment.orderId}` : shipment.invoiceId ? `Inv #${shipment.invoiceId}` : ''}
                           </div>
@@ -1182,7 +1241,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                             {shipment.destinationCity}
                           </div>
                           <Badge variant="outline" className="mt-1 text-[10px]">
-                            {shipment.shippingScope === 'international' ? t('خارجي', 'International') : t('داخلي', 'Domestic')}
+                            {shipment.shippingScope === 'international' ? t('دولي', 'International') : t('داخلي', 'Domestic')}
                           </Badge>
                           {shipment.destinationCountry && (
                             <div className="text-xs text-muted-foreground">{t('الدولة', 'Country')}: {shipment.destinationCountry === 'SA' ? t('السعودية', 'Saudi Arabia') : shipment.destinationCountry}</div>
@@ -1344,7 +1403,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
           <Form {...editForm}>
             <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
-                <ShipmentFormFields form={editForm} t={t} isCreate={false} />
+                <ShipmentFormFields form={editForm} t={t} isCreate={false} isB2B={isB2B} />
               </div>
               <div className="shrink-0 border-t bg-muted/30 px-6 py-4">
                 <DialogFooter>

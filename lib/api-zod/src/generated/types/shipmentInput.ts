@@ -13,6 +13,21 @@ export interface ShipmentInput {
   channel: ShipmentInputChannel;
   shippingScope?: ShipmentInputShippingScope;
   sourceId: number;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  companyName?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  recipientName?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  recipientPhone?: string | null;
   /** @minLength 1 */
   destinationCity: string;
   /** @nullable */

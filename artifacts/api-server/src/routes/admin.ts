@@ -260,6 +260,11 @@ const publicShipment = (row: Awaited<ReturnType<typeof shippingRows>>[number]) =
   })),
 });
 
+function validCompanyShipmentContact(input: { companyName?: string | null; recipientName?: string | null; recipientPhone?: string | null }) {
+  return Boolean(input.companyName?.trim() && input.recipientName?.trim()
+    && input.recipientPhone?.trim() && /^\+?[0-9]{8,15}$/.test(input.recipientPhone.trim()));
+}
+
 const carrierStatusToShipmentStatus = {
   created: "ready",
   picked_up: "in_transit",
@@ -2186,6 +2191,9 @@ router.get("/admin/shipping", permit("shipping", "view"), route(async (req, res)
 
 router.post("/admin/shipping", permit("shipping", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateShipmentBody, req.body, res); if (!body) return;
+  if (body.channel === "b2b" && !validCompanyShipmentContact(body)) {
+    res.status(400).json({ error: "Company name, recipient name and valid mobile number are required" }); return;
+  }
   if (!Number.isInteger(body.sourceId) || body.sourceId < 1
     || (body.actualCost != null && body.actualCost < 0)
     || (body.collectedCost != null && body.collectedCost < 0)) {
@@ -2221,6 +2229,9 @@ router.post("/admin/shipping", permit("shipping", "edit"), route(async (req, res
   const { sourceId, ...values } = body;
   const [created] = await db.insert(shipmentsTable).values({
     ...values,
+    companyName: body.channel === "b2b" ? body.companyName?.trim() : null,
+    recipientName: body.channel === "b2b" ? body.recipientName?.trim() : null,
+    recipientPhone: body.channel === "b2b" ? body.recipientPhone?.trim() : null,
     carrier,
     ...(body.shippingScope === "domestic" ? {
       destinationCountry: null,
@@ -2247,6 +2258,10 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
   const [existing] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Shipment not found" }); return; }
   const channel = existing.channel as "online" | "b2b";
+  if (channel === "b2b" && [body.companyName, body.recipientName, body.recipientPhone].some((value) => value !== undefined)
+    && !validCompanyShipmentContact({ ...existing, ...body })) {
+    res.status(400).json({ error: "Company name, recipient name and valid mobile number are required" }); return;
+  }
   if (!(await canUseShipping(res, channel, "edit"))) {
     res.status(403).json({ error: "Insufficient permission" }); return;
   }
@@ -2280,6 +2295,11 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
   await db.transaction(async (tx) => {
     await tx.update(shipmentsTable).set({
       ...body,
+      ...(channel === "b2b" ? {
+        companyName: body.companyName?.trim() ?? existing.companyName,
+        recipientName: body.recipientName?.trim() ?? existing.recipientName,
+        recipientPhone: body.recipientPhone?.trim() ?? existing.recipientPhone,
+      } : { companyName: existing.companyName, recipientName: existing.recipientName, recipientPhone: existing.recipientPhone }),
       carrier,
       ...(next.shippingScope === "domestic" ? {
         destinationCountry: null,
@@ -2341,8 +2361,8 @@ router.post("/admin/shipping/:id/label", permit("shipping", "edit"), route(async
   try {
     const label = await createSmsaShippingLabel(integration?.apiBaseUrl ?? null, {
       referenceNumber: row.referenceNumber,
-      recipientName: row.partyName,
-      recipientPhone: row.partyPhone,
+      recipientName: channel === "b2b" ? row.shipment.recipientName || row.partyName : row.partyName,
+      recipientPhone: channel === "b2b" ? row.shipment.recipientPhone || row.partyPhone : row.partyPhone,
       destinationCity: row.shipment.destinationCity,
       destinationAddress: row.shipment.destinationAddress,
       serviceMethod: body.serviceMethod,

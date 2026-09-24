@@ -1,5 +1,5 @@
 import request from "supertest";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { eq, inArray, or } from "drizzle-orm";
 import {
   adminPermissionsTable,
@@ -16,10 +16,16 @@ import {
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
+import { createSmsaShippingLabel } from "../lib/shipping-carriers";
+
+vi.mock("../lib/shipping-carriers", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../lib/shipping-carriers")>(),
+  createSmsaShippingLabel: vi.fn(),
+}));
 
 const suffix = Date.now();
 const base = 1_820_000_000 + (suffix % 20_000_000);
-const ids = { admin: base, viewer: base + 1, customer: base + 2, order: base + 3, address: base + 4, distributor: base + 5, invoice: base + 6, missingShipmentOrder: base + 7 };
+const ids = { admin: base, viewer: base + 1, customer: base + 2, order: base + 3, address: base + 4, distributor: base + 5, invoice: base + 6, missingShipmentOrder: base + 7, newInvoice: base + 8 };
 let adminToken: string;
 let shippingViewerToken: string;
 
@@ -72,9 +78,17 @@ beforeAll(async () => {
     buyerName: "Shipping Company", buyerAddress: "Industrial Area, Jeddah",
     subtotal: 500, vatAmount: 75, totalAmount: 575, qrCodeData: "AQ==",
   });
+  await db.insert(invoicesTable).values({
+    id: ids.newInvoice, distributorId: ids.distributor, creationKey: `shipping-invoice-new-${suffix}`,
+    sequenceNumber: base + 1, invoiceNumber: `SHIP-INV-NEW-${suffix}`, sellerName: "Musk Ellolo",
+    issueDatetime: new Date("2026-09-02T09:00:00.000Z"), sellerVatNumber: "300000000000003",
+    buyerName: "Shipping Company", buyerAddress: "Industrial Area, Jeddah",
+    subtotal: 500, vatAmount: 75, totalAmount: 575, qrCodeData: "AQ==",
+  });
   await db.insert(shipmentsTable).values([
     {
       channel: "online", orderId: ids.order, destinationCity: "Riyadh", destinationAddress: "Olaya",
+      nationalAddressShortCode: "RIYD1234",
       serviceMethod: "express", trackingNumber: `ON-${suffix}`, status: "in_transit",
       actualCost: 20, collectedCost: 28, shippedAt: new Date("2026-09-03T09:00:00.000Z"),
       createdAt: new Date("2026-09-03T09:00:00.000Z"),
@@ -90,7 +104,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(shipmentsTable).where(or(eq(shipmentsTable.orderId, ids.order), eq(shipmentsTable.invoiceId, ids.invoice)));
-  await db.delete(invoicesTable).where(eq(invoicesTable.id, ids.invoice));
+  await db.delete(shipmentsTable).where(eq(shipmentsTable.invoiceId, ids.newInvoice));
+  await db.delete(invoicesTable).where(inArray(invoicesTable.id, [ids.invoice, ids.newInvoice]));
   await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, ids.distributor));
   await db.delete(ordersTable).where(inArray(ordersTable.id, [ids.order, ids.missingShipmentOrder]));
   await db.delete(customersTable).where(eq(customersTable.id, ids.customer));
@@ -154,6 +169,7 @@ describe.sequential("admin shipping dashboards", () => {
       carrier: "Carrier Y",
       trackingNumber: `NEW-${suffix}`,
       status: "ready",
+      nationalAddressShortCode: "DAMM1234",
       actualCost: 17,
       collectedCost: 20,
     }).expect(201);
@@ -165,6 +181,53 @@ describe.sequential("admin shipping dashboards", () => {
       actualCost: 17,
       collectedCost: 20,
     });
+  });
+
+  it("keeps old B2B shipments readable and saves shipment-specific contacts on create and edit", async () => {
+    const legacy = await request(app).get(`/api/admin/shipping?channel=b2b&search=${encodeURIComponent(`B2B-${suffix}`)}`)
+      .set(auth(adminToken)).expect(200);
+    expect(legacy.body.items[0]).toMatchObject({ companyName: null, recipientName: null, recipientPhone: null });
+    const input = { channel: "b2b", sourceId: ids.newInvoice, destinationCity: "Jeddah",
+      carrier: "Test Carrier", shippingScope: "domestic", nationalAddressShortCode: "JEDD1234" };
+    await request(app).post("/api/admin/shipping").set(auth(adminToken)).send(input).expect(400);
+    await request(app).post("/api/admin/shipping").set(auth(adminToken))
+      .send({ ...input, companyName: "  New Branch  ", recipientName: "  Sara  ", recipientPhone: "123" }).expect(400);
+    const created = await request(app).post("/api/admin/shipping").set(auth(adminToken))
+      .send({ ...input, companyName: "  New Branch  ", recipientName: "  Sara  ", recipientPhone: "0501234567" }).expect(201);
+    expect(created.body).toMatchObject({ companyName: "New Branch", recipientName: "Sara", recipientPhone: "0501234567" });
+    await request(app).patch(`/api/admin/shipping/${created.body.id}`).set(auth(adminToken))
+      .send({ recipientPhone: "bad" }).expect(400);
+    await request(app).patch(`/api/admin/shipping/${created.body.id}`).set(auth(adminToken))
+      .send({ recipientName: "Ahmed", recipientPhone: "0551234567" }).expect(200);
+    const reopened = await request(app).get(`/api/admin/shipping?channel=b2b&search=${encodeURIComponent(`SHIP-INV-NEW-${suffix}`)}`)
+      .set(auth(adminToken)).expect(200);
+    expect(reopened.body.items[0]).toMatchObject({
+      companyName: "New Branch", recipientName: "Ahmed", recipientPhone: "0551234567",
+    });
+    const [distributor] = await db.select().from(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, ids.distributor));
+    expect(distributor).toMatchObject({ companyName: "Shipping Company", contactName: "Manager" });
+  });
+
+  it("sends the shipment recipient to the carrier and falls back to distributor contacts for old shipments", async () => {
+    const [newShipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, ids.newInvoice));
+    const [legacy] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, ids.invoice));
+    vi.mocked(createSmsaShippingLabel).mockResolvedValue({
+      carrierShipmentId: `CARRIER-${suffix}`, trackingNumber: `LABEL-${suffix}`, labelUrl: null, actualCost: 12,
+    });
+    await request(app).post(`/api/admin/shipping/${newShipment.id}/label`).set(auth(adminToken))
+      .send({ carrier: "smsa", serviceMethod: "standard" }).expect(201);
+    expect(vi.mocked(createSmsaShippingLabel)).toHaveBeenLastCalledWith(null, expect.objectContaining({
+      recipientName: "Ahmed", recipientPhone: "0551234567",
+    }));
+
+    // A shipment created before contact fields existed remains labelable.
+    await db.update(shipmentsTable).set({ status: "pending" }).where(eq(shipmentsTable.id, legacy.id));
+    await request(app).post(`/api/admin/shipping/${legacy.id}/label`).set(auth(adminToken))
+      .send({ carrier: "smsa", serviceMethod: "standard" }).expect(201);
+    const [distributor] = await db.select().from(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, ids.distributor));
+    expect(vi.mocked(createSmsaShippingLabel)).toHaveBeenLastCalledWith(null, expect.objectContaining({
+      recipientName: distributor.companyName, recipientPhone: distributor.phone,
+    }));
   });
 
   it("returns a clear empty dashboard when filters match no shipments", async () => {

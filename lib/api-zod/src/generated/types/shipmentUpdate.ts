@@ -9,6 +9,21 @@ import type { ShipmentUpdateShippingScope } from './shipmentUpdateShippingScope'
 import type { ShipmentUpdateStatus } from './shipmentUpdateStatus';
 
 export interface ShipmentUpdate {
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  companyName?: string | null;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  recipientName?: string | null;
+  /**
+     * @maxLength 30
+     * @nullable
+     */
+  recipientPhone?: string | null;
   shippingScope?: ShipmentUpdateShippingScope;
   /** @minLength 1 */
   destinationCity?: string;

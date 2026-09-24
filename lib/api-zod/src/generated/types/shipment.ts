@@ -21,6 +21,12 @@ export interface Shipment {
   invoiceId: number | null;
   referenceNumber: string;
   partyName: string;
+  /** @nullable */
+  companyName?: string | null;
+  /** @nullable */
+  recipientName?: string | null;
+  /** @nullable */
+  recipientPhone?: string | null;
   destinationCity: string;
   /** @nullable */
   destinationAddress: string | null;

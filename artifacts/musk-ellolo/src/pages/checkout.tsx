@@ -40,7 +40,7 @@ export default function Checkout() {
   
   const [couponCode, setCouponCode] = useState('');
   const [activeCoupon, setActiveCoupon] = useState<string | null>(null);
-  const [shippingMethod, setShippingMethod] = useState('storage-station-standard');
+  const [shippingMethod, setShippingMethod] = useState<'regular' | 'refrigerated'>('regular');
   const [paymentMethod, setPaymentMethod] = useState<'moyasar' | 'tabby' | 'tamara'>('moyasar');
 
   const validateCoupon = useValidateCoupon();
@@ -62,15 +62,22 @@ export default function Checkout() {
     data: quote,
     isPending: isLoadingQuote,
     isError: isQuoteError,
+    variables: quoteVariables,
     mutate: requestCheckoutQuote,
   } = useGetCheckoutQuote();
   const city = form.watch('city');
 
   useEffect(() => {
     if (currentUser && cart && cart.items.length > 0 && city.trim().length >= 2) {
-      requestCheckoutQuote({ data: { city, couponCode: activeCoupon } });
+      requestCheckoutQuote({ data: { city, shippingMethod, couponCode: activeCoupon } });
     }
-  }, [activeCoupon, cart?.id, city, currentUser, requestCheckoutQuote]);
+  }, [activeCoupon, cart?.id, cart?.subtotal, city, shippingMethod, currentUser, requestCheckoutQuote]);
+
+  const quoteIsCurrent = quoteVariables?.data.city === city
+    && quoteVariables?.data.shippingMethod === shippingMethod
+    && quoteVariables?.data.couponCode === activeCoupon
+    && quote?.subtotal === cart?.subtotal
+    && !isLoadingQuote;
 
   useEffect(() => {
     if (!isLoadingCart && !isLoadingUser && isUserError && cart && cart.items.length > 0) {
@@ -100,7 +107,7 @@ export default function Checkout() {
   };
 
   const onSubmit = (data: AddressFormValues) => {
-    if (!quote) return;
+    if (!quote || !quoteIsCurrent) return;
     
     createOrder.mutate({
       data: {
@@ -120,7 +127,7 @@ export default function Checkout() {
     });
   };
 
-  if (isLoadingCart || isLoadingUser || isUserError || (currentUser && isLoadingQuote) || !cart || cart.items.length === 0) {
+  if (isLoadingCart || isLoadingUser || isUserError || (currentUser && !quote && !isQuoteError) || !cart || cart.items.length === 0) {
     return (
       <div className="container mx-auto px-4 py-12 max-w-6xl grid md:grid-cols-2 gap-12">
         <div className="space-y-8"><Skeleton className="h-12 w-1/3" /><Skeleton className="h-64 w-full" /></div>
@@ -135,7 +142,7 @@ export default function Checkout() {
         <div className="rounded-2xl border bg-card p-8 shadow-sm">
           <h1 className="mb-3 text-2xl font-bold">{t('تعذر حساب خيارات التوصيل', 'Unable to load delivery options')}</h1>
           <p className="mb-6 text-muted-foreground">{t('تحقق من الاتصال ثم أعد المحاولة.', 'Check your connection and try again.')}</p>
-          <Button onClick={() => requestCheckoutQuote({ data: { city, couponCode: activeCoupon } })}>
+          <Button onClick={() => requestCheckoutQuote({ data: { city, shippingMethod, couponCode: activeCoupon } })}>
             {t('إعادة المحاولة', 'Try again')}
           </Button>
         </div>
@@ -196,10 +203,10 @@ export default function Checkout() {
                     {quote?.shippingMethods?.map(method => (
                       <label key={method.id} className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${shippingMethod === method.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}>
                         <div className="flex min-w-0 items-center gap-3">
-                          <input type="radio" name="shippingMethod" value={method.id} checked={shippingMethod === method.id} onChange={(e) => setShippingMethod(e.target.value)} className="w-4 h-4 text-primary" />
+                           <input type="radio" name="shippingMethod" value={method.id} checked={shippingMethod === method.id} onChange={(e) => setShippingMethod(e.target.value as 'regular' | 'refrigerated')} className="w-4 h-4 text-primary" />
                           <div className="min-w-0">
-                            <p className="font-bold text-sm">{method.name}</p>
-                            <p className="text-xs text-muted-foreground">{method.estimatedDays}</p>
+                            <p className="font-bold text-sm">{method.id === 'refrigerated' ? t('شحن مبرد', 'Refrigerated shipping') : t('عادي', 'Regular shipping')}</p>
+                            <p className="text-xs text-muted-foreground">{t(method.estimatedDays, '2–4 business days')}</p>
                           </div>
                         </div>
                         <span className="shrink-0 text-sm font-bold">{method.price === 0 ? t('مجاناً', 'Free') : <Money value={method.price} lang={lang} />}</span>
@@ -229,7 +236,7 @@ export default function Checkout() {
                   </div>
                 </section>
 
-                <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-full" disabled={createOrder.isPending}>
+                <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-full" disabled={createOrder.isPending || !quoteIsCurrent}>
                   {createOrder.isPending ? t('جاري التنفيذ...', 'Processing...') : t('تأكيد الطلب والدفع', 'Confirm Order & Pay')}
                 </Button>
               </form>
@@ -275,15 +282,17 @@ export default function Checkout() {
                 </Button>
               </div>
 
-              {/* Totals */}
+               {!quoteIsCurrent && <p role="status" className="mb-4 text-sm text-muted-foreground">{t('جاري تحديث الإجمالي...', 'Updating total...')}</p>}
+               {/* Totals */}
+               {quoteIsCurrent && quote && <>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('المجموع الفرعي', 'Subtotal')}</span>
-                  <Money value={quote?.subtotal || cart.subtotal} lang={lang} className="font-bold" />
+                   <Money value={quote.subtotal} lang={lang} className="font-bold" />
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('الشحن', 'Shipping')}</span>
-                  <span className="font-bold">{quote?.shippingCost === 0 ? t('مجاناً', 'Free') : <Money value={quote?.shippingCost || 0} lang={lang} />}</span>
+                   <span className="font-bold"><Money value={quote.shippingCost} lang={lang} /></span>
                 </div>
                 {quote?.discount ? (
                   <div className="flex justify-between text-accent">
@@ -293,14 +302,15 @@ export default function Checkout() {
                 ) : null}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">{t('الضريبة (15%)', 'Tax (15%)')}</span>
-                  <Money value={quote?.tax || 0} lang={lang} className="font-bold" />
+                   <Money value={quote.tax} lang={lang} className="font-bold" />
                 </div>
               </div>
               
               <div className="border-t mt-4 pt-4 flex justify-between items-center text-lg">
                 <span className="font-bold">{t('الإجمالي', 'Total')}</span>
-                <Money value={quote?.total || cart.subtotal} lang={lang} className="font-bold text-xl text-primary" />
+                 <Money value={quote.total} lang={lang} className="font-bold text-xl text-primary" />
               </div>
+               </>}
             </div>
           </div>
         </div>

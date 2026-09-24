@@ -448,6 +448,7 @@ export const ValidateCouponResponse = zod.object({
  */
 export const GetCheckoutQuoteBody = zod.object({
   "city": zod.string(),
+  "shippingMethod": zod.enum(['refrigerated', 'regular']),
   "couponCode": zod.string().nullish()
 })
 
@@ -512,7 +513,7 @@ export const CreateOrderBody = zod.object({
   "additionalInfo": zod.string().nullish(),
   "isDefault": zod.boolean().optional()
 }),
-  "shippingMethod": zod.string(),
+  "shippingMethod": zod.enum(['refrigerated', 'regular']),
   "paymentMethod": zod.enum(['moyasar', 'tabby', 'tamara']),
   "couponCode": zod.string().nullish()
 })
@@ -3896,6 +3897,9 @@ export const GetAdminShippingDashboardResponse = zod.object({
   "invoiceId": zod.number().nullable(),
   "referenceNumber": zod.string(),
   "partyName": zod.string(),
+  "companyName": zod.string().nullish(),
+  "recipientName": zod.string().nullish(),
+  "recipientPhone": zod.string().nullish(),
   "destinationCity": zod.string(),
   "destinationAddress": zod.string().nullable(),
   "nationalAddressShortCode": zod.string().nullable(),
@@ -3941,6 +3945,13 @@ export const GetAdminShippingDashboardResponse = zod.object({
  * @summary Register a shipment for an eligible order or B2B invoice
  */
 export const adminCreateShipmentBodyShippingScopeDefault = `domestic`;
+export const adminCreateShipmentBodyCompanyNameMax = 200;
+
+export const adminCreateShipmentBodyRecipientNameMax = 200;
+
+export const adminCreateShipmentBodyRecipientPhoneMax = 30;
+
+
 export const adminCreateShipmentBodyNationalAddressShortCodeMin = 4;
 export const adminCreateShipmentBodyNationalAddressShortCodeMax = 12;
 
@@ -3962,6 +3973,9 @@ export const AdminCreateShipmentBody = zod.object({
   "channel": zod.enum(['online', 'b2b']),
   "shippingScope": zod.enum(['domestic', 'international']).default(adminCreateShipmentBodyShippingScopeDefault),
   "sourceId": zod.number(),
+  "companyName": zod.string().max(adminCreateShipmentBodyCompanyNameMax).nullish(),
+  "recipientName": zod.string().max(adminCreateShipmentBodyRecipientNameMax).nullish(),
+  "recipientPhone": zod.string().max(adminCreateShipmentBodyRecipientPhoneMax).nullish(),
   "destinationCity": zod.string().min(1),
   "destinationAddress": zod.string().nullish(),
   "nationalAddressShortCode": zod.string().min(adminCreateShipmentBodyNationalAddressShortCodeMin).max(adminCreateShipmentBodyNationalAddressShortCodeMax).nullish(),
@@ -3989,6 +4003,9 @@ export const AdminCreateShipmentResponse = zod.object({
   "invoiceId": zod.number().nullable(),
   "referenceNumber": zod.string(),
   "partyName": zod.string(),
+  "companyName": zod.string().nullish(),
+  "recipientName": zod.string().nullish(),
+  "recipientPhone": zod.string().nullish(),
   "destinationCity": zod.string(),
   "destinationAddress": zod.string().nullable(),
   "nationalAddressShortCode": zod.string().nullable(),
@@ -4033,6 +4050,12 @@ export const AdminUpdateShipmentParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const adminUpdateShipmentBodyCompanyNameMax = 200;
+
+export const adminUpdateShipmentBodyRecipientNameMax = 200;
+
+export const adminUpdateShipmentBodyRecipientPhoneMax = 30;
+
 
 export const adminUpdateShipmentBodyNationalAddressShortCodeMin = 4;
 export const adminUpdateShipmentBodyNationalAddressShortCodeMax = 12;
@@ -4052,6 +4075,9 @@ export const adminUpdateShipmentBodyDestinationAdditionalDetailsMax = 500;
 
 
 export const AdminUpdateShipmentBody = zod.object({
+  "companyName": zod.string().max(adminUpdateShipmentBodyCompanyNameMax).nullish(),
+  "recipientName": zod.string().max(adminUpdateShipmentBodyRecipientNameMax).nullish(),
+  "recipientPhone": zod.string().max(adminUpdateShipmentBodyRecipientPhoneMax).nullish(),
   "shippingScope": zod.enum(['domestic', 'international']).optional(),
   "destinationCity": zod.string().min(1).optional(),
   "destinationAddress": zod.string().nullish(),
@@ -4080,6 +4106,9 @@ export const AdminUpdateShipmentResponse = zod.object({
   "invoiceId": zod.number().nullable(),
   "referenceNumber": zod.string(),
   "partyName": zod.string(),
+  "companyName": zod.string().nullish(),
+  "recipientName": zod.string().nullish(),
+  "recipientPhone": zod.string().nullish(),
   "destinationCity": zod.string(),
   "destinationAddress": zod.string().nullable(),
   "nationalAddressShortCode": zod.string().nullable(),
@@ -4141,6 +4170,9 @@ export const AdminCreateShippingLabelResponse = zod.object({
   "invoiceId": zod.number().nullable(),
   "referenceNumber": zod.string(),
   "partyName": zod.string(),
+  "companyName": zod.string().nullish(),
+  "recipientName": zod.string().nullish(),
+  "recipientPhone": zod.string().nullish(),
   "destinationCity": zod.string(),
   "destinationAddress": zod.string().nullable(),
   "nationalAddressShortCode": zod.string().nullable(),

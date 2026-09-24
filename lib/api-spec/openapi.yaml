@@ -2850,10 +2850,13 @@ components:
           type: ["string", "null"]
     CheckoutQuoteInput:
       type: object
-      required: [city]
+      required: [city, shippingMethod]
       properties:
         city:
           type: string
+        shippingMethod:
+          type: string
+          enum: [refrigerated, regular]
         couponCode:
           type: ["string", "null"]
     CheckoutQuote:
@@ -2913,6 +2916,7 @@ components:
           $ref: "#/components/schemas/AddressInput"
         shippingMethod:
           type: string
+          enum: [refrigerated, regular]
         paymentMethod:
           type: string
           enum: [moyasar, tabby, tamara]
@@ -4000,6 +4004,9 @@ components:
         invoiceId: { type: [number, "null"] }
         referenceNumber: { type: string }
         partyName: { type: string }
+        companyName: { type: [string, "null"] }
+        recipientName: { type: [string, "null"] }
+        recipientPhone: { type: [string, "null"] }
         destinationCity: { type: string }
         destinationAddress: { type: [string, "null"] }
         nationalAddressShortCode: { type: [string, "null"] }
@@ -4033,6 +4040,9 @@ components:
         channel: { type: string, enum: [online, b2b] }
         shippingScope: { type: string, enum: [domestic, international], default: domestic }
         sourceId: { type: number }
+        companyName: { type: [string, "null"], maxLength: 200 }
+        recipientName: { type: [string, "null"], maxLength: 200 }
+        recipientPhone: { type: [string, "null"], maxLength: 30 }
         destinationCity: { type: string, minLength: 1 }
         destinationAddress: { type: [string, "null"] }
         nationalAddressShortCode: { type: [string, "null"], minLength: 4, maxLength: 12 }
@@ -4053,6 +4063,9 @@ components:
     ShipmentUpdate:
       type: object
       properties:
+        companyName: { type: [string, "null"], maxLength: 200 }
+        recipientName: { type: [string, "null"], maxLength: 200 }
+        recipientPhone: { type: [string, "null"], maxLength: 30 }
         shippingScope: { type: string, enum: [domestic, international] }
         destinationCity: { type: string, minLength: 1 }
         destinationAddress: { type: [string, "null"] }

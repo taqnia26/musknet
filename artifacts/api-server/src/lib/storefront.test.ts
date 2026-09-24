@@ -1,4 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import request from "supertest";
+import app from "../app";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   customersTable,
@@ -10,6 +12,7 @@ import {
   orderAddressesTable,
   ordersTable,
   productsTable,
+  shipmentsTable,
 } from "@workspace/db";
 import {
   addAddress,
@@ -20,6 +23,8 @@ import {
   getCartForUser,
   getOrder,
   getOrders,
+  getQuote,
+  issueToken,
   removeCartItem,
   requestDevelopmentOtp,
   updateCartItem,
@@ -123,7 +128,7 @@ describe.sequential("persistent storefront carts and orders", () => {
         additionalInfo: null,
         isDefault: false,
       },
-      shippingMethod: "storage-station-standard",
+      shippingMethod: "regular",
       paymentMethod: "moyasar",
     });
     movementReasons.push(`Order ${order!.orderNumber}`);
@@ -161,7 +166,7 @@ describe.sequential("persistent storefront carts and orders", () => {
     await Promise.all([addToCart(first.id, 2, 1), addToCart(second.id, 2, 1)]);
     const details = {
       address: { label: "Home", city: "Riyadh", district: "Olaya", street: "Main", buildingNo: "10", additionalInfo: null, isDefault: false },
-      shippingMethod: "standard", paymentMethod: "card",
+      shippingMethod: "regular", paymentMethod: "card",
     };
     const [one, two] = await Promise.all([
       createOrderForUser(first.id, details),
@@ -199,7 +204,7 @@ describe.sequential("persistent storefront carts and orders", () => {
         additionalInfo: null,
         isDefault: false,
       },
-      shippingMethod: "storage-station-standard",
+      shippingMethod: "regular",
       paymentMethod: "moyasar",
     }, null, { confirmedByProvider: true, environment });
 
@@ -214,6 +219,52 @@ describe.sequential("persistent storefront carts and orders", () => {
     ));
     expect(journals).toHaveLength(1);
     expect(journals[0]?.status).toBe("posted");
+  });
+
+  it.each([
+    ["regular", 28],
+    ["refrigerated", 33],
+  ])("quotes and persists %s shipping at %i SAR with VAT included", async (method, price) => {
+    const owner = await createUser(method);
+    const [product] = await db.select({ stockQuantity: productsTable.stockQuantity, price: productsTable.price })
+      .from(productsTable).where(eq(productsTable.id, 1));
+    productSnapshots.set(1, product);
+    balanceSnapshots.set(1, await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, 1)));
+    await addToCart(owner.id, 1, 1);
+    const riyadh = await getQuote(owner.id, "الرياض", method);
+    const jeddah = await getQuote(owner.id, "Jeddah", method);
+    expect(riyadh).toEqual(jeddah);
+    expect(riyadh.shippingCost).toBe(price);
+    expect(riyadh.total).toBeCloseTo(product.price + price, 2);
+    expect(riyadh.tax).toBe(Math.round(Math.round((product.price + price) * 100) * 15 / 115) / 100);
+    const order = await createOrderForUser(owner.id, {
+      address: { label: "Home", city: "Jeddah", district: "Center", street: "Main", buildingNo: "1", additionalInfo: null, isDefault: false },
+      shippingMethod: method,
+      paymentMethod: "moyasar",
+    });
+    movementReasons.push(`Order ${order!.orderNumber}`);
+    expect(order).toMatchObject({ shippingCost: price, total: riyadh.total, tax: riyadh.tax });
+    const [shipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, order!.id));
+    expect(shipment).toMatchObject({ serviceMethod: method, collectedCost: price });
+  });
+
+  it("rejects unsupported shipping before consuming a cart", async () => {
+    const owner = await createUser("invalid");
+    await addToCart(owner.id, 1, 1);
+    const authorization = `Bearer ${issueToken(owner.id)}`;
+    const address = { label: "Home", city: "Riyadh", district: "Center", street: "Main", buildingNo: "1" };
+    await request(app).post("/api/checkout/quote").set("Authorization", authorization)
+      .send({ city: "Riyadh" }).expect(400);
+    await request(app).post("/api/checkout/quote").set("Authorization", authorization)
+      .send({ city: "Riyadh", shippingMethod: "unknown" }).expect(400);
+    await request(app).post("/api/orders").set("Authorization", authorization)
+      .send({ address, shippingMethod: "unknown", paymentMethod: "moyasar" }).expect(400);
+    await expect(getQuote(owner.id, "Riyadh", "unknown")).rejects.toThrow(/Invalid individual shipping method/);
+    await expect(createOrderForUser(owner.id, {
+      address: { label: "Home", city: "Riyadh", district: "Center", street: "Main", buildingNo: "1", additionalInfo: null, isDefault: false },
+      shippingMethod: "unknown", paymentMethod: "moyasar",
+    })).rejects.toThrow(/Invalid individual shipping method/);
+    expect((await getCartForUser(owner.id)).itemCount).toBe(1);
   });
 
   it("keeps exactly one default address under concurrent writes", async () => {

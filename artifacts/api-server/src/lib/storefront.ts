@@ -776,10 +776,21 @@ export async function getCoupon(code: string, subtotal: number) {
   return couponResult(coupon, subtotal);
 }
 
-export async function getQuote(userId: number, city: string, couponCode?: string | null) {
+const individualShippingMethods = [
+  { id: "refrigerated", name: "شحن مبرد", description: "شحن مبرد", price: 33, estimatedDays: "2–4 أيام عمل" },
+  { id: "regular", name: "عادي", description: "شحن عادي", price: 28, estimatedDays: "2–4 أيام عمل" },
+] as const;
+
+function individualShippingPrice(method: string) {
+  const choice = individualShippingMethods.find((entry) => entry.id === method);
+  if (!choice) throw new Error("Invalid individual shipping method");
+  return choice.price;
+}
+
+export async function getQuote(userId: number, _city: string, shippingMethod: string, couponCode?: string | null) {
+  const shippingCost = individualShippingPrice(shippingMethod);
   const cart = await getCartForUser(userId);
   const coupon = couponCode ? await getCoupon(couponCode, cart.subtotal) : { discount: 0 };
-  const shippingCost = city.trim().toLowerCase().includes("الرياض") || city.trim().toLowerCase().includes("riyadh") ? 20 : 30;
   const net = Math.max(0, cart.subtotal - coupon.discount);
   const taxableGrossCents = Math.round((net + shippingCost) * 100);
   const tax = extractVatFromGross(taxableGrossCents, 15).vatCents / 100;
@@ -789,9 +800,7 @@ export async function getQuote(userId: number, city: string, couponCode?: string
     discount: coupon.discount,
     tax,
     total: Math.round((net + shippingCost) * 100) / 100,
-    shippingMethods: [
-      { id: "storage-station-standard", name: "توصيل قياسي", description: "عبر Storage Station", price: shippingCost, estimatedDays: "2–4 أيام عمل" },
-    ],
+    shippingMethods: individualShippingMethods,
     paymentMethods: [
       { id: "moyasar", name: "مدى، فيزا، Apple Pay", description: "دفع آمن عبر Moyasar", available: true },
       { id: "tabby", name: "تابي", description: "قسّمها على 4 دفعات", available: true },
@@ -813,6 +822,7 @@ export async function createOrderForUser(
   trustedPayment?: { confirmedByProvider: true; environment?: NodeJS.ProcessEnv },
   referralCode?: string | null,
 ) {
+  const shippingCost = individualShippingPrice(details.shippingMethod);
   await ensureStandardAccountingChart();
   const createdOrder = await db.transaction(async (tx) => {
     const [cart] = await tx.select().from(cartsTable).where(eq(cartsTable.userId, userId)).limit(1);
@@ -862,8 +872,6 @@ export async function createOrderForUser(
           .where(eq(couponsTable.id, coupon.couponId));
       }
     }
-    const shippingCost = details.address.city.trim().toLowerCase().includes("الرياض") ||
-      details.address.city.trim().toLowerCase().includes("riyadh") ? 20 : 30;
     const net = Math.max(0, subtotal - coupon.discount);
     const taxableGrossCents = Math.round((net + shippingCost) * 100);
     const tax = extractVatFromGross(taxableGrossCents, 15).vatCents / 100;

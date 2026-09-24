@@ -293,7 +293,7 @@ router.post("/checkout/quote", asyncRoute(async (req, res) => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  res.json(GetCheckoutQuoteResponse.parse(await getQuote(user.id, parsed.data.city, parsed.data.couponCode)));
+  res.json(GetCheckoutQuoteResponse.parse(await getQuote(user.id, parsed.data.city, parsed.data.shippingMethod, parsed.data.couponCode)));
 }));
 
 router.get("/orders", asyncRoute(async (req, res) => {

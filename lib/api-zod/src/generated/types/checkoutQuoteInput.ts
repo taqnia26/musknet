@@ -5,9 +5,11 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { CheckoutQuoteInputShippingMethod } from './checkoutQuoteInputShippingMethod';
 
 export interface CheckoutQuoteInput {
   city: string;
+  shippingMethod: CheckoutQuoteInputShippingMethod;
   /** @nullable */
   couponCode?: string | null;
 }

@@ -7,10 +7,11 @@
  */
 import type { AddressInput } from './addressInput';
 import type { OrderInputPaymentMethod } from './orderInputPaymentMethod';
+import type { OrderInputShippingMethod } from './orderInputShippingMethod';
 
 export interface OrderInput {
   address: AddressInput;
-  shippingMethod: string;
+  shippingMethod: OrderInputShippingMethod;
   paymentMethod: OrderInputPaymentMethod;
   /** @nullable */
   couponCode?: string | null;
