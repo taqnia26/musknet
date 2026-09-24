@@ -1,0 +1,127 @@
+{
+  "sourceFile": "attached_assets/Perfumes_description_1790257818157.docx",
+  "sourceSha256": "4556e7fc8314d7d5ec0678d7fad6a0b901f935f43d9acabf11a20e2663c453d5",
+  "extraction": "Word paragraphs joined with LF; only leading/trailing paragraph whitespace removed; headings excluded; prices retained as text",
+  "products": [
+    {
+      "headingEn": "ROYAL OUD",
+      "headingAr": "رويال عود",
+      "id": 6,
+      "slug": "royal-oud",
+      "nameAr": "رويال عود",
+      "sku": "6287020840029",
+      "ar": "عطر يتجاوز التوقّع… ولا يُشبه إلا النخبة.\nفي كل رشة، ينساب الزعفران النقي ونفحات الماندرين المترفة، ليفتتح حضورًا ملكياً آسراً.\nيتوسطه عبق البخور المهيب، يلتفّ حوله الورد الفاخر بلمسة من الغموض.\nأما القاعدة، فهي وعدٌ بالثبات والأناقة… فانيليا ناعمة، مِسك أبيض، عنبر دافئ، وخشب الصندل يخلّد العطر على الجلد كوشمٍ من الفخامة.\nرويال عود... ليس مجرد عطر... بل هالة تُروى، وهيبة تُحسّ، ورفاهية تُرتدى\nالهرم العطري:\nالقمة: ماندرين ، زعفران\nالقلب: بخور، ورد\nالقاعدة: فانيليا ، مسك ،عنبر ، خشب الصندل\nبارفام 20%  - 50 مل\nالسعر: 469  ريال",
+      "en": "A fragrance that exceeds expectations… made for the elite.\nWith every spritz, pure saffron and the opulent touch of mandarin flow gracefully, unveiling a truly regal opening.\nAt its heart lies the majestic scent of incense, embraced by luxurious rose with a subtle hint of mystery.\nThe base is a promise of lasting elegance — soft vanilla, white musk, warm amber, and sandalwood leave a refined imprint on the skin like a tattoo of luxury.\nRoyal Oud… more than a fragrance — it’s an aura to be told, a presence to be felt, and a luxury to be worn.\nFragrance Pyramid:\nTop Notes: Mandarin , Saffron\nHeart Notes: Incense ,  Rose\nBase Notes: Vanilla , Musk , Amber , Sandalwood\nConcentration:\nPARFUM 20% - 50 ML\n469 SR\nUnisex",
+      "arSha256": "fbe59d0f7e28ee2208008a7e3162dd7b840e2e51741084617daa276bc46c2fa2",
+      "enSha256": "99d482dafe3c70f3fc325d5cb01db6c758464dc6ddfed99d4c46d361efb6689f"
+    },
+    {
+      "headingEn": "ROYAL  MUSK",
+      "headingAr": "رويال مسك",
+      "id": 5,
+      "slug": "royal-musk",
+      "nameAr": "رويال مسك",
+      "sku": "6287020840012",
+      "ar": "هدوءٌ مختلف... يُترجم الفخامة بطريقته.\nينساب رويال مسك كنسمةٍ راقيةٍ من الصفاء، تبدأ بلمسات ليمونٍ خفيفةٍ تُنعش الحواس برفق، ثم يتفتح قلبه بتناغمٍ فريدٍ بين الورد الجوري والياسمين، في مزيجٍ يعبّر عن رُقيٍّ لا يُقال... بل يُحسّ.\nوفي القاعدة، يحتضن المسك والفانيلا وخشب الصندل سكونًا دافئًا يُجسّد الجاذبية ببساطتها، والفخامة في هدوئها.\nعطرٌ يحمل بصمةً مختلفة،\nتُشبه الأناقة حين تُلهم... لا حين تتحدث.\nرويال مسك... فخامة السكون وجاذبية الهدوء.\nالهرم العطري:\nالقمة:ليمون\nالقلب:القرنفل، ورد جوري دمشقي، ياسمين، باودر\nالقاعدة:خشب الصندل، خشب الأرز، المسك، فانيلا.\nإكستريت دو بارفام 34% -50 مل\nالسعر :339 ريال",
+      "en": "A quiet sophistication… translating luxury in its own way.\nRoyal Musk flows like a refined breeze of serenity.\nIt opens with soft touches of lemon that gently awaken the senses, then unfolds into a graceful harmony of Damask rose and jasmine …a blend that speaks of elegance not in words, but in feeling.\nAt the base, musk, vanilla, and sandalwood embrace a warm calmness, reflecting allure in its simplicity and luxury in its stillness.\nA fragrance with a distinctive signature.\nResembling elegance that inspires… not one that needs to speak.\nRoyal Musk... the luxury of stillness and the charm of calm.\nFragrance Pyramid:\nTop Notes: Lemon\nHeart Notes: Cloves, Damask Rose, Jasmine and Powder\nBase Notes: Sandalwood, Cedarwood, Musk and Vanilla.\nConcentration:\nExtrait de Parfum 50 ML\n339 SR\nUnisex",
+      "arSha256": "6df40d95097357fe200cf8727c203761be08ad2559fa488980fc92bf2952fda2",
+      "enSha256": "2d1d54862c8def949de287822212e6bd34d04d185128017e619898d1cb05fe76"
+    },
+    {
+      "headingEn": "ROYAL  JASMINE",
+      "headingAr": "رويال جازمين",
+      "id": 4,
+      "slug": "royal-jasmine",
+      "nameAr": "رويال جازمين",
+      "sku": "6287020840036",
+      "ar": "عطر يفيض بإشراقة الأزهار الملكية.\nيتألق رويال جازمين بتناغم آسر بين البرغموت وزهرة الماندرين والورد، ممهدًا الطريق لقلبٍ مشرق من الياسمين الملكي والمسك.\nتختتم القاعدة بنفحات ناعمة من المسك وطحلب السنديان والعنبر، تترك بصمة أنيقة تدوم.\nيأتي العطر بتصميم راقٍ يحتضن حبيبات اللؤلؤ، ليكون توقيعًا عطريًا يفيض بالرومانسية والدفء، ويعيد إحياء أجمل الذكريات مع كل نفحة.\nرويال جازمين... أناقة تزهر في سكون.\nالهرم العطري:\nالقمة: برغموت، زهرة الماندرين،ورد\nالقلب: مسك ،ياسمين\nالقاعدة: مسك ، طحلب السنديان ،عنبر\nإكستريت دو بارفام 34% -50 مل\nالسعر: 369 ريال",
+      "en": "A fragrance that overflows with the radiance of royal blooms.\nRoyal Jasmine shines with a captivating harmony of bergamot, mandarin blossom, and rose, paving the way for a luminous heart of royal jasmine and musk.\nThe base concludes with soft touches of musk, oakmoss, and warm amber, leaving a graceful trace that lingers.\nPresented in an elegant design adorned with pearl details, it becomes a signature scent that overflows with romance and warmth, reviving the most beautiful memories with every breath.\nRoyal Jasmine... Elegance blooming in stillness.\nFragrance Pyramid:\nTop Notes: Mandarin, Rose, Bergamot\nHeart Notes: Musk, Jasmine\nBase Notes: Musk, Oakmoss, Amber\nConcentration:\nExtrait de Parfum 34% -50 ML\nSR 369\nUnisex",
+      "arSha256": "bd4d50c047371b524d8eb1262f622742fc3c5aeeadf58dbfca539fa5bc57d104",
+      "enSha256": "7830c7243b02e15a1b297b220a0eb4e6cc8817d4f741273e25797b030d93f0fd"
+    },
+    {
+      "headingEn": "Royal Collection",
+      "headingAr": "المجموعة الملكية",
+      "id": null,
+      "slug": null,
+      "nameAr": "المجموعة الملكية",
+      "sku": null,
+      "ar": "عطورك الفاخرة أينما كنت\nاستمتع برفاهية عطور الرويال بحجمها الصغير، المصممة لترافقك في كل لحظة. تضم المجموعة إصدارات مصغّرة من عطورنا الأكثر تميزًا، لتمنحك تجربة فريدة تعكس الأناقة والفخامة في أي وقت وأي مكان.\nبارفام  10 مل /لكل واحدة\nالسعر: 249 ريال",
+      "en": "Luxury at Your Fingertips\nExperience the elegance of The Royal Collection, featuring our signature fragrances in a refined travel-friendly size. Designed for those who seek luxury on the go, this exclusive set brings you the essence of sophistication anytime, anywhere.\nConcentration:\nPARFUM 10 ML/ per one\n249 SR",
+      "arSha256": "094ed884cae4833654b4cfb97e65805e99708ddb0082995ccd3586f0f8137cbd",
+      "enSha256": "eaf78680a42f3954cc485973c0f5934212d4282cb8c6ae4c77fa76774f29c78d"
+    },
+    {
+      "headingEn": "LADY  LULU",
+      "headingAr": "ليدي لولو",
+      "id": 3,
+      "slug": "lady-lulu",
+      "nameAr": "ليدي لولو",
+      "sku": "6287020840050",
+      "ar": "دلالكِ… بصيغة عطر.\nكل شيء يبدأ بلحظة خفيفة؛ كمثرى ناعمة تلتقي بـبندق محمّص، تمتزج مع خيوط بخور هادئة تهمس في الأجواء وتثير فضولاً لا إجابة له.\nثم يتفتح القلب بعذوبة، حيث تذوب الفانيليا الكريمية في جوز الهند وتنساب فوقها زهور الورد والياسمين، تتراقص على إيقاع أنوثة لا تصرخ، لكنها تُقال.\nوفي العمق، يستقر العطر على قاعدة ناعمة من خشب الصندل والمسك والعنبر، تلفّ اللحظة بهدوء فخم وتترك لمسة لا تُنسى.\nلمن تعرف كيف تمرّ بخفة، وتبقى في الذاكرة . … ليدي لولو\nالهرم العطري:\nالقمة: كمثرى، بندق ، بخور\nالقلب: فانيليا، جوز الهند، ورد، ياسمين\nالقاعدة: خشب الصندل، مسك، عنبر\nإكستريت دو بارفام 30% -50 مل\nالسعر : 389 ريال",
+      "en": "Your charm… bottled as a fragrance.\nIt all begins with a delicate touch — soft pear meets toasted hazelnut, blending with whispers of gentle incense that stir the air and spark irresistible curiosity.\nThe heart unfolds with sweetness as creamy vanilla melts into coconut, cascading over rose petals and jasmine blossoms, dancing to the rhythm of understated femininity.\nAt the base, the scent settles into sandalwood, musk, and amber, wrapping the moment in quiet elegance and leaving an unforgettable trace.\nLady Lulu… for the woman who passes lightly yet lingers in memory.\nFragrance Pyramid:\nTop Notes: Pear, Hazelnut, Incense\nHeart Notes: Vanilla, Coconut , Rose, Jasmine\nBase Notes: Sandalwood, Musk, Amber\nConcentration:\nExtrait de Parfum  30% -50 ML\nSR 389\nUnisex",
+      "arSha256": "88bb3a39f3bbcce257a2067dd50f5341e8fbf47a1858309019c7c597dc72be72",
+      "enSha256": "4620fb01e45d3ea8195086efabd8d6bbe541dd0fc8fe085affdde00877647fae"
+    },
+    {
+      "headingEn": "EVORA",
+      "headingAr": "إيفورا",
+      "id": 2,
+      "slug": "evora",
+      "nameAr": "ايفورا",
+      "sku": "6287020840074",
+      "ar": "سحر الجاذبية والتألق\nيبدأ إيفورا نفحاته بـجوز الهند الغني، تتناغم بسلاسة مع لمسات فاكهية نابضة من الليتشي والبرقوق.\nفي القلب، تمتزج الفانيلا الناعمة مع الياسمين والخوخ، لتتوجها قاعدة دافئة من التونكا والمسك والعنبر، تاركة بصمة لا تُنسى.\nكل تفصيل في إيفورا يعكس الفخامة، مع تصميم يحتضن حبيبات اللؤلؤ التي تجسد النقاء والجمال الراقي، ليتفرد بتوقيع عطري يروي حكاية الأناقة والجاذبية في كل لحظة.\nالهرم العطري:\nالقمة: جوز الهند، الليتشي، البرقوق.\nالقلب: الفانيلا، الياسمين، الخوخ.\nالقاعدة: التونكا، المسك، العنبر.\nبارفام 20% - 50 مل\nالسعر: 389 ريال",
+      "en": "The allure of elegance and radiance\nEvora opens with the richness of coconut, seamlessly blended with lively fruity notes of lychee and plum.\nAt its heart, soft vanilla entwines with jasmine and peach, crowned by a warm base of tonka bean, musk, and amber, leaving an unforgettable impression.\nEvery detail of Evora reflects luxury, with a design adorned with pearl accents that embody purity and refined beauty, creating a signature fragrance that tells a story of elegance and irresistible charm in every moment.\nFragrance Pyramid:\nTop Notes: Coconut, Lychee, Plum.\nHeart Notes: Vanilla, Jasmine, Peach.\nBase Notes: Tonka Bean, Musk, Amber.\nConcentration:\nPARFUM 20% - 50 ML\nSR 389\nUnisex",
+      "arSha256": "8c3c7af5b3b0cfe49280ba10bb05c2f06c08f4f0b2f3e339b445febfa8bf0a5b",
+      "enSha256": "cdb4f80aa9ad7f5c6f7031b357c1d54b41ec0e395c565134831f816d96956c49"
+    },
+    {
+      "headingEn": "SOLENN",
+      "headingAr": "سولين",
+      "id": 1,
+      "slug": "solenn",
+      "nameAr": "سولين",
+      "sku": "6287020840067",
+      "ar": "ليس عطرًا… بل أسطورة تُهمس، لا تُقال\nسولين هو سكون مهيب ينبض بالفخامة… يلامسك دون أن يطلب الإذن، ويتسلل كقصيدة خالدة تُروى في اللحظة.\nتفتتحه القرفة الدافئة ممزوجة بلمحات البرتقال الغني، تتداخل معها الشوكولاتة الداكنة والبخور، في طقوس افتتاحية تبعث الهيبة والدهشة معًا.\nوفي القلب، يهمس المُرّ بنعومة، محاطًا بـالجلد والفانيليا، كأنك تغوص في نسيج مخملي من الغموض والترف.\nثم تنساب القاعدة بثباتٍ ساحرمن التونكا الحلوة، خشب الصندل، والعنبر… ختام لا يليق إلا بالعظماء.\nليس توقيعًا عطريًا فحسب، بل هالة من الوقار تختار من يليق بها.  … سولين\nهو الفخامة إذا قررت أن تتجسّد في عبير.\nالهرم العطري:\nالقمة: قرفة، برتقال، شوكولاتة، بخور\nالقلب: مُرّ ،جلد ،فانيليا\nالقاعدة: تونكا ،خشب الصندل ،عنبر\nإكستريت دو بارفام 20% -50 مل\nالسعر: 399 ريال",
+      "en": "Not just a fragrance… but a whispered legend untold.\nSolenn embodies majestic stillness that pulses with luxury — it touches you without asking permission, unfolding like a timeless poem told in the moment.\nIt opens with warm cinnamon blended with hints of rich orange, infused with dark chocolate and incense, creating an opening ritual that evokes both grandeur and wonder.\nAt its heart, myrrh whispers softly, embraced by leathery notes and vanilla, as if diving into a velvety weave of mystery and opulence.\nThe base flows with a captivating steadiness: sweet tonka bean, sandalwood, and amber — a finale worthy only of greatness.\nSolenn… not merely a signature scent, but an aura of dignity that chooses who is worthy.\nLuxury itself, embodied in fragrance.\nFragrance Pyramid:\nTop Notes: Cinnamon , Orange , Chocolate , Incense.\nHeart Notes: Myrrh , Leather , Vanilla.\nBase Notes: Tonka ,Sandalwood, Amber.\nConcentration:\nExtrait de Parfum 25%- 50 ML\nSR 399\nUnisex",
+      "arSha256": "832c0989269fd2cbe88e7d13d4b30b18b2cba65f43d85acd7b7e87eafb18ce4d",
+      "enSha256": "5e6d7148c6dc5cfa8ba8ed331ad4f91d24dfe4abe3bb0f071d2746ac255aba02"
+    },
+    {
+      "headingEn": "LUNÉRA – Hair Mist",
+      "headingAr": "لونيرا – عطر شعر",
+      "id": 8,
+      "slug": "lunera",
+      "nameAr": "لونيرا",
+      "sku": "6287020840081",
+      "ar": "لا يُرى… لكنه يُحسّ، يُلهم، ويُبقي خلفه حكاية.\nتبدأ أولى نفحاته برفرفة من الزعفران والتوت الأحمر والفلفل الأسود، تنساب برقيّ وتوقظ الحواس دون جهد.\nثم يكشف القلب عن وردٍ مخملي ترافقه لمسات بخور وتبغ دافئ تمنح الشعر حضورًا آسِرًا.\nوفي القاعدة، تتجسد الفخامة الصامتة: مِسك أبيض، خشب الصندل، طحلب البلوط، ولمسات عنبر تلفّ الخصلات كوشاح من الهدوء العميق.\nيدمج العطر عناصر عناية ذات تركيبات حريرية ناعمة تمنح الشعر ترطيبًا خفيفًا، لمعانًا رقيقًا، وتترك خصلاتك تنساب بكل سلاسة دون ثِقل — لتبقى اللمسة… أثرًا لا يُقال، بل يُحسّ.\nلونيرا… لأن الشعر لا يحتاج صوتًا ليُعبّر، يكفيه أن يتنفس فخامة.\nالهرم العطري:\nالقمة: زعفران ،توت أحمر ، الفلفل الأسود\nالقلب : ورد  ، بخور ، تبغ\nالقاعدة: مسك ، خشب الصندل ، طحلب البلوط ، عنبر الحوت\nعطر شعر 35 مل\nالسعر:209 ريال",
+      "en": "Unseen… yet deeply felt, inspiring a story that lingers.\nIt opens with a graceful flutter of saffron, red berries, and black pepper, awakening the senses with effortless elegance.\nAt its heart, velvety rose is wrapped in whispers of warm incense and soft tobacco, creating a presence that attracts without announcing itself.\nAt the base, silent luxury unfolds: white musk, sandalwood, oakmoss, and amber delicately veil each strand in refined serenity.\nInfused with lightweight, silk-like conditioning elements, it adds soft shine, gentle hydration, and smoothness—without weighing the hair down.\nA touch that isn’t seen… but unmistakably felt.\nLunéra… because hair doesn’t need a voice to speak — it simply breathes luxury.\nFragrance Pyramid:\nTop Notes: Saffron , Raspberry, Black Pepper\nHeart Notes: Rose, Incense, Tobacco\nBase Notes: Musk , Sandalwood , Oakmoss , Ambergris\nConcentration:\nHair mist  35 ML\nSR 209",
+      "arSha256": "0ffb32e56d8cbc54bb6f74ca9a29c728302d21f09f0a57a35a96d87e0a917a5a",
+      "enSha256": "6492c5a1c150b6db2c911a1f4e3fd303dd17984201df33f989af98ec2549ce68"
+    },
+    {
+      "headingEn": "LUMISK – Hair Mist",
+      "headingAr": "لومسك -عطر شعر",
+      "id": 9,
+      "slug": "lumisk",
+      "nameAr": "لومسك",
+      "sku": "6287020840098",
+      "ar": "ضوء ناعم... يهمس بالمسك.\nعطرٌ يفيض بأنوثةٍ هادئةٍ تجذب دون أن تحاول، يجدها الضوء قبل أن تبحث عنه.\nتبدأ نفحاته بإشراقة ليمونٍ خفيفة تمنح الشعر لمعانًا رقيقًا، ثم يتفتح القلب بورودٍ دمشقية وياسمينٍ كنسمة فجرٍ دافئة،\nتتداخل مع باودر ناعم يضيف عمقًا من السكون والرقة.\nوفي القاعدة، يحتضن الصندل والفانيلا والمسك الخصلات بهدوءٍ فخم.\nمع لمسات عناية مرطّبة وخفيفة تمنح الشعر انسيابية حريرية ولمعانًا طبيعيًا دون أن تثقله\nليترك حضورًا ناعمًا يُحسّ… قبل أن يُرى.\nلومسك... لأن الهدوء يخلق الحضور.\nالهرم العطري:\nالقمة: ليمون\nالقلب: القرنفل، ورد جوري دمشقي، ياسمين، باودر\nالقاعدة: خشب الصندل، خشب الأرز، المسك، فانيلا.\nعطر شعر 35 مل\nالسعر: 209 ريال",
+      "en": "Soft light… whispering of musk.\nA fragrance that radiates quiet femininity—captivating without intent.\nLight finds her before she reaches for it.\nIt opens with a gentle touch of lemon, giving the hair a soft, radiant sheen,\nthen unfolds into Damask rose and jasmine, tender as the first breath of dawn,\nwith a powdery warmth that adds subtle depth and serene grace.\nAt the base, sandalwood, vanilla, and musk rest softly around each strand,\nenhanced with lightweight moisturizing elements that leave the hair silky, smooth, and naturally luminous—never heavy.\nLumisk… because silence creates presence.\nFragrance Pyramid:\nTop Notes; Lemon\nHeart Notes; Cloves, Damask Rose, Jasmine and Powder\nBase Notes; Sandalwood, Cedarwood, Musk and Vanilla.\nConcentration:\nHair mist  35 ML\nSR 209",
+      "arSha256": "d95299c50b33cb0cfc187ccbf82495e4cabf776a826062e9e5ffbd3d3900b6f3",
+      "enSha256": "a6c8460684ec86399d3fc01d498dc5407b72fa77a385623d7199c577b8db7efe"
+    },
+    {
+      "headingEn": "PEACH MUSE – Hair Mist",
+      "headingAr": "بيتش موس – عطر الشعر",
+      "id": 7,
+      "slug": "beach-moss",
+      "nameAr": "بيتش موس",
+      "sku": "6287020840104",
+      "ar": "لحظة نقية… وأثر ساحر.\nيبدأ العطر بنفحات خوخ ناعمة وبرغموت منعش، تتسلل بخفة إلى خصلاتك وتمنحها لمعانًا رقيقًا كأنها خرجت للتو من لحظة صفاء.\nثم تمتزج لمسات جوز الهند بإحساسٍ من النقاء والانتعاش المتجدد،\nقبل أن تنسدل زهور الورد والياسمين بهدوء، تغمر الشعر بهالة ناعمة لا تُنسى.\nوفي القاعدة، تلتف نفحات المسك ونجيل الهند كأثر حريري يلامس من حولك دون إعلان.\nوتم تعزيز العطر بعناصر عناية شعرية خفيفة تمنح الخصلات ترطيبًا حريريًا ولمعانًا طبيعيًا،\nلتبقى كل خصلة ناعمة، منسابة، ومفعمة بالحيوية… دون أي ثِقل.\nبيتش موس… للأنثى التي لا تبحث عن التأثير، بل تخلقه.\nالهرم العطري:\nالقمة: برغموت، خوخ، جوز الهند\nالقلب: ياسمين، ورد ، باتشولي\nالقاعدة: مسك، نجيل الهند\nعطر شعر 35 مل\nالسعر :209 ريال",
+      "en": "A pure moment… with a captivating trace.\nThe fragrance opens with soft peach and fresh bergamot, gently weaving through the hair with a soft, luminous glow—like a moment of clarity captured in scent.\nCoconut adds a touch of purity and refreshing vitality,\nbefore rose and jasmine settle gracefully, enveloping each strand in an unforgettable feminine aura.\nAt the base, musk and vetiver leave a silky, whispering trail—felt, not spoken.\nEnhanced with lightweight, silk-like hair care elements, it provides natural softness, subtle shine, and a smooth, airy texture—without weighing the hair down.\nPeach Muse… for the woman who doesn’t seek to impress — she creates the impression herself.\nFragrance Pyramid:\nTop Notes: Bergamot, Peach, Coconut \nHeart Notes: Jasmine, Rose, Patchouli\nBase Notes: Musk, Vetiver\nConcentration:\nHair mist  35ML\nSR 209",
+      "arSha256": "c3b89859e26e5ba7dab13b94a25545875d6d5c1b5fce15a1b19ea562dd246dad",
+      "enSha256": "8599cd4a9855c2273b21bc6f64bc17176caaaa38919b762361bba61fe548764c"
+    }
+  ]
+}

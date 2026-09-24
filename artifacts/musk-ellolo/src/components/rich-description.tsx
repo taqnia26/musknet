@@ -67,12 +67,13 @@ export function isValidRichDescriptionHref(href: string): boolean {
 }
 
 export function legacyTextToRichDescription(text: string | null | undefined): RichDescription {
-  const lines = (text || '').replace(/\r\n?/g, '\n').split('\n');
-  const blockTexts = lines.length > 100 ? [...lines.slice(0, 99), lines.slice(99).join('\n')] : lines;
-  return { blocks: blockTexts.map((line): RichBlock => ({
+  const normalized = (text || '').replace(/\r\n?/g, '\n');
+  return { blocks: [{
     ...emptyBlock(),
-    content: line ? Array.from({ length: Math.ceil(line.length / 2000) }, (_, i) => ({ text: line.slice(i * 2000, (i + 1) * 2000) })) : [{ text: '' }],
-  })) };
+    content: normalized
+      ? Array.from({ length: Math.ceil(normalized.length / 2000) }, (_, i) => ({ text: normalized.slice(i * 2000, (i + 1) * 2000) }))
+      : [{ text: '' }],
+  }] };
 }
 
 export function richDescriptionToPlainText(value: RichDescription): string {
@@ -91,12 +92,25 @@ const colorStyles: Record<Exclude<RichColor, 'default'>, string> = {
 };
 
 function readInlineContent(root: HTMLElement): RichSpan[] {
+  if (root.childNodes.length === 1 && root.firstChild instanceof HTMLElement && root.firstChild.tagName === 'BR') return [{ text: '' }];
   const output: RichSpan[] = [];
   const appendText = (text: string, format: Omit<RichSpan, 'text'>) => {
-    for (let offset = 0; offset < text.length; offset += 2000) {
-      output.push({ ...format, text: text.slice(offset, offset + 2000) });
+    let remaining = text.replace(/\r\n?/g, '\n');
+    while (remaining) {
+      const last = output[output.length - 1];
+      const sameFormat = last && last.bold === format.bold && last.italic === format.italic
+        && last.underline === format.underline && last.color === format.color && last.href === format.href;
+      if (sameFormat && last.text.length < 2000) {
+        const length = 2000 - last.text.length;
+        last.text += remaining.slice(0, length);
+        remaining = remaining.slice(length);
+      } else {
+        output.push({ ...format, text: remaining.slice(0, 2000) });
+        remaining = remaining.slice(2000);
+      }
     }
   };
+  const isBlock = (node: Node) => node instanceof HTMLElement && (node.tagName === 'DIV' || node.tagName === 'P');
   const walk = (node: Node, inherited: Omit<RichSpan, 'text'> = {}) => {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent || '';
@@ -113,24 +127,25 @@ function readInlineContent(root: HTMLElement): RichSpan[] {
     const href = safeHref(node.getAttribute('href'));
     if (href) next.href = href;
     if (node.tagName === 'BR') {
-      output.push({ ...next, text: '\n' });
+      appendText('\n', next);
       return;
     }
-    const isBlock = node.tagName === 'DIV' || node.tagName === 'P';
-    if (isBlock && output.length && !output[output.length - 1].text.endsWith('\n')) {
-      output.push({ ...next, text: '\n' });
-    }
-    node.childNodes.forEach((child) => walk(child, next));
-    if (isBlock && node.nextSibling && !output[output.length - 1]?.text.endsWith('\n')) {
-      output.push({ ...next, text: '\n' });
-    }
+    // An empty editable paragraph contains a placeholder <br>; its line break
+    // comes from the boundary between blocks, not from that placeholder.
+    if (isBlock(node) && node.childNodes.length === 1 && node.firstChild instanceof HTMLElement && node.firstChild.tagName === 'BR') return;
+    let previous: Node | null = null;
+    node.childNodes.forEach((child) => {
+      if (previous && (isBlock(previous) || isBlock(child))) appendText('\n', next);
+      walk(child, next);
+      previous = child;
+    });
   };
-  root.childNodes.forEach((node) => walk(node));
-  while (output.length && output[output.length - 1].text.endsWith('\n')) {
-    const last = output[output.length - 1];
-    last.text = last.text.slice(0, -1);
-    if (!last.text) output.pop();
-  }
+  let previous: Node | null = null;
+  root.childNodes.forEach((node) => {
+    if (previous && (isBlock(previous) || isBlock(node))) appendText('\n', {});
+    walk(node);
+    previous = node;
+  });
   return output.length ? output : [{ text: '' }];
 }
 

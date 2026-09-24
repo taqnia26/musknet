@@ -1,0 +1,72 @@
+{
+  "environment": "development only",
+  "mode": "--apply",
+  "sourceSha256": "4556e7fc8314d7d5ec0678d7fad6a0b901f935f43d9acabf11a20e2663c453d5",
+  "verifiedAt": "2026-09-24T13:57:51.440Z",
+  "matched": [
+    {
+      "heading": "ROYAL OUD",
+      "id": 6,
+      "slug": "royal-oud"
+    },
+    {
+      "heading": "ROYAL  MUSK",
+      "id": 5,
+      "slug": "royal-musk"
+    },
+    {
+      "heading": "ROYAL  JASMINE",
+      "id": 4,
+      "slug": "royal-jasmine"
+    },
+    {
+      "heading": "LADY  LULU",
+      "id": 3,
+      "slug": "lady-lulu"
+    },
+    {
+      "heading": "EVORA",
+      "id": 2,
+      "slug": "evora"
+    },
+    {
+      "heading": "SOLENN",
+      "id": 1,
+      "slug": "solenn"
+    },
+    {
+      "heading": "LUNÉRA – Hair Mist",
+      "id": 8,
+      "slug": "lunera"
+    },
+    {
+      "heading": "LUMISK – Hair Mist",
+      "id": 9,
+      "slug": "lumisk"
+    },
+    {
+      "heading": "PEACH MUSE – Hair Mist",
+      "id": 7,
+      "slug": "beach-moss"
+    }
+  ],
+  "missing": [
+    "Royal Collection"
+  ],
+  "changed": [],
+  "unchangedCount": 9,
+  "appliedCount": 0,
+  "changedSinceBackup": [
+    6,
+    5,
+    4,
+    3,
+    2,
+    1,
+    8,
+    9,
+    7
+  ],
+  "backupPath": "/home/runner/workspace/.local/task-154-output/prior-descriptions.json",
+  "sourceManifestPath": "/home/runner/workspace/.local/task-154-output/source-manifest.json"
+}

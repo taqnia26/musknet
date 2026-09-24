@@ -58,11 +58,45 @@ describe('rich product descriptions', () => {
     expect(markup).not.toContain('<b>not markup</b>');
   });
 
-  it('keeps long legacy lines and line breaks within the rich format limits', () => {
-    const legacy = [...Array.from({ length: 105 }, (_, index) => `line ${index}`), 'x'.repeat(4500)].join('\n');
+  it('keeps all legacy paragraphs, blank lines and trailing newlines in one rendered block', () => {
+    const legacy = 'first\r\n\r\nsecond\rthird\n';
     const rich = legacyTextToRichDescription(legacy);
-    expect(rich.blocks.length).toBeLessThanOrEqual(100);
-    expect(rich.blocks.every((block) => block.content.every((span) => span.text.length <= 2000))).toBe(true);
+    expect(rich.blocks).toEqual([{
+      type: 'paragraph', align: 'start', effect: 'none', content: [{ text: 'first\n\nsecond\nthird\n' }],
+    }]);
+    const markup = renderToStaticMarkup(<RichDescriptionRenderer description={rich} />);
+    expect(markup.match(/<p\b/g)).toHaveLength(1);
+    expect(markup).toContain('whitespace-pre-wrap');
+    expect(richDescriptionToPlainText(rich)).toBe('first\n\nsecond\nthird\n');
+    expect(legacyTextToRichDescription(null).blocks).toEqual([{ type: 'paragraph', align: 'start', effect: 'none', content: [{ text: '' }] }]);
+  });
+
+  it('keeps long legacy text within the span limit without introducing extra boxes', () => {
+    const legacy = [...Array.from({ length: 105 }, (_, index) => `line ${index}`), '', 'x'.repeat(4500), ''].join('\n');
+    const rich = legacyTextToRichDescription(legacy);
+    expect(rich.blocks).toHaveLength(1);
+    expect(rich.blocks[0].content.length).toBe(Math.ceil(legacy.length / 2000));
+    expect(rich.blocks[0].content.every((span) => span.text.length <= 2000)).toBe(true);
     expect(richDescriptionToPlainText(rich)).toBe(legacy);
+    expect(renderToStaticMarkup(<RichDescriptionRenderer description={rich} />).match(/<p\b/g)).toHaveLength(1);
+  });
+
+  it('preserves deliberately authored rich blocks instead of flattening them as legacy text', () => {
+    const saved = {
+      blocks: [
+        { type: 'heading2', align: 'center', effect: 'fade', effectSpeed: 1.25, content: [{ text: 'Title', bold: true }] },
+        { type: 'bullet', align: 'end', effect: 'none', content: [{ text: 'Visit', href: 'https://example.com' }, { text: ' us', color: 'gold' }] },
+        { type: 'paragraph', align: 'start', effect: 'none', content: [{ text: 'Line one\n\nLine two', italic: true }] },
+      ],
+    };
+    const rich = normalizeRichDescription(saved);
+    expect(rich).toEqual(saved);
+    const markup = renderToStaticMarkup(<RichDescriptionRenderer description={rich!} />);
+    expect(markup).toContain('<h2');
+    expect(markup).toContain('<ul');
+    expect(markup).toContain('href="https://example.com"');
+    expect(markup).toContain('rich-description-effect--fade');
+    expect(markup).toContain('1440ms');
+    expect(markup.match(/<p\b/g)).toHaveLength(1);
   });
 });
