@@ -288,6 +288,13 @@ html.dark.admin-route {
     min-width: 0;
   }
 
+  /* The admin shell scrolls its own main area and sidebar. Prevent the
+     document behind it from exposing an empty second scroll region. */
+  html.admin-route:has(.admin-theme.h-screen),
+  html.admin-route:has(.admin-theme.h-screen) body {
+    overflow: hidden;
+  }
+
   img,
   video {
     max-width: 100%;

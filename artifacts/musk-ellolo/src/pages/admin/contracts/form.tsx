@@ -264,7 +264,7 @@ export default function AdminContractForm() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-20">
+    <div className="space-y-6 max-w-5xl mx-auto pb-4">
       <div className="flex items-center gap-4">
         <Link href={isEditing ? `/admin/contracts/${id}` : "/admin/contracts"}>
           <Button variant="ghost" size="icon" className="shrink-0 rounded-full">
