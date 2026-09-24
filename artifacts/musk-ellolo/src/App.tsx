@@ -13,6 +13,7 @@ import Checkout from '@/pages/checkout';
 import About from '@/pages/about';
 import Policy from '@/pages/policy';
 import Guarantee from '@/pages/guarantee';
+import ExclusiveDestinations from '@/pages/exclusive-destinations';
 import Privacy from '@/pages/privacy';
 import Contact from '@/pages/contact';
 import Account from '@/pages/account';
@@ -65,6 +66,7 @@ function Router() {
         <Route path="/about" component={About} />
         <Route path="/policy" component={Policy} />
         <Route path="/guarantee" component={Guarantee} />
+        <Route path="/products-locator/page-13726912" component={ExclusiveDestinations} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/contact" component={Contact} />
         

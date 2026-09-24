@@ -36,14 +36,14 @@ export function Navbar() {
       children: categoryLinks,
     },
     { href: '/guarantee', ar: 'الضمان', en: 'Guarantee' },
-    { href: '/', ar: 'وجهاتنا الحصرية', en: 'Exclusive Destinations' },
+    { href: '/products-locator/page-13726912', ar: 'وجهاتنا الحصرية', en: 'Exclusive Destinations' },
     { href: '/policy', ar: 'سياساتنا', en: 'Policies' },
   ];
 
   const topLinks = [
     { href: '/about', ar: 'من نحن', en: 'About Us' },
     { href: '/guarantee', ar: 'الضمان', en: 'Guarantee' },
-    { href: '/', ar: 'وجهاتنا الحصرية', en: 'Exclusive Destinations' },
+    { href: '/products-locator/page-13726912', ar: 'وجهاتنا الحصرية', en: 'Exclusive Destinations' },
   ];
 
   return (

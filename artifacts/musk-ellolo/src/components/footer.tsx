@@ -44,7 +44,7 @@ export function Footer() {
           <ul className="space-y-3 text-sm text-gray-400">
             <li><Link href="/about"><span className="hover:text-white transition-colors cursor-pointer">{t('من نحن', 'About Us')}</span></Link></li>
             <li><Link href="/guarantee"><span className="hover:text-white transition-colors cursor-pointer">{t('الضمان', 'Guarantee')}</span></Link></li>
-            <li><Link href="/"><span className="hover:text-white transition-colors cursor-pointer">{t('وجهاتنا الحصرية', 'Exclusive Destinations')}</span></Link></li>
+            <li><Link href="/products-locator/page-13726912"><span className="hover:text-white transition-colors cursor-pointer">{t('وجهاتنا الحصرية', 'Exclusive Destinations')}</span></Link></li>
             <li><Link href="/policy"><span className="hover:text-white transition-colors cursor-pointer">{t('سياساتنا', 'Our Policies')}</span></Link></li>
             <li><Link href="/privacy"><span className="hover:text-white transition-colors cursor-pointer">{t('المدونة', 'Blog')}</span></Link></li>
             <li><Link href="/privacy"><span className="hover:text-white transition-colors cursor-pointer">{t('سياسة الخصوصية', 'Privacy Policy')}</span></Link></li>
