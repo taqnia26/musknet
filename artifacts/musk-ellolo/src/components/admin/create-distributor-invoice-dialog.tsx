@@ -310,17 +310,23 @@ export function CreateDistributorInvoiceDialog() {
                   <SelectContent>{productOptions.map((product) => <SelectItem key={product.id} value={String(product.id)} disabled={lines.some((candidate, candidateIndex) => candidateIndex !== index && candidate.productId === String(product.id))}>{lang === 'ar' ? product.nameAr : product.nameEn}</SelectItem>)}</SelectContent>
                 </Select>
                 <Input type="number" min={1} step={1} value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} aria-label={t('الكمية', 'Quantity')} />
-              <Input type="number" min={0.01} step={0.01} value={line.unitPrice || ''} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} aria-label={t('سعر الوحدة شامل الضريبة', 'Gross unit price including VAT')} />
+              <Input type="number" min={0.01} step={0.01} value={line.unitPrice || ''} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} aria-label={taxTreatment === 'international' ? t('سعر الوحدة', 'Unit price') : t('سعر الوحدة شامل الضريبة', 'Gross unit price including VAT')} />
                 <Button type="button" variant="ghost" size="icon" disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}><Trash2 className="h-4 w-4" /></Button>
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/20 p-4 text-center">
-            <div><p className="text-xs text-muted-foreground">{t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount')}</p><p className="font-semibold">{totals.grossSubtotal.toFixed(2)}</p></div>
+          <div data-testid="distributor-invoice-totals" className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/20 p-4 text-center">
+            <div><p className="text-xs text-muted-foreground">{taxTreatment === 'international' ? t('الإجمالي قبل الخصم', 'Gross before discount') : t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</p><p className="font-semibold">{totals.grossSubtotal.toFixed(2)}</p></div>
             <div><p className="text-xs text-muted-foreground">{t('الخصم', 'Discount')}{selectedSource ? ` (${discountPercent}%)` : ''}</p><p className="font-semibold">-{totals.discount.toFixed(2)}</p></div>
-            <div><p className="text-xs text-muted-foreground">{t('صافي المبلغ قبل الضريبة', 'Net subtotal')}</p><p className="font-semibold">{totals.subtotal.toFixed(2)}</p></div>
-            <div><p className="text-xs text-muted-foreground">{vatRate ? t(`ضريبة القيمة المضافة المستخرجة (${vatRate}%)`, `VAT included (${vatRate}%)`) : t('ضريبة القيمة المضافة (دولي)', 'VAT (international)')}</p><p className="font-semibold">{totals.vat.toFixed(2)}</p></div>
-            <div><p className="text-xs text-muted-foreground">{t('الإجمالي', 'Total')}</p><p className="font-bold text-primary">{totals.total.toFixed(2)}</p></div>
+            {taxTreatment === 'international' ? (
+              <div><p className="text-xs text-muted-foreground">{t('الإجمالي بعد الخصم', 'Total after discount')}</p><p className="font-bold text-primary">{totals.total.toFixed(2)}</p></div>
+            ) : (
+              <>
+                <div><p className="text-xs text-muted-foreground">{t('صافي المبلغ قبل الضريبة', 'Net subtotal')}</p><p className="font-semibold">{totals.subtotal.toFixed(2)}</p></div>
+                <div><p className="text-xs text-muted-foreground">{vatRate ? t(`ضريبة القيمة المضافة المستخرجة (${vatRate}%)`, `VAT included (${vatRate}%)`) : t('ضريبة القيمة المضافة (0%)', 'VAT (0%)')}</p><p className="font-semibold">{totals.vat.toFixed(2)}</p></div>
+                <div><p className="text-xs text-muted-foreground">{t('الإجمالي', 'Total')}</p><p className="font-bold text-primary">{totals.total.toFixed(2)}</p></div>
+              </>
+            )}
           </div>
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
           <Button className="w-full" onClick={submit} disabled={createInvoice.isPending || contractsLoading || uploadedFilesLoading || (pendingUploadedFiles.length > 0 && !selectedSource)}>{createInvoice.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ وإصدار الفاتورة', 'Save and Issue Invoice')}</Button>

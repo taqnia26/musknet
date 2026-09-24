@@ -53,6 +53,7 @@ function InvoiceTemplate({
   const { t, lang } = useLanguage();
   const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const usesContractTerms = Boolean(invoice.contractId || invoice.uploadedContractFileId);
+  const internationalDistributor = invoice.distributorId != null && invoice.taxTreatment === 'international' && invoice.vatAmount === 0;
   const contractDisplayName = invoice.contractNumber || (invoice.uploadedContractFileId
     ? t(`ملف عقد #${invoice.uploadedContractFileId}`, `Contract file #${invoice.uploadedContractFileId}`)
     : '-');
@@ -175,21 +176,23 @@ function InvoiceTemplate({
           {usesContractTerms ? (
             <>
               <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</span>
+                <span>{internationalDistributor ? t('الإجمالي قبل الخصم', 'Gross before discount') : t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</span>
                 <span className="font-mono"><Money value={grossBeforeDiscount} lang={lang} fractionDigits={2} /></span>
               </div>
               <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t(`خصم العقد (${invoice.contractDiscountPercent ?? 0}%)`, `Contract discount (${invoice.contractDiscountPercent ?? 0}%)`)}</span>
                 <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
               </div>
-              <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('صافي المجموع الفرعي بعد الخصم', 'Net subtotal after discount')}</span>
-                <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
-              </div>
-              <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{vatLabel}</span>
-                <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
-              </div>
+              {!internationalDistributor && <>
+                <div className="flex justify-between text-gray-600 px-2 text-sm">
+                  <span>{t('صافي المجموع الفرعي بعد الخصم', 'Net subtotal after discount')}</span>
+                  <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
+                </div>
+                <div className="flex justify-between text-gray-600 px-2 text-sm">
+                  <span>{vatLabel}</span>
+                  <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
+                </div>
+              </>}
               {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t('الشحن', 'Shipping')}</span>
                 <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
@@ -197,19 +200,26 @@ function InvoiceTemplate({
             </>
           ) : (
             <>
-              <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('المجموع الفرعي', 'Subtotal')}</span>
-                <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
-              </div>
-              <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{vatLabel}</span>
-                <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
-              </div>
+              {internationalDistributor ? (
+                <div className="flex justify-between text-gray-600 px-2 text-sm">
+                  <span>{t('الإجمالي قبل الخصم', 'Gross before discount')}</span>
+                  <span className="font-mono"><Money value={grossBeforeDiscount} lang={lang} fractionDigits={2} /></span>
+                </div>
+              ) : <>
+                <div className="flex justify-between text-gray-600 px-2 text-sm">
+                  <span>{t('المجموع الفرعي', 'Subtotal')}</span>
+                  <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
+                </div>
+                <div className="flex justify-between text-gray-600 px-2 text-sm">
+                  <span>{vatLabel}</span>
+                  <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
+                </div>
+              </>}
               {!inclusiveOrderSnapshot && (invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t('الشحن', 'Shipping')}</span>
                 <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
               </div>}
-              {!inclusiveOrderSnapshot && <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
+              {(!inclusiveOrderSnapshot || internationalDistributor) && <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t('الخصم', 'Discount')}</span>
                 <span className="font-mono">-<Money value={invoice.discountAmount ?? 0} lang={lang} fractionDigits={2} /></span>
               </div>}
@@ -230,7 +240,7 @@ function InvoiceTemplate({
             </div>
           )}
            <div data-testid="invoice-total-card" className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
-             <span className="text-[#292728]">{t('الإجمالي', 'Total')}</span>
+              <span className="text-[#292728]">{internationalDistributor && (invoice.shippingAmount ?? 0) === 0 ? t('الإجمالي بعد الخصم', 'Total after discount') : t('الإجمالي', 'Total')}</span>
              <span className="font-mono text-[#292728]"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></span>
            </div>
         </div>
