@@ -16,6 +16,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListDistributorsQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { IntakeAddressFields } from '@/components/admin/intake-address-fields';
+import { emptyIntakeAddress, intakeAddressSchema, intakeAddressPayload, type IntakeAddressField } from '@/lib/intake-address';
 
 const COUNTRY_CODES = `AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW`.split(' ');
 const GCC_COUNTRY_CODES = ['SA', 'AE', 'BH', 'KW', 'OM', 'QA'];
@@ -47,8 +49,28 @@ const distributorSchema = z.object({
   countryCode: z.string().refine((value) => value === '' || /^[A-Z]{2}$/.test(value), {
     message: 'اختر رمز دولة مكوّناً من حرفين كبيرين / Choose a two-letter uppercase country code',
   }),
+  nationalAddressShortCode: z.string().nullable().optional(),
+  district: z.string().nullable().optional(),
+  street: z.string().nullable().optional(),
+  buildingNo: z.string().nullable().optional(),
+  postalCode: z.string().nullable().optional(),
+  additionalNumber: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   isActive: z.boolean().default(true),
+});
+const createDistributorSchema = distributorSchema.superRefine((data, ctx) => {
+  for (const key of ['companyName', 'contactName', 'taxNumber', 'commercialRegistrationNumber', 'email'] as const) {
+    if (!data[key]?.trim()) ctx.addIssue({ code: 'custom', path: [key], message: 'هذا الحقل مطلوب / Required' });
+  }
+  const result = intakeAddressSchema.safeParse({
+    country: data.countryCode, city: data.city ?? '', nationalAddressShortCode: data.nationalAddressShortCode ?? '',
+    district: data.district ?? '', street: data.street ?? '', buildingNo: data.buildingNo ?? '',
+    postalCode: data.postalCode ?? '', additionalNumber: data.additionalNumber ?? '', additionalInfo: data.address ?? '',
+  });
+  if (!result.success) result.error.issues.forEach((issue) => ctx.addIssue({
+    code: 'custom', path: [issue.path[0] === 'country' ? 'countryCode' : issue.path[0] === 'additionalInfo' ? 'address' : issue.path[0]],
+    message: issue.message,
+  }));
 });
 
 export default function AdminDistributors() {
@@ -88,23 +110,36 @@ export default function AdminDistributors() {
   };
 
   const form = useForm<z.infer<typeof distributorSchema>>({
-    resolver: zodResolver(distributorSchema),
-    defaultValues: { companyName: '', contactName: '', phone: '', email: null, city: null, address: null, taxNumber: null, commercialRegistrationNumber: null, countryCode: 'SA', notes: null, isActive: true }
+    resolver: zodResolver(editingId ? distributorSchema : createDistributorSchema),
+    defaultValues: { companyName: '', contactName: '', phone: '', email: '', city: '', address: '', taxNumber: '', commercialRegistrationNumber: '', countryCode: 'SA', notes: null, isActive: true,
+      nationalAddressShortCode: '', district: '', street: '', buildingNo: '', postalCode: '', additionalNumber: '' }
   });
 
   const onSubmit = (data: z.infer<typeof distributorSchema>) => {
+    const address = !editingId ? intakeAddressPayload({
+      country: data.countryCode, city: data.city ?? '', nationalAddressShortCode: data.nationalAddressShortCode ?? '',
+      district: data.district ?? '', street: data.street ?? '', buildingNo: data.buildingNo ?? '',
+      postalCode: data.postalCode ?? '', additionalNumber: data.additionalNumber ?? '', additionalInfo: data.address ?? '',
+    }) : null;
     const payload = {
       ...data,
       companyName: data.companyName.trim(),
       contactName: data.contactName.trim(),
       phone: normalizePhone(data.phone),
-      email: normalizeOptional(data.email),
-      city: normalizeOptional(data.city),
+      email: editingId ? normalizeOptional(data.email) : data.email?.trim() ?? '',
+      city: editingId ? normalizeOptional(data.city) : data.city?.trim() ?? '',
       address: normalizeOptional(data.address),
-      taxNumber: normalizeOptional(data.taxNumber),
-      commercialRegistrationNumber: normalizeOptional(data.commercialRegistrationNumber),
-      countryCode: data.countryCode || null,
+      taxNumber: editingId ? normalizeOptional(data.taxNumber) : data.taxNumber?.trim() ?? '',
+      commercialRegistrationNumber: editingId ? normalizeOptional(data.commercialRegistrationNumber) : data.commercialRegistrationNumber?.trim() ?? '',
+      countryCode: data.countryCode,
       notes: normalizeOptional(data.notes),
+      ...(!editingId && address ? {
+        countryCode: address.country, city: address.city,
+        nationalAddressShortCode: address.nationalAddressShortCode,
+        district: address.district, street: address.street, buildingNo: address.buildingNo,
+        postalCode: address.postalCode, additionalNumber: address.additionalNumber,
+        address: address.additionalInfo,
+      } : {}),
     };
     if (editingId) {
       updateMutation.mutate({ id: editingId, data: payload }, {
@@ -122,7 +157,9 @@ export default function AdminDistributors() {
         }),
       });
     } else {
-      createMutation.mutate({ data: payload }, {
+      createMutation.mutate({ data: { ...payload, email: data.email?.trim() ?? '', city: data.city?.trim() ?? '',
+        countryCode: address!.country, taxNumber: data.taxNumber?.trim() ?? '',
+        commercialRegistrationNumber: data.commercialRegistrationNumber?.trim() ?? '' } }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListDistributorsQueryKey() });
           setIsDialogOpen(false);
@@ -150,6 +187,9 @@ export default function AdminDistributors() {
       taxNumber: distributor.taxNumber,
       commercialRegistrationNumber: distributor.commercialRegistrationNumber,
       countryCode: distributor.countryCode ?? '',
+      nationalAddressShortCode: distributor.nationalAddressShortCode,
+      district: distributor.district, street: distributor.street, buildingNo: distributor.buildingNo,
+      postalCode: distributor.postalCode, additionalNumber: distributor.additionalNumber,
       notes: distributor.notes,
       isActive: distributor.isActive
     });
@@ -171,7 +211,7 @@ export default function AdminDistributors() {
                 {t('إضافة موزع', 'Add Distributor')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+             <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingId ? t('تعديل موزع', 'Edit Distributor') : t('إضافة موزع', 'Add Distributor')}</DialogTitle>
             </DialogHeader>
@@ -195,7 +235,7 @@ export default function AdminDistributors() {
                 })}
                 className="space-y-4"
               >
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField control={form.control} name="companyName" render={({ field }) => (
                     <FormItem><FormLabel>{t('اسم الشركة', 'Company Name')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
@@ -206,7 +246,7 @@ export default function AdminDistributors() {
                 <FormField control={form.control} name="commercialRegistrationNumber" render={({ field }) => (
                   <FormItem><FormLabel>{t('رقم السجل التجاري', 'Commercial Registration Number')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="countryCode" render={({ field }) => (
+                {editingId && <FormField control={form.control} name="countryCode" render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('الدولة / رمز ISO-2', 'Country / ISO-2 code')}</FormLabel>
                     <FormControl>
@@ -228,8 +268,8 @@ export default function AdminDistributors() {
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )} />
-                <div className="grid grid-cols-2 gap-4">
+                )} />}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField control={form.control} name="phone" render={({ field }) => (
                     <FormItem><FormLabel>{t('رقم الهاتف', 'Phone')}</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                   )} />
@@ -237,7 +277,7 @@ export default function AdminDistributors() {
                     <FormItem><FormLabel>{t('البريد الإلكتروني', 'Email')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField control={form.control} name="city" render={({ field }) => (
                     <FormItem><FormLabel>{t('المدينة', 'City')}</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
                   )} />
@@ -245,9 +285,29 @@ export default function AdminDistributors() {
                     <FormItem><FormLabel>{t('الرقم الضريبي', 'Tax Number')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
-                <FormField control={form.control} name="address" render={({ field }) => (
+                {editingId ? <FormField control={form.control} name="address" render={({ field }) => (
                   <FormItem><FormLabel>{t('العنوان', 'Address')}</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
-                )} />
+                )} /> : <IntakeAddressFields id="distributor-address" value={{
+                  country: form.watch('countryCode'), city: form.watch('city') ?? '',
+                  nationalAddressShortCode: form.watch('nationalAddressShortCode') ?? '',
+                  district: form.watch('district') ?? '', street: form.watch('street') ?? '',
+                  buildingNo: form.watch('buildingNo') ?? '', postalCode: form.watch('postalCode') ?? '',
+                  additionalNumber: form.watch('additionalNumber') ?? '', additionalInfo: form.watch('address') ?? '',
+                }} onChange={(key: IntakeAddressField, next) => form.setValue(
+                  key === 'country' ? 'countryCode' : key === 'additionalInfo' ? 'address' : key, next,
+                  { shouldValidate: true },
+                )} errors={{
+                  country: form.formState.errors.countryCode?.message, city: form.formState.errors.city?.message,
+                  nationalAddressShortCode: form.formState.errors.nationalAddressShortCode?.message,
+                  district: form.formState.errors.district?.message, street: form.formState.errors.street?.message,
+                  buildingNo: form.formState.errors.buildingNo?.message, postalCode: form.formState.errors.postalCode?.message,
+                  additionalNumber: form.formState.errors.additionalNumber?.message, additionalInfo: form.formState.errors.address?.message,
+                }} />}
+                {editingId && form.watch('nationalAddressShortCode') && <p className="rounded-md border p-3 text-sm">
+                  {t('الرمز المختصر للعنوان الوطني', 'National address short code')}: {form.watch('nationalAddressShortCode')}
+                  {' — '}{[form.watch('district'), form.watch('street'), form.watch('buildingNo'),
+                    form.watch('postalCode'), form.watch('additionalNumber')].filter(Boolean).join('، ')}
+                </p>}
                 <Button data-testid="button-save-distributor" type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ', 'Save')}
                 </Button>

@@ -3954,6 +3954,8 @@ components:
         city: { type: string }
         country: { type: [string, "null"] }
         nationalAddressShortCode: { type: [string, "null"] }
+        postalCode: { type: [string, "null"] }
+        additionalNumber: { type: [string, "null"] }
         district: { type: string }
         street: { type: string }
         buildingNo: { type: string }
@@ -4284,6 +4286,7 @@ components:
         phone: { type: string }
         name: { type: string }
         email: { type: [string, "null"] }
+        profileAddress: { $ref: "#/components/schemas/AdminProfileAddress" }
         phoneVerified: { type: boolean }
         isActive: { type: boolean }
         createdAt: { type: string, format: date-time }
@@ -4291,11 +4294,38 @@ components:
     AdminCustomerInput:
       type: object
       additionalProperties: false
-      required: [name, phone]
+      required: [name, phone, email, profileAddress]
       properties:
         name: { type: string, minLength: 1 }
         phone: { type: string, minLength: 8 }
-        email: { type: [string, "null"], pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$' }
+        email: { type: string, pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$' }
+        profileAddress: { $ref: "#/components/schemas/AdminProfileAddressInput" }
+    AdminProfileAddress:
+      type: [object, "null"]
+      required: [country, city, nationalAddressShortCode, district, street, buildingNo, postalCode, additionalNumber, additionalInfo]
+      properties:
+        country: { type: [string, "null"] }
+        city: { type: string }
+        nationalAddressShortCode: { type: [string, "null"] }
+        district: { type: string }
+        street: { type: string }
+        buildingNo: { type: string }
+        postalCode: { type: [string, "null"] }
+        additionalNumber: { type: [string, "null"] }
+        additionalInfo: { type: [string, "null"] }
+    AdminProfileAddressInput:
+      type: object
+      required: [country, city]
+      properties:
+        country: { type: string }
+        city: { type: string }
+        nationalAddressShortCode: { type: [string, "null"] }
+        district: { type: [string, "null"] }
+        street: { type: [string, "null"] }
+        buildingNo: { type: [string, "null"] }
+        postalCode: { type: [string, "null"] }
+        additionalNumber: { type: [string, "null"] }
+        additionalInfo: { type: [string, "null"] }
     AdminCustomerUpdate:
       type: object
       properties:
@@ -4419,6 +4449,12 @@ components:
         city: { type: [string, "null"] }
         countryCode: { type: [string, "null"] }
         address: { type: [string, "null"] }
+        nationalAddressShortCode: { type: [string, "null"] }
+        district: { type: [string, "null"] }
+        street: { type: [string, "null"] }
+        buildingNo: { type: [string, "null"] }
+        postalCode: { type: [string, "null"] }
+        additionalNumber: { type: [string, "null"] }
         taxNumber: { type: [string, "null"] }
         commercialRegistrationNumber: { type: [string, "null"] }
         notes: { type: [string, "null"] }
@@ -4427,21 +4463,45 @@ components:
         updatedAt: { type: string, format: date-time }
     AdminDistributorInput:
       type: object
-      required: [companyName, contactName, phone]
+      required: [companyName, contactName, phone, email, city, countryCode, taxNumber, commercialRegistrationNumber]
       properties:
         companyName: { type: string, minLength: 1 }
         contactName: { type: string, minLength: 1 }
-        email: { type: [string, "null"] }
+        email: { type: string, pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$' }
         phone: { type: string, minLength: 1, pattern: '^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$' }
         city: { type: [string, "null"] }
         countryCode: { type: [string, "null"], pattern: '^[A-Za-z]{2}$' }
         address: { type: [string, "null"] }
+        nationalAddressShortCode: { type: [string, "null"] }
+        district: { type: [string, "null"] }
+        street: { type: [string, "null"] }
+        buildingNo: { type: [string, "null"] }
+        postalCode: { type: [string, "null"] }
+        additionalNumber: { type: [string, "null"] }
         taxNumber: { type: [string, "null"] }
         commercialRegistrationNumber: { type: [string, "null"] }
         notes: { type: [string, "null"] }
         isActive: { type: boolean }
     AdminDistributorUpdate:
-      allOf: [{ $ref: "#/components/schemas/AdminDistributorInput" }]
+      type: object
+      properties:
+        companyName: { type: string }
+        contactName: { type: string }
+        phone: { type: string, minLength: 1, pattern: '^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$' }
+        email: { type: [string, "null"] }
+        city: { type: [string, "null"] }
+        countryCode: { type: [string, "null"] }
+        address: { type: [string, "null"] }
+        taxNumber: { type: [string, "null"] }
+        commercialRegistrationNumber: { type: [string, "null"] }
+        nationalAddressShortCode: { type: [string, "null"] }
+        district: { type: [string, "null"] }
+        street: { type: [string, "null"] }
+        buildingNo: { type: [string, "null"] }
+        postalCode: { type: [string, "null"] }
+        additionalNumber: { type: [string, "null"] }
+        notes: { type: [string, "null"] }
+        isActive: { type: boolean }
     AdminStaffInput:
       type: object
       required: [email, name, jobTitle, phone, password]

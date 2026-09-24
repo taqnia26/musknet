@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { intakeAddressSchema, intakeAddressPayload } from './intake-address';
 
 export const normalizePhone = (value: string) => value.trim()
   .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
@@ -13,7 +14,8 @@ export const createCustomerSchema = z.object({
     const phone = normalizePhone(value);
     return /^\+?[\d\s().-]+$/.test(phone) && /^\d{8,15}$/.test(phone.replace(/\D/g, ''));
   }, 'أدخل رقم هاتف من 8 إلى 15 رقماً / Enter a phone number with 8–15 digits'),
-  email: emailSchema,
+  email: z.string().email('أدخل بريداً إلكترونياً صالحاً / Enter a valid email address'),
+  profileAddress: intakeAddressSchema,
 });
 export const editCustomerSchema = z.object({ name: nameSchema, email: emailSchema, isActive: z.boolean() });
 export type CreateCustomerValues = z.infer<typeof createCustomerSchema>;
@@ -22,7 +24,8 @@ export type EditCustomerValues = z.infer<typeof editCustomerSchema>;
 export const customerPayload = (data: CreateCustomerValues) => ({
   name: data.name.trim(),
   phone: normalizePhone(data.phone).replace(/\D/g, ''),
-  email: data.email.trim() || null,
+  email: data.email.trim(),
+  profileAddress: intakeAddressPayload(data.profileAddress),
 });
 
 export function customerCreateError(error: unknown, fallback: string, duplicateMessage: string) {

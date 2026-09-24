@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminProfileAddress } from './adminProfileAddress';
 
 export interface AdminCustomer {
   id: number;
@@ -12,6 +13,7 @@ export interface AdminCustomer {
   name: string;
   /** @nullable */
   email?: string | null;
+  profileAddress?: AdminProfileAddress | null;
   phoneVerified: boolean;
   isActive: boolean;
   createdAt: Date;

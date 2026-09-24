@@ -24,6 +24,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { sortProductsForSelection } from '@/lib/product-sort';
 import { hasPermission } from '@/lib/permissions';
 import { createCustomerSchema, customerPayload, customerCreateError, type CreateCustomerValues } from '@/lib/customer-create';
+import { emptyIntakeAddress, type IntakeAddressField } from '@/lib/intake-address';
+import { IntakeAddressFields } from './intake-address-fields';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -58,7 +60,7 @@ export function CreateOrderDialog() {
   const [newCustomer, setNewCustomer] = useState<{ id: number; name: string; phone: string } | null>(null);
   const customerForm = useForm<CreateCustomerValues>({
     resolver: zodResolver(createCustomerSchema),
-    defaultValues: { name: '', phone: '', email: '' },
+    defaultValues: { name: '', phone: '', email: '', profileAddress: emptyIntakeAddress() },
   });
 
   const { data: currentUser } = useGetAdminMe();
@@ -215,8 +217,11 @@ export function CreateOrderDialog() {
                      <FormItem><FormLabel>{t('رقم الهاتف *', 'Phone number *')}</FormLabel><FormControl><Input {...field} dir="ltr" type="tel" /></FormControl><FormMessage /></FormItem>
                    )} />
                    <FormField control={customerForm.control} name="email" render={({ field }) => (
-                     <FormItem><FormLabel>{t('البريد الإلكتروني (اختياري)', 'Email (optional)')}</FormLabel><FormControl><Input {...field} dir="ltr" type="email" /></FormControl><FormMessage /></FormItem>
+                      <FormItem><FormLabel>{t('البريد الإلكتروني *', 'Email *')}</FormLabel><FormControl><Input {...field} dir="ltr" type="email" /></FormControl><FormMessage /></FormItem>
                    )} />
+                    <IntakeAddressFields id="inline-customer-address" value={customerForm.watch('profileAddress')}
+                      onChange={(key: IntakeAddressField, next) => customerForm.setValue(`profileAddress.${key}`, next, { shouldValidate: true })}
+                      errors={Object.fromEntries(Object.entries(customerForm.formState.errors.profileAddress ?? {}).map(([key, error]) => [key, typeof error === 'object' && error && 'message' in error ? String(error.message) : undefined]))} />
                    {customerError && <p role="alert" className="text-sm text-destructive">{customerError}</p>}
                    <Button type="submit" disabled={createCustomer.isPending}>{createCustomer.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ العميل', 'Save customer')}</Button>
                  </form>

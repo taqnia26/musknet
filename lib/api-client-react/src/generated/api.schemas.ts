@@ -1803,6 +1803,10 @@ export interface AdminOrderAddress {
   country?: string | null;
   /** @nullable */
   nationalAddressShortCode?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
   district: string;
   street: string;
   buildingNo: string;
@@ -2924,28 +2928,64 @@ export interface AdminCampaignUpdate {
   couponIds?: number[];
 }
 
+/**
+ * @nullable
+ */
+export type AdminProfileAddress = {
+  /** @nullable */
+  country: string | null;
+  city: string;
+  /** @nullable */
+  nationalAddressShortCode: string | null;
+  district: string;
+  street: string;
+  buildingNo: string;
+  /** @nullable */
+  postalCode: string | null;
+  /** @nullable */
+  additionalNumber: string | null;
+  /** @nullable */
+  additionalInfo: string | null;
+} | null;
 export interface AdminCustomer {
   id: number;
   phone: string;
   name: string;
   /** @nullable */
   email?: string | null;
+  profileAddress?: AdminProfileAddress | null;
   phoneVerified: boolean;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
+export interface AdminProfileAddressInput {
+  country: string;
+  city: string;
+  /** @nullable */
+  nationalAddressShortCode?: string | null;
+  /** @nullable */
+  district?: string | null;
+  /** @nullable */
+  street?: string | null;
+  /** @nullable */
+  buildingNo?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  /** @nullable */
+  additionalInfo?: string | null;
+}
 export interface AdminCustomerInput {
   /** @minLength 1 */
   name: string;
   /** @minLength 8 */
   phone: string;
-  /**
-     * @nullable
-     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
-     */
-  email?: string | null;
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
+  profileAddress: AdminProfileAddressInput;
 }
 
 export interface AdminCustomerUpdate {
@@ -3127,6 +3167,18 @@ export interface AdminDistributor {
   /** @nullable */
   address?: string | null;
   /** @nullable */
+  nationalAddressShortCode?: string | null;
+  /** @nullable */
+  district?: string | null;
+  /** @nullable */
+  street?: string | null;
+  /** @nullable */
+  buildingNo?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  /** @nullable */
   taxNumber?: string | null;
   /** @nullable */
   commercialRegistrationNumber?: string | null;
@@ -3142,19 +3194,56 @@ export interface AdminDistributorInput {
   companyName: string;
   /** @minLength 1 */
   contactName: string;
-  /** @nullable */
-  email?: string | null;
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
   /**
      * @minLength 1
      * @pattern ^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$
      */
   phone: string;
   /** @nullable */
-  city?: string | null;
+  city: string | null;
   /**
      * @nullable
      * @pattern ^[A-Za-z]{2}$
      */
+  countryCode: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  nationalAddressShortCode?: string | null;
+  /** @nullable */
+  district?: string | null;
+  /** @nullable */
+  street?: string | null;
+  /** @nullable */
+  buildingNo?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  /** @nullable */
+  taxNumber: string | null;
+  /** @nullable */
+  commercialRegistrationNumber: string | null;
+  /** @nullable */
+  notes?: string | null;
+  isActive?: boolean;
+}
+
+export interface AdminDistributorUpdate {
+  companyName?: string;
+  contactName?: string;
+  /**
+     * @minLength 1
+     * @pattern ^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$
+     */
+  phone?: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
   countryCode?: string | null;
   /** @nullable */
   address?: string | null;
@@ -3163,12 +3252,21 @@ export interface AdminDistributorInput {
   /** @nullable */
   commercialRegistrationNumber?: string | null;
   /** @nullable */
+  nationalAddressShortCode?: string | null;
+  /** @nullable */
+  district?: string | null;
+  /** @nullable */
+  street?: string | null;
+  /** @nullable */
+  buildingNo?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  /** @nullable */
   notes?: string | null;
   isActive?: boolean;
 }
-
-export type AdminDistributorUpdate = AdminDistributorInput;
-
 export interface AdminStaffInput {
   email: string;
   /** @minLength 1 */
@@ -4982,4 +5080,3 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
-

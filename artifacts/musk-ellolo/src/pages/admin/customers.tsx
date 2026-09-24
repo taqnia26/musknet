@@ -18,6 +18,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useQueryClient } from '@tanstack/react-query';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { createCustomerSchema, editCustomerSchema, customerPayload, customerCreateError, type CreateCustomerValues, type EditCustomerValues } from '@/lib/customer-create';
+import { emptyIntakeAddress, type IntakeAddressField } from '@/lib/intake-address';
+import { IntakeAddressFields } from '@/components/admin/intake-address-fields';
 
 export default function AdminCustomers() {
   const { t } = useLanguage();
@@ -31,7 +33,7 @@ export default function AdminCustomers() {
   const createMutation = useAdminCreateCustomer();
   const updateMutation = useAdminUpdateCustomer();
   const createForm = useForm<CreateCustomerValues>({
-    resolver: zodResolver(createCustomerSchema), defaultValues: { name: '', phone: '', email: '' },
+    resolver: zodResolver(createCustomerSchema), defaultValues: { name: '', phone: '', email: '', profileAddress: emptyIntakeAddress() },
   });
   const editForm = useForm<EditCustomerValues>({
     resolver: zodResolver(editCustomerSchema), defaultValues: { name: '', email: '', isActive: true },
@@ -44,11 +46,11 @@ export default function AdminCustomers() {
   const close = () => {
     setMode(null);
     setSelectedCustomer(null);
-    createForm.reset({ name: '', phone: '', email: '' });
+    createForm.reset({ name: '', phone: '', email: '', profileAddress: emptyIntakeAddress() });
     editForm.reset({ name: '', email: '', isActive: true });
   };
   const openCreate = () => {
-    createForm.reset({ name: '', phone: '', email: '' });
+    createForm.reset({ name: '', phone: '', email: '', profileAddress: emptyIntakeAddress() });
     setSelectedCustomer(null);
     setMode('create');
   };
@@ -108,13 +110,13 @@ export default function AdminCustomers() {
       </div>
 
       <Dialog open={mode !== null} onOpenChange={(open) => { if (!open) close(); }}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{mode === 'create' ? t('إضافة عميل', 'Add Customer') : t('تعديل بيانات العميل', 'Edit Customer')}</DialogTitle>
           </DialogHeader>
           {mode === 'create' ? (
             <Form {...createForm}>
-              <form onSubmit={createForm.handleSubmit(onCreate)} className="space-y-4">
+               <form onSubmit={createForm.handleSubmit(onCreate)} className="space-y-4">
                 <FormField control={createForm.control} name="name" render={({ field }) => (
                   <FormItem><FormLabel>{t('اسم العميل *', 'Customer name *')}</FormLabel><FormControl><Input {...field} data-testid="input-customer-name" /></FormControl><FormMessage /></FormItem>
                 )} />
@@ -122,8 +124,11 @@ export default function AdminCustomers() {
                   <FormItem><FormLabel>{t('رقم الهاتف *', 'Phone number *')}</FormLabel><FormControl><Input {...field} data-testid="input-customer-phone" type="tel" dir="ltr" placeholder="966501234567" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={createForm.control} name="email" render={({ field }) => (
-                  <FormItem><FormLabel>{t('البريد الإلكتروني (اختياري)', 'Email (optional)')}</FormLabel><FormControl><Input {...field} type="email" dir="ltr" /></FormControl><FormMessage /></FormItem>
+                   <FormItem><FormLabel>{t('البريد الإلكتروني *', 'Email *')}</FormLabel><FormControl><Input {...field} type="email" dir="ltr" /></FormControl><FormMessage /></FormItem>
                 )} />
+                 <IntakeAddressFields id="customer-address" value={createForm.watch('profileAddress')}
+                   onChange={(key: IntakeAddressField, next) => createForm.setValue(`profileAddress.${key}`, next, { shouldValidate: true })}
+                   errors={Object.fromEntries(Object.entries(createForm.formState.errors.profileAddress ?? {}).map(([key, error]) => [key, typeof error === 'object' && error && 'message' in error ? String(error.message) : undefined]))} />
                 <Button data-testid="button-save-customer" type="submit" className="w-full" disabled={createMutation.isPending}>
                   {createMutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('إضافة عميل', 'Add Customer')}
                 </Button>
@@ -138,6 +143,14 @@ export default function AdminCustomers() {
                 <FormField control={editForm.control} name="email" render={({ field }) => (
                   <FormItem><FormLabel>{t('البريد الإلكتروني', 'Email')}</FormLabel><FormControl><Input {...field} type="email" dir="ltr" /></FormControl><FormMessage /></FormItem>
                 )} />
+                 {selectedCustomer?.profileAddress && <div className="rounded-md border p-3 text-sm">
+                   <strong>{t('عنوان الملف', 'Profile address')}</strong>
+                   <p>{[selectedCustomer.profileAddress.country, selectedCustomer.profileAddress.city,
+                     selectedCustomer.profileAddress.nationalAddressShortCode, selectedCustomer.profileAddress.district,
+                     selectedCustomer.profileAddress.street, selectedCustomer.profileAddress.buildingNo,
+                     selectedCustomer.profileAddress.postalCode, selectedCustomer.profileAddress.additionalNumber,
+                     selectedCustomer.profileAddress.additionalInfo].filter(Boolean).join('، ')}</p>
+                 </div>}
                 <Button type="submit" className="w-full" disabled={updateMutation.isPending}>
                   {updateMutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ التغييرات', 'Save Changes')}
                 </Button>

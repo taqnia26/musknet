@@ -13,6 +13,8 @@ export const orderAddressesTable = pgTable("storefront_order_addresses", {
   district: text("district").notNull(),
   street: text("street").notNull(),
   buildingNo: text("building_no").notNull(),
+  postalCode: text("postal_code"),
+  additionalNumber: text("additional_number"),
   additionalInfo: text("additional_info"),
   isDefault: boolean("is_default").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

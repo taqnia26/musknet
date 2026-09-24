@@ -5,6 +5,40 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminDistributorInput } from './adminDistributorInput';
 
-export type AdminDistributorUpdate = AdminDistributorInput;
+export interface AdminDistributorUpdate {
+  companyName?: string;
+  contactName?: string;
+  /**
+     * @minLength 1
+     * @pattern ^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$
+     */
+  phone?: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  countryCode?: string | null;
+  /** @nullable */
+  address?: string | null;
+  /** @nullable */
+  taxNumber?: string | null;
+  /** @nullable */
+  commercialRegistrationNumber?: string | null;
+  /** @nullable */
+  nationalAddressShortCode?: string | null;
+  /** @nullable */
+  district?: string | null;
+  /** @nullable */
+  street?: string | null;
+  /** @nullable */
+  buildingNo?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  isActive?: boolean;
+}

@@ -39,3 +39,4 @@
 - [RTL contract date controls](rtl-contract-date-controls.md) — native date segments can overlap placeholders in Arabic dialogs; keep contract dates visibly ISO without changing submitted days.
 - [Perfume source fidelity](perfume-source-fidelity.md) — preserve bilingual source differences and textual prices without changing sales data.
 - [Product reference direction](product-reference-direction.md) — explicit desktop right-details/left-image requirement overrides the recording’s opposite orientation.
+- [Customer profile address identity](customer-profile-address-identity.md) — keep manually captured profile addresses distinct from mutable storefront default-shipping selection.

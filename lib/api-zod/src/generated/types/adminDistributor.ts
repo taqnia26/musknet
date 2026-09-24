@@ -20,6 +20,18 @@ export interface AdminDistributor {
   /** @nullable */
   address?: string | null;
   /** @nullable */
+  nationalAddressShortCode?: string | null;
+  /** @nullable */
+  district?: string | null;
+  /** @nullable */
+  street?: string | null;
+  /** @nullable */
+  buildingNo?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  /** @nullable */
   taxNumber?: string | null;
   /** @nullable */
   commercialRegistrationNumber?: string | null;

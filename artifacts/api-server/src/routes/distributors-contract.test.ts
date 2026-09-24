@@ -4,7 +4,8 @@ import * as Api from "@workspace/api-zod";
 const validDistributor = {
   companyName: "شركة اختبار",
   contactName: "مسؤول الاختبار",
-  email: null,
+  email: "test@example.com",
+  countryCode: "SA", city: "Riyadh", taxNumber: "300012345678901", commercialRegistrationNumber: "1010123456",
 };
 
 describe("distributor phone contract", () => {

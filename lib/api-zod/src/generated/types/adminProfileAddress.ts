@@ -6,21 +6,22 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AdminOrderAddress {
-  label: string;
+/**
+ * @nullable
+ */
+export type AdminProfileAddress = {
+  /** @nullable */
+  country: string | null;
   city: string;
   /** @nullable */
-  country?: string | null;
-  /** @nullable */
-  nationalAddressShortCode?: string | null;
-  /** @nullable */
-  postalCode?: string | null;
-  /** @nullable */
-  additionalNumber?: string | null;
+  nationalAddressShortCode: string | null;
   district: string;
   street: string;
   buildingNo: string;
   /** @nullable */
+  postalCode: string | null;
+  /** @nullable */
+  additionalNumber: string | null;
+  /** @nullable */
   additionalInfo: string | null;
-  isDefault: boolean;
-}
+} | null;

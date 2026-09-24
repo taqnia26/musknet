@@ -13,6 +13,7 @@ import {
   accountingAccountsTable,
   categoriesTable,
   customersTable,
+  addressesTable,
   db,
   inventoryBalancesTable,
   inventoryMovementsTable,
@@ -37,6 +38,7 @@ import * as accounting from "../lib/accounting";
 import * as invoiceEmail from "../lib/invoice-email";
 import * as Api from "@workspace/api-zod";
 import { LocalContractStorage } from "../lib/local-contract-storage";
+import { addAddress, deleteAddress } from "../lib/storefront";
 
 const seedEmail = `route-super-${Date.now()}@example.com`;
 const createdIds: number[] = [];
@@ -48,6 +50,12 @@ let categoryId: number;
 let productId: number;
 let customerId: number;
 let manualCustomerId: number;
+const intakeSaudi = {
+  country: "SA", city: "Riyadh", nationalAddressShortCode: "RYDH1234",
+  district: "Olaya", street: "King Road", buildingNo: "24",
+  postalCode: "12345", additionalNumber: "6789",
+};
+const intakeInternational = { country: "AE", city: "Dubai", additionalInfo: "Office 5, Marina Tower, Dubai" };
 let orderId: number;
 let createdAdminOrderId: number;
 let inventoryCreatedProductId: number;
@@ -56,7 +64,9 @@ let previousSmsaIntegration: typeof adminIntegrationsTable.$inferSelect | undefi
 
 describe("admin validation contracts", () => {
   it("accepts practical phone formats but rejects alphabetic or implausible values", () => {
-    const valid = { companyName: "شركة اختبار", contactName: "مسؤول", phone: "+966 (50) 123-4567" };
+    const valid = { companyName: "شركة اختبار", contactName: "مسؤول", phone: "+966 (50) 123-4567",
+      email: "company@example.com", countryCode: "SA", city: "Riyadh", taxNumber: "300012345678901",
+      commercialRegistrationNumber: "1010123456" };
     expect(Api.AdminCreateDistributorBody.safeParse(valid).success).toBe(true);
     expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, countryCode: "AE" }).success).toBe(true);
     expect(Api.AdminCreateDistributorBody.safeParse({ ...valid, countryCode: null }).success).toBe(true);
@@ -345,7 +355,7 @@ describe.sequential("admin route authorization", () => {
     }
     const url = "/api/admin/customers";
     const uniquePhone = `9665${String(Date.now()).slice(-8)}`;
-    const payload = { name: "  عميل جديد  ", phone: `+${uniquePhone.slice(0, 3)} ${uniquePhone.slice(3, 5)} ${uniquePhone.slice(5)}`, email: "new@example.com" };
+    const payload = { name: "  عميل جديد  ", phone: `+${uniquePhone.slice(0, 3)} ${uniquePhone.slice(3, 5)} ${uniquePhone.slice(5)}`, email: "new@example.com", profileAddress: intakeSaudi };
     await request(app).post(url).send(payload).expect(401);
     await request(app).post(url).set("Authorization", `Bearer ${viewerToken}`).send(payload).expect(403);
     const admin = { Authorization: `Bearer ${superToken}` };
@@ -354,6 +364,11 @@ describe.sequential("admin route authorization", () => {
       { ...payload, phone: "123" },
       { ...payload, phone: "9665ABC123" },
       { ...payload, email: "invalid" },
+      { ...payload, email: "" },
+      { ...payload, profileAddress: { ...intakeSaudi, postalCode: "" } },
+      { ...payload, profileAddress: { ...intakeSaudi, additionalInfo: "mixed branch" } },
+      { ...payload, profileAddress: { ...intakeInternational, district: "mixed" } },
+      { ...payload, profileAddress: { ...intakeInternational, country: "XX" } },
       { ...payload, phoneVerified: true },
     ]) await request(app).post(url).set(admin).send(invalid).expect(400);
 
@@ -362,21 +377,97 @@ describe.sequential("admin route authorization", () => {
     expect(created.body).toMatchObject({ name: "عميل جديد", phone: uniquePhone, email: "new@example.com", phoneVerified: false, isActive: true });
     const [stored] = await db.select().from(customersTable).where(eq(customersTable.id, manualCustomerId));
     expect(stored.phoneVerified).toBe(false);
+    const [profile] = await db.select().from(addressesTable).where(eq(addressesTable.userId, manualCustomerId));
+    expect(profile).toMatchObject({ ...intakeSaudi, isDefault: true, isProfile: true });
+    expect((await request(app).get(`${url}/${manualCustomerId}`).set(admin).expect(200)).body.profileAddress).toMatchObject(intakeSaudi);
+    const shippingAddress = await addAddress(manualCustomerId, {
+      label: "Shipping", city: "Jeddah", district: "Port", street: "Harbor Road",
+      buildingNo: "9", additionalInfo: null, isDefault: true,
+    });
+    try {
+      expect(await deleteAddress(manualCustomerId, profile.id)).toBe(false);
+      expect((await request(app).get(`${url}/${manualCustomerId}`).set(admin).expect(200)).body.profileAddress).toMatchObject(intakeSaudi);
+      const listedAddresses = await request(app).get(url).set(admin).expect(200);
+      expect(listedAddresses.body.find((customer: { id: number }) => customer.id === manualCustomerId).profileAddress.city).toBe("Riyadh");
+    } finally {
+      expect(await deleteAddress(manualCustomerId, shippingAddress.id)).toBe(true);
+    }
     const duplicate = await request(app).post(url).set(admin)
-      .send({ name: "Overwrite attempt", phone: uniquePhone }).expect(409);
+      .send({ ...payload, name: "Overwrite attempt", phone: uniquePhone }).expect(409);
     expect(duplicate.body.error).toMatch(/phone/i);
     await request(app).post(url).set(admin)
-      .send({ name: "Formatted duplicate", phone: `+${uniquePhone}` }).expect(409);
+      .send({ ...payload, name: "Formatted duplicate", phone: `+${uniquePhone}` }).expect(409);
     const [existingCustomer] = await db.select({ phone: customersTable.phone }).from(customersTable)
       .where(eq(customersTable.id, customerId));
     await request(app).post(url).set(admin)
-      .send({ name: "Existing customer duplicate", phone: `+${existingCustomer.phone}` }).expect(409);
+      .send({ ...payload, name: "Existing customer duplicate", phone: `+${existingCustomer.phone}` }).expect(409);
     const listed = await request(app).get(`${url}?search=${uniquePhone}`).set(admin).expect(200);
     expect(listed.body).toHaveLength(1);
     expect(listed.body[0].id).toBe(manualCustomerId);
     const edited = await request(app).patch(`${url}/${manualCustomerId}`).set(admin)
       .send({ name: "Updated individual" }).expect(200);
     expect(edited.body).toMatchObject({ name: "Updated individual", phone: uniquePhone, phoneVerified: false });
+  });
+
+  it("creates international customers and both distributor address branches, rejects invalid inputs", async () => {
+    const auth = { Authorization: `Bearer ${superToken}` };
+    const unique = String(Date.now()).slice(-9);
+    const customer = { name: "International customer", phone: `971${unique}`, email: "global@example.com", profileAddress: intakeInternational };
+    const created = await request(app).post("/api/admin/customers").set(auth).send(customer).expect(201);
+    try {
+      expect(created.body.profileAddress).toMatchObject(intakeInternational);
+      expect((await request(app).get(`/api/admin/customers/${created.body.id}`).set(auth).expect(200)).body.profileAddress).toMatchObject(intakeInternational);
+    } finally { await db.delete(customersTable).where(eq(customersTable.id, created.body.id)); }
+
+    const base = { companyName: "Test Company", commercialRegistrationNumber: "1010123456", taxNumber: "300012345678901",
+      contactName: "Contact", phone: `966${unique}`, email: "office@example.com" };
+    const saudi = { ...base, countryCode: "SA", ...intakeSaudi, country: undefined };
+    const international = { ...base, phone: `971${unique}`, countryCode: "AE",
+      city: "Dubai", address: intakeInternational.additionalInfo };
+    await request(app).post("/api/admin/distributors").send(saudi).expect(401);
+    await request(app).post("/api/admin/distributors").set("Authorization", `Bearer ${viewerToken}`).send(saudi).expect(403);
+    for (const invalid of [
+      { ...saudi, postalCode: "" }, { ...saudi, email: "not-an-email" },
+      { ...saudi, taxNumber: "" }, { ...saudi, address: "mixed" },
+      { ...international, nationalAddressShortCode: "RYDH1234" }, { ...international, address: "" },
+    ]) await request(app).post("/api/admin/distributors").set(auth).send(invalid).expect(400);
+    for (const payload of [saudi, international]) {
+      const result = await request(app).post("/api/admin/distributors").set(auth).send(payload).expect(201);
+      try {
+        expect(result.body.address).toBeTruthy();
+        expect(result.body.countryCode).toBe(payload.countryCode);
+        expect(result.body.postalCode).toBe(payload.countryCode === "SA" ? "12345" : null);
+        const listing = await request(app).get("/api/admin/distributors").set(auth).expect(200);
+        expect(listing.body.find((row: { id: number }) => row.id === result.body.id)).toMatchObject(result.body);
+        await request(app).patch(`/api/admin/distributors/${result.body.id}`).set(auth).send({ phone: "123" }).expect(400);
+        await request(app).patch(`/api/admin/distributors/${result.body.id}`).set(auth).send({ phone: "invalidABC123" }).expect(400);
+        expect((await db.select().from(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, result.body.id)))[0].phone).toBe(payload.phone);
+        await request(app).patch(`/api/admin/distributors/${result.body.id}`).set(auth)
+          .send({ phone: "+966 50 123 4567" }).expect(200);
+      } finally { await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, result.body.id)); }
+    }
+  });
+
+  it("rolls back the customer when its profile address cannot be written", async () => {
+    const phone = `9667${String(Date.now()).slice(-8)}`;
+    const auth = { Authorization: `Bearer ${superToken}` };
+    await db.execute(sql`create function intake_test_reject_profile() returns trigger language plpgsql as $$
+      begin if new.label = 'Profile' and new.city = 'AtomicityProbe' then
+        raise exception 'forced profile insert failure';
+      end if; return new; end $$`);
+    await db.execute(sql`create trigger intake_test_reject_profile before insert on storefront_addresses
+      for each row execute function intake_test_reject_profile()`);
+    try {
+      await request(app).post("/api/admin/customers").set(auth).send({
+        name: "Atomicity check", phone, email: "atomic@example.com",
+        profileAddress: { ...intakeSaudi, city: "AtomicityProbe" },
+      }).expect(500);
+      const rows = await db.select().from(customersTable).where(eq(customersTable.phone, phone));
+      expect(rows).toHaveLength(0);
+    } finally {
+      await db.execute(sql`drop trigger intake_test_reject_profile on storefront_addresses`);
+      await db.execute(sql`drop function intake_test_reject_profile()`);
+    }
   });
 
   it("stores private contracts locally across service instances, validates uploads, and reports configuration errors", async () => {

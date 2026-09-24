@@ -19,6 +19,7 @@ import {
   campaignsTable,
   couponsTable,
   customersTable,
+  addressesTable,
   db,
   employeesTable,
   attendanceRecordsTable,
@@ -95,6 +96,7 @@ import { nextIndividualOrderNumber } from "../lib/order-numbers";
 import { createInvoicePdf, sendInvoiceEmail } from "../lib/invoice-email";
 import { assertShippingStatusTransition, canApplyCarrierShippingStatus, ShippingStatusTransitionError } from "../lib/shipping-status";
 import { extractVatFromGross } from "../lib/vat";
+import { normalizeIntakeAddress } from "../lib/intake-address";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -195,6 +197,11 @@ const searchFilter = <T>(rows: T[], search: string | undefined, fields: Array<ke
   const needle = search?.trim().toLocaleLowerCase();
   return needle ? rows.filter((row) => fields.some((field) => String(row[field] ?? "").toLocaleLowerCase().includes(needle))) : rows;
 };
+async function customerWithProfile(row: typeof customersTable.$inferSelect) {
+  const [profileAddress] = await db.select().from(addressesTable)
+    .where(and(eq(addressesTable.userId, row.id), eq(addressesTable.isProfile, true))).limit(1);
+  return { ...row, profileAddress: profileAddress ?? null };
+}
 
 const isoDate = (value: unknown) => value instanceof Date
   ? value.toISOString().slice(0, 10)
@@ -1628,6 +1635,8 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
     ...body.orderAddress, city, country,
     taxTreatment: domestic ? "domestic" : "international",
     nationalAddressShortCode: saudiAddress ? shortCode : null,
+    postalCode: body.orderAddress.postalCode?.trim() || null,
+    additionalNumber: body.orderAddress.additionalNumber?.trim() || null,
     district: saudiAddress ? "" : district,
     street: saudiAddress ? "" : street,
     buildingNo: saudiAddress ? "" : buildingNo,
@@ -1694,6 +1703,8 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         city,
         country,
         nationalAddressShortCode: cleanedAddress.nationalAddressShortCode,
+        postalCode: cleanedAddress.postalCode,
+        additionalNumber: cleanedAddress.additionalNumber,
         district: cleanedAddress.district,
         street: cleanedAddress.street,
         buildingNo: cleanedAddress.buildingNo,
@@ -1801,6 +1812,8 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
     city: typeof legacyAddress.city === "string" ? legacyAddress.city : "",
     country: typeof legacyAddress.country === "string" ? legacyAddress.country : null,
     nationalAddressShortCode: typeof legacyAddress.nationalAddressShortCode === "string" ? legacyAddress.nationalAddressShortCode : null,
+    postalCode: typeof legacyAddress.postalCode === "string" ? legacyAddress.postalCode : null,
+    additionalNumber: typeof legacyAddress.additionalNumber === "string" ? legacyAddress.additionalNumber : null,
     district: typeof legacyAddress.district === "string" ? legacyAddress.district : "",
     street: typeof legacyAddress.street === "string" ? legacyAddress.street : "",
     buildingNo: typeof legacyAddress.buildingNo === "string" ? legacyAddress.buildingNo : "",
@@ -1816,6 +1829,7 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
     orderAddress: {
       label: address.label, city: address.city, district: address.district, street: address.street,
       country: address.country, nationalAddressShortCode: address.nationalAddressShortCode,
+      postalCode: address.postalCode, additionalNumber: address.additionalNumber,
       buildingNo: address.buildingNo, additionalInfo: address.additionalInfo, isDefault: address.isDefault,
     },
     items,
@@ -2870,14 +2884,17 @@ router.get("/admin/customers", permit("customers", "view"), route(async (req, re
   const query = parse(Api.AdminListCustomersQueryParams, req.query, res); if (!query) return;
   let rows = await db.select().from(customersTable).orderBy(customersTable.id);
   rows = statusFilter(searchFilter(rows, query.search, ["name", "phone", "email"]), query.status);
-  res.json(Api.AdminListCustomersResponse.parse(rows));
+  res.json(Api.AdminListCustomersResponse.parse(await Promise.all(rows.map(customerWithProfile))));
 }));
 router.post("/admin/customers", permit("customers", "edit"), route(async (req, res) => {
   if (!req.body || typeof req.body !== "object" || Array.isArray(req.body) ||
-    Object.keys(req.body).some((key) => !["name", "phone", "email"].includes(key))) {
-    res.status(400).json({ error: "Only name, phone and optional email are accepted" }); return;
+    Object.keys(req.body).some((key) => !["name", "phone", "email", "profileAddress"].includes(key))) {
+    res.status(400).json({ error: "Unexpected customer fields" }); return;
   }
   const body = parse(Api.AdminCreateCustomerBody, req.body, res); if (!body) return;
+  let profile;
+  try { profile = normalizeIntakeAddress(body.profileAddress); }
+  catch (error) { res.status(400).json({ error: (error as Error).message }); return; }
   const name = body.name.trim();
   const rawPhone = body.phone.trim()
     .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
@@ -2887,8 +2904,8 @@ router.post("/admin/customers", permit("customers", "edit"), route(async (req, r
     res.status(400).json({ error: "A name and a valid phone number (8–15 digits) are required" }); return;
   }
   const phone = rawPhone.replace(/\D/g, "");
-  const email = body.email?.trim() || null;
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const email = body.email.trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     res.status(400).json({ error: "Enter a valid email address" }); return;
   }
   // Older shopper records may contain a leading + or formatting characters.
@@ -2896,24 +2913,33 @@ router.post("/admin/customers", permit("customers", "edit"), route(async (req, r
     .where(sql`regexp_replace(translate(${customersTable.phone}, '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789'), '[^0-9]', '', 'g') = ${phone}`)
     .limit(1);
   if (existing) { res.status(409).json({ error: "A customer with this phone number already exists" }); return; }
-  const [row] = await db.insert(customersTable)
-    .values({ name, phone, email, phoneVerified: false })
-    .onConflictDoNothing({ target: customersTable.phone }).returning();
+  const row = await db.transaction(async (tx) => {
+    const [customer] = await tx.insert(customersTable)
+      .values({ name, phone, email, phoneVerified: false })
+      .onConflictDoNothing({ target: customersTable.phone }).returning();
+    if (!customer) return null;
+    await tx.insert(addressesTable).values({
+      userId: customer.id, label: "Profile", isDefault: true, isProfile: true,
+      ...profile, district: profile.district ?? "", street: profile.street ?? "",
+      buildingNo: profile.buildingNo ?? "",
+    });
+    return customer;
+  });
   if (!row) { res.status(409).json({ error: "A customer with this phone number already exists" }); return; }
-  res.status(201).json(Api.AdminCreateCustomerResponse.parse(row));
+  res.status(201).json(Api.AdminCreateCustomerResponse.parse(await customerWithProfile(row)));
 }));
 router.get("/admin/customers/:id", permit("customers", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetCustomerParams, req.params, res); if (!params) return;
   const [row] = await db.select().from(customersTable).where(eq(customersTable.id, params.id)).limit(1);
   if (!row) { res.status(404).json({ error: "Customer not found" }); return; }
-  res.json(Api.AdminGetCustomerResponse.parse(row));
+  res.json(Api.AdminGetCustomerResponse.parse(await customerWithProfile(row)));
 }));
 router.patch("/admin/customers/:id", permit("customers", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateCustomerParams, req.params, res);
   const body = parse(Api.AdminUpdateCustomerBody, req.body, res); if (!params || !body) return;
   const [row] = await db.update(customersTable).set(body).where(eq(customersTable.id, params.id)).returning();
   if (!row) { res.status(404).json({ error: "Customer not found" }); return; }
-  res.json(Api.AdminUpdateCustomerResponse.parse(row));
+  res.json(Api.AdminUpdateCustomerResponse.parse(await customerWithProfile(row)));
 }));
 
 router.get("/admin/inventory", permit("inventory", "view"), route(async (req, res) => {
@@ -3415,8 +3441,30 @@ router.get("/admin/distributors", permit("distributors", "view"), route(async (r
 }));
 router.post("/admin/distributors", permit("distributors", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateDistributorBody, req.body, res); if (!body) return;
+  if (![body.companyName, body.contactName, body.taxNumber, body.commercialRegistrationNumber, body.email].every((v) => v?.trim()) ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) {
+    res.status(400).json({ error: "Company, registration, tax, contact and valid email are required" }); return;
+  }
+  let location;
+  try {
+    location = normalizeIntakeAddress({
+      country: body.countryCode ?? "", city: body.city ?? "",
+      nationalAddressShortCode: body.nationalAddressShortCode,
+      district: body.district, street: body.street, buildingNo: body.buildingNo,
+      postalCode: body.postalCode, additionalNumber: body.additionalNumber, additionalInfo: body.address,
+    });
+  } catch (error) { res.status(400).json({ error: (error as Error).message }); return; }
   const [row] = await db.insert(wholesaleDistributorsTable).values({
-    ...body, countryCode: body.countryCode?.toUpperCase() ?? null,
+    ...body, companyName: body.companyName.trim(), contactName: body.contactName.trim(),
+    email: body.email.trim(), taxNumber: body.taxNumber!.trim(),
+    commercialRegistrationNumber: body.commercialRegistrationNumber!.trim(),
+    city: location.city, countryCode: location.country,
+    address: location.country === "SA"
+      ? [location.district, location.street, location.buildingNo, location.postalCode, location.additionalNumber].join(", ")
+      : location.additionalInfo,
+    nationalAddressShortCode: location.nationalAddressShortCode,
+    district: location.district, street: location.street, buildingNo: location.buildingNo,
+    postalCode: location.postalCode, additionalNumber: location.additionalNumber,
   }).returning();
   res.status(201).json(Api.AdminCreateDistributorResponse.parse(row));
 }));

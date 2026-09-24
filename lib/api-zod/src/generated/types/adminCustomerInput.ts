@@ -5,15 +5,14 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminProfileAddressInput } from './adminProfileAddressInput';
 
 export interface AdminCustomerInput {
   /** @minLength 1 */
   name: string;
   /** @minLength 8 */
   phone: string;
-  /**
-     * @nullable
-     * @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$
-     */
-  email?: string | null;
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
+  profileAddress: AdminProfileAddressInput;
 }

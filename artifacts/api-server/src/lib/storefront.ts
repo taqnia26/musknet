@@ -732,7 +732,7 @@ export async function addAddress(userId: number, value: Omit<AddressRecord, "id"
 export async function deleteAddress(userId: number, addressId: number) {
   const deleted = await db
     .delete(addressesTable)
-    .where(and(eq(addressesTable.id, addressId), eq(addressesTable.userId, userId)))
+    .where(and(eq(addressesTable.id, addressId), eq(addressesTable.userId, userId), eq(addressesTable.isProfile, false)))
     .returning({ id: addressesTable.id });
   return deleted.length > 0;
 }

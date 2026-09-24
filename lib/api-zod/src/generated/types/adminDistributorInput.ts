@@ -11,26 +11,38 @@ export interface AdminDistributorInput {
   companyName: string;
   /** @minLength 1 */
   contactName: string;
-  /** @nullable */
-  email?: string | null;
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
   /**
      * @minLength 1
      * @pattern ^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$
      */
   phone: string;
   /** @nullable */
-  city?: string | null;
+  city: string | null;
   /**
      * @nullable
      * @pattern ^[A-Za-z]{2}$
      */
-  countryCode?: string | null;
+  countryCode: string | null;
   /** @nullable */
   address?: string | null;
   /** @nullable */
-  taxNumber?: string | null;
+  nationalAddressShortCode?: string | null;
   /** @nullable */
-  commercialRegistrationNumber?: string | null;
+  district?: string | null;
+  /** @nullable */
+  street?: string | null;
+  /** @nullable */
+  buildingNo?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  /** @nullable */
+  taxNumber: string | null;
+  /** @nullable */
+  commercialRegistrationNumber: string | null;
   /** @nullable */
   notes?: string | null;
   isActive?: boolean;

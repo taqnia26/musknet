@@ -124,6 +124,8 @@ export * from './adminProductImageUploadInput';
 export * from './adminProductImageUploadInputContentType';
 export * from './adminProductInput';
 export * from './adminProductUpdate';
+export * from './adminProfileAddress';
+export * from './adminProfileAddressInput';
 export * from './adminRevenueAnalytics';
 export * from './adminRevenueAnalyticsCurrency';
 export * from './adminRevenueAnalyticsProductMovements';
