@@ -5,12 +5,13 @@ import {
   getGetAdminRevenueAnalyticsQueryKey,
 } from '@workspace/api-client-react';
 import {
-  DollarSign, Building2, ShoppingCart, Info, TrendingUp, TrendingDown, RefreshCw, Layers, AlertCircle, Truck, Package
+  Building2, ShoppingCart, Info, TrendingUp, TrendingDown, RefreshCw, Layers, AlertCircle, Truck
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { formatCompact as compactNumber, formatInteger, formatPercent } from '@/lib/formatters';
-import { Money } from '@/components/money';
+import { formatInteger, formatPercent } from '@/lib/formatters';
+import { Money, RiyalSymbol } from '@/components/money';
+import { RevenueMoneyAxisTick } from '@/components/revenue-money-axis-tick';
 import {
   XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -55,7 +56,6 @@ export default function AdminRevenueAnalytics() {
   };
 
   const money = (val: number) => <Money value={val} lang={lang} />;
-  const formatCompact = (val: number) => compactNumber(val, lang);
   const formatNumber = (val: number) => formatInteger(val, lang);
 
   if (isLoading) {
@@ -203,7 +203,7 @@ export default function AdminRevenueAnalytics() {
             <div className="flex justify-between items-start mb-4">
               <div className="text-[13px] font-medium text-muted-foreground">{t('إجمالي الإيرادات', 'Total Revenue')}</div>
               <div className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 text-primary">
-                <DollarSign className="h-4 w-4" />
+                 <RiyalSymbol className="h-4 w-4" />
               </div>
             </div>
             <div className="flex flex-col gap-1.5 mt-auto">
@@ -306,11 +306,10 @@ export default function AdminRevenueAnalytics() {
                   dy={10}
                 />
                 <YAxis 
-                  tickFormatter={formatCompact} 
-                  tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} 
+                   tick={<RevenueMoneyAxisTick lang={lang} orientation="vertical" />}
                   tickLine={false} 
                   axisLine={false} 
-                  width={45} 
+                   width={100}
                   dx={-10}
                 />
                 <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--border))', strokeDasharray: '4 4' }} />
@@ -343,8 +342,7 @@ export default function AdminRevenueAnalytics() {
                   <CartesianGrid strokeDasharray="4 4" horizontal={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
                   <XAxis
                     type="number"
-                    tickFormatter={formatCompact}
-                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                     tick={<RevenueMoneyAxisTick lang={lang} orientation="horizontal" />}
                     tickLine={false}
                     axisLine={false}
                   />

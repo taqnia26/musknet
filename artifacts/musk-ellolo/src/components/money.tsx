@@ -1,5 +1,5 @@
 import React, { type CSSProperties } from 'react';
-import { formatCurrency, type DisplayValue } from '../lib/formatters';
+import { formatCompact, formatCurrency, type DisplayValue } from '../lib/formatters';
 
 const symbolUrl = `${import.meta.env.BASE_URL}site-assets/saudi-riyal-symbol.svg`;
 
@@ -27,6 +27,7 @@ export function Money({
   fractionDigits,
   minimumFractionDigits,
   maximumFractionDigits,
+  compact = false,
   className = '',
 }: {
   value: DisplayValue;
@@ -34,11 +35,14 @@ export function Money({
   fractionDigits?: number;
   minimumFractionDigits?: number;
   maximumFractionDigits?: number;
+  compact?: boolean;
   className?: string;
 }) {
-  const formatted = fractionDigits === undefined && minimumFractionDigits === undefined && maximumFractionDigits === undefined
-    ? formatCurrency(value, lang)
-    : new Intl.NumberFormat('en-US', {
+  const formatted = compact
+    ? formatCompact(value, lang)
+    : fractionDigits === undefined && minimumFractionDigits === undefined && maximumFractionDigits === undefined
+      ? formatCurrency(value, lang)
+      : new Intl.NumberFormat('en-US', {
         minimumFractionDigits: fractionDigits ?? minimumFractionDigits ?? 0,
         maximumFractionDigits: fractionDigits ?? maximumFractionDigits ?? 2,
       }).format(Number(value ?? 0));
