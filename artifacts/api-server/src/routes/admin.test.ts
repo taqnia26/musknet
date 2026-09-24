@@ -511,6 +511,7 @@ describe.sequential("admin route authorization", () => {
       paymentDays: 30,
       startDate: "2026-01-01",
       endDate: "2027-12-31",
+      signedDate: "2025-12-30",
     };
     try {
       await db.update(wholesaleDistributorsTable).set({ isActive: false })
@@ -532,11 +533,20 @@ describe.sequential("admin route authorization", () => {
         paymentDays: terms.paymentDays,
         startDate: `${terms.startDate}T00:00:00.000Z`,
         endDate: `${terms.endDate}T00:00:00.000Z`,
+        signedDate: `${terms.signedDate}T00:00:00.000Z`,
         termsConfirmedBy: superId,
       });
       expect(confirmed.body.termsConfirmedAt).toBeTruthy();
       await request(app).post(`/api/admin/contract-files/${file.id}/terms`)
         .set(headers).send(terms).expect(409);
+      await request(app).put(`/api/admin/contract-files/${file.id}/terms`)
+        .set("Authorization", `Bearer ${viewerToken}`).send(terms).expect(403);
+      const updated = await request(app).put(`/api/admin/contract-files/${file.id}/terms`)
+        .set(headers).send({ ...terms, discountPercent: 9, signedDate: null, paymentTerm: "due_on_issue", paymentDays: undefined }).expect(200);
+      expect(updated.body).toMatchObject({ discountPercent: 9, signedDate: null, paymentTerm: "due_on_issue", paymentDays: null, termsConfirmedBy: superId });
+      expect(updated.body.termsConfirmedAt).toEqual(confirmed.body.termsConfirmedAt);
+      const listed = await request(app).get("/api/admin/contract-files").set(headers).expect(200);
+      expect(listed.body.find((item: { id: number }) => item.id === file.id)).toMatchObject({ discountPercent: 9, signedDate: null });
     } finally {
       await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, file.id));
       await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, distributor.id));

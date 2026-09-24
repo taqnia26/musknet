@@ -28,4 +28,6 @@ export interface UploadedContractTermsInput {
   startDate?: Date | null;
   /** @nullable */
   endDate?: Date | null;
+  /** @nullable */
+  signedDate?: Date | null;
 }

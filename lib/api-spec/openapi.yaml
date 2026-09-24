@@ -672,6 +672,27 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: Terms already confirmed or distributor unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    put:
+      operationId: adminUpdateUploadedContractTerms
+      summary: Update reviewed terms for future distributor invoices without changing the signed file
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/UploadedContractTermsInput" } } } }
+      responses:
+        "200": { description: Updated terms, content: { application/json: { schema: { $ref: "#/components/schemas/UploadedContractFile" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Distributor unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/contract-files/{id}/signed-date-suggestion:
+    get:
+      operationId: adminSuggestUploadedContractSignedDate
+      summary: Read a signed date suggestion from contract content only
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200": { description: Date suggestion or reason unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/ContractSignedDateSuggestion" } } } }
   /admin/contract-files/{id}:
     delete:
       operationId: adminDeleteContractFile
@@ -3772,7 +3793,7 @@ components:
         notes: { type: [string, "null"], maxLength: 1000 }
     UploadedContractFile:
       type: object
-      required: [id, ownerType, ownerId, ownerName, fileName, mimeType, sizeBytes, notes, contractType, discountPercent, paymentTerm, paymentDays, startDate, endDate, termsConfirmedAt, termsConfirmedBy, uploadedBy, uploadedAt]
+      required: [id, ownerType, ownerId, ownerName, fileName, mimeType, sizeBytes, notes, contractType, discountPercent, paymentTerm, paymentDays, startDate, endDate, signedDate, termsConfirmedAt, termsConfirmedBy, uploadedBy, uploadedAt]
       properties:
         id: { type: number }
         ownerType: { type: string, enum: [distributor, customer, influencer, employee] }
@@ -3788,6 +3809,7 @@ components:
         paymentDays: { type: [number, "null"] }
         startDate: { type: [string, "null"], format: date }
         endDate: { type: [string, "null"], format: date }
+        signedDate: { type: [string, "null"], format: date }
         termsConfirmedAt: { type: [string, "null"], format: date-time }
         termsConfirmedBy: { type: [number, "null"] }
         uploadedBy: { type: number }
@@ -3802,6 +3824,14 @@ components:
         paymentDays: { type: number, minimum: 1, maximum: 365, multipleOf: 1 }
         startDate: { type: [string, "null"], format: date }
         endDate: { type: [string, "null"], format: date }
+        signedDate: { type: [string, "null"], format: date }
+    ContractSignedDateSuggestion:
+      type: object
+      required: [date, source, message]
+      properties:
+        date: { type: [string, "null"], format: date }
+        source: { type: string, enum: [text, ocr, unavailable] }
+        message: { type: string }
     ReceivablePaymentInput:
       type: object
       required: [paymentKey, paymentDate, amount, paymentMethod]

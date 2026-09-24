@@ -3,6 +3,9 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
+import { open } from "node:fs/promises";
+import { constants } from "node:fs";
+import { suggestContractSignedDate } from "../lib/contract-signed-date";
 import * as Api from "@workspace/api-zod";
 import {
   adminPermissionsTable,
@@ -631,6 +634,7 @@ router.get("/admin/contract-files", permit("contracts", "view"), route(async (_r
     paymentDays: uploadedContractFilesTable.paymentDays,
     startDate: uploadedContractFilesTable.startDate,
     endDate: uploadedContractFilesTable.endDate,
+    signedDate: uploadedContractFilesTable.signedDate,
     termsConfirmedAt: uploadedContractFilesTable.termsConfirmedAt,
     termsConfirmedBy: uploadedContractFilesTable.termsConfirmedBy,
     uploadedBy: uploadedContractFilesTable.uploadedBy,
@@ -739,6 +743,7 @@ router.post("/admin/contract-files/:id/terms", permit("contracts", "edit"), rout
       paymentDays: body.paymentTerm === "net_days" ? body.paymentDays! : null,
       startDate: body.startDate ? body.startDate.toISOString().slice(0, 10) : null,
       endDate: body.endDate ? body.endDate.toISOString().slice(0, 10) : null,
+      signedDate: body.signedDate ? body.signedDate.toISOString().slice(0, 10) : null,
       termsConfirmedAt: new Date(),
       termsConfirmedBy: res.locals.admin.id,
     }).where(and(
@@ -767,6 +772,72 @@ router.post("/admin/contract-files/:id/terms", permit("contracts", "edit"), rout
     ...publicRow,
     discountPercent: publicRow.discountPercent === null ? null : Number(publicRow.discountPercent),
   }));
+}));
+
+router.put("/admin/contract-files/:id/terms", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminUpdateUploadedContractTermsParams, req.params, res); if (!params) return;
+  const body = parse(Api.AdminUpdateUploadedContractTermsBody, req.body, res); if (!body) return;
+  if (!body.contractType.trim() ||
+      (body.paymentTerm === "net_days" ? body.paymentDays === undefined : body.paymentDays !== undefined) ||
+      (body.startDate && body.endDate && body.startDate > body.endDate)) {
+    res.status(400).json({ error: "Invalid contract terms or dates" }); return;
+  }
+  const result = await db.transaction(async (tx) => {
+    const [identity] = await tx.select({ ownerType: uploadedContractFilesTable.ownerType, ownerId: uploadedContractFilesTable.ownerId })
+      .from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+    if (!identity) return { status: "not-found" as const };
+    if (identity.ownerType !== "distributor") return { status: "not-distributor" as const };
+    await lockDistributorContractSource(tx, identity.ownerId);
+    const [existing] = await tx.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+    if (!existing || existing.ownerId !== identity.ownerId || existing.ownerType !== "distributor") return { status: "changed" as const };
+    const [owner] = await tx.select({ companyName: wholesaleDistributorsTable.companyName }).from(wholesaleDistributorsTable)
+      .where(and(eq(wholesaleDistributorsTable.id, identity.ownerId), eq(wholesaleDistributorsTable.isActive, true))).limit(1);
+    if (!owner) return { status: "inactive" as const };
+    const [row] = await tx.update(uploadedContractFilesTable).set({
+      ownerName: owner.companyName,
+      contractType: body.contractType.trim(),
+      discountPercent: String(body.discountPercent),
+      paymentTerm: body.paymentTerm,
+      paymentDays: body.paymentTerm === "net_days" ? body.paymentDays! : null,
+      startDate: body.startDate ? body.startDate.toISOString().slice(0, 10) : null,
+      endDate: body.endDate ? body.endDate.toISOString().slice(0, 10) : null,
+      signedDate: body.signedDate ? body.signedDate.toISOString().slice(0, 10) : null,
+    }).where(and(eq(uploadedContractFilesTable.id, params.id), eq(uploadedContractFilesTable.ownerType, "distributor"),
+      eq(uploadedContractFilesTable.ownerId, identity.ownerId))).returning();
+    return { status: "updated" as const, row };
+  });
+  if (result.status === "not-found") { res.status(404).json({ error: "Contract file not found" }); return; }
+  if (result.status !== "updated") { res.status(result.status === "not-distributor" ? 400 : 409).json({ error: "Distributor unavailable or contract owner changed" }); return; }
+  const { objectPath: _objectPath, ...publicRow } = result.row;
+  res.json(Api.AdminUpdateUploadedContractTermsResponse.parse({
+    ...publicRow, discountPercent: publicRow.discountPercent === null ? null : Number(publicRow.discountPercent),
+  }));
+}));
+
+router.get("/admin/contract-files/:id/signed-date-suggestion", permit("contracts", "view"), route(async (req, res) => {
+  const params = parse(Api.AdminSuggestUploadedContractSignedDateParams, req.params, res); if (!params) return;
+  const [row] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+  if (!row) { res.status(404).json({ error: "Contract file not found" }); return; }
+  if (row.ownerType !== "distributor") { res.status(400).json({ error: "Only distributor contracts can be reviewed" }); return; }
+  // Bounded, read-only inspection. The signed object is never modified.
+  const local = isLocalContractPath(row.objectPath);
+  const metadata = local ? await localContracts.getMetadata(row.objectPath) : await objectStorage.getObjectMetadata(row.objectPath);
+  if (metadata.size > 25 * 1024 * 1024 || metadata.size < 1) {
+    res.status(400).json({ error: "Contract file exceeds inspection size limit" }); return;
+  }
+  let bytes: Buffer;
+  if (local) {
+    const handle = await open((metadata as Awaited<ReturnType<typeof localContracts.getMetadata>>).path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const info = await handle.stat();
+      if (!info.isFile() || info.size !== metadata.size) { res.status(409).json({ error: "Contract file changed during inspection" }); return; }
+      bytes = await handle.readFile();
+    } finally { await handle.close(); }
+  } else {
+    bytes = (await (metadata as Awaited<ReturnType<typeof objectStorage.getObjectMetadata>>).file.download())[0];
+  }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(Api.AdminSuggestUploadedContractSignedDateResponse.parse(await suggestContractSignedDate(bytes, row.mimeType)));
 }));
 
 router.get("/admin/contract-files/:id/download", permit("contracts", "view"), route(async (req, res) => {
@@ -1937,7 +2008,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
     buyerName: invoicesTable.buyerName, buyerAddress: invoicesTable.buyerAddress,
     buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
-    discountAmount: sql<number>`coalesce(${ordersTable.discount}, 0)`,
+    discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
     shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount, totalAmount: invoicesTable.totalAmount, qrCodeData: invoicesTable.qrCodeData,
   }).from(invoicesTable).leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))

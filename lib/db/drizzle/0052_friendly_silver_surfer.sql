@@ -1,0 +1,1 @@
+ALTER TABLE "uploaded_contract_files" ADD COLUMN "signed_date" date;

@@ -1122,6 +1122,21 @@ export type ContractPreviewSectionsItem = {
   heading: string;
   paragraphs: string[];
 };
+
+export type ContractPreviewProductsItem = {
+  barcode: string;
+  description: string;
+  price: string;
+  priceWithVat: string;
+};
+
+export interface ContractPreview {
+  title: string;
+  missing: string[];
+  sections: ContractPreviewSectionsItem[];
+  products: ContractPreviewProductsItem[];
+}
+
 export type DistributorContractUpdate = DistributorContractInput;
 
 export interface ContractSignatureInput {
@@ -2080,6 +2095,8 @@ export interface UploadedContractFile {
   /** @nullable */
   endDate: string | null;
   /** @nullable */
+  signedDate: string | null;
+  /** @nullable */
   termsConfirmedAt: string | null;
   /** @nullable */
   termsConfirmedBy: number | null;
@@ -2117,6 +2134,24 @@ export interface UploadedContractTermsInput {
   startDate?: string | null;
   /** @nullable */
   endDate?: string | null;
+  /** @nullable */
+  signedDate?: string | null;
+}
+
+export type ContractSignedDateSuggestionSource = typeof ContractSignedDateSuggestionSource[keyof typeof ContractSignedDateSuggestionSource];
+
+
+export const ContractSignedDateSuggestionSource = {
+  text: 'text',
+  ocr: 'ocr',
+  unavailable: 'unavailable',
+} as const;
+
+export interface ContractSignedDateSuggestion {
+  /** @nullable */
+  date: string | null;
+  source: ContractSignedDateSuggestionSource;
+  message: string;
 }
 
 export type ReceivablePaymentInputPaymentMethod = typeof ReceivablePaymentInputPaymentMethod[keyof typeof ReceivablePaymentInputPaymentMethod];
@@ -4458,6 +4493,21 @@ search?: AdminSearchParameter;
 };
 
 export type GetPublicContractVerification200Status = typeof GetPublicContractVerification200Status[keyof typeof GetPublicContractVerification200Status];
+
+
+export const GetPublicContractVerification200Status = {
+  final: 'final',
+} as const;
+
+export type GetPublicContractVerification200 = {
+  contractNumber: string;
+  status: GetPublicContractVerification200Status;
+  /** @nullable */
+  sellerSignedAt?: string | null;
+  /** @nullable */
+  buyerSignedAt?: string | null;
+};
+
 export type GetAdminAnalyticsDashboardParams = {
 rangeDays?: GetAdminAnalyticsDashboardRangeDays;
 };
@@ -4783,31 +4833,3 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
-
-
-export type ContractPreviewProductsItem = {
-  barcode: string;
-  description: string;
-  price: string;
-  priceWithVat: string;
-};
-
-export interface ContractPreview {
-  title: string;
-  missing: string[];
-  sections: ContractPreviewSectionsItem[];
-  products: ContractPreviewProductsItem[];
-}
-
-export const GetPublicContractVerification200Status = {
-  final: 'final',
-} as const;
-
-export type GetPublicContractVerification200 = {
-  contractNumber: string;
-  status: GetPublicContractVerification200Status;
-  /** @nullable */
-  sellerSignedAt?: string | null;
-  /** @nullable */
-  buyerSignedAt?: string | null;
-};

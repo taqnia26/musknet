@@ -19,6 +19,7 @@ export const uploadedContractFilesTable = pgTable("uploaded_contract_files", {
   paymentDays: integer("payment_days"),
   startDate: date("start_date", { mode: "string" }),
   endDate: date("end_date", { mode: "string" }),
+  signedDate: date("signed_date", { mode: "string" }),
   termsConfirmedAt: timestamp("terms_confirmed_at", { withTimezone: true }),
   termsConfirmedBy: integer("terms_confirmed_by").references(() => adminUsersTable.id, { onDelete: "restrict" }),
   uploadedBy: integer("uploaded_by").notNull().references(() => adminUsersTable.id, { onDelete: "restrict" }),

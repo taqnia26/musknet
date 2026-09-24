@@ -7,6 +7,9 @@ import { CalendarDays } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useAdminConfirmUploadedContractTerms,
+  useAdminUpdateUploadedContractTerms,
+  useAdminSuggestUploadedContractSignedDate,
+  getAdminSuggestUploadedContractSignedDateQueryKey,
   getAdminListContractFilesQueryKey,
 } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
@@ -42,6 +45,7 @@ export const uploadedContractTermsSchema = z.object({
   paymentDays: z.string().optional(),
   startDate: z.string().refine((value) => !value || isContractDate(value), 'أدخل التاريخ بصيغة YYYY-MM-DD').optional(),
   endDate: z.string().refine((value) => !value || isContractDate(value), 'أدخل التاريخ بصيغة YYYY-MM-DD').optional(),
+  signedDate: z.string().refine((value) => !value || isContractDate(value), 'أدخل التاريخ بصيغة YYYY-MM-DD').optional(),
 }).superRefine((values, context) => {
   if (values.paymentTerm === 'net_days' &&
       (!values.paymentDays || !Number.isSafeInteger(Number(values.paymentDays)) || Number(values.paymentDays) < 1 || Number(values.paymentDays) > 365)) {
@@ -61,6 +65,7 @@ export const blankUploadedContractTerms = (): UploadedContractTermsValues => ({
   paymentDays: '',
   startDate: '',
   endDate: '',
+  signedDate: '',
 });
 
 export const uploadedContractTermsRequest = (values: UploadedContractTermsValues) => ({
@@ -70,6 +75,7 @@ export const uploadedContractTermsRequest = (values: UploadedContractTermsValues
   ...(values.paymentTerm === 'net_days' ? { paymentDays: Number(values.paymentDays) } : {}),
   startDate: values.startDate || null,
   endDate: values.endDate || null,
+  signedDate: values.signedDate || null,
 });
 
 function ContractDateField({
@@ -208,6 +214,13 @@ export function UploadedContractTermsFields({
           <FormMessage />
         </FormItem>
       )} />
+      <FormField control={form.control} name="signedDate" render={({ field }) => (
+        <FormItem>
+          <FormLabel htmlFor={`${idPrefix}-signed-date`}>تاريخ إبرام العقد (اختياري، غير تاريخ السريان)</FormLabel>
+          <ContractDateField id={`${idPrefix}-signed-date`} calendarLabel="اختر تاريخ إبرام العقد" name={field.name} inputRef={field.ref} onBlur={field.onBlur} value={field.value ?? ''} onChange={field.onChange} />
+          <FormMessage />
+        </FormItem>
+      )} />
     </>
   );
 }
@@ -225,56 +238,84 @@ type UploadedFileForTerms = {
   ownerName: string;
   ownerType: string;
   termsConfirmedAt?: string | null;
+  contractType?: string | null;
+  discountPercent?: number | null;
+  paymentTerm?: string | null;
+  paymentDays?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  signedDate?: string | null;
 };
 
 export function ConfirmUploadedContractTermsDialog({
   file,
   open,
   onOpenChange,
+  editing = false,
 }: {
   file: UploadedFileForTerms | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editing?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const confirmTerms = useAdminConfirmUploadedContractTerms();
+  const updateTerms = useAdminUpdateUploadedContractTerms();
+  const suggestion = useAdminSuggestUploadedContractSignedDate(file?.id ?? 0, { query: { queryKey: getAdminSuggestUploadedContractSignedDateQueryKey(file?.id ?? 0), enabled: open && Boolean(file) && file?.ownerType === 'distributor', staleTime: 60000, retry: false } });
   const form = useTermsForm();
 
   useEffect(() => {
-    form.reset(blankUploadedContractTerms());
-  }, [file?.id, open]);
+    form.reset(editing && file ? {
+      ...blankUploadedContractTerms(),
+      contractType: (file.contractType || blankUploadedContractTerms().contractType) as UploadedContractTermsValues['contractType'],
+      discountPercent: file.discountPercent == null ? '' : String(file.discountPercent),
+      paymentTerm: (file.paymentTerm || 'net_days') as UploadedContractPaymentTerm,
+      paymentDays: file.paymentDays == null ? '' : String(file.paymentDays),
+      startDate: file.startDate?.slice(0, 10) || '',
+      endDate: file.endDate?.slice(0, 10) || '',
+      signedDate: file.signedDate?.slice(0, 10) || '',
+    } : blankUploadedContractTerms());
+  }, [file?.id, open, editing]);
 
   const submit = form.handleSubmit((values) => {
-    if (!file || file.ownerType !== 'distributor' || file.termsConfirmedAt) return;
-    confirmTerms.mutate({
+    if (!file || file.ownerType !== 'distributor' || (!editing && file.termsConfirmedAt)) return;
+    const mutation = editing ? updateTerms : confirmTerms;
+    mutation.mutate({
       id: file.id,
       data: uploadedContractTermsRequest(values),
     }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListContractFilesQueryKey() });
-        toast({ title: 'تم اعتماد شروط العقد', description: 'سيُطبّق العقد تلقائياً على فواتير هذه الشركة' });
+        toast({ title: editing ? 'تم تعديل شروط الفوترة' : 'تم اعتماد شروط العقد', description: 'تسري التعديلات على الفواتير الجديدة فقط دون تغيير الفواتير السابقة أو ملف العقد.' });
         onOpenChange(false);
       },
       onError: (error) => {
         const cause = error as { data?: { error?: string }; message?: string };
-        toast({ title: 'تعذر اعتماد شروط العقد', description: cause.data?.error ?? cause.message ?? 'تحقق من البيانات ثم حاول مجدداً', variant: 'destructive' });
+        toast({ title: 'تعذر حفظ شروط العقد', description: cause.data?.error ?? cause.message ?? 'تحقق من البيانات ثم حاول مجدداً', variant: 'destructive' });
       },
     });
   });
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!confirmTerms.isPending) onOpenChange(next); }}>
+    <Dialog open={open} onOpenChange={(next) => { if (!confirmTerms.isPending && !updateTerms.isPending) onOpenChange(next); }}>
       <DialogContent dir="rtl" className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader className="text-right">
-          <DialogTitle>اعتماد شروط الفوترة للعقد المرفوع</DialogTitle>
+          <DialogTitle>{editing ? 'تعديل شروط الفوترة للعقد المرفوع' : 'اعتماد شروط الفوترة للعقد المرفوع'}</DialogTitle>
           <DialogDescription>
-            راجع بنود العقد مرة واحدة. بعد الاعتماد سيُستخدم تلقائياً لفواتير الشركة، وتُحفظ شروط كل فاتورة كما صدرت.
+            راجع بنود العقد وتاريخ إبرامه. تُستخدم الشروط الجديدة للفواتير اللاحقة فقط؛ لا يتغير ملف العقد أو الفواتير السابقة.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-1 rounded-md border bg-muted/30 p-3 text-sm">
           <p><span className="text-muted-foreground">الشركة: </span><span className="font-medium">{file?.ownerName}</span></p>
           <p dir="ltr" className="text-right"><span className="text-muted-foreground">الملف: </span><span className="font-mono">{file?.fileName}</span></p>
+        </div>
+        <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm space-y-2">
+          <p>{suggestion.isLoading ? 'جارٍ قراءة تاريخ الإبرام من محتوى الملف...' : suggestion.isError ? 'تعذرت قراءة تاريخ الإبرام من الملف. راجع النسخة الممسوحة وأدخله يدويًا.' : suggestion.data?.message}</p>
+          {suggestion.data?.date && <div className="flex items-center gap-2 flex-wrap">
+            <span>التاريخ المقترح من {suggestion.data.source === 'ocr' ? 'القراءة الضوئية' : 'نص الملف'}: <b dir="ltr">{suggestion.data.date.slice(0, 10)}</b></span>
+            <Button type="button" variant="outline" size="sm" onClick={() => form.setValue('signedDate', suggestion.data!.date!.slice(0, 10), { shouldValidate: true })}>استخدام هذا التاريخ</Button>
+          </div>}
         </div>
         <Form {...form}>
           <form onSubmit={submit} className="space-y-4">
@@ -282,9 +323,9 @@ export function ConfirmUploadedContractTermsDialog({
               <UploadedContractTermsFields form={form} idPrefix={`uploaded-terms-${file?.id ?? 'new'}`} />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={confirmTerms.isPending}>إلغاء</Button>
-              <Button type="submit" data-testid="button-confirm-uploaded-contract-terms" disabled={confirmTerms.isPending || !file || file.ownerType !== 'distributor' || Boolean(file.termsConfirmedAt)}>
-                {confirmTerms.isPending ? 'جارٍ الاعتماد...' : 'اعتماد الشروط وربط العقد'}
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={confirmTerms.isPending || updateTerms.isPending}>إلغاء</Button>
+              <Button type="submit" data-testid={editing ? 'button-update-uploaded-contract-terms' : 'button-confirm-uploaded-contract-terms'} disabled={confirmTerms.isPending || updateTerms.isPending || !file || file.ownerType !== 'distributor' || (!editing && Boolean(file.termsConfirmedAt))}>
+                {confirmTerms.isPending || updateTerms.isPending ? 'جارٍ الحفظ...' : editing ? 'حفظ التعديلات' : 'اعتماد الشروط وربط العقد'}
               </Button>
             </DialogFooter>
           </form>

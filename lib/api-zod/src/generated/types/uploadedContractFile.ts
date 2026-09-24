@@ -31,6 +31,8 @@ export interface UploadedContractFile {
   /** @nullable */
   endDate: Date | null;
   /** @nullable */
+  signedDate: Date | null;
+  /** @nullable */
   termsConfirmedAt: Date | null;
   /** @nullable */
   termsConfirmedBy: number | null;

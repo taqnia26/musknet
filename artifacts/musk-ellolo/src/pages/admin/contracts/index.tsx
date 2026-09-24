@@ -49,6 +49,7 @@ export default function AdminContractsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [termsFile, setTermsFile] = useState<UploadedContractFile | null>(null);
+  const [editingTerms, setEditingTerms] = useState(false);
   const [activeTab, setActiveTab] = useState('generated');
   const [, setLocation] = useLocation();
   
@@ -341,6 +342,7 @@ export default function AdminContractsList() {
                   <TableHead>النوع</TableHead>
                   <TableHead>المالك</TableHead>
                   <TableHead>تاريخ الرفع</TableHead>
+                  <TableHead>تاريخ الإبرام</TableHead>
                   <TableHead>ملاحظات</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
                 </TableRow>
@@ -348,19 +350,19 @@ export default function AdminContractsList() {
               <TableBody>
                 {loadingUploadedFiles ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center">
+                    <TableCell colSpan={7} className="h-32 text-center">
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                     </TableCell>
                   </TableRow>
                 ) : uploadedFilesError ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-destructive">
+                    <TableCell colSpan={7} className="h-32 text-center text-destructive">
                       تعذر تحميل الملفات المرفوعة. حدّث الصفحة وحاول مجدداً.
                     </TableCell>
                   </TableRow>
                 ) : filteredUploadedFiles?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                       لا توجد ملفات مرفوعة مطابقة للبحث
                     </TableCell>
                   </TableRow>
@@ -406,6 +408,7 @@ export default function AdminContractsList() {
                       <TableCell>
                         <div className="text-sm" dir="ltr">{format(new Date(file.uploadedAt), 'yyyy-MM-dd HH:mm')}</div>
                       </TableCell>
+                      <TableCell><span dir="ltr" className="text-sm">{file.signedDate?.slice(0, 10) || '—'}</span></TableCell>
                       <TableCell className="max-w-[250px] truncate text-sm text-muted-foreground" title={file.notes || ''}>
                         {file.notes || '—'}
                       </TableCell>
@@ -417,7 +420,7 @@ export default function AdminContractsList() {
                               size="sm"
                               data-testid={`button-approve-file-terms-${file.id}`}
                               className="gap-1 whitespace-nowrap"
-                              onClick={() => setTermsFile(file)}
+                              onClick={() => { setEditingTerms(false); setTermsFile(file); }}
                             >
                               <CheckCircle className="h-3.5 w-3.5" />
                               اعتماد الشروط
@@ -435,6 +438,12 @@ export default function AdminContractsList() {
                               <Download className="h-4 w-4" />
                               تحميل الملف
                             </DropdownMenuItem>
+                             {file.ownerType === 'distributor' && (
+                               <DropdownMenuItem data-testid={`edit-file-terms-${file.id}`} className="cursor-pointer gap-2" onClick={() => { setEditingTerms(true); setTermsFile(file); }}>
+                                 <FileText className="h-4 w-4" />
+                                 تعديل شروط الفوترة
+                               </DropdownMenuItem>
+                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={() => handleDeleteUploaded(file.id)}>
                               <Trash className="h-4 w-4" />
@@ -456,6 +465,7 @@ export default function AdminContractsList() {
       <UploadContractDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} />
       <ConfirmUploadedContractTermsDialog
         file={termsFile}
+        editing={editingTerms}
         open={Boolean(termsFile)}
         onOpenChange={(open) => { if (!open) setTermsFile(null); }}
       />

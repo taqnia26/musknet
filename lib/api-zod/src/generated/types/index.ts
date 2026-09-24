@@ -163,6 +163,8 @@ export * from './contractSignatureInput';
 export * from './contractSignatureUpload';
 export * from './contractSignatureUploadInput';
 export * from './contractSignatureUploadInputContentType';
+export * from './contractSignedDateSuggestion';
+export * from './contractSignedDateSuggestionSource';
 export * from './couponAffectedCampaign';
 export * from './couponDisableConflict';
 export * from './couponLink';
