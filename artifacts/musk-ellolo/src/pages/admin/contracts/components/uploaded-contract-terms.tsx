@@ -1,7 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useState, type FocusEventHandler, type Ref } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { format, isValid, parse } from 'date-fns';
+import { CalendarDays } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useAdminConfirmUploadedContractTerms,
@@ -10,12 +12,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 
 const paymentTerms = ['net_days', 'end_of_month', 'due_on_issue'] as const;
 export type UploadedContractPaymentTerm = (typeof paymentTerms)[number];
+
+const isContractDate = (value: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = parse(value, 'yyyy-MM-dd', new Date());
+  return isValid(parsed) && format(parsed, 'yyyy-MM-dd') === value;
+};
 
 export const uploadedContractTermsSchema = z.object({
   contractType: z.enum([
@@ -30,8 +40,8 @@ export const uploadedContractTermsSchema = z.object({
   ),
   paymentTerm: z.enum(paymentTerms),
   paymentDays: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: z.string().refine((value) => !value || isContractDate(value), 'أدخل التاريخ بصيغة YYYY-MM-DD').optional(),
+  endDate: z.string().refine((value) => !value || isContractDate(value), 'أدخل التاريخ بصيغة YYYY-MM-DD').optional(),
 }).superRefine((values, context) => {
   if (values.paymentTerm === 'net_days' &&
       (!values.paymentDays || !Number.isSafeInteger(Number(values.paymentDays)) || Number(values.paymentDays) < 1 || Number(values.paymentDays) > 365)) {
@@ -61,6 +71,69 @@ export const uploadedContractTermsRequest = (values: UploadedContractTermsValues
   startDate: values.startDate || null,
   endDate: values.endDate || null,
 });
+
+function ContractDateField({
+  value,
+  onChange,
+  onBlur,
+  inputRef,
+  name,
+  id,
+  calendarLabel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onBlur: FocusEventHandler<HTMLInputElement>;
+  inputRef: Ref<HTMLInputElement>;
+  name: string;
+  id: string;
+  calendarLabel: string;
+}) {
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const selected = isContractDate(value) ? parse(value, 'yyyy-MM-dd', new Date()) : undefined;
+  return (
+    <div className="flex min-w-0 items-center gap-2" dir="ltr">
+      <FormControl>
+        <Input
+          id={id}
+          data-testid={id}
+          ref={inputRef}
+          name={name}
+          onBlur={onBlur}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="YYYY-MM-DD"
+          className="min-w-0 flex-1"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </FormControl>
+      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" size="icon" className="h-12 w-12 shrink-0" aria-label={calendarLabel}>
+            <CalendarDays className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-0" align="center" collisionPadding={12} dir="rtl">
+          <Calendar
+            className="w-full"
+            mode="single"
+            selected={selected}
+            defaultMonth={selected}
+            onSelect={(date) => {
+              onChange(date ? format(date, 'yyyy-MM-dd') : '');
+              setCalendarOpen(false);
+            }}
+            captionLayout="dropdown"
+            startMonth={new Date(1900, 0)}
+            endMonth={new Date(2100, 11)}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 export function UploadedContractTermsFields({
   form,
@@ -124,14 +197,14 @@ export function UploadedContractTermsFields({
       <FormField control={form.control} name="startDate" render={({ field }) => (
         <FormItem>
           <FormLabel htmlFor={`${idPrefix}-start-date`}>تاريخ بداية العقد (اختياري)</FormLabel>
-          <FormControl><Input {...field} id={`${idPrefix}-start-date`} data-testid={`${idPrefix}-start-date`} type="date" value={field.value ?? ''} /></FormControl>
+          <ContractDateField id={`${idPrefix}-start-date`} calendarLabel="اختر تاريخ بداية العقد" name={field.name} inputRef={field.ref} onBlur={field.onBlur} value={field.value ?? ''} onChange={field.onChange} />
           <FormMessage />
         </FormItem>
       )} />
       <FormField control={form.control} name="endDate" render={({ field }) => (
         <FormItem>
           <FormLabel htmlFor={`${idPrefix}-end-date`}>تاريخ نهاية العقد (اختياري)</FormLabel>
-          <FormControl><Input {...field} id={`${idPrefix}-end-date`} data-testid={`${idPrefix}-end-date`} type="date" value={field.value ?? ''} /></FormControl>
+          <ContractDateField id={`${idPrefix}-end-date`} calendarLabel="اختر تاريخ نهاية العقد" name={field.name} inputRef={field.ref} onBlur={field.onBlur} value={field.value ?? ''} onChange={field.onChange} />
           <FormMessage />
         </FormItem>
       )} />
