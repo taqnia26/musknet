@@ -35,3 +35,4 @@
 - [Word letterhead footer art](word-letterhead-footer-art.md) — the brand's Word footer artwork lives inside its full-page header image, not the document's empty footer section.
 - [Historical order VAT semantics](historical-order-vat-semantics.md) — paid orders span tax-added and tax-inclusive eras; infer each record's arithmetic before issuing or reversing its invoice.
 - [Invoice print verification](invoice-print-verification.md) — explicitly select print media before PDF capture; modal translation can survive transform resets.
+- [Uploaded contract approval](uploaded-contract-approval.md) — link by the chosen company ID, but require a one-time review of financial terms before invoices use scanned files.

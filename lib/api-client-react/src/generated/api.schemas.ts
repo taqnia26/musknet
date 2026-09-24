@@ -1705,6 +1705,18 @@ export interface AdminOrderInput {
 /**
  * @nullable
  */
+export type AdminInvoicePaymentTerm = typeof AdminInvoicePaymentTerm[keyof typeof AdminInvoicePaymentTerm] | null;
+
+
+export const AdminInvoicePaymentTerm = {
+  net_days: 'net_days',
+  end_of_month: 'end_of_month',
+  due_on_issue: 'due_on_issue',
+} as const;
+
+/**
+ * @nullable
+ */
 export type AdminInvoiceTaxTreatment = typeof AdminInvoiceTaxTreatment[keyof typeof AdminInvoiceTaxTreatment] | null;
 
 
@@ -1768,6 +1780,8 @@ export interface AdminInvoice {
   /** @nullable */
   contractId: number | null;
   /** @nullable */
+  uploadedContractFileId: number | null;
+  /** @nullable */
   contractNumber: string | null;
   /** @nullable */
   contractType: string | null;
@@ -1775,6 +1789,8 @@ export interface AdminInvoice {
   contractDiscountPercent: number | null;
   /** @nullable */
   paymentDays: number | null;
+  /** @nullable */
+  paymentTerm: AdminInvoicePaymentTerm;
   /** @nullable */
   taxTreatment: AdminInvoiceTaxTreatment;
   /** @nullable */
@@ -1839,6 +1855,8 @@ export interface DistributorInvoiceInput {
   distributorId: number;
   /** @minimum 1 */
   contractId?: number;
+  /** @minimum 1 */
+  uploadedContractFileId?: number;
   taxTreatment?: DistributorInvoiceInputTaxTreatment;
   dueDate?: string;
   /**
@@ -2022,6 +2040,18 @@ export const UploadedContractFileOwnerType = {
   employee: 'employee',
 } as const;
 
+/**
+ * @nullable
+ */
+export type UploadedContractFilePaymentTerm = typeof UploadedContractFilePaymentTerm[keyof typeof UploadedContractFilePaymentTerm] | null;
+
+
+export const UploadedContractFilePaymentTerm = {
+  net_days: 'net_days',
+  end_of_month: 'end_of_month',
+  due_on_issue: 'due_on_issue',
+} as const;
+
 export interface UploadedContractFile {
   id: number;
   ownerType: UploadedContractFileOwnerType;
@@ -2032,8 +2062,56 @@ export interface UploadedContractFile {
   sizeBytes: number;
   /** @nullable */
   notes: string | null;
+  /** @nullable */
+  contractType: string | null;
+  /** @nullable */
+  discountPercent: number | null;
+  /** @nullable */
+  paymentTerm: UploadedContractFilePaymentTerm;
+  /** @nullable */
+  paymentDays: number | null;
+  /** @nullable */
+  startDate: string | null;
+  /** @nullable */
+  endDate: string | null;
+  /** @nullable */
+  termsConfirmedAt: string | null;
+  /** @nullable */
+  termsConfirmedBy: number | null;
   uploadedBy: number;
   uploadedAt: string;
+}
+
+export type UploadedContractTermsInputPaymentTerm = typeof UploadedContractTermsInputPaymentTerm[keyof typeof UploadedContractTermsInputPaymentTerm];
+
+
+export const UploadedContractTermsInputPaymentTerm = {
+  net_days: 'net_days',
+  end_of_month: 'end_of_month',
+  due_on_issue: 'due_on_issue',
+} as const;
+
+export interface UploadedContractTermsInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  contractType: string;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  discountPercent: number;
+  paymentTerm: UploadedContractTermsInputPaymentTerm;
+  /**
+     * @minimum 1
+     * @maximum 365
+     */
+  paymentDays?: number;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  endDate?: string | null;
 }
 
 export type ReceivablePaymentInputPaymentMethod = typeof ReceivablePaymentInputPaymentMethod[keyof typeof ReceivablePaymentInputPaymentMethod];

@@ -1396,6 +1396,14 @@ export const AdminListContractFilesResponseItem = zod.object({
   "mimeType": zod.string(),
   "sizeBytes": zod.number(),
   "notes": zod.string().nullable(),
+  "contractType": zod.string().nullable(),
+  "discountPercent": zod.number().nullable(),
+  "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
+  "paymentDays": zod.number().nullable(),
+  "startDate": zod.coerce.date().nullable(),
+  "endDate": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullable(),
+  "termsConfirmedBy": zod.number().nullable(),
   "uploadedBy": zod.number(),
   "uploadedAt": zod.coerce.date()
 })
@@ -1432,6 +1440,14 @@ export const AdminCreateContractFileResponse = zod.object({
   "mimeType": zod.string(),
   "sizeBytes": zod.number(),
   "notes": zod.string().nullable(),
+  "contractType": zod.string().nullable(),
+  "discountPercent": zod.number().nullable(),
+  "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
+  "paymentDays": zod.number().nullable(),
+  "startDate": zod.coerce.date().nullable(),
+  "endDate": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullable(),
+  "termsConfirmedBy": zod.number().nullable(),
   "uploadedBy": zod.number(),
   "uploadedAt": zod.coerce.date()
 })
@@ -1460,6 +1476,54 @@ export const AdminDownloadContractFileParams = zod.object({
 })
 
 export const AdminDownloadContractFileResponse = zod.unknown()
+
+
+/**
+ * @summary Confirm manually reviewed commercial terms for an uploaded distributor contract
+ */
+export const AdminConfirmUploadedContractTermsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminConfirmUploadedContractTermsBodyContractTypeMax = 100;
+
+export const adminConfirmUploadedContractTermsBodyDiscountPercentMin = 0;
+export const adminConfirmUploadedContractTermsBodyDiscountPercentMax = 100;
+
+export const adminConfirmUploadedContractTermsBodyPaymentDaysMax = 365;
+export const adminConfirmUploadedContractTermsBodyPaymentDaysMultipleOf = 1;
+
+
+
+export const AdminConfirmUploadedContractTermsBody = zod.object({
+  "contractType": zod.string().min(1).max(adminConfirmUploadedContractTermsBodyContractTypeMax),
+  "discountPercent": zod.number().min(adminConfirmUploadedContractTermsBodyDiscountPercentMin).max(adminConfirmUploadedContractTermsBodyDiscountPercentMax),
+  "paymentTerm": zod.enum(['net_days', 'end_of_month', 'due_on_issue']),
+  "paymentDays": zod.number().min(1).max(adminConfirmUploadedContractTermsBodyPaymentDaysMax).multipleOf(adminConfirmUploadedContractTermsBodyPaymentDaysMultipleOf).optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish()
+})
+
+export const AdminConfirmUploadedContractTermsResponse = zod.object({
+  "id": zod.number(),
+  "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
+  "ownerId": zod.number(),
+  "ownerName": zod.string(),
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "sizeBytes": zod.number(),
+  "notes": zod.string().nullable(),
+  "contractType": zod.string().nullable(),
+  "discountPercent": zod.number().nullable(),
+  "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
+  "paymentDays": zod.number().nullable(),
+  "startDate": zod.coerce.date().nullable(),
+  "endDate": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullable(),
+  "termsConfirmedBy": zod.number().nullable(),
+  "uploadedBy": zod.number(),
+  "uploadedAt": zod.coerce.date()
+})
 
 
 export const AdminDeleteContractFileParams = zod.object({
@@ -2799,10 +2863,12 @@ export const AdminListInvoicesResponseItem = zod.object({
   "distributorId": zod.number().nullable(),
   "distributorName": zod.string().nullable(),
   "contractId": zod.number().nullable(),
+  "uploadedContractFileId": zod.number().nullable(),
   "contractNumber": zod.string().nullable(),
   "contractType": zod.string().nullable(),
   "contractDiscountPercent": zod.number().nullable(),
   "paymentDays": zod.number().nullable(),
+  "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
   "taxTreatment": zod.union([zod.literal('domestic'),zod.literal('international'),zod.literal(null)]).nullable(),
   "vatRate": zod.number().nullable(),
   "exhibitionId": zod.number().nullable(),
@@ -2862,6 +2928,8 @@ export const adminCreateDistributorInvoiceBodyDistributorIdMultipleOf = 1;
 
 export const adminCreateDistributorInvoiceBodyContractIdMultipleOf = 1;
 
+export const adminCreateDistributorInvoiceBodyUploadedContractFileIdMultipleOf = 1;
+
 export const adminCreateDistributorInvoiceBodyItemsItemProductIdMultipleOf = 1;
 
 export const adminCreateDistributorInvoiceBodyItemsItemQuantityMultipleOf = 1;
@@ -2876,6 +2944,7 @@ export const AdminCreateDistributorInvoiceBody = zod.object({
   "creationKey": zod.string().min(adminCreateDistributorInvoiceBodyCreationKeyMin).max(adminCreateDistributorInvoiceBodyCreationKeyMax),
   "distributorId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyDistributorIdMultipleOf),
   "contractId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyContractIdMultipleOf).optional(),
+  "uploadedContractFileId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyUploadedContractFileIdMultipleOf).optional(),
   "taxTreatment": zod.enum(['domestic', 'international']).optional(),
   "dueDate": zod.coerce.date().optional(),
   "items": zod.array(zod.object({
@@ -2892,10 +2961,12 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "distributorId": zod.number().nullable(),
   "distributorName": zod.string().nullable(),
   "contractId": zod.number().nullable(),
+  "uploadedContractFileId": zod.number().nullable(),
   "contractNumber": zod.string().nullable(),
   "contractType": zod.string().nullable(),
   "contractDiscountPercent": zod.number().nullable(),
   "paymentDays": zod.number().nullable(),
+  "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
   "taxTreatment": zod.union([zod.literal('domestic'),zod.literal('international'),zod.literal(null)]).nullable(),
   "vatRate": zod.number().nullable(),
   "exhibitionId": zod.number().nullable(),
@@ -2993,10 +3064,12 @@ export const AdminCreateExhibitionInvoiceResponse = zod.object({
   "distributorId": zod.number().nullable(),
   "distributorName": zod.string().nullable(),
   "contractId": zod.number().nullable(),
+  "uploadedContractFileId": zod.number().nullable(),
   "contractNumber": zod.string().nullable(),
   "contractType": zod.string().nullable(),
   "contractDiscountPercent": zod.number().nullable(),
   "paymentDays": zod.number().nullable(),
+  "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
   "taxTreatment": zod.union([zod.literal('domestic'),zod.literal('international'),zod.literal(null)]).nullable(),
   "vatRate": zod.number().nullable(),
   "exhibitionId": zod.number().nullable(),

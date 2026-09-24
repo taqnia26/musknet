@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   useAdminListContracts, useAdminDeleteContract, useAdminCancelContract, getAdminListContractsQueryKey, useAdminSendContract, DistributorContractStatus,
-  useAdminListContractFiles, useAdminDeleteContractFile, getAdminListContractFilesQueryKey,
+  useAdminListContractFiles, useAdminDeleteContractFile, getAdminListContractFilesQueryKey, type UploadedContractFile,
    adminDownloadContractFile
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { UploadContractDialog } from './components/UploadContractDialog';
+import { ConfirmUploadedContractTermsDialog } from './components/uploaded-contract-terms';
 import { downloadContractPdf, pdfDownloadError } from './download-pdf';
 
 const statusMap: Record<DistributorContractStatus, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', icon: any }> = {
@@ -47,11 +48,12 @@ const formatFileSize = (bytes: number) => bytes < 1024 * 1024
 export default function AdminContractsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [termsFile, setTermsFile] = useState<UploadedContractFile | null>(null);
   const [activeTab, setActiveTab] = useState('generated');
   const [, setLocation] = useLocation();
   
-  const { data: contracts, isLoading: loadingContracts } = useAdminListContracts();
-  const { data: uploadedFiles, isLoading: loadingUploadedFiles } = useAdminListContractFiles();
+  const { data: contracts, isLoading: loadingContracts, isError: contractsError } = useAdminListContracts();
+  const { data: uploadedFiles, isLoading: loadingUploadedFiles, isError: uploadedFilesError } = useAdminListContractFiles();
   
   const deleteContract = useAdminDeleteContract();
   const cancelContract = useAdminCancelContract();
@@ -233,6 +235,12 @@ export default function AdminContractsList() {
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                     </TableCell>
                   </TableRow>
+                ) : contractsError ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center text-destructive">
+                      تعذر تحميل العقود. حدّث الصفحة وحاول مجدداً.
+                    </TableCell>
+                  </TableRow>
                 ) : filteredContracts?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
@@ -344,6 +352,12 @@ export default function AdminContractsList() {
                       <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                     </TableCell>
                   </TableRow>
+                ) : uploadedFilesError ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center text-destructive">
+                      تعذر تحميل الملفات المرفوعة. حدّث الصفحة وحاول مجدداً.
+                    </TableCell>
+                  </TableRow>
                 ) : filteredUploadedFiles?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
@@ -374,7 +388,20 @@ export default function AdminContractsList() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium">{file.ownerName}</span>
+                        <div className="space-y-1">
+                          <span className="font-medium">{file.ownerName}</span>
+                          {file.ownerType === 'distributor' && (
+                            <div>
+                              <Badge
+                                data-testid={`uploaded-contract-terms-status-${file.id}`}
+                                variant={file.termsConfirmedAt ? 'secondary' : 'outline'}
+                                className={file.termsConfirmedAt ? 'border-transparent bg-success text-success-foreground' : 'border-amber-500/40 bg-amber-500/10 text-amber-800'}
+                              >
+                                {file.termsConfirmedAt ? 'شروط الفوترة معتمدة' : 'بانتظار اعتماد الشروط'}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm" dir="ltr">{format(new Date(file.uploadedAt), 'yyyy-MM-dd HH:mm')}</div>
@@ -384,6 +411,18 @@ export default function AdminContractsList() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
+                          {file.ownerType === 'distributor' && !file.termsConfirmedAt && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              data-testid={`button-approve-file-terms-${file.id}`}
+                              className="gap-1 whitespace-nowrap"
+                              onClick={() => setTermsFile(file)}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              اعتماد الشروط
+                            </Button>
+                          )}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="إجراءات الملف">
@@ -415,6 +454,11 @@ export default function AdminContractsList() {
       </Tabs>
 
       <UploadContractDialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen} />
+      <ConfirmUploadedContractTermsDialog
+        file={termsFile}
+        open={Boolean(termsFile)}
+        onOpenChange={(open) => { if (!open) setTermsFile(null); }}
+      />
     </div>
   );
 }

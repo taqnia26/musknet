@@ -1,12 +1,13 @@
-import { and, eq, sql } from "drizzle-orm";
-import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, distributorContractsTable } from "@workspace/db";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 import { adjustOperationalBalances } from "./operations";
 import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType, type TaxTreatment } from "./vat";
-import { defaultCompanyDueDate, dueDateFromContract } from "./invoice-dates";
+import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, saudiCalendarDate } from "./invoice-dates";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
+const DISTRIBUTOR_CONTRACT_LOCK_NAMESPACE = 752_101;
 
 const money = (value: number) => value.toFixed(2);
 const cents = (value: number) => Math.round((value + Number.EPSILON) * 100);
@@ -17,6 +18,19 @@ const stableJson = (value: unknown): string => JSON.stringify(value, (_key, item
     : item);
 
 const dateOnly = (value: string | Date) => value instanceof Date ? value.toISOString().slice(0, 10) : value;
+function uploadedContractDueDate(issueDate: Date, paymentTerm: string, paymentDays: number | null) {
+  const issueDateSaudi = saudiCalendarDate(issueDate);
+  if (paymentTerm === "due_on_issue") return issueDateSaudi;
+  if (paymentTerm === "end_of_month") {
+    const [year, month] = issueDateSaudi.split("-").map(Number);
+    const finalDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    return `${year}-${String(month).padStart(2, "0")}-${String(finalDay).padStart(2, "0")}`;
+  }
+  if (paymentTerm === "net_days" && Number.isSafeInteger(paymentDays) && paymentDays! > 0) {
+    return addCalendarDays(issueDateSaudi, paymentDays!);
+  }
+  throw new DistributorInvoiceConflictError("Uploaded contract payment terms are incomplete or invalid");
+}
 function orderInvoiceTaxSnapshot(order: typeof ordersTable.$inferSelect) {
   let address: Record<string, unknown> = {};
   try {
@@ -53,10 +67,18 @@ export class DistributorInvoiceConflictError extends Error {}
 
 export class ReceivablePaymentNotFoundError extends Error {}
 
+// Every path that reads or writes distributor contract-source state must take
+// this lock first. Invoice paths take product/sequence locks only afterward;
+// term confirmation never takes those locks, preserving a single safe order.
+export async function lockDistributorContractSource(tx: any, distributorId: number) {
+  await tx.execute(sql`select pg_advisory_xact_lock(${DISTRIBUTOR_CONTRACT_LOCK_NAMESPACE}, ${distributorId})`);
+}
+
 async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoicesTable.$inferSelect, input: {
   creationKey: string;
   distributorId: number;
   contractId?: number;
+  uploadedContractFileId?: number;
   taxTreatment?: TaxTreatment;
   dueDate?: string | Date;
   items: Array<{ productId: number; quantity: number; unitPrice: number }>;
@@ -80,6 +102,7 @@ async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoices
     productId: item.productId, quantity: item.quantity, unitPriceCents: cents(item.unitPrice),
   })).sort((a: { productId: number }, b: { productId: number }) => a.productId - b.productId);
   const mismatch = (input.contractId !== undefined && input.contractId !== previous.contractId) ||
+    (input.uploadedContractFileId !== undefined && input.uploadedContractFileId !== previous.uploadedContractFileId) ||
     (input.taxTreatment !== undefined && input.taxTreatment !== previous.taxTreatment) ||
     (input.dueDate !== undefined && previous.dueDate !== dateOnly(input.dueDate)) ||
     stableJson(requestedItems) !== stableJson(recordedItems);
@@ -182,12 +205,15 @@ export async function createExhibitionInvoice(
 }
 
 export async function createDistributorInvoice(
-  input: { creationKey: string; distributorId: number; contractId?: number; taxTreatment?: TaxTreatment; dueDate?: string | Date; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; taxTreatment?: TaxTreatment; dueDate?: string | Date; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
   environment: NodeJS.ProcessEnv = process.env,
 ) {
   if (!input.items.length) throw new DistributorInvoiceValidationError("At least one invoice item is required");
   if (input.creationKey.trim().length < 16) throw new DistributorInvoiceValidationError("A valid creation key is required");
+  if (input.contractId !== undefined && input.uploadedContractFileId !== undefined) {
+    throw new DistributorInvoiceValidationError("Select either a generated contract or an uploaded contract file, not both");
+  }
   const productIds = input.items.map((item) => item.productId);
   if (new Set(productIds).size !== productIds.length) {
     throw new DistributorInvoiceValidationError("Each product may only appear once");
@@ -198,6 +224,7 @@ export async function createDistributorInvoice(
 
   await ensureStandardAccountingChart();
   return db.transaction(async (tx) => {
+    await lockDistributorContractSource(tx, input.distributorId);
     const [previous] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (previous) {
       await assertDistributorInvoiceReplay(tx, previous, input);
@@ -211,25 +238,58 @@ export async function createDistributorInvoice(
     if (!distributor) throw new DistributorInvoiceValidationError("Distributor not found");
     if (!distributor.isActive) throw new DistributorInvoiceConflictError("Distributor is inactive");
 
-    const today = new Date();
-    const todayDate = today.toISOString().slice(0, 10);
+    const todayDate = saudiCalendarDate(new Date());
     const currentContracts = await tx.select().from(distributorContractsTable).where(and(
       eq(distributorContractsTable.distributorId, distributor.id),
       eq(distributorContractsTable.status, "final"),
       sql`(${distributorContractsTable.startDate} is null or ${distributorContractsTable.startDate}::date <= ${todayDate}::date)`,
       sql`(${distributorContractsTable.endDate} is null or ${distributorContractsTable.endDate}::date >= ${todayDate}::date)`,
     ));
+    const currentUploadedContracts = await tx.select().from(uploadedContractFilesTable).where(and(
+      eq(uploadedContractFilesTable.ownerType, "distributor"),
+      eq(uploadedContractFilesTable.ownerId, distributor.id),
+      isNotNull(uploadedContractFilesTable.termsConfirmedAt),
+      sql`(${uploadedContractFilesTable.startDate} is null or ${uploadedContractFilesTable.startDate}::date <= ${todayDate}::date)`,
+      sql`(${uploadedContractFilesTable.endDate} is null or ${uploadedContractFilesTable.endDate}::date >= ${todayDate}::date)`,
+    ));
+    const pendingUploadedContracts = await tx.select({ id: uploadedContractFilesTable.id }).from(uploadedContractFilesTable).where(and(
+      eq(uploadedContractFilesTable.ownerType, "distributor"),
+      eq(uploadedContractFilesTable.ownerId, distributor.id),
+      isNull(uploadedContractFilesTable.termsConfirmedAt),
+    ));
     let contract: typeof distributorContractsTable.$inferSelect | undefined;
+    let uploadedContract: typeof uploadedContractFilesTable.$inferSelect | undefined;
     if (input.contractId !== undefined) {
       contract = currentContracts.find((row) => row.id === input.contractId);
       if (!contract) throw new DistributorInvoiceConflictError("Selected contract is not a current final contract linked to this distributor");
-    } else if (currentContracts.length > 1) {
-      throw new DistributorInvoiceConflictError("Multiple current final contracts are linked to this distributor; select contractId explicitly");
+    } else if (input.uploadedContractFileId !== undefined) {
+      uploadedContract = currentUploadedContracts.find((row) => row.id === input.uploadedContractFileId);
+      if (!uploadedContract) throw new DistributorInvoiceConflictError("Selected uploaded contract is not confirmed, current, and linked to this distributor");
     } else {
+      if (pendingUploadedContracts.length > 0) {
+        throw new DistributorInvoiceConflictError("A linked uploaded contract must have its terms reviewed and a source selected before issuing an invoice");
+      }
+      if (currentContracts.length + currentUploadedContracts.length > 1) {
+        throw new DistributorInvoiceConflictError("Multiple current contracts are linked to this distributor; select a contract source explicitly");
+      }
       contract = currentContracts[0];
+      uploadedContract = currentUploadedContracts[0];
     }
-    const contractTreatment = contract ? taxTreatmentForContractType(contract.contractType) : null;
-    if (contract && input.taxTreatment === undefined) {
+    if (uploadedContract && (
+      !uploadedContract.contractType?.trim() ||
+      !["net_days", "end_of_month", "due_on_issue"].includes(uploadedContract.paymentTerm ?? "") ||
+      uploadedContract.discountPercent === null ||
+      !Number.isFinite(Number(uploadedContract.discountPercent)) ||
+      Number(uploadedContract.discountPercent) < 0 ||
+      Number(uploadedContract.discountPercent) > 100 ||
+      (uploadedContract.paymentTerm === "net_days" && (!Number.isSafeInteger(uploadedContract.paymentDays) || (uploadedContract.paymentDays ?? 0) < 1)) ||
+      (uploadedContract.paymentTerm !== "net_days" && uploadedContract.paymentDays !== null)
+    )) {
+      throw new DistributorInvoiceConflictError("Uploaded contract has incomplete or invalid confirmed terms");
+    }
+    const selectedContractType = contract?.contractType ?? uploadedContract?.contractType ?? null;
+    const contractTreatment = selectedContractType ? taxTreatmentForContractType(selectedContractType) : null;
+    if ((contract || uploadedContract) && input.taxTreatment === undefined) {
       throw new DistributorInvoiceValidationError("taxTreatment is required for a contract-linked company invoice");
     }
     const taxTreatment: TaxTreatment = input.taxTreatment ?? "domestic";
@@ -249,13 +309,13 @@ export async function createDistributorInvoice(
     if (contractTreatment === "international" && countryCode === "SA") {
       throw new DistributorInvoiceConflictError("Gulf contract type cannot be invoiced to a Saudi distributor");
     }
-    const rawVatRate = contract ? Number(contract.vatRate) : 15;
+    const rawVatRate = contract ? Number(contract.vatRate) : taxTreatment === "international" ? 0 : 15;
     const vatRate = taxTreatment === "international" ? 0 : Number.isFinite(rawVatRate) && rawVatRate >= 0 && rawVatRate <= 100 ? rawVatRate : 15;
-    const rawDiscount = contract ? Number(contract.marginPercent) : 0;
+    const rawDiscount = contract ? Number(contract.marginPercent) : uploadedContract ? Number(uploadedContract.discountPercent) : 0;
     if (!Number.isFinite(rawDiscount) || rawDiscount < 0 || rawDiscount > 100) {
       throw new DistributorInvoiceConflictError("Contract discount must be between 0 and 100 percent");
     }
-    const contractDiscountPercent = contract ? rawDiscount : 0;
+    const contractDiscountPercent = contract || uploadedContract ? rawDiscount : 0;
 
     const sortedProductIds = [...productIds].sort((a, b) => a - b);
     for (const productId of sortedProductIds) {
@@ -326,7 +386,9 @@ export async function createDistributorInvoice(
       invoiceNumber,
       sellerName: configuration.sellerName,
       issueDatetime,
-      dueDate: contract
+      dueDate: uploadedContract
+        ? uploadedContractDueDate(issueDatetime, uploadedContract.paymentTerm ?? "", uploadedContract.paymentDays)
+        : contract
         ? dueDateFromContract(issueDatetime, contract.contractType, contract.paymentDays)
         : input.dueDate ? dateOnly(input.dueDate) : defaultCompanyDueDate(),
       sellerVatNumber: configuration.vatRegistrationNumber,
@@ -335,10 +397,12 @@ export async function createDistributorInvoice(
       buyerCommercialRegistrationNumber: distributor.commercialRegistrationNumber,
       buyerAddress: [distributor.address, distributor.city].filter(Boolean).join(", ") || null,
       contractId: contract?.id ?? null,
-      contractNumber: contract?.contractNumber ?? null,
-      contractType: contract?.contractType ?? null,
-      contractDiscountPercent: contract ? String(contractDiscountPercent) : null,
-      paymentDays: contract?.paymentDays ?? null,
+      uploadedContractFileId: uploadedContract?.id ?? null,
+      contractNumber: contract?.contractNumber ?? uploadedContract?.fileName ?? null,
+      contractType: selectedContractType,
+      contractDiscountPercent: contract || uploadedContract ? String(contractDiscountPercent) : null,
+      paymentDays: contract?.paymentDays ?? (uploadedContract?.paymentTerm === "net_days" ? uploadedContract.paymentDays : null),
+      paymentTerm: uploadedContract?.paymentTerm ?? (contract ? (/نقد|cash/i.test(contract.contractType) ? "due_on_issue" : "net_days") : null),
       taxTreatment,
       vatRate: String(vatRate),
       subtotal,

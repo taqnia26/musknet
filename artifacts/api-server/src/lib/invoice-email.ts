@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { saudiCalendarDate } from "./invoice-dates";
 
 type InvoiceForEmail = {
   invoiceNumber: string;
@@ -31,6 +32,7 @@ type InvoiceForEmail = {
 };
 
 const money = (value: number) => value.toFixed(2);
+export const invoiceBusinessIssueDate = (issueDatetime: Date) => saudiCalendarDate(issueDatetime);
 const invoiceLogo = [
   resolve(dirname(fileURLToPath(import.meta.url)), "../../musk-ellolo/public/site-assets/invoice-logo-black.png"),
   resolve(dirname(fileURLToPath(import.meta.url)), "../../../musk-ellolo/public/site-assets/invoice-logo-black.png"),
@@ -116,7 +118,7 @@ export async function createInvoicePdf(invoice: InvoiceForEmail) {
   document.text("Issue Date", 56, 278);
   document.text("Due Date", 56, 305);
   document.fillColor("#292728").text(invoice.invoiceNumber, 152, 251, { width: 120, align: "right" });
-  const issueDate = invoice.issueDatetime.toISOString().slice(0, 10);
+  const issueDate = invoiceBusinessIssueDate(invoice.issueDatetime);
   document.text(issueDate, 152, 278, { width: 120, align: "right" });
   document.text(invoice.dueDate || "-", 152, 305, { width: 120, align: "right" });
 

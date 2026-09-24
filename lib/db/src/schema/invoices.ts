@@ -7,16 +7,19 @@ import { wholesaleDistributorsTable } from "./wholesale-distributors";
 import { productsTable } from "./products";
 import { exhibitionsTable } from "./exhibitions";
 import { distributorContractsTable } from "./distributor-contracts";
+import { uploadedContractFilesTable } from "./uploaded-contract-files";
 
 export const taxInvoicesTable = pgTable("tax_invoices", {
   id: serial("id").primaryKey(),
   orderId: integer("order_id").references(() => ordersTable.id, { onDelete: "restrict" }),
   distributorId: integer("distributor_id").references(() => wholesaleDistributorsTable.id, { onDelete: "restrict" }),
   contractId: integer("contract_id").references(() => distributorContractsTable.id, { onDelete: "set null" }),
+  uploadedContractFileId: integer("uploaded_contract_file_id").references(() => uploadedContractFilesTable.id, { onDelete: "restrict" }),
   contractNumber: text("contract_number"),
   contractType: text("contract_type"),
   contractDiscountPercent: numeric("contract_discount_percent", { precision: 5, scale: 2 }),
   paymentDays: integer("payment_days"),
+  paymentTerm: text("payment_term"),
   taxTreatment: text("tax_treatment"),
   vatRate: numeric("vat_rate", { precision: 5, scale: 2 }),
   exhibitionId: integer("exhibition_id").references(() => exhibitionsTable.id, { onDelete: "restrict" }),
@@ -41,6 +44,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   check("invoice_single_channel", sql`(case when ${table.orderId} is not null then 1 else 0 end + case when ${table.distributorId} is not null then 1 else 0 end + case when ${table.exhibitionId} is not null then 1 else 0 end) = 1`),
+  check("invoice_single_contract_source", sql`not (${table.contractId} is not null and ${table.uploadedContractFileId} is not null)`),
   uniqueIndex("invoices_order_id_unique").on(table.orderId),
   uniqueIndex("invoices_sequence_number_unique").on(table.sequenceNumber),
   uniqueIndex("invoices_invoice_number_unique").on(table.invoiceNumber),

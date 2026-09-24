@@ -17,6 +17,7 @@ import {
   inventoryBalancesTable,
   inventoryMovementsTable,
   invoiceEmailDeliveriesTable,
+  invoiceItemsTable,
   journalEntriesTable,
   journalEntryLinesTable,
   journalEntryAuditTable,
@@ -28,6 +29,7 @@ import {
   shipmentEventsTable,
   shipmentsTable,
   uploadedContractFilesTable,
+  wholesaleDistributorsTable,
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
@@ -484,6 +486,63 @@ describe.sequential("admin route authorization", () => {
     }
   });
 
+  it("confirms reviewed terms once and only for an active distributor", async () => {
+    const suffix = Date.now();
+    const [distributor] = await db.insert(wholesaleDistributorsTable).values({
+      companyName: `Terms confirmation ${suffix}`,
+      contactName: "Contract reviewer test",
+      phone: `052${String(suffix).slice(-7)}`,
+    }).returning();
+    const [file] = await db.insert(uploadedContractFilesTable).values({
+      ownerType: "distributor",
+      ownerId: distributor.id,
+      ownerName: distributor.companyName,
+      fileName: `reviewed-${suffix}.pdf`,
+      objectPath: `/objects/uploads/contracts/files/reviewed-${suffix}`,
+      mimeType: "application/pdf",
+      sizeBytes: 100,
+      uploadedBy: superId,
+    }).returning();
+    const headers = { Authorization: `Bearer ${superToken}` };
+    const terms = {
+      contractType: "Saudi distributor agreement",
+      discountPercent: 5,
+      paymentTerm: "net_days",
+      paymentDays: 30,
+      startDate: "2026-01-01",
+      endDate: "2027-12-31",
+    };
+    try {
+      await db.update(wholesaleDistributorsTable).set({ isActive: false })
+        .where(eq(wholesaleDistributorsTable.id, distributor.id));
+      await request(app).post(`/api/admin/contract-files/${file.id}/terms`).set(headers)
+        .send(terms).expect(409);
+      const [unchanged] = await db.select().from(uploadedContractFilesTable)
+        .where(eq(uploadedContractFilesTable.id, file.id));
+      expect(unchanged.termsConfirmedAt).toBeNull();
+      await db.update(wholesaleDistributorsTable).set({ isActive: true })
+        .where(eq(wholesaleDistributorsTable.id, distributor.id));
+      const confirmed = await request(app).post(`/api/admin/contract-files/${file.id}/terms`)
+        .set(headers).send(terms).expect(200);
+      expect(confirmed.body).toMatchObject({
+        id: file.id,
+        contractType: terms.contractType,
+        discountPercent: 5,
+        paymentTerm: terms.paymentTerm,
+        paymentDays: terms.paymentDays,
+        startDate: `${terms.startDate}T00:00:00.000Z`,
+        endDate: `${terms.endDate}T00:00:00.000Z`,
+        termsConfirmedBy: superId,
+      });
+      expect(confirmed.body.termsConfirmedAt).toBeTruthy();
+      await request(app).post(`/api/admin/contract-files/${file.id}/terms`)
+        .set(headers).send(terms).expect(409);
+    } finally {
+      await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, file.id));
+      await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, distributor.id));
+    }
+  });
+
   it("updates a product with a single field", async () => {
     const response = await request(app)
       .patch(`/api/admin/products/${productId}`)
@@ -830,6 +889,87 @@ describe.sequential("admin route authorization", () => {
     expect(send).toHaveBeenCalledTimes(2);
     pdf.mockRestore();
     send.mockRestore();
+  });
+
+  it("uses the uploaded-contract discount snapshot in distributor invoice email PDF data", async () => {
+    const suffix = Date.now();
+    const [distributor] = await db.insert(wholesaleDistributorsTable).values({
+      companyName: `Email contract distributor ${suffix}`,
+      contactName: "Invoice email test",
+      phone: `053${String(suffix).slice(-7)}`,
+    }).returning();
+    const [contractFile] = await db.insert(uploadedContractFilesTable).values({
+      ownerType: "distributor",
+      ownerId: distributor.id,
+      ownerName: distributor.companyName,
+      fileName: `email-contract-${suffix}.pdf`,
+      objectPath: `/objects/uploads/contracts/files/email-contract-${suffix}`,
+      mimeType: "application/pdf",
+      sizeBytes: 100,
+      contractType: "Saudi distributor agreement",
+      discountPercent: "5.00",
+      paymentTerm: "due_on_issue",
+      termsConfirmedAt: new Date(),
+      termsConfirmedBy: superId,
+      uploadedBy: superId,
+    }).returning();
+    const [{ next }] = await db.select({
+      next: sql<number>`coalesce(max(${invoicesTable.sequenceNumber}), 0) + 1`,
+    }).from(invoicesTable);
+    const [invoice] = await db.insert(invoicesTable).values({
+      distributorId: distributor.id,
+      uploadedContractFileId: contractFile.id,
+      contractNumber: contractFile.fileName,
+      contractType: contractFile.contractType,
+      contractDiscountPercent: "5.00",
+      paymentTerm: "due_on_issue",
+      taxTreatment: "domestic",
+      vatRate: "15",
+      sequenceNumber: Number(next),
+      invoiceNumber: `LC-EMAIL-${suffix}`,
+      sellerName: "Musk Ellolo",
+      issueDatetime: new Date("2026-03-31T21:30:00.000Z"),
+      dueDate: "2026-04-01",
+      sellerVatNumber: "300000000000003",
+      buyerName: distributor.companyName,
+      subtotal: 16.52,
+      discountAmount: 1,
+      vatAmount: 2.48,
+      totalAmount: 19,
+      qrCodeData: "invoice-email-test",
+    }).returning();
+    await db.insert(invoiceItemsTable).values({
+      invoiceId: invoice.id,
+      productId,
+      productName: "Invoice email test product",
+      quantity: 1,
+      unitPrice: 20,
+      subtotal: 16.52,
+      vatAmount: 2.48,
+      totalAmount: 19,
+    });
+    let pdfInvoice: Parameters<typeof invoiceEmail.createInvoicePdf>[0] | undefined;
+    const pdf = vi.spyOn(invoiceEmail, "createInvoicePdf").mockImplementation(async (data) => {
+      pdfInvoice = data;
+      return Buffer.from("%PDF-uploaded-contract");
+    });
+    const send = vi.spyOn(invoiceEmail, "sendInvoiceEmail").mockResolvedValue("uploaded-contract-email");
+    try {
+      await request(app).post(`/api/admin/invoices/${invoice.id}/email`)
+        .set("Authorization", `Bearer ${superToken}`)
+        .send({ recipient: "distributor@example.com" })
+        .expect(201);
+      expect(pdfInvoice?.discountAmount).toBe(1);
+      expect(invoiceEmail.getInvoiceTotalRows(pdfInvoice!)).toContainEqual(["Contract discount (5%)", -1]);
+    } finally {
+      pdf.mockRestore();
+      send.mockRestore();
+      await db.delete(invoiceEmailDeliveriesTable).where(eq(invoiceEmailDeliveriesTable.invoiceId, invoice.id));
+      await db.delete(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id));
+      await db.delete(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+      await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, contractFile.id));
+      await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, distributor.id));
+    }
   });
 
   it("rejects an invalid order status", async () => {

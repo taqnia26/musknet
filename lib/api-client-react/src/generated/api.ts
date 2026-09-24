@@ -241,7 +241,8 @@ import type {
   TrialBalance,
   UnauthorizedResponse,
   UploadedContractFile,
-  UploadedContractFileInput
+  UploadedContractFileInput,
+  UploadedContractTermsInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -3868,6 +3869,78 @@ export function useAdminDownloadContractFile<TData = Awaited<ReturnType<typeof a
 
 
 
+export const getAdminConfirmUploadedContractTermsUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contract-files/${id}/terms`
+}
+
+/**
+ * @summary Confirm manually reviewed commercial terms for an uploaded distributor contract
+ */
+export const adminConfirmUploadedContractTerms = async (id: number,
+    uploadedContractTermsInput: UploadedContractTermsInput, options?: Parameters<typeof customFetch>[1]): Promise<UploadedContractFile> => {
+
+  return customFetch<UploadedContractFile>(getAdminConfirmUploadedContractTermsUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(uploadedContractTermsInput)
+  }
+);}
+
+
+
+
+
+export const getAdminConfirmUploadedContractTermsMutationOptions = <TError = ErrorType<BadRequestResponse | NotFoundResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminConfirmUploadedContractTerms>>, TError,{id: number;data: BodyType<UploadedContractTermsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminConfirmUploadedContractTerms>>, TError,{id: number;data: BodyType<UploadedContractTermsInput>}, TContext> => {
+
+const mutationKey = ['adminConfirmUploadedContractTerms'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminConfirmUploadedContractTerms>>, {id: number;data: BodyType<UploadedContractTermsInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminConfirmUploadedContractTerms(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminConfirmUploadedContractTermsMutationResult = NonNullable<Awaited<ReturnType<typeof adminConfirmUploadedContractTerms>>>
+    export type AdminConfirmUploadedContractTermsMutationBody = BodyType<UploadedContractTermsInput>
+    export type AdminConfirmUploadedContractTermsMutationError = ErrorType<BadRequestResponse | NotFoundResponse | Error>
+
+    /**
+ * @summary Confirm manually reviewed commercial terms for an uploaded distributor contract
+ */
+export const useAdminConfirmUploadedContractTerms = <TError = ErrorType<BadRequestResponse | NotFoundResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminConfirmUploadedContractTerms>>, TError,{id: number;data: BodyType<UploadedContractTermsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminConfirmUploadedContractTerms>>,
+        TError,
+        {id: number;data: BodyType<UploadedContractTermsInput>},
+        TContext
+      > => {
+      return useMutation(getAdminConfirmUploadedContractTermsMutationOptions(options));
+    }
+
 export const getAdminDeleteContractFileUrl = (id: number,) => {
 
 
@@ -3891,7 +3964,7 @@ export const adminDeleteContractFile = async (id: number, options?: Parameters<t
 
 
 
-export const getAdminDeleteContractFileMutationOptions = <TError = ErrorType<unknown>,
+export const getAdminDeleteContractFileMutationOptions = <TError = ErrorType<Error>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContractFile>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContractFile>>, TError,{id: number}, TContext> => {
 
@@ -3920,9 +3993,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AdminDeleteContractFileMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteContractFile>>>
 
-    export type AdminDeleteContractFileMutationError = ErrorType<unknown>
+    export type AdminDeleteContractFileMutationError = ErrorType<Error>
 
-    export const useAdminDeleteContractFile = <TError = ErrorType<unknown>,
+    export const useAdminDeleteContractFile = <TError = ErrorType<Error>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteContractFile>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof adminDeleteContractFile>>,

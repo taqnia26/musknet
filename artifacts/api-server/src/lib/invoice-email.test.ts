@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createInvoicePdf, getInvoiceTotalRows } from "./invoice-email";
+import { createInvoicePdf, getInvoiceTotalRows, invoiceBusinessIssueDate } from "./invoice-email";
 
 const baseInvoice = {
   invoiceNumber: "TEST-100",
@@ -27,6 +27,11 @@ const baseInvoice = {
 };
 
 describe("invoice email PDF", () => {
+  it("uses the Saudi business date at a UTC date boundary", () => {
+    expect(invoiceBusinessIssueDate(new Date("2026-03-31T21:30:00.000Z"))).toBe("2026-04-01");
+    expect(invoiceBusinessIssueDate(new Date("2026-03-31T20:59:59.000Z"))).toBe("2026-03-31");
+  });
+
   it("shows a contract discount once between gross and net subtotal", () => {
     const rows = getInvoiceTotalRows({
       ...baseInvoice,

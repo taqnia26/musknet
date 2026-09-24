@@ -652,13 +652,28 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       responses: { "200": { description: Original contract file, content: { application/octet-stream: { schema: { type: string, format: binary } } } } }
+  /admin/contract-files/{id}/terms:
+    post:
+      operationId: adminConfirmUploadedContractTerms
+      summary: Confirm manually reviewed commercial terms for an uploaded distributor contract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/UploadedContractTermsInput" } } } }
+      responses:
+        "200": { description: Confirmed contract terms, content: { application/json: { schema: { $ref: "#/components/schemas/UploadedContractFile" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Terms already confirmed or distributor unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/contract-files/{id}:
     delete:
       operationId: adminDeleteContractFile
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
-      responses: { "204": { description: Contract file record deleted } }
+      responses:
+        "204": { description: Contract file record deleted }
+        "409": { description: Contract file is referenced by an invoice, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/site-content:
     get:
       operationId: adminListSiteContent
@@ -3565,7 +3580,7 @@ components:
         adminNotes: { type: [string, "null"] }
     AdminInvoice:
       type: object
-      required: [id, orderId, orderNumber, distributorId, distributorName, contractId, contractNumber, contractType, contractDiscountPercent, paymentDays, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
+      required: [id, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
       properties:
         id: { type: number }
         orderId: { type: [number, "null"] }
@@ -3573,10 +3588,12 @@ components:
         distributorId: { type: [number, "null"] }
         distributorName: { type: [string, "null"] }
         contractId: { type: [number, "null"] }
+        uploadedContractFileId: { type: [number, "null"] }
         contractNumber: { type: [string, "null"] }
         contractType: { type: [string, "null"] }
         contractDiscountPercent: { type: [number, "null"] }
         paymentDays: { type: [number, "null"] }
+        paymentTerm: { type: [string, "null"], enum: [net_days, end_of_month, due_on_issue, null] }
         taxTreatment: { type: [string, "null"], enum: [domestic, international, null] }
         vatRate: { type: [number, "null"] }
         exhibitionId: { type: [number, "null"] }
@@ -3630,6 +3647,7 @@ components:
         creationKey: { type: string, minLength: 16, maxLength: 100 }
         distributorId: { type: number, minimum: 1, multipleOf: 1 }
         contractId: { type: number, minimum: 1, multipleOf: 1 }
+        uploadedContractFileId: { type: number, minimum: 1, multipleOf: 1 }
         taxTreatment: { type: string, enum: [domestic, international] }
         dueDate: { type: string, format: date }
         items:
@@ -3703,7 +3721,7 @@ components:
         notes: { type: [string, "null"], maxLength: 1000 }
     UploadedContractFile:
       type: object
-      required: [id, ownerType, ownerId, ownerName, fileName, mimeType, sizeBytes, notes, uploadedBy, uploadedAt]
+      required: [id, ownerType, ownerId, ownerName, fileName, mimeType, sizeBytes, notes, contractType, discountPercent, paymentTerm, paymentDays, startDate, endDate, termsConfirmedAt, termsConfirmedBy, uploadedBy, uploadedAt]
       properties:
         id: { type: number }
         ownerType: { type: string, enum: [distributor, customer, influencer, employee] }
@@ -3713,8 +3731,26 @@ components:
         mimeType: { type: string }
         sizeBytes: { type: number }
         notes: { type: [string, "null"] }
+        contractType: { type: [string, "null"] }
+        discountPercent: { type: [number, "null"] }
+        paymentTerm: { type: [string, "null"], enum: [net_days, end_of_month, due_on_issue, null] }
+        paymentDays: { type: [number, "null"] }
+        startDate: { type: [string, "null"], format: date }
+        endDate: { type: [string, "null"], format: date }
+        termsConfirmedAt: { type: [string, "null"], format: date-time }
+        termsConfirmedBy: { type: [number, "null"] }
         uploadedBy: { type: number }
         uploadedAt: { type: string, format: date-time }
+    UploadedContractTermsInput:
+      type: object
+      required: [contractType, discountPercent, paymentTerm]
+      properties:
+        contractType: { type: string, minLength: 1, maxLength: 100 }
+        discountPercent: { type: number, minimum: 0, maximum: 100 }
+        paymentTerm: { type: string, enum: [net_days, end_of_month, due_on_issue] }
+        paymentDays: { type: number, minimum: 1, maximum: 365, multipleOf: 1 }
+        startDate: { type: [string, "null"], format: date }
+        endDate: { type: [string, "null"], format: date }
     ReceivablePaymentInput:
       type: object
       required: [paymentKey, paymentDate, amount, paymentMethod]

@@ -67,7 +67,7 @@ import {
   verifyAdminPassword,
 } from "../lib/admin-auth";
 import { hashOwnerPassword } from "../lib/owner-auth";
-import { createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
+import { createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
 import {
   AccountingConflictError,
   AccountingNotFoundError,
@@ -607,10 +607,21 @@ router.get("/admin/contract-files", permit("contracts", "view"), route(async (_r
     mimeType: uploadedContractFilesTable.mimeType,
     sizeBytes: uploadedContractFilesTable.sizeBytes,
     notes: uploadedContractFilesTable.notes,
+    contractType: uploadedContractFilesTable.contractType,
+    discountPercent: uploadedContractFilesTable.discountPercent,
+    paymentTerm: uploadedContractFilesTable.paymentTerm,
+    paymentDays: uploadedContractFilesTable.paymentDays,
+    startDate: uploadedContractFilesTable.startDate,
+    endDate: uploadedContractFilesTable.endDate,
+    termsConfirmedAt: uploadedContractFilesTable.termsConfirmedAt,
+    termsConfirmedBy: uploadedContractFilesTable.termsConfirmedBy,
     uploadedBy: uploadedContractFilesTable.uploadedBy,
     uploadedAt: uploadedContractFilesTable.uploadedAt,
   }).from(uploadedContractFilesTable).orderBy(desc(uploadedContractFilesTable.uploadedAt));
-  res.json(Api.AdminListContractFilesResponse.parse(rows));
+  res.json(Api.AdminListContractFilesResponse.parse(rows.map((row) => ({
+    ...row,
+    discountPercent: row.discountPercent === null ? null : Number(row.discountPercent),
+  }))));
 }));
 
 router.post("/admin/contract-files/upload-url", permit("contracts", "edit"), route(async (req, res) => {
@@ -664,6 +675,85 @@ router.post("/admin/contract-files", permit("contracts", "edit"), route(async (r
   res.status(201).json(Api.AdminCreateContractFileResponse.parse(publicRow));
 }));
 
+router.post("/admin/contract-files/:id/terms", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminConfirmUploadedContractTermsParams, req.params, res); if (!params) return;
+  const body = parse(Api.AdminConfirmUploadedContractTermsBody, req.body, res); if (!body) return;
+  if (body.paymentTerm === "net_days" && body.paymentDays === undefined) {
+    res.status(400).json({ error: "paymentDays is required for net_days terms" }); return;
+  }
+  if (body.paymentTerm !== "net_days" && body.paymentDays !== undefined) {
+    res.status(400).json({ error: "paymentDays is only valid for net_days terms" }); return;
+  }
+  if (!body.contractType.trim()) {
+    res.status(400).json({ error: "contractType cannot be blank" }); return;
+  }
+  if (body.startDate && body.endDate && body.startDate > body.endDate) {
+    res.status(400).json({ error: "Contract startDate must be on or before endDate" }); return;
+  }
+  const confirmation = await db.transaction(async (tx) => {
+    // Read only the immutable owner routing keys to find the lock; all terms
+    // and owner state are re-read after obtaining the distributor-scoped lock.
+    const [identity] = await tx.select({
+      ownerType: uploadedContractFilesTable.ownerType,
+      ownerId: uploadedContractFilesTable.ownerId,
+    }).from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+    if (!identity) return { status: "not-found" as const };
+    if (identity.ownerType !== "distributor") return { status: "not-distributor" as const };
+
+    await lockDistributorContractSource(tx, identity.ownerId);
+    const [existing] = await tx.select().from(uploadedContractFilesTable)
+      .where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+    if (!existing) return { status: "not-found" as const };
+    if (existing.ownerType !== "distributor" || existing.ownerId !== identity.ownerId) {
+      return { status: "owner-changed" as const };
+    }
+    if (existing.termsConfirmedAt) return { status: "already-confirmed" as const };
+    const [owner] = await tx.select({
+      id: wholesaleDistributorsTable.id,
+      companyName: wholesaleDistributorsTable.companyName,
+    }).from(wholesaleDistributorsTable).where(and(
+      eq(wholesaleDistributorsTable.id, existing.ownerId),
+      eq(wholesaleDistributorsTable.isActive, true),
+    )).limit(1);
+    if (!owner) return { status: "inactive-owner" as const };
+    const [row] = await tx.update(uploadedContractFilesTable).set({
+      ownerName: owner.companyName,
+      contractType: body.contractType.trim(),
+      discountPercent: String(body.discountPercent),
+      paymentTerm: body.paymentTerm,
+      paymentDays: body.paymentTerm === "net_days" ? body.paymentDays! : null,
+      startDate: body.startDate ? body.startDate.toISOString().slice(0, 10) : null,
+      endDate: body.endDate ? body.endDate.toISOString().slice(0, 10) : null,
+      termsConfirmedAt: new Date(),
+      termsConfirmedBy: res.locals.admin.id,
+    }).where(and(
+      eq(uploadedContractFilesTable.id, params.id),
+      eq(uploadedContractFilesTable.ownerType, "distributor"),
+      eq(uploadedContractFilesTable.ownerId, owner.id),
+      isNull(uploadedContractFilesTable.termsConfirmedAt),
+    )).returning();
+    return row ? { status: "confirmed" as const, row } : { status: "already-confirmed" as const };
+  });
+  if (confirmation.status === "not-found") { res.status(404).json({ error: "Contract file not found" }); return; }
+  if (confirmation.status === "not-distributor") {
+    res.status(400).json({ error: "Reviewed invoice terms can only be confirmed for a distributor contract" }); return;
+  }
+  if (confirmation.status === "inactive-owner") {
+    res.status(409).json({ error: "Contract owner must be an active distributor" }); return;
+  }
+  if (confirmation.status === "owner-changed") {
+    res.status(409).json({ error: "Contract owner changed while confirming terms" }); return;
+  }
+  if (confirmation.status === "already-confirmed") {
+    res.status(409).json({ error: "Contract terms have already been confirmed" }); return;
+  }
+  const { objectPath: _objectPath, ...publicRow } = confirmation.row;
+  res.json(Api.AdminConfirmUploadedContractTermsResponse.parse({
+    ...publicRow,
+    discountPercent: publicRow.discountPercent === null ? null : Number(publicRow.discountPercent),
+  }));
+}));
+
 router.get("/admin/contract-files/:id/download", permit("contracts", "view"), route(async (req, res) => {
   const params = parse(Api.AdminDownloadContractFileParams, req.params, res); if (!params) return;
   const [row] = await db.select().from(uploadedContractFilesTable)
@@ -682,10 +772,15 @@ router.delete("/admin/contract-files/:id", permit("contracts", "delete"), route(
   const params = parse(Api.AdminDeleteContractFileParams, req.params, res); if (!params) return;
   const [existing] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Contract file not found" }); return; }
-  if (isLocalContractPath(existing.objectPath)) await localContracts.delete(existing.objectPath);
+  const [referenced] = await db.select({ id: invoicesTable.id }).from(invoicesTable)
+    .where(eq(invoicesTable.uploadedContractFileId, params.id)).limit(1);
+  if (referenced) {
+    res.status(409).json({ error: "This contract file is referenced by an invoice and cannot be deleted" }); return;
+  }
   const [row] = await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).returning();
   if (!row) { res.status(404).json({ error: "Contract file not found" }); return; }
-  if (!isLocalContractPath(row.objectPath)) await objectStorage.deleteObject(row.objectPath).catch(() => undefined);
+  if (isLocalContractPath(row.objectPath)) await localContracts.delete(row.objectPath);
+  else await objectStorage.deleteObject(row.objectPath).catch(() => undefined);
   res.sendStatus(204);
 }));
 
@@ -1643,10 +1738,12 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     distributorId: invoicesTable.distributorId,
     distributorName: invoicesTable.buyerName,
     contractId: invoicesTable.contractId,
+    uploadedContractFileId: invoicesTable.uploadedContractFileId,
     contractNumber: invoicesTable.contractNumber,
     contractType: invoicesTable.contractType,
     contractDiscountPercent: invoicesTable.contractDiscountPercent,
     paymentDays: invoicesTable.paymentDays,
+    paymentTerm: invoicesTable.paymentTerm,
     taxTreatment: invoicesTable.taxTreatment,
     vatRate: invoicesTable.vatRate,
     exhibitionId: invoicesTable.exhibitionId,
@@ -1825,7 +1922,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
     buyerName: invoicesTable.buyerName, buyerAddress: invoicesTable.buyerAddress,
     buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
-    discountAmount: sql<number>`coalesce(${ordersTable.discount}, 0)`,
+     discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
     shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount, totalAmount: invoicesTable.totalAmount, qrCodeData: invoicesTable.qrCodeData,
   }).from(invoicesTable).leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))

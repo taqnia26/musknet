@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UploadedContractFileOwnerType } from './uploadedContractFileOwnerType';
+import type { UploadedContractFilePaymentTerm } from './uploadedContractFilePaymentTerm';
 
 export interface UploadedContractFile {
   id: number;
@@ -17,6 +18,22 @@ export interface UploadedContractFile {
   sizeBytes: number;
   /** @nullable */
   notes: string | null;
+  /** @nullable */
+  contractType: string | null;
+  /** @nullable */
+  discountPercent: number | null;
+  /** @nullable */
+  paymentTerm: UploadedContractFilePaymentTerm;
+  /** @nullable */
+  paymentDays: number | null;
+  /** @nullable */
+  startDate: Date | null;
+  /** @nullable */
+  endDate: Date | null;
+  /** @nullable */
+  termsConfirmedAt: Date | null;
+  /** @nullable */
+  termsConfirmedBy: number | null;
   uploadedBy: number;
   uploadedAt: Date;
 }

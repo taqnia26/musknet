@@ -18,6 +18,8 @@ export interface DistributorInvoiceInput {
   distributorId: number;
   /** @minimum 1 */
   contractId?: number;
+  /** @minimum 1 */
+  uploadedContractFileId?: number;
   taxTreatment?: DistributorInvoiceInputTaxTreatment;
   dueDate?: Date;
   /**

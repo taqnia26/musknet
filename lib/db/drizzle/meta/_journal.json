@@ -351,6 +351,13 @@
       "when": 1790240245382,
       "tag": "0049_panoramic_mentallo",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1790242530675,
+      "tag": "0050_good_molecule_man",
+      "breakpoints": true
     }
   ]
 }

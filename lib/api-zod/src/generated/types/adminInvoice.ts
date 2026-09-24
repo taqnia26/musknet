@@ -7,6 +7,7 @@
  */
 import type { AdminInvoiceItem } from './adminInvoiceItem';
 import type { AdminInvoicePaymentStatus } from './adminInvoicePaymentStatus';
+import type { AdminInvoicePaymentTerm } from './adminInvoicePaymentTerm';
 import type { AdminInvoiceTaxTreatment } from './adminInvoiceTaxTreatment';
 import type { ReceivablePayment } from './receivablePayment';
 
@@ -23,6 +24,8 @@ export interface AdminInvoice {
   /** @nullable */
   contractId: number | null;
   /** @nullable */
+  uploadedContractFileId: number | null;
+  /** @nullable */
   contractNumber: string | null;
   /** @nullable */
   contractType: string | null;
@@ -30,6 +33,8 @@ export interface AdminInvoice {
   contractDiscountPercent: number | null;
   /** @nullable */
   paymentDays: number | null;
+  /** @nullable */
+  paymentTerm: AdminInvoicePaymentTerm;
   /** @nullable */
   taxTreatment: AdminInvoiceTaxTreatment;
   /** @nullable */

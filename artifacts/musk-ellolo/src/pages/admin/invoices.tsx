@@ -39,6 +39,7 @@ import { hasPermission } from '@/lib/permissions';
 import { CreateDistributorInvoiceDialog } from '@/components/admin/create-distributor-invoice-dialog';
 import { CreateExhibitionInvoiceDialog } from '@/components/admin/create-exhibition-invoice-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { formatRiyadhBusinessDate } from '@/lib/riyadh-business-date';
 
 function InvoiceTemplate({
   invoice,
@@ -51,6 +52,17 @@ function InvoiceTemplate({
 }) {
   const { t, lang } = useLanguage();
   const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const usesContractTerms = Boolean(invoice.contractId || invoice.uploadedContractFileId);
+  const contractDisplayName = invoice.contractNumber || (invoice.uploadedContractFileId
+    ? t(`ملف عقد #${invoice.uploadedContractFileId}`, `Contract file #${invoice.uploadedContractFileId}`)
+    : '-');
+  const paymentTermsDescription = invoice.paymentTerm === 'due_on_issue'
+    ? t('نقداً / يوم الإصدار', 'Due on issue')
+    : invoice.paymentTerm === 'end_of_month'
+      ? t('نهاية الشهر الميلادي', 'End of month')
+      : invoice.paymentDays !== null && invoice.paymentDays !== undefined
+        ? t(`${invoice.paymentDays} يوم`, `${invoice.paymentDays} days`)
+        : null;
   const inclusiveOrderSnapshot = Boolean(invoice.orderNumber) &&
     Math.round(invoice.subtotal * 100) + Math.round(invoice.vatAmount * 100) === Math.round(invoice.totalAmount * 100);
   const vatLabel = invoice.vatAmount > 0
@@ -113,8 +125,9 @@ function InvoiceTemplate({
             <dl className="space-y-3 text-sm">
               <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
               {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
-              {invoice.contractId && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('العقد', 'Contract')}</dt><dd>{invoice.contractNumber || '-'}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
-              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{format(new Date(invoice.issueDatetime), 'yyyy-MM-dd')}</dd></div>
+              {usesContractTerms && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{invoice.uploadedContractFileId ? t('ملف العقد', 'Contract file') : t('العقد', 'Contract')}</dt><dd className="text-end">{contractDisplayName}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
+              {usesContractTerms && paymentTermsDescription && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('شروط السداد', 'Payment terms')}</dt><dd>{paymentTermsDescription}</dd></div>}
+              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{formatRiyadhBusinessDate(invoice.issueDatetime)}</dd></div>
               <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
             </dl>
           </div>
@@ -159,7 +172,7 @@ function InvoiceTemplate({
           )}
         </div>
         <div className="w-full sm:w-80 space-y-4">
-          {invoice.contractId ? (
+          {usesContractTerms ? (
             <>
               <div className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</span>
@@ -754,7 +767,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
                   <TableCell>{channel === 'online' ? (invoice.buyerName ?? '-') : (
                     <div>
                       <span>{invoice.distributorName ?? <span className="text-muted-foreground">-</span>}</span>
-                      {invoice.contractId && <span className="mt-1 block text-xs text-muted-foreground">{invoice.contractNumber}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</span>}
+                      {(invoice.contractId || invoice.uploadedContractFileId) && <span className="mt-1 block text-xs text-muted-foreground">{invoice.contractNumber || (invoice.uploadedContractFileId ? t(`ملف عقد #${invoice.uploadedContractFileId}`, `Contract file #${invoice.uploadedContractFileId}`) : '-')}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</span>}
                     </div>
                   )}</TableCell>
                   <TableCell className={invoice.dueDate && invoice.outstandingAmount > 0 && invoice.dueDate < new Date().toISOString().slice(0, 10) ? 'font-semibold text-destructive' : ''}>{invoice.dueDate ?? '-'}</TableCell>
@@ -885,7 +898,7 @@ export function AdminExhibitionInvoices() {
               invoices.map(invoice => <TableRow key={invoice.id} data-testid={`exhibition-invoice-${invoice.id}`}>
                 <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                 <TableCell>{invoice.exhibitionName}</TableCell>
-                <TableCell>{invoice.issueDatetime.slice(0, 10)}</TableCell>
+                <TableCell>{formatRiyadhBusinessDate(invoice.issueDatetime)}</TableCell>
                 <TableCell>{invoice.buyerName}</TableCell>
                 <TableCell><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></TableCell>
                 <TableCell><div className="flex justify-center gap-1">

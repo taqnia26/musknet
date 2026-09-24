@@ -4,6 +4,7 @@ import {
   useAdminCreateDistributorInvoice,
   useAdminListDistributors,
   useAdminListContracts,
+  useAdminListContractFiles,
   useAdminListProducts,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,6 +19,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { sortProductsForSelection } from '@/lib/product-sort';
 
 type Line = { productId: string; quantity: number; unitPrice: number };
+type InvoiceContractSource = {
+  key: string;
+  sourceType: 'generated' | 'uploaded';
+  id: number;
+  title: string;
+  contractType: string;
+  discountPercent: number;
+  paymentDays: number | null;
+  paymentTerm: 'net_days' | 'end_of_month' | 'due_on_issue';
+  startDate: string | null;
+  endDate: string | null;
+  vatRate: number | null;
+};
 const emptyLine = (): Line => ({ productId: '', quantity: 1, unitPrice: 0 });
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 const defaultDueDate = () => {
@@ -33,49 +47,95 @@ export function CreateDistributorInvoiceDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [distributorId, setDistributorId] = useState('');
-  const [contractId, setContractId] = useState('');
+  const [contractSourceKey, setContractSourceKey] = useState('');
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [creationKey, setCreationKey] = useState(() => crypto.randomUUID());
   const [dueDate, setDueDate] = useState(defaultDueDate);
   const [error, setError] = useState<string | null>(null);
   const { data: distributors } = useAdminListDistributors({ status: 'active' });
   const { data: contracts, isLoading: contractsLoading, isError: contractsError } = useAdminListContracts();
+  const { data: uploadedFiles, isLoading: uploadedFilesLoading, isError: uploadedFilesError } = useAdminListContractFiles();
   const { data: products } = useAdminListProducts({ status: 'active' });
   const productOptions = useMemo(() => sortProductsForSelection(products ?? [], lang), [products, lang]);
   const createInvoice = useAdminCreateDistributorInvoice();
 
-  const applicableContracts = useMemo(
-    () => {
-      const today = localDateValue(new Date());
-      return (contracts ?? []).filter((contract) =>
+  const today = localDateValue(new Date());
+  const contractSources = useMemo(() => {
+    if (!distributorId) return [];
+    const generated: InvoiceContractSource[] = (contracts ?? [])
+      .filter((contract) =>
         contract.status === 'final' &&
         contract.distributorId === Number(distributorId) &&
         (!contract.startDate || contract.startDate.slice(0, 10) <= today) &&
         (!contract.endDate || contract.endDate.slice(0, 10) >= today),
-      );
-    },
-    [contracts, distributorId],
+      )
+      .map((contract) => ({
+        key: `generated-${contract.id}`,
+        sourceType: 'generated',
+        id: contract.id,
+        title: contract.contractNumber,
+        contractType: contract.contractType,
+        discountPercent: Number(contract.marginPercent ?? 0),
+        paymentDays: contract.paymentDays ?? null,
+        paymentTerm: contract.contractType.includes('نقد') ? 'due_on_issue' : 'net_days',
+        startDate: contract.startDate ?? null,
+        endDate: contract.endDate ?? null,
+        vatRate: contract.vatRate == null ? null : Number(contract.vatRate),
+      }));
+    const uploaded: InvoiceContractSource[] = (uploadedFiles ?? [])
+      .filter((file) =>
+        file.ownerType === 'distributor' &&
+        file.ownerId === Number(distributorId) &&
+        Boolean(file.termsConfirmedAt) &&
+        (!file.startDate || file.startDate.slice(0, 10) <= today) &&
+        (!file.endDate || file.endDate.slice(0, 10) >= today),
+      )
+      .map((file) => ({
+        key: `uploaded-${file.id}`,
+        sourceType: 'uploaded',
+        id: file.id,
+        title: file.fileName,
+        contractType: file.contractType!,
+        discountPercent: Number(file.discountPercent ?? 0),
+        paymentDays: file.paymentDays ?? null,
+        paymentTerm: file.paymentTerm!,
+        startDate: file.startDate ?? null,
+        endDate: file.endDate ?? null,
+        vatRate: null,
+      }));
+    return [...generated, ...uploaded];
+  }, [contracts, uploadedFiles, distributorId, today]);
+  const pendingUploadedFiles = useMemo(
+    () => (uploadedFiles ?? []).filter((file) =>
+      file.ownerType === 'distributor' &&
+      file.ownerId === Number(distributorId) &&
+      !file.termsConfirmedAt,
+    ),
+    [uploadedFiles, distributorId],
   );
-  const selectedContract = applicableContracts.find((contract) => String(contract.id) === contractId);
+  const selectedSource = contractSources.find((source) => source.key === contractSourceKey);
   useEffect(() => {
-    setContractId(applicableContracts.length === 1 ? String(applicableContracts[0].id) : '');
-  }, [distributorId, applicableContracts]);
+    setContractSourceKey(contractSources.length === 1 ? contractSources[0].key : '');
+  }, [distributorId, contractSources]);
 
   const selectedDistributor = (distributors ?? []).find((distributor) => String(distributor.id) === distributorId);
   const countryCode = (selectedDistributor as (typeof selectedDistributor & { countryCode?: string | null }))?.countryCode?.trim() ?? '';
   const hasValidCountryCode = /^[A-Z]{2}$/.test(countryCode);
-  const isGulfContract = Boolean(selectedContract?.contractType.includes('دول الخليج'));
-  const isSaudiContract = Boolean(selectedContract?.contractType.includes('السعودية'));
+  const isGulfContract = Boolean(selectedSource?.contractType.includes('دول الخليج'));
+  const isSaudiContract = Boolean(selectedSource?.contractType.includes('السعودية'));
   const taxTreatment = hasValidCountryCode && countryCode !== 'SA' ? 'international' : 'domestic';
-  const discountPercent = Math.min(100, Math.max(0, Number(selectedContract?.marginPercent ?? 0) || 0));
-  const vatRate = taxTreatment === 'domestic' ? Math.max(0, Number(selectedContract?.vatRate ?? 15) || 0) : 0;
-  const isCashContract = Boolean(selectedContract?.contractType.includes('نقد'));
+  const discountPercent = Math.min(100, Math.max(0, Number(selectedSource?.discountPercent ?? 0) || 0));
+  const vatRate = taxTreatment === 'domestic' ? Math.max(0, Number(selectedSource?.vatRate ?? 15) || 0) : 0;
   const contractDueDate = useMemo(() => {
-    if (!selectedContract) return '';
+    if (!selectedSource) return '';
     const date = new Date();
-    date.setDate(date.getDate() + (isCashContract ? 0 : Math.max(0, selectedContract.paymentDays ?? 0)));
+    if (selectedSource.paymentTerm === 'end_of_month') {
+      return localDateValue(new Date(date.getFullYear(), date.getMonth() + 1, 0));
+    }
+    const paymentDays = selectedSource.paymentTerm === 'due_on_issue' ? 0 : Math.max(0, selectedSource.paymentDays ?? 0);
+    date.setDate(date.getDate() + paymentDays);
     return localDateValue(date);
-  }, [isCashContract, selectedContract]);
+  }, [selectedSource]);
 
   const totals = useMemo(() => {
     const amounts = lines.map((line) => {
@@ -99,7 +159,7 @@ export function CreateDistributorInvoiceDialog() {
 
   const reset = () => {
     setDistributorId('');
-    setContractId('');
+    setContractSourceKey('');
     setLines([emptyLine()]);
     setCreationKey(crypto.randomUUID());
     setDueDate(defaultDueDate());
@@ -110,7 +170,7 @@ export function CreateDistributorInvoiceDialog() {
   };
   const submit = () => {
     setError(null);
-    const effectiveDueDate = selectedContract ? contractDueDate : dueDate;
+    const effectiveDueDate = selectedSource ? contractDueDate : dueDate;
     if (!distributorId) {
       setError(t('اختر موزعاً وأدخل منتجاً وكمية وسعراً صالحاً لكل بند', 'Select a distributor and enter a valid product, quantity, and price for every line'));
       return;
@@ -119,12 +179,16 @@ export function CreateDistributorInvoiceDialog() {
       setError(t('تعذر التحقق من بلد الشركة. أعد تحميل الشركات وحاول مجدداً.', 'Could not verify the company country. Reload the company list and try again.'));
       return;
     }
-    if (contractsLoading || contractsError) {
+    if (contractsLoading || uploadedFilesLoading || contractsError || uploadedFilesError) {
       setError(t('تعذر التحقق من العقود المرتبطة. حاول مجدداً قبل إصدار الفاتورة.', 'Could not verify linked contracts. Retry before issuing the invoice.'));
       return;
     }
-    if (applicableContracts.length > 1 && !selectedContract) {
-      setError(t('اختر العقد الذي ستصدر الفاتورة بموجبه.', 'Select the contract to issue this invoice under.'));
+    if (pendingUploadedFiles.length > 0 && !selectedSource) {
+      setError(t('يوجد عقد مرفوع لهذه الشركة بانتظار اعتماد شروطه. اعتمد الشروط من تبويب الملفات المرفوعة قبل إصدار الفاتورة.', 'This company has an uploaded contract waiting for terms approval. Approve its terms in Uploaded Files before issuing an invoice.'));
+      return;
+    }
+    if (contractSources.length > 1 && !selectedSource) {
+      setError(t('اختر العقد أو الملف المعتمد الذي ستصدر الفاتورة بموجبه.', 'Select the contract or approved file to issue this invoice under.'));
       return;
     }
     if (isGulfContract && (!hasValidCountryCode || countryCode === 'SA')) {
@@ -149,7 +213,11 @@ export function CreateDistributorInvoiceDialog() {
       data: {
         creationKey,
         distributorId: Number(distributorId),
-        ...(selectedContract ? { contractId: selectedContract.id, taxTreatment } : { dueDate, taxTreatment }),
+        ...(selectedSource
+          ? selectedSource.sourceType === 'uploaded'
+            ? { uploadedContractFileId: selectedSource.id, taxTreatment }
+            : { contractId: selectedSource.id, taxTreatment }
+          : { dueDate, taxTreatment }),
         items: lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity, unitPrice: line.unitPrice })),
       },
     }, {
@@ -176,36 +244,50 @@ export function CreateDistributorInvoiceDialog() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label>{t('الموزع النشط', 'Active Distributor')}</Label>
-              <Select value={distributorId} onValueChange={(value) => { setDistributorId(value); setContractId(''); }}>
+               <Select value={distributorId} onValueChange={(value) => { setDistributorId(value); setContractSourceKey(''); }}>
                 <SelectTrigger data-testid="select-invoice-distributor"><SelectValue placeholder={t('اختر الموزع', 'Select distributor')} /></SelectTrigger>
                 <SelectContent>{(distributors ?? []).map((distributor) => <SelectItem key={distributor.id} value={String(distributor.id)}>{distributor.companyName}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>{t('العقد النهائي المرتبط', 'Final linked contract')}</Label>
-              {contractsLoading ? <p className="text-sm text-muted-foreground">{t('جاري تحميل العقود...', 'Loading contracts...')}</p> : contractsError ? (
-                <p role="alert" className="text-sm text-destructive">{t('تعذر تحميل العقود المرتبطة. أعد فتح النافذة وحاول مجدداً.', 'Could not load linked contracts. Reopen the dialog and try again.')}</p>
-              ) : applicableContracts.length === 0 ? (
-                <p className="rounded-md border bg-muted/20 p-2 text-sm text-muted-foreground">{t('لا يوجد عقد نهائي ينطبق على هذه الشركة.', 'No final contract applies to this company.')}</p>
-              ) : applicableContracts.length === 1 ? (
-                <p className="rounded-md border bg-muted/20 p-2 text-sm">{applicableContracts[0].contractNumber} · {applicableContracts[0].contractType}</p>
+              <Label>{t('مصدر شروط الفوترة', 'Invoice terms source')}</Label>
+              {contractsLoading || uploadedFilesLoading ? <p className="text-sm text-muted-foreground">{t('جاري تحميل العقود والملفات...', 'Loading contracts and files...')}</p> : contractsError || uploadedFilesError ? (
+                <p role="alert" className="text-sm text-destructive">{t('تعذر تحميل العقود أو الملفات المرفوعة. أعد فتح النافذة وحاول مجدداً.', 'Could not load contracts or uploaded files. Reopen the dialog and try again.')}</p>
+              ) : !distributorId ? (
+                <p className="rounded-md border bg-muted/20 p-2 text-sm text-muted-foreground">{t('اختر الشركة لعرض العقود المتاحة.', 'Select a company to view available contracts.')}</p>
+              ) : contractSources.length === 0 ? (
+                <p className="rounded-md border bg-muted/20 p-2 text-sm text-muted-foreground">{t('لا يوجد عقد نهائي أو ملف عقد معتمد وساري لهذه الشركة.', 'No final contract or approved active contract file applies to this company.')}</p>
+              ) : contractSources.length === 1 ? (
+                <p className="rounded-md border bg-muted/20 p-2 text-sm">
+                  {contractSources[0].sourceType === 'uploaded' ? t('ملف مرفوع', 'Uploaded file') : t('عقد نهائي', 'Final contract')} · {contractSources[0].title} · {contractSources[0].contractType}
+                </p>
               ) : (
-                <Select value={contractId} onValueChange={setContractId}>
-                  <SelectTrigger data-testid="select-invoice-contract"><SelectValue placeholder={t('اختر العقد', 'Select a contract')} /></SelectTrigger>
-                  <SelectContent>{applicableContracts.map((contract) => <SelectItem key={contract.id} value={String(contract.id)}>{contract.contractNumber} · {contract.contractType}</SelectItem>)}</SelectContent>
+                <Select value={contractSourceKey} onValueChange={setContractSourceKey}>
+                  <SelectTrigger data-testid="select-invoice-contract-source"><SelectValue placeholder={t('اختر العقد أو الملف المعتمد', 'Select a contract or approved file')} /></SelectTrigger>
+                  <SelectContent>{contractSources.map((source) => <SelectItem key={source.key} value={source.key}>{source.sourceType === 'uploaded' ? t('ملف مرفوع', 'Uploaded file') : t('عقد نهائي', 'Final contract')} · {source.title} · {source.contractType}</SelectItem>)}</SelectContent>
                 </Select>
+              )}
+              {pendingUploadedFiles.length > 0 && (
+                <p role="alert" className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-800">
+                  {t(
+                    `يوجد ${pendingUploadedFiles.length} ملف عقد بانتظار اعتماد الشروط (${pendingUploadedFiles.map((file) => file.fileName).join('، ')}). ${selectedSource ? 'يمكن إصدار الفاتورة بالمصدر المعتمد المختار؛ اعتمد هذه الملفات لاستخدامها لاحقاً.' : 'اعتمد الشروط من الملفات المرفوعة قبل إصدار الفاتورة.'}`,
+                    `${pendingUploadedFiles.length} uploaded contract file(s) await terms approval. ${selectedSource ? 'You can invoice using the selected approved source; approve these files for later use.' : 'Approve the terms in Uploaded Files before issuing an invoice.'}`,
+                  )}
+                </p>
               )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="invoice-due-date">{t('تاريخ الاستحقاق', 'Due date')}</Label>
-              <Input id="invoice-due-date" type="date" value={selectedContract ? contractDueDate : dueDate} onChange={(event) => setDueDate(event.target.value)} readOnly={!!selectedContract} />
-              {selectedContract && <p className="text-xs text-muted-foreground">{isCashContract
-                ? t('فاتورة نقدية: تاريخ الاستحقاق اليوم', 'Cash contract: due today')
-                : t(`احتُسب حسب مهلة الدفع في العقد (${selectedContract.paymentDays ?? 0} يوم)`, `Calculated from contract payment terms (${selectedContract.paymentDays ?? 0} days)`)}</p>}
+              <Input id="invoice-due-date" type="date" value={selectedSource ? contractDueDate : dueDate} onChange={(event) => setDueDate(event.target.value)} readOnly={!!selectedSource} />
+              {selectedSource && <p className="text-xs text-muted-foreground">{selectedSource.paymentTerm === 'due_on_issue'
+                ? t('فاتورة نقدية: تاريخ الاستحقاق يوم الإصدار', 'Cash terms: due on issue')
+                : selectedSource.paymentTerm === 'end_of_month'
+                  ? t('احتُسب تاريخ الاستحقاق لنهاية الشهر', 'Due date calculated as end of month')
+                  : t(`احتُسب حسب مهلة الدفع في العقد (${selectedSource.paymentDays ?? 0} يوم)`, `Calculated from contract payment terms (${selectedSource.paymentDays ?? 0} days)`)}</p>}
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {selectedContract && <>{t('الخصم', 'Discount')}: {discountPercent}% · </>}
+            {selectedSource && <>{t('المصدر', 'Source')}: {selectedSource.title} · {t('الخصم', 'Discount')}: {discountPercent}% · </>}
             {taxTreatment === 'international'
               ? t(`دولي وفق دولة الشركة (${countryCode}) — بدون ضريبة قيمة مضافة`, `International from company country (${countryCode}) — no VAT`)
               : t('محلي وفق دولة الشركة (ضريبة القيمة المضافة مشمولة)', 'Domestic from company country (VAT included)')}
@@ -235,13 +317,13 @@ export function CreateDistributorInvoiceDialog() {
           </div>
           <div className="grid grid-cols-3 gap-3 rounded-lg border bg-muted/20 p-4 text-center">
             <div><p className="text-xs text-muted-foreground">{t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount')}</p><p className="font-semibold">{totals.grossSubtotal.toFixed(2)}</p></div>
-            <div><p className="text-xs text-muted-foreground">{t('الخصم', 'Discount')}{selectedContract ? ` (${discountPercent}%)` : ''}</p><p className="font-semibold">-{totals.discount.toFixed(2)}</p></div>
+            <div><p className="text-xs text-muted-foreground">{t('الخصم', 'Discount')}{selectedSource ? ` (${discountPercent}%)` : ''}</p><p className="font-semibold">-{totals.discount.toFixed(2)}</p></div>
             <div><p className="text-xs text-muted-foreground">{t('صافي المبلغ قبل الضريبة', 'Net subtotal')}</p><p className="font-semibold">{totals.subtotal.toFixed(2)}</p></div>
             <div><p className="text-xs text-muted-foreground">{vatRate ? t(`ضريبة القيمة المضافة المستخرجة (${vatRate}%)`, `VAT included (${vatRate}%)`) : t('ضريبة القيمة المضافة (دولي)', 'VAT (international)')}</p><p className="font-semibold">{totals.vat.toFixed(2)}</p></div>
             <div><p className="text-xs text-muted-foreground">{t('الإجمالي', 'Total')}</p><p className="font-bold text-primary">{totals.total.toFixed(2)}</p></div>
           </div>
           {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
-          <Button className="w-full" onClick={submit} disabled={createInvoice.isPending || contractsLoading}>{createInvoice.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ وإصدار الفاتورة', 'Save and Issue Invoice')}</Button>
+          <Button className="w-full" onClick={submit} disabled={createInvoice.isPending || contractsLoading || uploadedFilesLoading || (pendingUploadedFiles.length > 0 && !selectedSource)}>{createInvoice.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ وإصدار الفاتورة', 'Save and Issue Invoice')}</Button>
         </div>
       </DialogContent>
     </Dialog>

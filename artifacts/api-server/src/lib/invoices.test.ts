@@ -4,17 +4,21 @@ import {
   accountingAccountsTable, adminUsersTable, categoriesTable, customersTable, db, inventoryBalancesTable, inventoryMovementsTable,
   invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryAuditTable,
   journalEntryLinesTable, operationEventsTable, orderItemsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
+  uploadedContractFilesTable,
 } from "@workspace/db";
-import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, updateOrderAndIssueInvoice } from "./invoices";
+import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, updateOrderAndIssueInvoice } from "./invoices";
 
 const base = 1_700_000_000 + (Date.now() % 100_000_000);
 const customerId = base;
 const orderIds = [base + 1, base + 2, base + 3, base + 4];
 let distributorId: number;
 let inactiveDistributorId: number;
+let internationalDistributorId: number;
+let concurrentDistributorId: number;
 let productId: number;
 let actorId: number;
 let successfulInvoiceId: number;
+const uploadedContractFileIds: number[] = [];
 
 const order = (id: number) => ({
   id,
@@ -59,14 +63,22 @@ beforeAll(async () => {
       companyName: "موزع غير نشط", contactName: "Tester", phone: `051${String(base).slice(-7)}`,
       isActive: false,
     },
+    {
+      companyName: "موزع دولي للاختبار", contactName: "Tester", phone: `052${String(base).slice(-7)}`,
+    },
+    {
+      companyName: "موزع تزامن العقود", contactName: "Tester", phone: `053${String(base).slice(-7)}`,
+    },
   ]).returning({ id: wholesaleDistributorsTable.id, isActive: wholesaleDistributorsTable.isActive });
-  distributorId = distributors.find((row) => row.isActive)!.id;
+  distributorId = distributors[0].id;
   inactiveDistributorId = distributors.find((row) => !row.isActive)!.id;
+  internationalDistributorId = distributors[2].id;
+  concurrentDistributorId = distributors[3].id;
 });
 
 afterAll(async () => {
   const distributorInvoices = await db.select({ id: invoicesTable.id }).from(invoicesTable)
-    .where(inArray(invoicesTable.distributorId, [distributorId, inactiveDistributorId]));
+    .where(inArray(invoicesTable.distributorId, [distributorId, inactiveDistributorId, internationalDistributorId, concurrentDistributorId]));
   if (distributorInvoices.length) {
     const invoiceIds = distributorInvoices.map((row) => row.id);
     const payments = await db.select({ id: receivablePaymentsTable.id }).from(receivablePaymentsTable)
@@ -105,7 +117,10 @@ afterAll(async () => {
     ));
     await db.delete(invoicesTable).where(inArray(invoicesTable.id, invoiceIds));
   }
-  await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, [distributorId, inactiveDistributorId]));
+  if (uploadedContractFileIds.length) {
+    await db.delete(uploadedContractFilesTable).where(inArray(uploadedContractFilesTable.id, uploadedContractFileIds));
+  }
+  await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, [distributorId, inactiveDistributorId, internationalDistributorId, concurrentDistributorId]));
   await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
   await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
   await db.delete(productsTable).where(eq(productsTable.id, productId));
@@ -341,6 +356,148 @@ describe.sequential("distributor invoice issuance", () => {
     expect(Math.abs(first.sequenceNumber - second.sequenceNumber)).toBe(1);
   });
 
+  it("requires review for pending uploads and applies confirmed uploaded terms by explicit owner", async () => {
+    const [pending] = await db.insert(uploadedContractFilesTable).values({
+      ownerType: "distributor",
+      ownerId: distributorId,
+      ownerName: "موزع اختبار",
+      fileName: `pending-${base}.pdf`,
+      objectPath: `/objects/uploads/contracts/files/pending-${base}`,
+      mimeType: "application/pdf",
+      sizeBytes: 100,
+      uploadedBy: actorId,
+    }).returning();
+    uploadedContractFileIds.push(pending.id);
+    await expect(createDistributorInvoice({
+      creationKey: `pending-${base}-invoice`,
+      distributorId,
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, pending.id));
+    uploadedContractFileIds.splice(uploadedContractFileIds.indexOf(pending.id), 1);
+
+    const files = await db.insert(uploadedContractFilesTable).values(["first", "second"].map((suffix) => ({
+      ownerType: "distributor",
+      ownerId: distributorId,
+      ownerName: "موزع اختبار",
+      fileName: `confirmed-${suffix}-${base}.pdf`,
+      objectPath: `/objects/uploads/contracts/files/confirmed-${suffix}-${base}`,
+      mimeType: "application/pdf",
+      sizeBytes: 100,
+      contractType: "Saudi distributor agreement",
+      discountPercent: "7.50",
+      paymentTerm: "end_of_month",
+      paymentDays: null,
+      termsConfirmedAt: new Date(),
+      termsConfirmedBy: actorId,
+      uploadedBy: actorId,
+    }))).returning();
+    uploadedContractFileIds.push(...files.map((file) => file.id));
+    await expect(createDistributorInvoice({
+      creationKey: `ambiguous-${base}-invoice`,
+      distributorId,
+      taxTreatment: "domestic",
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    const invoice = await createDistributorInvoice({
+      creationKey: `uploaded-${base}-invoice`,
+      distributorId,
+      uploadedContractFileId: files[0].id,
+      taxTreatment: "domestic",
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env);
+    expect(invoice).toMatchObject({
+      uploadedContractFileId: files[0].id,
+      contractNumber: files[0].fileName,
+      contractType: "Saudi distributor agreement",
+      contractDiscountPercent: "7.50",
+      paymentTerm: "end_of_month",
+      paymentDays: null,
+    });
+    expect(invoice.totalAmount).toBe(18.5);
+    const [persisted] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+    const issueDateParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit",
+    }).formatToParts(invoice.issueDatetime);
+    const issueYear = Number(issueDateParts.find((part) => part.type === "year")?.value);
+    const issueMonth = Number(issueDateParts.find((part) => part.type === "month")?.value);
+    const lastDay = new Date(Date.UTC(issueYear, issueMonth, 0)).getUTCDate();
+    expect(persisted.dueDate).toBe(`${issueYear}-${String(issueMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`);
+    await expect(createDistributorInvoice({
+      creationKey: `uploaded-${base}-invoice`,
+      distributorId,
+      uploadedContractFileId: files[1].id,
+      taxTreatment: "domestic",
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+  });
+
+  it("waits for a concurrent terms confirmation before resolving invoice sources", async () => {
+    const [file] = await db.insert(uploadedContractFilesTable).values({
+      ownerType: "distributor",
+      ownerId: concurrentDistributorId,
+      ownerName: "موزع تزامن العقود",
+      fileName: `concurrent-${base}.pdf`,
+      objectPath: `/objects/uploads/contracts/files/concurrent-${base}`,
+      mimeType: "application/pdf",
+      sizeBytes: 100,
+      uploadedBy: actorId,
+    }).returning();
+    uploadedContractFileIds.push(file.id);
+    let releaseConfirmation!: () => void;
+    let signalLocked!: () => void;
+    const confirmationGate = new Promise<void>((resolve) => { releaseConfirmation = resolve; });
+    const lockAcquired = new Promise<void>((resolve) => { signalLocked = resolve; });
+    const confirmation = db.transaction(async (tx) => {
+      await lockDistributorContractSource(tx, concurrentDistributorId);
+      signalLocked();
+      await confirmationGate;
+      await tx.update(uploadedContractFilesTable).set({
+        contractType: "Saudi distributor agreement",
+        discountPercent: "5.00",
+        paymentTerm: "due_on_issue",
+        paymentDays: null,
+        termsConfirmedAt: new Date(),
+        termsConfirmedBy: actorId,
+      }).where(eq(uploadedContractFilesTable.id, file.id));
+    });
+    await lockAcquired;
+    const issuance = createDistributorInvoice({
+      creationKey: `concurrent-confirmation-${base}-invoice`,
+      distributorId: concurrentDistributorId,
+      taxTreatment: "domestic",
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env);
+    let outcome: "waiting" | "settled" | "timeout" = "timeout";
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      const lockState = await db.execute(sql`
+        select exists (
+          select 1 from pg_locks
+          where locktype = 'advisory'
+            and classid = 752101::oid
+            and objid = ${concurrentDistributorId}::oid
+            and granted = false
+        ) as waiting
+      `);
+      if (lockState.rows[0]?.waiting) { outcome = "waiting"; break; }
+      const alreadySettled = await Promise.race([
+        issuance.then(() => true, () => true),
+        new Promise<false>((resolve) => setTimeout(() => resolve(false), 10)),
+      ]);
+      if (alreadySettled) { outcome = "settled"; break; }
+    }
+    releaseConfirmation();
+    await confirmation;
+    expect(outcome).toBe("waiting");
+    const invoice = await issuance;
+    expect(invoice).toMatchObject({
+      uploadedContractFileId: file.id,
+      contractDiscountPercent: "5.00",
+      paymentTerm: "due_on_issue",
+      paymentDays: null,
+    });
+  });
+
   it("records partial and full collections without allowing overpayment", async () => {
     const partial = await createReceivablePayment(successfulInvoiceId, {
       paymentKey: `partial-${base}-payment`,
@@ -395,17 +552,17 @@ describe.sequential("distributor invoice issuance", () => {
   it("requires an explicit non-Saudi country for international invoices", async () => {
     const creationKey = `international-${base}-invoice`;
     const request = {
-      creationKey, distributorId, taxTreatment: "international" as const,
+      creationKey, distributorId: internationalDistributorId, taxTreatment: "international" as const,
       items: [{ productId, quantity: 1, unitPrice: 20 }],
     };
     await expect(createDistributorInvoice(request, actorId, env))
       .rejects.toBeInstanceOf(DistributorInvoiceValidationError);
     await db.update(wholesaleDistributorsTable).set({ countryCode: "SA" })
-      .where(eq(wholesaleDistributorsTable.id, distributorId));
+      .where(eq(wholesaleDistributorsTable.id, internationalDistributorId));
     await expect(createDistributorInvoice(request, actorId, env))
       .rejects.toBeInstanceOf(DistributorInvoiceValidationError);
     await db.update(wholesaleDistributorsTable).set({ countryCode: "AE" })
-      .where(eq(wholesaleDistributorsTable.id, distributorId));
+      .where(eq(wholesaleDistributorsTable.id, internationalDistributorId));
     const invoice = await createDistributorInvoice(request, actorId, env);
     expect(invoice).toMatchObject({ taxTreatment: "international", vatAmount: 0 });
     expect(Number(invoice.vatRate)).toBe(0);

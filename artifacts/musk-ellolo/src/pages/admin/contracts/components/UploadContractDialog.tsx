@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -45,10 +45,18 @@ import {
   getAdminListCustomersQueryKey,
   getListInfluencersQueryKey,
   getAdminListEmployeesQueryKey,
+  useAdminConfirmUploadedContractTerms,
   UploadedContractFileInputOwnerType,
   UploadedContractFileInputMimeType,
   ContractFileUploadRequestMimeType
 } from '@workspace/api-client-react';
+import {
+  UploadedContractTermsFields,
+  blankUploadedContractTerms,
+  uploadedContractTermsRequest,
+  uploadedContractTermsSchema,
+  type UploadedContractTermsValues,
+} from './uploaded-contract-terms';
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
@@ -80,6 +88,11 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
   
   const requestUpload = useAdminRequestContractFileUpload();
   const createFileRecord = useAdminCreateContractFile();
+  const confirmUploadedContractTerms = useAdminConfirmUploadedContractTerms();
+  const termsForm = useForm<UploadedContractTermsValues>({
+    resolver: zodResolver(uploadedContractTermsSchema),
+    defaultValues: blankUploadedContractTerms(),
+  });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -93,6 +106,10 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
   });
 
   const ownerType = form.watch('ownerType');
+  const ownerId = form.watch('ownerId');
+  useEffect(() => {
+    termsForm.reset(blankUploadedContractTerms());
+  }, [ownerType, ownerId, open]);
 
   // Fetch owners based on selected type
   const { data: distributors, isLoading: loadingDistributors } = useAdminListDistributors(undefined, { query: { enabled: open && ownerType === 'distributor', queryKey: getAdminListDistributorsQueryKey() }});
@@ -145,8 +162,11 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
     const mimeType = validMimeTypes[file.type];
     if (!mimeType) return;
 
+    if (values.ownerType === 'distributor' && !(await termsForm.trigger())) return;
+
     setUploading(true);
-    let uploadStage: 'prepare' | 'storage' | 'record' = 'prepare';
+    let uploadStage: 'prepare' | 'storage' | 'record' | 'terms' = 'prepare';
+    let createdFile: { id: number; fileName: string } | null = null;
     try {
       // 1. Request upload URL
       const { uploadUrl, objectPath } = await requestUpload.mutateAsync({
@@ -183,7 +203,7 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
 
       // 3. Create metadata record in DB
       uploadStage = 'record';
-      await createFileRecord.mutateAsync({
+      createdFile = await createFileRecord.mutateAsync({
         data: {
           ownerType: values.ownerType as UploadedContractFileInputOwnerType,
           ownerId: parseInt(values.ownerId, 10),
@@ -194,15 +214,39 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
           notes: values.notes || null,
         }
       });
+      if (values.ownerType === 'distributor') {
+        uploadStage = 'terms';
+        await confirmUploadedContractTerms.mutateAsync({
+          id: createdFile.id,
+          data: uploadedContractTermsRequest(termsForm.getValues()),
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: getAdminListContractFilesQueryKey() });
-      toast({ title: 'تم الرفع', description: 'تم رفع العقد بنجاح' });
+      toast({
+        title: values.ownerType === 'distributor' ? 'تم رفع العقد واعتماد شروطه' : 'تم الرفع',
+        description: values.ownerType === 'distributor'
+          ? 'سيُطبّق العقد تلقائياً على فواتير هذه الشركة'
+          : 'تم رفع الملف بنجاح',
+      });
       
       onOpenChange(false);
       form.reset();
+      termsForm.reset(blankUploadedContractTerms());
       removeFile();
     } catch (error) {
       console.error('Contract upload failed', { stage: uploadStage, error });
+      if (createdFile && uploadStage === 'terms') {
+        queryClient.invalidateQueries({ queryKey: getAdminListContractFilesQueryKey() });
+        toast({
+          title: 'تم رفع الملف لكن لم تُعتمد شروطه',
+          description: `${createdFile.fileName} محفوظ تحت اسم الشركة. افتح «الملفات المرفوعة» واعتمد شروطه قبل إصدار الفاتورة. ${error instanceof Error ? error.message : ''}`,
+          variant: 'destructive',
+        });
+        onOpenChange(false);
+        removeFile();
+        return;
+      }
       const stageLabel = uploadStage === 'prepare'
         ? 'تعذر تجهيز رابط رفع الملف'
         : uploadStage === 'storage'
@@ -299,6 +343,22 @@ export function UploadContractDialog({ open, onOpenChange }: UploadContractDialo
                 )}
               />
             </div>
+
+            {ownerType === 'distributor' && (
+              <div className="space-y-3 rounded-md border border-primary/20 bg-primary/5 p-4">
+                <div>
+                  <h3 className="text-sm font-semibold">شروط الفوترة</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    أدخل البنود مرة واحدة كما وردت في العقد؛ ستُطبّق تلقائياً على فواتير هذه الشركة.
+                  </p>
+                </div>
+                <Form {...termsForm}>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <UploadedContractTermsFields form={termsForm} idPrefix="upload-terms" />
+                  </div>
+                </Form>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>ملف العقد (PDF, DOC, DOCX - حد أقصى 25MB)</Label>
