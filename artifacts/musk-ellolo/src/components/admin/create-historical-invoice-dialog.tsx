@@ -10,6 +10,7 @@ import {
 } from '@workspace/api-client-react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { quantityInputClass } from '@/lib/quantity-input';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -235,7 +236,7 @@ export function CreateHistoricalInvoiceDialog() {
                   ['totalAmount', 'الإجمالي', 'Gross', 'number'],
                 ] as const).map(([key, ar, en, type]) => (
                   <div className="space-y-1" key={key}><Label htmlFor={`historical-line-${line.id}-${key}`}>{t(ar, en)}</Label>
-                    <Input id={`historical-line-${line.id}-${key}`} type={type} min={type === 'number' ? 0 : undefined} step={key === 'quantity' ? 1 : type === 'number' ? '0.01' : undefined}
+                    <Input id={`historical-line-${line.id}-${key}`} type={type} min={type === 'number' ? 0 : undefined} step={key === 'quantity' ? 1 : type === 'number' ? '0.01' : undefined} className={key === 'quantity' ? quantityInputClass : undefined}
                       dir={type === 'number' ? 'ltr' : undefined} value={line[key]} onChange={event => updateLine(line.id, { [key]: event.target.value })} /></div>
                 ))}</div>
               </div>

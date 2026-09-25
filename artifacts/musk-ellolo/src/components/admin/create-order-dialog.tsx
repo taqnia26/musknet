@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { sortProductsForSelection } from '@/lib/product-sort';
 import { hasPermission } from '@/lib/permissions';
+import { quantityInputClass } from '@/lib/quantity-input';
 import { createCustomerSchema, customerPayload, customerCreateError, type CreateCustomerValues } from '@/lib/customer-create';
 import { emptyIntakeAddress, type IntakeAddressField } from '@/lib/intake-address';
 import { IntakeAddressFields } from './intake-address-fields';
@@ -268,9 +269,9 @@ export function CreateOrderDialog() {
             {lines.map((line, index) => {
               const selected = availableProducts.find((product) => String(product.id) === line.productId);
               return (
-                <div key={index} className="grid grid-cols-[minmax(0,1fr)_100px_40px] gap-2">
+                 <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(6rem,8rem)_40px] gap-2">
                   <Select value={line.productId} onValueChange={(productId) => updateLine(index, { productId })}>
-                    <SelectTrigger><SelectValue placeholder={t('اختر منتجاً', 'Select product')} /></SelectTrigger>
+                     <SelectTrigger className="min-w-0"><SelectValue placeholder={t('اختر منتجاً', 'Select product')} /></SelectTrigger>
                     <SelectContent>
                       {availableProducts.map((product) => (
                         <SelectItem key={product.id} value={String(product.id)} disabled={lines.some((candidate, candidateIndex) => candidateIndex !== index && candidate.productId === String(product.id))}>
@@ -280,6 +281,7 @@ export function CreateOrderDialog() {
                     </SelectContent>
                   </Select>
                   <Input
+                     className={quantityInputClass}
                     type="number"
                     min={1}
                     max={selected?.stockQuantity}

@@ -10,6 +10,7 @@ import {
   getAdminListManufacturingBatchesQueryKey
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { quantityInputClass } from '@/lib/quantity-input';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,7 +141,7 @@ export default function AdminManufacturing() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('الكمية', 'Quantity')}</label>
-                  <Input name="quantityProduced" type="number" min="1" required defaultValue={editingBatch?.quantityProduced} />
+                  <Input name="quantityProduced" type="number" min="1" required defaultValue={editingBatch?.quantityProduced} className={quantityInputClass} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('تكلفة الوحدة', 'Cost per Unit')}</label>
@@ -174,12 +175,12 @@ export default function AdminManufacturing() {
                       <Button type="button" variant="outline" size="sm" onClick={() => setInputLines([...inputLines, { materialProductId: '', quantity: '1' }])}><Plus className="me-1 h-3 w-3" />{t('إضافة مادة', 'Add material')}</Button>
                     </div>
                     {inputLines.map((line, index) => (
-                      <div key={index} className="grid grid-cols-[1fr_120px_auto] gap-2">
-                        <select value={line.materialProductId} onChange={(event) => setInputLines(inputLines.map((item, itemIndex) => itemIndex === index ? { ...item, materialProductId: event.target.value } : item))} className="h-9 rounded-md border bg-background px-2 text-sm">
+                      <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(6rem,8rem)_auto] gap-2">
+                        <select value={line.materialProductId} onChange={(event) => setInputLines(inputLines.map((item, itemIndex) => itemIndex === index ? { ...item, materialProductId: event.target.value } : item))} className="h-9 min-w-0 rounded-md border bg-background px-2 text-sm">
                           <option value="">{t('اختر مادة', 'Select material')}</option>
                            {productOptions.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
                         </select>
-                        <Input type="number" min="1" step="1" value={line.quantity} onChange={(event) => setInputLines(inputLines.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} />
+                        <Input type="number" min="1" step="1" value={line.quantity} onChange={(event) => setInputLines(inputLines.map((item, itemIndex) => itemIndex === index ? { ...item, quantity: event.target.value } : item))} className={quantityInputClass} />
                         <Button type="button" variant="ghost" size="icon" onClick={() => setInputLines(inputLines.filter((_, itemIndex) => itemIndex !== index))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
                     ))}

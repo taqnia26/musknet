@@ -18,6 +18,7 @@ import { getListInventoryCycleCountsQueryKey } from '@workspace/api-client-react
 import { useToast } from '@/hooks/use-toast';
 import { formatInteger } from '@/lib/formatters';
 import { Money } from '@/components/money';
+import { quantityInputClass } from '@/lib/quantity-input';
 
 export default function AdminInventoryCounts() {
   const { t, lang } = useLanguage();
@@ -135,16 +136,16 @@ export default function AdminInventoryCounts() {
               </div>
               <div className="border p-4 rounded-lg bg-muted/20">
                 <h4 className="text-sm font-medium mb-3">{t('صنف الجرد', 'Counted Item')}</h4>
-                {lines.map((line, index) => <div className="mb-3 grid grid-cols-[minmax(0,1fr)_5.5rem_auto] items-end gap-2" key={index}>
-                  <div className="min-w-0">
+                 {lines.map((line, index) => <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_minmax(6rem,8rem)_auto] items-end gap-2" key={index}>
+                   <div className="col-span-2 min-w-0 sm:col-span-1">
                     <Label>{t('الصنف', 'Item')}</Label>
                     <Select value={line.productId} onValueChange={(value) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, productId: value } : entry))}><SelectTrigger className="mt-1 h-10 w-full"><SelectValue placeholder={t('اختر الصنف', 'Select item')} /></SelectTrigger><SelectContent>{items.map((item) => <SelectItem key={item.id} value={String(item.id)}>{item.sku || item.id} · {lang === 'ar' ? item.nameAr : item.nameEn}</SelectItem>)}</SelectContent></Select>
                   </div>
-                  <div className="w-[5.5rem]">
+                   <div className="min-w-0">
                     <Label className="whitespace-nowrap text-xs">{t('الكمية', 'Qty')}</Label>
-                    <Input value={line.countedQuantity} onChange={(e) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, countedQuantity: e.target.value } : entry))} type="number" min="0" required className="mt-1 h-10 px-2 text-center" />
+                     <Input value={line.countedQuantity} onChange={(e) => setLines((current) => current.map((entry, i) => i === index ? { ...entry, countedQuantity: e.target.value } : entry))} type="number" min="0" required className={`mt-1 h-10 px-2 ${quantityInputClass}`} />
                   </div>
-                  <Button type="button" variant="ghost" size="sm" className="h-10 px-2" disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, i) => i !== index))}>{t('حذف', 'Remove')}</Button>
+                   <Button type="button" variant="ghost" size="sm" className="h-10 px-2" disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, i) => i !== index))}>{t('حذف', 'Remove')}</Button>
                 </div>)}
                 <Button type="button" variant="outline" onClick={() => setLines((current) => [...current, { productId: '', countedQuantity: '' }])}>{t('إضافة سطر', 'Add line')}</Button>
               </div>

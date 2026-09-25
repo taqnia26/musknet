@@ -15,6 +15,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDownRight, ArrowUpRight, Boxes, CircleDollarSign, History, PackagePlus, Search, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useLanguage } from '@/hooks/use-language';
+import { quantityInputClass } from '@/lib/quantity-input';
 import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { hasPermission } from '@/lib/permissions';
@@ -117,7 +118,7 @@ function InventoryDetails({ item, open, onOpenChange, canEdit }: {
             <h3 className="font-semibold">{t('تسجيل حركة', 'Record movement')}</h3>
             <div className="grid gap-4 sm:grid-cols-3">
               <div><Label>{t('العملية', 'Operation')}</Label><Select value={operation} onValueChange={(value) => setOperation(value as AdminInventoryAdjustmentOperation)}><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="increase">{t('زيادة', 'Increase')}</SelectItem><SelectItem value="decrease">{t('صرف', 'Issue')}</SelectItem><SelectItem value="adjustment">{t('تسوية إلى رصيد', 'Set balance')}</SelectItem></SelectContent></Select></div>
-              <div><Label>{operation === 'adjustment' ? t('الرصيد الجديد', 'New balance') : t('الكمية', 'Quantity')}</Label><Input className="mt-1" type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
+              <div><Label>{operation === 'adjustment' ? t('الرصيد الجديد', 'New balance') : t('الكمية', 'Quantity')}</Label><Input className={`mt-1 ${quantityInputClass}`} type="number" min="0" step="1" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
               <div><Label>{t('الرصيد الناتج', 'Resulting balance')}</Label><div className={`mt-1 flex h-10 items-center rounded-md border px-3 font-bold ${expected < 0 ? 'text-destructive' : ''}`}>{Number.isFinite(expected) ? expected : '—'}</div></div>
             </div>
             {operation !== 'decrease' && <div><Label>{t('تكلفة الوحدة (ليست سعر البيع)', 'Unit cost (not selling price)')}</Label><Input className="mt-1" type="number" min="0" step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} placeholder={t('أدخل تكلفة شراء أو تصنيع الوحدة', 'Enter the unit purchase or manufacturing cost')} /></div>}

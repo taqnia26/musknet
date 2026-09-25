@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { getAdminListInvoicesQueryKey, getAdminListExhibitionProductsQueryKey, useAdminCreateExhibitionInvoice, useAdminListExhibitions, useAdminListExhibitionProducts } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { quantityInputClass } from '@/lib/quantity-input';
 import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -106,7 +107,7 @@ export function CreateExhibitionInvoiceDialog() {
           <div className="space-y-2"><Label htmlFor="exhibition-invoice-cr">{t('السجل التجاري (اختياري)', 'CR number (optional)')}</Label><Input id="exhibition-invoice-cr" value={buyerCR} onChange={e => setBuyerCR(e.target.value)} /></div>
         </div>
         <div className="flex items-center justify-between gap-2"><Label>{t('بنود الفاتورة', 'Invoice items')}</Label><Button type="button" size="sm" variant="outline" onClick={() => setLines(current => [...current, emptyLine()])}><Plus className="me-1 h-4 w-4" />{t('إضافة بند', 'Add item')}</Button></div>
-        {lines.map((line, index) => <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_90px_120px_auto]">
+        {lines.map((line, index) => <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(6rem,8rem)_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(6rem,8rem)_120px_auto]">
           <select aria-label={t('المنتج', 'Product')} className="col-span-3 h-10 min-w-0 rounded-md border border-input bg-background px-2 sm:col-span-1" value={line.productId} onChange={e => {
             const allocation = allocations?.find(a => String(a.productId) === e.target.value);
             updateLine(index, { productId: e.target.value, unitPrice: allocation?.productPrice ?? 0 });
@@ -114,7 +115,7 @@ export function CreateExhibitionInvoiceDialog() {
             <option value="">{t('اختر المنتج المخصص', 'Select allocated product')}</option>
             {sortProductsForSelection((allocations ?? []).filter(a => a.quantityAllocated > a.quantitySold).map(a => ({ ...a, nameAr: a.productNameAr, nameEn: a.productNameEn })), lang).map(a => <option key={a.id} value={a.productId} disabled={lines.some((l, i) => i !== index && l.productId === String(a.productId))}>{lang === 'ar' ? a.productNameAr : a.productNameEn} ({a.quantityAllocated - a.quantitySold})</option>)}
           </select>
-          <Input type="number" min="1" step="1" aria-label={t('الكمية', 'Quantity')} value={line.quantity} onChange={e => updateLine(index, { quantity: Number(e.target.value) })} />
+          <Input className={quantityInputClass} type="number" min="1" step="1" aria-label={t('الكمية', 'Quantity')} value={line.quantity} onChange={e => updateLine(index, { quantity: Number(e.target.value) })} />
           <Input type="number" min="0.01" step="0.01" aria-label={t('سعر الوحدة شامل الضريبة', 'Unit price including VAT')} value={line.unitPrice || ''} onChange={e => updateLine(index, { unitPrice: Number(e.target.value) })} />
           <Button type="button" size="icon" variant="ghost" aria-label={t('حذف البند', 'Remove item')} disabled={lines.length === 1} onClick={() => setLines(current => current.filter((_, i) => i !== index))}><Trash2 className="h-4 w-4" /></Button>
         </div>)}

@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import { quantityInputClass } from '@/lib/quantity-input';
 
 type ReceiptLine = { productId: string; quantity: string; unitCost: string };
 
@@ -149,14 +150,14 @@ export function PurchaseReceiptForm() {
           <div className="space-y-2">
             <div className="flex items-center justify-between"><h3 className="font-medium">{t('بنود الاستلام', 'Receipt lines')}</h3><Button type="button" variant="outline" size="sm" onClick={() => setLines([...lines, { productId: '', quantity: '1', unitCost: '0' }])}><Plus className="me-2 h-4 w-4" />{t('إضافة بند', 'Add line')}</Button></div>
             {lines.map((line, index) => (
-              <div key={index} className="grid gap-2 md:grid-cols-[1fr_140px_160px_auto]">
-                <select value={line.productId} onChange={(event) => updateLine(index, { productId: event.target.value })} className="h-10 rounded-md border bg-background px-3 text-sm" required>
+               <div key={index} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(6rem,8rem)_minmax(7rem,10rem)_auto]">
+                 <select value={line.productId} onChange={(event) => updateLine(index, { productId: event.target.value })} className="col-span-2 h-10 min-w-0 rounded-md border bg-background px-3 text-sm sm:col-span-1" required>
                   <option value="">{t('اختر المنتج', 'Select product')}</option>
                   {productOptions.map((product) => <option key={product.id} value={product.id}>{lang === 'ar' ? product.nameAr : product.nameEn}</option>)}
                 </select>
-                <Input type="number" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} aria-label={t('الكمية', 'Quantity')} />
-                <Input type="number" min="0" step="0.0001" value={line.unitCost} onChange={(event) => updateLine(index, { unitCost: event.target.value })} aria-label={t('تكلفة الوحدة', 'Unit cost')} />
-                <Button type="button" variant="ghost" size="icon" disabled={lines.length === 1} onClick={() => setLines(lines.filter((_, lineIndex) => lineIndex !== index))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                 <Input className={quantityInputClass} type="number" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} aria-label={t('الكمية', 'Quantity')} />
+                 <Input className="min-w-0" type="number" min="0" step="0.0001" value={line.unitCost} onChange={(event) => updateLine(index, { unitCost: event.target.value })} aria-label={t('تكلفة الوحدة', 'Unit cost')} />
+                 <Button type="button" variant="ghost" size="icon" className="row-start-1 col-start-2 sm:row-auto sm:col-auto" disabled={lines.length === 1} onClick={() => setLines(lines.filter((_, lineIndex) => lineIndex !== index))}><Trash2 className="h-4 w-4 text-destructive" /></Button>
               </div>
             ))}
           </div>

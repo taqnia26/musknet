@@ -12,6 +12,7 @@ import {
   getAdminListExhibitionProductsQueryKey
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { quantityInputClass } from '@/lib/quantity-input';
 import { Money } from '@/components/money';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
@@ -85,11 +86,11 @@ function ExhibitionProducts({ exhibitionId, canEdit }: { exhibitionId: number, c
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-sm font-medium">{t('الكمية المخصصة', 'Allocated Quantity')}</label>
-                    <Input name="quantityAllocated" type="number" min="1" required />
+                    <Input name="quantityAllocated" type="number" min="1" required className={quantityInputClass} />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">{t('الكمية المباعة', 'Sold Quantity')}</label>
-                    <Input name="quantitySold" type="number" min="0" defaultValue="0" />
+                    <Input name="quantitySold" type="number" min="0" defaultValue="0" className={quantityInputClass} />
                   </div>
                 </div>
                 <div className="flex justify-end mt-4">

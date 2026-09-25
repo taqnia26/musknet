@@ -30,6 +30,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { BarcodeScanner } from '@/components/admin/inventory/barcode-scanner';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import { quantityInputClass } from '@/lib/quantity-input';
 
 export function RowActions({
   item, 
@@ -242,11 +243,11 @@ export function RowActions({
             </div>
             <div>
               <Label>{t('حد إعادة الطلب', 'Reorder Point')}</Label>
-              <Input name="reorderPoint" type="number" required defaultValue={item.reorderPoint} className="mt-1" />
+              <Input name="reorderPoint" type="number" required defaultValue={item.reorderPoint} className={`mt-1 ${quantityInputClass}`} />
             </div>
             <div>
               <Label>{t('الكمية المستهدفة', 'Target Quantity')}</Label>
-              <Input name="targetStockQuantity" type="number" required defaultValue={item.targetStockQuantity} className="mt-1" />
+              <Input name="targetStockQuantity" type="number" required defaultValue={item.targetStockQuantity} className={`mt-1 ${quantityInputClass}`} />
             </div>
             <div className="col-span-2 flex justify-end mt-4">
               <Button type="submit" disabled={editMutation.isPending}>{t('حفظ التعديلات', 'Save Changes')}</Button>
@@ -275,7 +276,7 @@ export function RowActions({
             </div>
             <div>
               <Label>{t('الكمية', 'Quantity')}</Label>
-              <Input name="quantity" type="number" required min="0" className="mt-1" />
+              <Input name="quantity" type="number" required min="0" className={`mt-1 ${quantityInputClass}`} />
             </div>
             <div>
               <Label>{t('تكلفة الوحدة (اختياري)', 'Unit Cost (Optional)')}</Label>
@@ -513,15 +514,15 @@ export default function AdminInventoryBalances() {
               </div>
               <div>
                 <Label>{t('الرصيد الافتتاحي', 'Opening Quantity')}</Label>
-                <Input name="openingQuantity" type="number" required defaultValue="0" className="mt-1" />
+                <Input name="openingQuantity" type="number" required defaultValue="0" className={`mt-1 ${quantityInputClass}`} />
               </div>
               <div>
                 <Label>{t('حد إعادة الطلب', 'Reorder Point')}</Label>
-                <Input name="reorderPoint" type="number" required defaultValue="10" className="mt-1" />
+                <Input name="reorderPoint" type="number" required defaultValue="10" className={`mt-1 ${quantityInputClass}`} />
               </div>
               <div>
                 <Label>{t('الكمية المستهدفة', 'Target Quantity')}</Label>
-                <Input name="targetStockQuantity" type="number" required defaultValue="50" className="mt-1" />
+                <Input name="targetStockQuantity" type="number" required defaultValue="50" className={`mt-1 ${quantityInputClass}`} />
               </div>
               <div className="col-span-2 flex justify-end mt-4">
                 <Button type="submit" disabled={createMutation.isPending}>{t('حفظ الصنف', 'Save Item')}</Button>

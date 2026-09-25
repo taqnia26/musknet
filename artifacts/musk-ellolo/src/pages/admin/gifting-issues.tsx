@@ -31,6 +31,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { giftingIssueLabels as labels, issueUses } from './gifting-issues-config';
 import { formatInteger } from '@/lib/formatters';
 import { Money } from '@/components/money';
+import { quantityInputClass } from '@/lib/quantity-input';
 
 type StockSource = 'normal' | 'used_return';
 type Line = { productId: string; quantity: string; stockSource: StockSource | '' };
@@ -563,13 +564,13 @@ export default function AdminGiftingIssues() {
                         )}
                       </div>
 
-                      <div className="w-full sm:w-32 flex-shrink-0">
+                      <div className="w-full max-w-32 flex-shrink-0">
                         <Input
                           type="number"
                           min="1"
                           max={line.stockSource === 'normal' ? product?.stockQuantity : undefined}
                           step="1"
-                          className="h-10 font-mono text-center"
+                          className={`h-10 font-mono ${quantityInputClass}`}
                           value={line.quantity}
                           onChange={(e) => updateLine(index, 'quantity', e.target.value)}
                           placeholder={t('الكمية', 'Qty')}
@@ -763,7 +764,7 @@ export default function AdminGiftingIssues() {
               </div>
               <div>
                 <Label>{t('الكمية', 'Quantity')}</Label>
-                <Input className="mt-1.5 font-mono" type="number" min="1" step="1" value={editForm.quantity} onChange={(e) => setEditForm((current) => ({ ...current, quantity: e.target.value }))} />
+                <Input className={`mt-1.5 font-mono ${quantityInputClass}`} type="number" min="1" step="1" value={editForm.quantity} onChange={(e) => setEditForm((current) => ({ ...current, quantity: e.target.value }))} />
               </div>
               <div>
                 <Label>{t('الشخص / المستلم', 'Person / recipient')}</Label>
@@ -845,7 +846,7 @@ export default function AdminGiftingIssues() {
               </div>
               <div>
                 <Label>{t('الكمية المسترجعة', 'Returned quantity')}</Label>
-                <Input className="mt-1.5 font-mono" type="number" min="1" max={returning.quantity - returning.returnedQuantity} step="1" value={returnForm.quantity} onChange={(event) => setReturnForm(current => ({ ...current, quantity: event.target.value }))} />
+                <Input className={`mt-1.5 font-mono ${quantityInputClass}`} type="number" min="1" max={returning.quantity - returning.returnedQuantity} step="1" value={returnForm.quantity} onChange={(event) => setReturnForm(current => ({ ...current, quantity: event.target.value }))} />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setReturning(null)}>{t('إلغاء', 'Cancel')}</Button>

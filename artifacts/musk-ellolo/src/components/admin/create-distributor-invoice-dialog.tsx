@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import { quantityInputClass } from '@/lib/quantity-input';
 
 type Line = { productId: string; quantity: number; unitPrice: number };
 type InvoiceContractSource = {
@@ -310,7 +311,7 @@ export function CreateDistributorInvoiceDialog() {
                   <SelectTrigger><SelectValue placeholder={t('اختر المنتج', 'Select product')} /></SelectTrigger>
                   <SelectContent>{productOptions.map((product) => <SelectItem key={product.id} value={String(product.id)} disabled={lines.some((candidate, candidateIndex) => candidateIndex !== index && candidate.productId === String(product.id))}>{lang === 'ar' ? product.nameAr : product.nameEn}</SelectItem>)}</SelectContent>
                 </Select>
-                <Input type="number" min={1} step={1} value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} aria-label={t('الكمية', 'Quantity')} />
+                <Input className={quantityInputClass} type="number" min={1} step={1} value={line.quantity} onChange={(event) => updateLine(index, { quantity: Number(event.target.value) })} aria-label={t('الكمية', 'Quantity')} />
               <Input type="number" min={0.01} step={0.01} value={line.unitPrice || ''} onChange={(event) => updateLine(index, { unitPrice: Number(event.target.value) })} aria-label={taxTreatment === 'international' ? t('سعر الوحدة', 'Unit price') : t('سعر الوحدة شامل الضريبة', 'Gross unit price including VAT')} />
                 <Button type="button" variant="ghost" size="icon" disabled={lines.length === 1} onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}><Trash2 className="h-4 w-4" /></Button>
               </div>

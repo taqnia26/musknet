@@ -36,6 +36,7 @@ import {
 import { useLanguage } from '@/hooks/use-language';
 import { sortProductsForSelection } from '@/lib/product-sort';
 import { hasPermission } from '@/lib/permissions';
+import { quantityInputClass } from '@/lib/quantity-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -826,13 +827,13 @@ export default function AdminProducts() {
 
                     <div className="grid gap-5 sm:grid-cols-3">
                       {!editingId && <FormField control={form.control} name="stockQuantity" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الكمية الافتتاحية', 'Opening stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" inputMode="numeric" {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('الكمية الافتتاحية', 'Opening stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" inputMode="numeric" {...field} dir="ltr" className={quantityInputClass} /></FormControl><FormMessage /></FormItem>
                       )} />}
                       <FormField control={form.control} name="reorderPoint" render={({ field }) => (
-                        <FormItem><FormLabel>{t('حد إعادة الطلب', 'Reorder point')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('حد إعادة الطلب', 'Reorder point')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" className={quantityInputClass} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="targetStockQuantity" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الكمية المستهدفة', 'Target stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('الكمية المستهدفة', 'Target stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" className={quantityInputClass} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
                   </section>

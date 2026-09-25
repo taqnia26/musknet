@@ -3531,6 +3531,7 @@ export const AdminListInvoicesQueryParams = zod.object({
 
 export const AdminListInvoicesResponseItem = zod.object({
   "id": zod.number(),
+  "historical": zod.enum(['yes', 'no']),
   "orderId": zod.number().nullable(),
   "orderNumber": zod.string().nullable(),
   "distributorId": zod.number().nullable(),
@@ -3577,7 +3578,7 @@ export const AdminListInvoicesResponseItem = zod.object({
   "qrCodeData": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "productId": zod.number(),
+  "productId": zod.number().nullable(),
   "productName": zod.string(),
   "productNameEn": zod.string().nullable(),
   "sku": zod.string().nullable(),
@@ -3630,6 +3631,7 @@ export const AdminCreateDistributorInvoiceBody = zod.object({
 
 export const AdminCreateDistributorInvoiceResponse = zod.object({
   "id": zod.number(),
+  "historical": zod.enum(['yes', 'no']),
   "orderId": zod.number().nullable(),
   "orderNumber": zod.string().nullable(),
   "distributorId": zod.number().nullable(),
@@ -3676,7 +3678,7 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "qrCodeData": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "productId": zod.number(),
+  "productId": zod.number().nullable(),
   "productName": zod.string(),
   "productNameEn": zod.string().nullable(),
   "sku": zod.string().nullable(),
@@ -3687,6 +3689,176 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "totalAmount": zod.number()
 })),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Read-only reconciliation with existing invoices and historical journals
+ */
+export const adminReconcileHistoricalInvoiceBodyCreationKeyMin = 16;
+export const adminReconcileHistoricalInvoiceBodyCreationKeyMax = 100;
+
+export const adminReconcileHistoricalInvoiceBodyDistributorIdMultipleOf = 1;
+
+export const adminReconcileHistoricalInvoiceBodyInvoiceNumberMax = 100;
+
+
+
+
+export const adminReconcileHistoricalInvoiceBodySubtotalMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyDiscountAmountMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyVatAmountMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyTotalAmountExclusiveMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyItemsItemProductNameMax = 200;
+
+export const adminReconcileHistoricalInvoiceBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminReconcileHistoricalInvoiceBodyItemsItemUnitPriceMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyItemsItemSubtotalMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyItemsItemVatAmountMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyItemsItemTotalAmountMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyItemsMax = 100;
+
+export const adminReconcileHistoricalInvoiceBodyPaymentsItemPaymentKeyMin = 16;
+export const adminReconcileHistoricalInvoiceBodyPaymentsItemPaymentKeyMax = 100;
+
+export const adminReconcileHistoricalInvoiceBodyPaymentsItemAmountExclusiveMin = 0;
+
+export const adminReconcileHistoricalInvoiceBodyPaymentsItemReferenceMax = 200;
+
+
+
+export const AdminReconcileHistoricalInvoiceBody = zod.object({
+  "creationKey": zod.string().min(adminReconcileHistoricalInvoiceBodyCreationKeyMin).max(adminReconcileHistoricalInvoiceBodyCreationKeyMax),
+  "distributorId": zod.number().min(1).multipleOf(adminReconcileHistoricalInvoiceBodyDistributorIdMultipleOf),
+  "invoiceNumber": zod.string().min(1).max(adminReconcileHistoricalInvoiceBodyInvoiceNumberMax),
+  "issueDate": zod.coerce.date(),
+  "dueDate": zod.coerce.date(),
+  "buyerName": zod.string().min(1),
+  "buyerTaxNumber": zod.string().nullish(),
+  "buyerAddress": zod.string().nullish(),
+  "buyerCommercialRegistrationNumber": zod.string().nullish(),
+  "sellerName": zod.string().min(1),
+  "sellerVatNumber": zod.string().min(1),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "subtotal": zod.number().min(adminReconcileHistoricalInvoiceBodySubtotalMin),
+  "discountAmount": zod.number().min(adminReconcileHistoricalInvoiceBodyDiscountAmountMin),
+  "vatAmount": zod.number().min(adminReconcileHistoricalInvoiceBodyVatAmountMin),
+  "totalAmount": zod.number().gt(adminReconcileHistoricalInvoiceBodyTotalAmountExclusiveMin),
+  "items": zod.array(zod.object({
+  "productName": zod.string().min(1).max(adminReconcileHistoricalInvoiceBodyItemsItemProductNameMax),
+  "sku": zod.string().nullish(),
+  "quantity": zod.number().min(1).multipleOf(adminReconcileHistoricalInvoiceBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminReconcileHistoricalInvoiceBodyItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(adminReconcileHistoricalInvoiceBodyItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(adminReconcileHistoricalInvoiceBodyItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(adminReconcileHistoricalInvoiceBodyItemsItemTotalAmountMin)
+})).min(1).max(adminReconcileHistoricalInvoiceBodyItemsMax),
+  "payments": zod.array(zod.object({
+  "paymentKey": zod.string().min(adminReconcileHistoricalInvoiceBodyPaymentsItemPaymentKeyMin).max(adminReconcileHistoricalInvoiceBodyPaymentsItemPaymentKeyMax),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number().gt(adminReconcileHistoricalInvoiceBodyPaymentsItemAmountExclusiveMin),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().max(adminReconcileHistoricalInvoiceBodyPaymentsItemReferenceMax).nullish()
+}))
+})
+
+export const AdminReconcileHistoricalInvoiceResponse = zod.object({
+  "conflicts": zod.array(zod.string()),
+  "warnings": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Record an externally issued company invoice without issuing a new invoice or affecting inventory
+ */
+export const adminCreateHistoricalInvoiceBodyCreationKeyMin = 16;
+export const adminCreateHistoricalInvoiceBodyCreationKeyMax = 100;
+
+export const adminCreateHistoricalInvoiceBodyDistributorIdMultipleOf = 1;
+
+export const adminCreateHistoricalInvoiceBodyInvoiceNumberMax = 100;
+
+
+
+
+export const adminCreateHistoricalInvoiceBodySubtotalMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyDiscountAmountMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyVatAmountMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyTotalAmountExclusiveMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyItemsItemProductNameMax = 200;
+
+export const adminCreateHistoricalInvoiceBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminCreateHistoricalInvoiceBodyItemsItemUnitPriceMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyItemsItemSubtotalMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyItemsItemVatAmountMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyItemsItemTotalAmountMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyItemsMax = 100;
+
+export const adminCreateHistoricalInvoiceBodyPaymentsItemPaymentKeyMin = 16;
+export const adminCreateHistoricalInvoiceBodyPaymentsItemPaymentKeyMax = 100;
+
+export const adminCreateHistoricalInvoiceBodyPaymentsItemAmountExclusiveMin = 0;
+
+export const adminCreateHistoricalInvoiceBodyPaymentsItemReferenceMax = 200;
+
+
+
+export const AdminCreateHistoricalInvoiceBody = zod.object({
+  "creationKey": zod.string().min(adminCreateHistoricalInvoiceBodyCreationKeyMin).max(adminCreateHistoricalInvoiceBodyCreationKeyMax),
+  "distributorId": zod.number().min(1).multipleOf(adminCreateHistoricalInvoiceBodyDistributorIdMultipleOf),
+  "invoiceNumber": zod.string().min(1).max(adminCreateHistoricalInvoiceBodyInvoiceNumberMax),
+  "issueDate": zod.coerce.date(),
+  "dueDate": zod.coerce.date(),
+  "buyerName": zod.string().min(1),
+  "buyerTaxNumber": zod.string().nullish(),
+  "buyerAddress": zod.string().nullish(),
+  "buyerCommercialRegistrationNumber": zod.string().nullish(),
+  "sellerName": zod.string().min(1),
+  "sellerVatNumber": zod.string().min(1),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "subtotal": zod.number().min(adminCreateHistoricalInvoiceBodySubtotalMin),
+  "discountAmount": zod.number().min(adminCreateHistoricalInvoiceBodyDiscountAmountMin),
+  "vatAmount": zod.number().min(adminCreateHistoricalInvoiceBodyVatAmountMin),
+  "totalAmount": zod.number().gt(adminCreateHistoricalInvoiceBodyTotalAmountExclusiveMin),
+  "items": zod.array(zod.object({
+  "productName": zod.string().min(1).max(adminCreateHistoricalInvoiceBodyItemsItemProductNameMax),
+  "sku": zod.string().nullish(),
+  "quantity": zod.number().min(1).multipleOf(adminCreateHistoricalInvoiceBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminCreateHistoricalInvoiceBodyItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(adminCreateHistoricalInvoiceBodyItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(adminCreateHistoricalInvoiceBodyItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(adminCreateHistoricalInvoiceBodyItemsItemTotalAmountMin)
+})).min(1).max(adminCreateHistoricalInvoiceBodyItemsMax),
+  "payments": zod.array(zod.object({
+  "paymentKey": zod.string().min(adminCreateHistoricalInvoiceBodyPaymentsItemPaymentKeyMin).max(adminCreateHistoricalInvoiceBodyPaymentsItemPaymentKeyMax),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number().gt(adminCreateHistoricalInvoiceBodyPaymentsItemAmountExclusiveMin),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().max(adminCreateHistoricalInvoiceBodyPaymentsItemReferenceMax).nullish()
+}))
+})
+
+export const AdminCreateHistoricalInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "invoiceNumber": zod.string()
 })
 
 
@@ -3734,6 +3906,7 @@ export const AdminCreateExhibitionInvoiceBody = zod.object({
 
 export const AdminCreateExhibitionInvoiceResponse = zod.object({
   "id": zod.number(),
+  "historical": zod.enum(['yes', 'no']),
   "orderId": zod.number().nullable(),
   "orderNumber": zod.string().nullable(),
   "distributorId": zod.number().nullable(),
@@ -3780,7 +3953,7 @@ export const AdminCreateExhibitionInvoiceResponse = zod.object({
   "qrCodeData": zod.string(),
   "items": zod.array(zod.object({
   "id": zod.number(),
-  "productId": zod.number(),
+  "productId": zod.number().nullable(),
   "productName": zod.string(),
   "productNameEn": zod.string().nullable(),
   "sku": zod.string().nullable(),
