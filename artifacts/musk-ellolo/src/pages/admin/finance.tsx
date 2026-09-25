@@ -8,7 +8,9 @@ import {
   useAdminDeleteExpense,
   useGetAdminMe,
   getAdminGetFinanceSummaryQueryKey,
-  getAdminListExpensesQueryKey
+  getAdminListExpensesQueryKey,
+  getAdminListOwnerObligationsQueryKey,
+  useAdminListOwnerObligations
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { hasPermission } from '@/lib/permissions';
@@ -29,6 +31,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Line, 
 import { useLocation } from 'wouter';
 import { PurchaseReceiptForm } from '@/components/admin/purchase-receipt-form';
 import { Money } from '@/components/money';
+import { AdminOwnerObligationsReview } from '@/components/admin/owner-finance-review';
 
 function OverviewTab() {
   const { t, lang } = useLanguage();
@@ -322,6 +325,8 @@ export default function AdminFinance() {
   const { data: currentUser } = useGetAdminMe();
   const canEdit = hasPermission(currentUser, 'finance', 'edit');
   const canDelete = hasPermission(currentUser, 'finance', 'delete');
+  const { data: ownerObligations } = useAdminListOwnerObligations({ query: { queryKey: getAdminListOwnerObligationsQueryKey(), refetchInterval: 12_000, enabled: Boolean(currentUser) } });
+  const pendingOwnerEvents = ownerObligations?.reduce((total, item) => total + item.events.filter((event) => event.status === 'pending').length, 0) ?? 0;
   const initialTab = location.endsWith('/expenses') ? 'expenses' : location.endsWith('/reports') ? 'monthly' : location.endsWith('/purchases') ? 'purchases' : 'overview';
 
   return (
@@ -332,16 +337,18 @@ export default function AdminFinance() {
       </div>
 
       <Tabs key={initialTab} defaultValue={initialTab} className="w-full">
-        <TabsList className="grid grid-cols-4 lg:w-[600px]">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-5">
           <TabsTrigger value="overview">{t('نظرة عامة', 'Overview')}</TabsTrigger>
           <TabsTrigger value="expenses">{t('المصروفات', 'Expenses')}</TabsTrigger>
           <TabsTrigger value="monthly">{t('تقارير شهرية', 'Monthly')}</TabsTrigger>
           <TabsTrigger value="purchases">{t('المشتريات', 'Purchases')}</TabsTrigger>
+          <TabsTrigger value="owner-obligations" data-testid="tab-finance-owner-obligations">{t('التزامات المالك', 'Owner obligations')}{pendingOwnerEvents > 0 && <span className="ms-2 rounded-full bg-[#b43232] px-2 py-0.5 text-xs font-bold text-white" data-testid="status-finance-pending-count">{pendingOwnerEvents}</span>}</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><OverviewTab /></TabsContent>
         <TabsContent value="expenses"><ExpensesTab canEdit={canEdit} canDelete={canDelete} /></TabsContent>
         <TabsContent value="monthly"><MonthlyTab /></TabsContent>
         <TabsContent value="purchases"><PurchaseReceiptForm /></TabsContent>
+        <TabsContent value="owner-obligations"><AdminOwnerObligationsReview canEdit={hasPermission(currentUser, 'accounting', 'edit')} /></TabsContent>
       </Tabs>
     </div>
   );

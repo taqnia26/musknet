@@ -12,6 +12,8 @@ import {
   useAdminListAccountingAccounts,
   useAdminListJournalEntries,
   useAdminReverseJournalEntry,
+  useAdminGetOwnerAccountReview,
+  getAdminGetOwnerAccountReviewQueryKey,
   useGetAdminMe,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -30,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useLocation } from 'wouter';
+import { AdminOwnerLedgerReview, AdminOwnerObligationsReview } from '@/components/admin/owner-finance-review';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const amountPattern = /^\d{1,15}(?:\.\d{1,4})?$/;
@@ -330,6 +333,8 @@ export default function AdminAccounting() {
   const { data: user, isLoading } = useGetAdminMe();
   const canView = hasPermission(user, 'accounting', 'view');
   const canEdit = hasPermission(user, 'accounting', 'edit');
+  const { data: ownerPayable } = useAdminGetOwnerAccountReview({ query: { queryKey: getAdminGetOwnerAccountReviewQueryKey(), enabled: canView, refetchInterval: 12_000 } });
+  const pendingOwnerJournals = ownerPayable?.entries.filter((entry) => !entry.review).length ?? 0;
   if (isLoading) return <p className="py-10 text-center">{t('جاري التحميل...', 'Loading...')}</p>;
   if (!canView) return <Card><CardContent className="py-12 text-center text-muted-foreground" data-testid="status-accounting-forbidden">{t('ليس لديك صلاحية عرض المحاسبة', 'You do not have permission to view accounting')}</CardContent></Card>;
   const initialTab = location.endsWith('/journal-entries') ? 'journals' : location.endsWith('/trial-balance') ? 'trial' : 'accounts';
@@ -337,16 +342,20 @@ export default function AdminAccounting() {
     <div className="space-y-6">
       <div className="flex items-center gap-3"><BookOpen className="h-8 w-8 text-primary" /><div><h1 className="text-3xl font-bold tracking-tight">{t('المحاسبة', 'Accounting')}</h1><p className="mt-1 text-muted-foreground">{t('دليل الحسابات والقيود وميزان المراجعة', 'Chart of accounts, journals, and trial balance')}</p></div></div>
       <Tabs key={initialTab} defaultValue={initialTab}>
-        <TabsList className="grid h-auto w-full grid-cols-2 lg:grid-cols-4">
+        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 lg:grid-cols-6">
           <TabsTrigger value="accounts" data-testid="tab-accounts">{t('دليل الحسابات', 'Chart of accounts')}</TabsTrigger>
           <TabsTrigger value="journals" data-testid="tab-journals">{t('القيود اليومية', 'Journal entries')}</TabsTrigger>
           {canEdit && <TabsTrigger value="manual" data-testid="tab-manual-entry">{t('قيد يدوي', 'Manual entry')}</TabsTrigger>}
           <TabsTrigger value="trial" data-testid="tab-trial-balance">{t('ميزان المراجعة', 'Trial balance')}</TabsTrigger>
+          <TabsTrigger value="owner-payable" data-testid="tab-owner-payable">{t('ذمم المالك', 'Owner payable')}{pendingOwnerJournals > 0 && <span className="ms-2 rounded-full bg-[#b43232] px-2 py-0.5 text-xs font-bold text-white" data-testid="status-accounting-owner-pending">{pendingOwnerJournals}</span>}</TabsTrigger>
+          <TabsTrigger value="owner-events">{t('دفعات المالك', 'Owner payments')}</TabsTrigger>
         </TabsList>
         <TabsContent value="accounts" className="mt-4"><AccountsTab /></TabsContent>
         <TabsContent value="journals" className="mt-4"><EntriesTab canEdit={canEdit} /></TabsContent>
         {canEdit && <TabsContent value="manual" className="mt-4"><ManualEntryTab /></TabsContent>}
         <TabsContent value="trial" className="mt-4"><TrialBalanceTab /></TabsContent>
+        <TabsContent value="owner-payable" className="mt-4"><AdminOwnerLedgerReview isSuperAdmin={Boolean(user?.isSuperAdmin)} /></TabsContent>
+        <TabsContent value="owner-events" className="mt-4"><AdminOwnerObligationsReview canEdit={canEdit} /></TabsContent>
       </Tabs>
     </div>
   );

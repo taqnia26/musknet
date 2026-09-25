@@ -421,6 +421,13 @@
       "when": 1790335395082,
       "tag": "0059_hard_magik",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1790335331786,
+      "tag": "0062_lush_victor_mancha",
+      "breakpoints": true
     }
   ]
 }

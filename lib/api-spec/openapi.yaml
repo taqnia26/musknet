@@ -17,6 +17,119 @@ tags:
   - name: admin
   - name: owner
 paths:
+  /owner/obligations:
+    get:
+      operationId: listOwnerObligations
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      responses: { "200": { description: Obligations, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OwnerObligation" } } } } } }
+    post:
+      operationId: createOwnerObligation
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationInput" } } } }
+      responses: { "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligation" } } } } }
+  /owner/obligations/{id}/events:
+    post:
+      operationId: createOwnerObligationEvent
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationEventInput" } } } }
+      responses: { "201": { description: Recorded, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationEvent" } } } } }
+  /owner/obligations/{id}/installments:
+    post:
+      operationId: addOwnerObligationInstallment
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationInstallmentInput" } } } }
+      responses: { "201": { description: Scheduled, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationInstallment" } } } } }
+  /owner/obligations/{id}/renew:
+    post:
+      operationId: renewOwnerMonthlyObligation
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "201": { description: Next monthly occurrence, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligation" } } } } }
+  /owner/installments/{id}:
+    patch:
+      operationId: reviseOwnerInstallment
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationInstallmentInput" } } } }
+      responses: { "200": { description: Updated with revision history, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationInstallment" } } } } }
+  /owner/accounting-review:
+    get:
+      operationId: getOwnerAccountingReview
+      tags: [owner]
+      security: [{ ownerBearerAuth: [] }]
+      responses: { "200": { description: Owner payable review, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerJournalReport" } } } } }
+  /admin/owner-obligations:
+    get:
+      operationId: adminListOwnerObligations
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Obligations, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/OwnerObligation" } } } } } }
+  /admin/owner-evidence/upload:
+    post:
+      operationId: adminUploadOwnerEvidence
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerEvidenceUploadRequest" } } } }
+      responses: { "200": { description: Private upload location, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOwnerEvidenceUpload" } } } } }
+  /admin/owner-evidence/events/{id}:
+    get:
+      operationId: adminDownloadOwnerEventEvidence
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Supporting document, content: { application/octet-stream: { schema: { type: string, format: binary } } } } }
+  /admin/owner-evidence/events/{id}/correction:
+    get:
+      operationId: adminDownloadOwnerEventCorrectionEvidence
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Correction evidence, content: { application/octet-stream: { schema: { type: string, format: binary } } } } }
+  /admin/owner-evidence/journals/{id}:
+    get:
+      operationId: adminDownloadOwnerJournalEvidence
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses: { "200": { description: Supporting document, content: { application/octet-stream: { schema: { type: string, format: binary } } } } }
+  /admin/owner-obligations/events/{id}/review:
+    post:
+      operationId: adminReviewOwnerEvent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerEventReviewInput" } } } }
+      responses: { "200": { description: Reviewed, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationEvent" } } } } }
+  /admin/owner-obligations/events/{id}/correct:
+    post:
+      operationId: adminCorrectOwnerEvent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerEventCorrectionInput" } } } }
+      responses: { "200": { description: Audited reversal and corrected event, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerObligationEvent" } } } } }
+  /admin/owner-account-review:
+    get:
+      operationId: adminGetOwnerAccountReview
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Owner ledger review, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerJournalReport" } } } } }
+  /admin/owner-account-review/{id}:
+    post:
+      operationId: adminDecideOwnerJournal
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerJournalDecisionInput" } } } }
+      responses: { "200": { description: Decision, content: { application/json: { schema: { $ref: "#/components/schemas/OwnerJournalReview" } } } } }
   /healthz:
     get:
       operationId: healthCheck
@@ -2518,6 +2631,170 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    OwnerEvidenceUploadRequest:
+      type: object
+      required: [contentType, size]
+      properties:
+        contentType: { type: string }
+        size: { type: number }
+    AdminOwnerEvidenceUpload:
+      type: object
+      required: [uploadUrl, objectPath]
+      properties:
+        uploadUrl: { type: string }
+        objectPath: { type: string }
+    OwnerObligationInput:
+      type: object
+      required: [name, amount, dueDate, recurrence, liableParty, clientKey]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        amount: { type: string, pattern: '^\d{1,14}(\.\d{1,4})?$' }
+        dueDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        recurrence: { type: string, enum: [once, monthly] }
+        liableParty: { type: string, enum: [owner, company] }
+        clientKey: { type: string, minLength: 1 }
+    OwnerObligationEventInput:
+      type: object
+      required: [kind, eventDate, clientKey]
+      properties:
+        kind: { type: string, enum: [payment, transfer] }
+        amount: { type: string }
+        eventDate: { type: string }
+        payer: { type: string, enum: [owner, company] }
+        clientKey: { type: string, minLength: 1 }
+    OwnerObligationInstallmentInput:
+      type: object
+      required: [amount, dueDate]
+      properties:
+        amount: { type: string }
+        dueDate: { type: string }
+    OwnerEventReviewInput:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [approved, rejected] }
+        evidence: { type: string }
+        accountCode: { type: string }
+        reason: { type: string }
+    OwnerEventCorrectionInput:
+      type: object
+      required: [reason, evidence, entryDate]
+      properties:
+        reason: { type: string, minLength: 1 }
+        evidence: { type: string, minLength: 1 }
+        entryDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+    OwnerJournalDecisionInput:
+      type: object
+      required: [decision, evidence, reason, entryDate]
+      properties:
+        decision: { type: string, enum: [retain, reverse] }
+        evidence: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1 }
+        entryDate: { type: string }
+    OwnerObligationEvent:
+      type: object
+      required: [id, obligationId, kind, amount, eventDate, status, clientKey, createdAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        obligationId: { type: number, multipleOf: 1 }
+        kind: { type: string }
+        amount: { type: string }
+        eventDate: { type: string }
+        payer: { type: ["string", "null"] }
+        status: { type: string }
+        clientKey: { type: string }
+        evidence: { type: ["string", "null"] }
+        accountCode: { type: ["string", "null"] }
+        reason: { type: ["string", "null"] }
+        journalEntryId: { type: ["number", "null"], multipleOf: 1 }
+        correctionReason: { type: ["string", "null"] }
+        correctionEvidence: { type: ["string", "null"] }
+        correctedBy: { type: ["number", "null"], multipleOf: 1 }
+        correctedAt: { type: ["string", "null"] }
+        reversalEntryId: { type: ["number", "null"], multipleOf: 1 }
+        reviewedBy: { type: ["number", "null"], multipleOf: 1 }
+        reviewedAt: { type: ["string", "null"] }
+        createdAt: { type: string }
+    OwnerObligationInstallment:
+      type: object
+      required: [id, obligationId, amount, dueDate, createdAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        obligationId: { type: number, multipleOf: 1 }
+        amount: { type: string }
+        dueDate: { type: string }
+        createdAt: { type: string }
+        revisions:
+          type: array
+          items:
+            type: object
+            required: [id, previousDate, previousAmount, nextDate, nextAmount, changedBy, changedAt]
+            properties:
+              id: { type: number, multipleOf: 1 }
+              previousDate: { type: string }
+              previousAmount: { type: string }
+              nextDate: { type: string }
+              nextAmount: { type: string }
+              changedBy: { type: number, multipleOf: 1 }
+              changedAt: { type: string }
+    OwnerObligation:
+      type: object
+      required: [id, name, amount, dueDate, recurrence, liableParty, effectiveLiableParty, paid, remaining, events, installments, createdAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        name: { type: string }
+        amount: { type: string }
+        dueDate: { type: string }
+        recurrence: { type: string }
+        renewalOf: { type: [number, "null"] }
+        liableParty: { type: string }
+        effectiveLiableParty: { type: string }
+        paid: { type: string }
+        remaining: { type: string }
+        createdAt: { type: string }
+        events: { type: array, items: { $ref: "#/components/schemas/OwnerObligationEvent" } }
+        installments: { type: array, items: { $ref: "#/components/schemas/OwnerObligationInstallment" } }
+    OwnerJournalReview:
+      type: object
+      required: [id, journalEntryId, decision, reason, evidence, reviewedBy, createdAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        journalEntryId: { type: number, multipleOf: 1 }
+        decision: { type: string }
+        reason: { type: string }
+        evidence: { type: string }
+        reviewedBy: { type: number, multipleOf: 1 }
+        reversalEntryId: { type: ["number", "null"], multipleOf: 1 }
+        createdAt: { type: string }
+    OwnerJournalReport:
+      type: object
+      required: [balance, entries, note]
+      properties:
+        balance: { type: string }
+        note: { type: string }
+        entries:
+          type: array
+          items:
+            type: object
+            required: [id, entryNumber, entryDate, description, status, debit, credit, projectedBalanceChangeIfReversed]
+            properties:
+              id: { type: number, multipleOf: 1 }
+              entryNumber: { type: string }
+              entryDate: { type: string }
+              description: { type: string }
+              sourceType: { type: ["string", "null"] }
+              sourceId: { type: ["string", "null"] }
+              status: { type: string }
+              debit: { type: string }
+              credit: { type: string }
+              projectedBalanceChangeIfReversed: { type: string }
+              sourceDetail:
+                type: ["object", "null"]
+                properties:
+                  id: { type: number, multipleOf: 1 }
+                  title: { type: string }
+                  paymentSource: { type: string }
+              review: { oneOf: [{ $ref: "#/components/schemas/OwnerJournalReview" }, { type: "null" }] }
     InventoryLocation:
       type: object
       required: [id, name, code, managerName, email, phone, type, isDefault, active]

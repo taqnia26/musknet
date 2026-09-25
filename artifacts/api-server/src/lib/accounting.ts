@@ -213,10 +213,10 @@ export async function postJournalEntry(input: PostJournalInput, executor?: Execu
   return db.transaction((tx) => postInTransaction(tx, input));
 }
 
-export async function reverseJournalEntry(entryId: number, actorId: number, reason: string, reversalDate?: string) {
+export async function reverseJournalEntry(entryId: number, actorId: number, reason: string, reversalDate?: string, executor?: Executor) {
   if (!reason.trim()) throw new AccountingValidationError("A reversal reason is required");
   await ensureStandardAccountingChart();
-  return db.transaction(async (tx) => {
+  const reverse = async (tx: Executor) => {
     await tx.execute(sql`select id from ${journalEntriesTable} where ${journalEntriesTable.id} = ${entryId} for update`);
     const [original] = await tx.select().from(journalEntriesTable).where(eq(journalEntriesTable.id, entryId)).limit(1);
     if (!original) throw new AccountingNotFoundError("Journal entry was not found");
@@ -240,7 +240,7 @@ export async function reverseJournalEntry(entryId: number, actorId: number, reas
       sourceType: "reversal",
       sourceId: String(entryId),
       reversalOfEntryId: entryId,
-      lines: lines.map((line) => ({
+      lines: lines.map((line: { accountCode: string; debit: string; credit: string; description: string | null }) => ({
         accountCode: line.accountCode,
         debit: line.credit,
         credit: line.debit,
@@ -253,7 +253,8 @@ export async function reverseJournalEntry(entryId: number, actorId: number, reas
       journalEntryId: original.id, action: "reversed", actorId, changes: { reversalEntryId: reversal.id, reason: reason.trim() },
     });
     return reversal;
-  });
+  };
+  return executor ? reverse(executor) : db.transaction(reverse);
 }
 
 export async function createExpenseWithJournal(

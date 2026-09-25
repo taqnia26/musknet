@@ -51,6 +51,8 @@ import {
   siteContentTable,
   ownerCredentialsTable,
   ownerUsersTable,
+  ownerObligationEventsTable,
+  ownerJournalReviewsTable,
   openingBalanceImportsTable,
   openingBalanceLinesTable,
   operationEventsTable,
@@ -98,6 +100,7 @@ import { nextIndividualOrderNumber } from "../lib/order-numbers";
 import { createInvoicePdf, sendInvoiceEmail } from "../lib/invoice-email";
 import { assertShippingStatusTransition, canApplyCarrierShippingStatus, ShippingStatusTransitionError } from "../lib/shipping-status";
 import { extractVatFromGross } from "../lib/vat";
+import { correctOwnerEvent, listObligations, ownerJournalReport, reviewEvent, reviewOwnerJournal } from "../lib/owner-obligations";
 import { normalizeIntakeAddress } from "../lib/intake-address";
 import { issueOrderPaymentLink, confirmMoyasarInvoice, cancelUnpaidMoyasarOrder, PaymentLinkError } from "../lib/moyasar-payment-links";
 
@@ -185,6 +188,70 @@ function superOnly(_req: Request, res: Response, next: NextFunction) {
   }
   next();
 }
+
+router.get("/admin/owner-obligations", async (_req, res, next) => {
+  try {
+    res.locals.permissions = (await publicAdmin(res.locals.admin)).permissions;
+    if (!allowed(res, "finance", "view") && !allowed(res, "accounting", "view")) {
+      res.status(403).json({ error: "Insufficient permission" }); return;
+    }
+    next();
+  } catch (error) { next(error); }
+}, route(async (_req, res) => {
+  res.json(await listObligations());
+}));
+router.post("/admin/owner-evidence/upload", permit("accounting", "edit"), route(async (req, res) => {
+  const body = Api.AdminUploadOwnerEvidenceBody.parse(req.body);
+  if (!purchaseMimeTypes.has(body.contentType) || body.size <= 0 || body.size > 10 * 1024 * 1024) {
+    res.status(400).json({ error: "Supporting document must be a PDF or image, 10 MB maximum" }); return;
+  }
+  res.json(await objectStorage.createPrivateUpload("owner-evidence"));
+}));
+router.get("/admin/owner-evidence/events/:id", permit("accounting", "view"), route(async (req, res) => {
+  const [event] = await db.select({ evidence: ownerObligationEventsTable.evidence }).from(ownerObligationEventsTable)
+    .where(eq(ownerObligationEventsTable.id, Number(req.params.id)));
+  if (!event?.evidence?.startsWith("/objects/owner-evidence/")) { res.sendStatus(404); return; }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  await objectStorage.pipeObject(await objectStorage.getObjectFile(event.evidence), res);
+}));
+router.get("/admin/owner-evidence/events/:id/correction", permit("accounting", "view"), route(async (req, res) => {
+  const [event] = await db.select({ evidence: ownerObligationEventsTable.correctionEvidence }).from(ownerObligationEventsTable)
+    .where(eq(ownerObligationEventsTable.id, Number(req.params.id)));
+  if (!event?.evidence?.startsWith("/objects/owner-evidence/")) { res.sendStatus(404); return; }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  await objectStorage.pipeObject(await objectStorage.getObjectFile(event.evidence), res);
+}));
+router.get("/admin/owner-evidence/journals/:id", permit("accounting", "view"), route(async (req, res) => {
+  const [review] = await db.select({ evidence: ownerJournalReviewsTable.evidence }).from(ownerJournalReviewsTable)
+    .where(eq(ownerJournalReviewsTable.journalEntryId, Number(req.params.id)));
+  if (!review?.evidence?.startsWith("/objects/owner-evidence/")) { res.sendStatus(404); return; }
+  res.setHeader("Cache-Control", "private, no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  await objectStorage.pipeObject(await objectStorage.getObjectFile(review.evidence), res);
+}));
+router.post("/admin/owner-obligations/events/:id/review", permit("accounting", "edit"), route(async (req, res) => {
+  try {
+    const body = Api.AdminReviewOwnerEventBody.parse(req.body);
+    res.json(await reviewEvent(Number(req.params.id), body, res.locals.admin.id));
+  } catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Review failed" }); }
+}));
+router.post("/admin/owner-obligations/events/:id/correct", permit("accounting", "edit"), superOnly, route(async (req, res) => {
+  try {
+    const body = Api.AdminCorrectOwnerEventBody.parse(req.body);
+    res.json(await correctOwnerEvent(Number(req.params.id), body, res.locals.admin.id));
+  } catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Correction failed" }); }
+}));
+router.get("/admin/owner-account-review", permit("accounting", "view"), route(async (_req, res) => {
+  res.json(await ownerJournalReport());
+}));
+router.post("/admin/owner-account-review/:id", permit("accounting", "edit"), superOnly, route(async (req, res) => {
+  try {
+    const body = Api.AdminDecideOwnerJournalBody.parse(req.body);
+    res.json(await reviewOwnerJournal(Number(req.params.id), body, res.locals.admin.id));
+  } catch (error) { res.status(409).json({ error: error instanceof Error ? error.message : "Review failed" }); }
+}));
 
 function parse<T>(schema: { safeParse(value: unknown): { success: boolean; data?: T; error?: { message: string } } }, value: unknown, res: Response): T | null {
   const result = schema.safeParse(value);
@@ -4181,6 +4248,12 @@ router.post(
   route(async (req, res) => {
   const params = parse(Api.AdminReverseJournalEntryParams, req.params, res);
   const body = parse(Api.AdminReverseJournalEntryBody, req.body, res); if (!params || !body) return;
+  const [ownerAccount] = await db.select({ id: accountingAccountsTable.id }).from(accountingAccountsTable).where(eq(accountingAccountsTable.code, "2140"));
+  if (ownerAccount) {
+    const [line] = await db.select({ id: journalEntryLinesTable.id }).from(journalEntryLinesTable)
+      .where(and(eq(journalEntryLinesTable.journalEntryId, params.id), eq(journalEntryLinesTable.accountId, ownerAccount.id))).limit(1);
+    if (line) { res.status(409).json({ error: "Use documented owner account review for this reversal" }); return; }
+  }
   const entry = await reverseJournalEntry(params.id, res.locals.admin.id, body.description, isoDate(body.entryDate));
   parsedJson(Api.AdminReverseJournalEntryResponse, entry, res, 201);
 }));

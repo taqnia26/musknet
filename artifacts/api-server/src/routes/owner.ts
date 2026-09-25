@@ -19,6 +19,7 @@ import {
   verifyOwnerPassword,
 } from "../lib/owner-auth";
 import { openingBalanceReconciliation } from "../lib/operations";
+import { addInstallment, createEvent, createObligation, listObligations, ownerJournalReport, renewMonthlyObligation, reviseInstallment } from "../lib/owner-obligations";
 
 const router: IRouter = Router();
 const bearer = (req: Request) => {
@@ -122,6 +123,37 @@ router.get("/owner/operations/opening-balances/:id", route(async (req, res) => {
   if (!rows.length) { res.status(404).json({ error: "Opening balance import not found" }); return; }
   res.json(rows[0]);
 }));
+
+router.get("/owner/obligations", route(async (_req, res) => { res.json(await listObligations()); }));
+router.post("/owner/obligations", route(async (req, res) => {
+  try {
+    const body = Api.CreateOwnerObligationBody.parse(req.body);
+    res.status(201).json(await createObligation(body, res.locals.owner.id));
+  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid obligation" }); }
+}));
+router.post("/owner/obligations/:id/renew", route(async (req, res) => {
+  try { res.status(201).json(await renewMonthlyObligation(Number(req.params.id), res.locals.owner.id)); }
+  catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Monthly renewal failed" }); }
+}));
+router.post("/owner/obligations/:id/events", route(async (req, res) => {
+  try {
+    const body = Api.CreateOwnerObligationEventBody.parse(req.body);
+    res.status(201).json(await createEvent({ ...body, obligationId: Number(req.params.id) }, res.locals.owner.id));
+  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid event" }); }
+}));
+router.post("/owner/obligations/:id/installments", route(async (req, res) => {
+  try {
+    const body = Api.AddOwnerObligationInstallmentBody.parse(req.body);
+    res.status(201).json(await addInstallment({ ...body, obligationId: Number(req.params.id) }, res.locals.owner.id));
+  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid installment" }); }
+}));
+router.patch("/owner/installments/:id", route(async (req, res) => {
+  try {
+    const body = Api.ReviseOwnerInstallmentBody.parse(req.body);
+    res.json(await reviseInstallment(Number(req.params.id), body, res.locals.owner.id));
+  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Invalid installment" }); }
+}));
+router.get("/owner/accounting-review", route(async (_req, res) => { res.json(await ownerJournalReport()); }));
 
 router.get("/owner/sessions", route(async (_req, res) => {
   const owner = res.locals.owner as typeof ownerUsersTable.$inferSelect;

@@ -2,6 +2,7 @@
 - [Parallel Drizzle migrations](parallel-drizzle-migrations.md) — merged snapshot history may omit previously registered SQL; inspect regenerated SQL for duplicate operations.
 - [PostgreSQL seed sequences](postgres-seed-sequences.md) — manually seeded IDs can leave serial sequences stale; synchronize them before relying on automatic IDs.
 - [Drizzle push and custom SQL](drizzle-push-custom-sql.md) — schema push does not install handwritten PostgreSQL functions or triggers; chain an idempotent installer into provisioning.
+- [Drizzle push CHECK changes](drizzle-push-check-changes.md) — push may skip edits to an existing CHECK constraint; verify the live definition after schema changes.
 - [Playwright on NixOS](playwright-nixos-runtime.md) — downloaded Chromium still needs its shared libraries declared in the workspace Nix configuration.
 - [OpenAPI email validation](openapi-email-validation.md) — use a pattern instead of format: email until the Orval/Zod generator versions are aligned.
 - [OpenAPI UUID validation](openapi-uuid-validation.md) — use a pattern instead of format: uuid until the Orval/Zod generator versions are aligned.
@@ -45,3 +46,4 @@
 - [Historical Master Sales matching](historical-master-sales-matching.md) — block prior sales or collections when Master Sales journals overlap their respective months until finance resolves them.
 - [Order status publish gate](order-status-publish-gate.md) — a managed publish schema diff cannot migrate historical order status data; stage data conversion before tightening the production constraint.
 - [Generated API freshness](generated-api-freshness.md) — stale generated clients can pass unnoticed until Vite fails on duplicate exports; regenerate from the spec before diagnosing UI edits.
+- [Monthly obligation occurrences](monthly-obligation-occurrences.md) — renewal is an explicit new period, never an automatic payment or journal.

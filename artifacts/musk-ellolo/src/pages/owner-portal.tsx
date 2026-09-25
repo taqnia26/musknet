@@ -51,6 +51,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import { OwnerObligations } from '@/components/owner/owner-obligations';
+import { OwnerPaymentPlan } from '@/components/owner/owner-payment-plan';
 import { OwnerWorkbookSection } from '@/components/owner/owner-workbook-section';
 import { GuidedTour } from '@/components/guided-tour/guided-tour';
 import { ownerTourSteps } from '@/components/guided-tour/tour-definitions';
@@ -416,7 +417,7 @@ export default function OwnerPortal() {
           ) : location === '/owner/products' ? (
             <OwnerWorkbookSection title={t('المنتجات', 'Products')} sheetNames={['المخزون الكلي', 'المخوزن الفعلي']} />
           ) : location === '/owner/payment-plan' ? (
-            <OwnerWorkbookSection title={t('خطة السداد', 'Payment plan')} sheetNames={['خطة السداد']} />
+            <OwnerPaymentPlan />
           ) : location === '/owner/manufacturing' ? (
             <OwnerWorkbookSection title={t('التصنيع', 'Manufacturing')} sheetNames={['الكميات التي تم تصنيعها ']} />
           ) : (
