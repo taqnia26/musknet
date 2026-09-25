@@ -65,7 +65,7 @@ describe("paid metrics and attribution invariants", () => {
     const user = await influencer();
     const phone = `+9665${Date.now()}${Math.floor(Math.random() * 10)}`; phones.push(phone);
     const [customer] = await db.insert(customersTable).values({ name: "Attribution Test", phone }).returning();
-    const [order] = await db.insert(ordersTable).values({ userId: customer.id, orderNumber: `TEST-${Date.now()}`, subtotal: 100, shippingCost: 0, discount: 0, tax: 0, total: 100, status: "new", paymentStatus: "paid", address: "{}", shippingMethod: "standard", paymentMethod: "card" }).returning();
+    const [order] = await db.insert(ordersTable).values({ userId: customer.id, orderNumber: `TEST-${Date.now()}`, subtotal: 100, shippingCost: 0, discount: 0, tax: 0, total: 100, status: "pending_review", paymentStatus: "paid", address: "{}", shippingMethod: "standard", paymentMethod: "card" }).returning();
     await db.insert(orderAttributionsTable).values({ orderId: order.id, influencerId: user.id, source: "referral", commissionRate: 12.5, commissionAmount: 12.5 });
     await db.update(influencersTable).set({ commissionRate: 20 }).where(eq(influencersTable.id, user.id));
     const [snapshot] = await db.select().from(orderAttributionsTable).where(eq(orderAttributionsTable.orderId, order.id));

@@ -1,11 +1,11 @@
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 import { adjustOperationalBalances } from "./operations";
 import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType, type TaxTreatment } from "./vat";
 import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, saudiCalendarDate } from "./invoice-dates";
 import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
+import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
 
@@ -592,12 +592,43 @@ export async function updateOrderAndIssueInvoice(
   values: Partial<typeof ordersTable.$inferInsert>,
   environment: NodeJS.ProcessEnv = process.env,
   actorId?: number,
+  verifiedProviderInvoiceId?: string,
+  verifiedProviderCancellationId?: string,
 ) {
   if (actorId !== undefined) await ensureStandardAccountingChart();
   return db.transaction(async (tx) => {
     await tx.execute(sql`select id from ${ordersTable} where ${ordersTable.id} = ${orderId} for update`);
     const [order] = await tx.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
     if (!order) return null;
+    if (verifiedProviderInvoiceId && order.paymentStatus === "paid") {
+      const [link] = await tx.select().from(orderPaymentLinksTable).where(eq(orderPaymentLinksTable.orderId, orderId));
+      if (link?.providerInvoiceId !== verifiedProviderInvoiceId)
+        throw new AccountingConflictError("Payment confirmation does not match this order");
+      return order;
+    }
+    if (order.paymentMethod === "moyasar" && order.status === "pending_payment") {
+      const [link] = await tx.select().from(orderPaymentLinksTable).where(eq(orderPaymentLinksTable.orderId, orderId));
+      if (verifiedProviderInvoiceId) {
+        if (link?.providerInvoiceId !== verifiedProviderInvoiceId ||
+          values.status !== "pending_review" || values.paymentStatus !== "paid" ||
+          order.paymentStatus !== "pending")
+          throw new AccountingConflictError("Payment confirmation no longer matches this pending order");
+      } else if (verifiedProviderCancellationId) {
+        if (values.status !== "cancelled" || link?.providerInvoiceId !== verifiedProviderCancellationId ||
+          order.paymentStatus !== "pending")
+          throw new AccountingConflictError("Cancellation does not match this unpaid link order");
+      } else if ((values.status !== undefined && values.status !== "pending_payment" &&
+          !(values.status === "cancelled" && !link?.providerInvoiceId)) ||
+          (values.paymentStatus !== undefined && values.paymentStatus !== "pending")) {
+        throw new AccountingConflictError("A pending payment cannot be advanced or marked paid manually");
+      }
+    }
+    if (values.status === "pending_payment" && order.status !== "pending_payment")
+      throw new AccountingConflictError("Pending payment is only set when a payment-link order is created");
+    if (order.status === "cancelled" && values.status && values.status !== "cancelled")
+      throw new AccountingConflictError("Cancelled orders cannot advance");
+    if (values.status === "returned" && order.status !== "returned")
+      throw new AccountingConflictError("Use the refund workflow before marking an order returned");
     const cancelling = values.status === "cancelled" && order.status !== "cancelled";
     if (order.paymentStatus === "paid") {
       if (values.paymentStatus !== undefined && values.paymentStatus !== "paid") {

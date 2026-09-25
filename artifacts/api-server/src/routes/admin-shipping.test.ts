@@ -157,7 +157,7 @@ describe.sequential("admin shipping dashboards", () => {
       .send({ status: "in_transit" }).expect(409)
       .then(({ body }) => expect(body.error).toMatch(/allowed next statuses: returned/i));
     const [order] = await db.select({ status: ordersTable.status }).from(ordersTable).where(eq(ordersTable.id, ids.order));
-    expect(order.status).toBe("new");
+    expect(order.status).toBe("pending_review");
   });
 
   it("registers shipping details for a source that has no shipment yet", async () => {

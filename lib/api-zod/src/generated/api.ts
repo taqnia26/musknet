@@ -485,7 +485,7 @@ export const ListOrdersResponseItem = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "items": zod.array(zod.object({
@@ -526,7 +526,7 @@ export const CreateOrderResponse = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "items": zod.array(zod.object({
@@ -537,6 +537,22 @@ export const CreateOrderResponse = zod.object({
   "imageUrl": zod.string().nullish()
 })),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Confirm a Moyasar invoice callback
+ */
+
+
+
+export const ReceiveMoyasarPaymentCallbackBody = zod.object({
+  "id": zod.string().min(1)
+})
+
+export const ReceiveMoyasarPaymentCallbackResponse = zod.object({
+  "accepted": zod.boolean(),
+  "duplicate": zod.boolean()
 })
 
 
@@ -555,7 +571,7 @@ export const GetOrderResponse = zod.object({
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "items": zod.array(zod.object({
@@ -688,7 +704,7 @@ export const OwnerLoginResponse = zod.object({
   "deviceLabel": zod.string(),
   "browser": zod.string(),
   "operatingSystem": zod.string(),
-  "expiresAt": zod.coerce.date(),
+  "expiresAt": zod.string(),
   "createdAt": zod.coerce.date(),
   "isCurrent": zod.boolean()
 })
@@ -739,7 +755,7 @@ export const ListOwnerSessionsResponseItem = zod.object({
   "deviceLabel": zod.string(),
   "browser": zod.string(),
   "operatingSystem": zod.string(),
-  "expiresAt": zod.coerce.date(),
+  "expiresAt": zod.string(),
   "createdAt": zod.coerce.date(),
   "isCurrent": zod.boolean()
 })
@@ -3293,25 +3309,31 @@ export const adminListOrdersQueryStatusDefault = `all`;
 
 export const AdminListOrdersQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "status": zod.enum(['all', 'new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']).default(adminListOrdersQueryStatusDefault)
+  "status": zod.enum(['all', 'cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']).default(adminListOrdersQueryStatusDefault)
 })
 
 export const AdminListOrdersResponseItem = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "customerName": zod.string(),
   "orderNumber": zod.string(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
   "shippingMethod": zod.string(),
   "paymentMethod": zod.string(),
   "adminNotes": zod.string().nullish(),
+  "paymentLink": zod.object({
+  "sent": zod.boolean(),
+  "status": zod.string(),
+  "expiresAt": zod.string()
+}).optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -3352,25 +3374,32 @@ export const AdminCreateOrderBody = zod.object({
   "shippingMethod": zod.string().min(1),
   "paymentMethod": zod.enum(['cash', 'bank-transfer', 'moyasar']),
   "shippingCost": zod.number().min(adminCreateOrderBodyShippingCostMin).optional(),
-  "adminNotes": zod.string().nullish()
+  "adminNotes": zod.string().nullish(),
+  "sendPaymentLink": zod.boolean().optional()
 })
 
 export const AdminCreateOrderResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "customerName": zod.string(),
   "orderNumber": zod.string(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
   "shippingMethod": zod.string(),
   "paymentMethod": zod.string(),
   "adminNotes": zod.string().nullish(),
+  "paymentLink": zod.object({
+  "sent": zod.boolean(),
+  "status": zod.string(),
+  "expiresAt": zod.string()
+}).optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -3383,19 +3412,25 @@ export const AdminGetOrderParams = zod.object({
 export const AdminGetOrderResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "customerName": zod.string(),
   "orderNumber": zod.string(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
   "shippingMethod": zod.string(),
   "paymentMethod": zod.string(),
   "adminNotes": zod.string().nullish(),
+  "paymentLink": zod.object({
+  "sent": zod.boolean(),
+  "status": zod.string(),
+  "expiresAt": zod.string()
+}).optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }).and(zod.object({
@@ -3438,7 +3473,7 @@ export const AdminUpdateOrderParams = zod.object({
 })
 
 export const AdminUpdateOrderBody = zod.object({
-  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']).optional(),
+  "status": zod.enum(['cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']).optional(),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']).optional(),
   "trackingNumber": zod.string().nullish(),
   "adminNotes": zod.string().nullish()
@@ -3447,21 +3482,38 @@ export const AdminUpdateOrderBody = zod.object({
 export const AdminUpdateOrderResponse = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
+  "customerName": zod.string(),
   "orderNumber": zod.string(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
   "tax": zod.number(),
   "total": zod.number(),
-  "status": zod.enum(['new', 'processing', 'ready', 'completed', 'shipped', 'delivered', 'cancelled']),
+  "status": zod.enum(['cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment']),
   "paymentStatus": zod.enum(['pending', 'paid', 'failed', 'refunded']),
   "trackingNumber": zod.string().nullish(),
   "address": zod.string().optional(),
   "shippingMethod": zod.string(),
   "paymentMethod": zod.string(),
   "adminNotes": zod.string().nullish(),
+  "paymentLink": zod.object({
+  "sent": zod.boolean(),
+  "status": zod.string(),
+  "expiresAt": zod.string()
+}).optional(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminSendOrderPaymentLinkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminSendOrderPaymentLinkResponse = zod.object({
+  "sent": zod.boolean(),
+  "expiresAt": zod.string(),
+  "status": zod.string()
 })
 
 
@@ -8437,3 +8489,5 @@ export const ListInventoryAlertsResponseItem = zod.object({
   "status": zod.enum(['out', 'low', 'ok'])
 })
 export const ListInventoryAlertsResponse = zod.array(ListInventoryAlertsResponseItem)
+
+

@@ -486,7 +486,7 @@ type OrderRecord = {
   discount: number;
   tax: number;
   total: number;
-  status: "new" | "processing" | "shipped" | "delivered" | "cancelled";
+  status: "cancelled" | "returned" | "pending_review" | "preparing" | "out_for_delivery" | "delivered" | "pending_payment";
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
   trackingNumber: string | null;
   items: Array<{ productName: string; quantity: number; unitPrice: number; totalPrice: number; imageUrl: string | null }>;

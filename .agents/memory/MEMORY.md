@@ -41,3 +41,4 @@
 - [Product reference direction](product-reference-direction.md) — explicit desktop right-details/left-image requirement overrides the recording’s opposite orientation.
 - [Customer profile address identity](customer-profile-address-identity.md) — keep manually captured profile addresses distinct from mutable storefront default-shipping selection.
 - [Historical Master Sales matching](historical-master-sales-matching.md) — block prior sales or collections when Master Sales journals overlap their respective months until finance resolves them.
+- [Order status publish gate](order-status-publish-gate.md) — a managed publish schema diff cannot migrate historical order status data; stage data conversion before tightening the production constraint.

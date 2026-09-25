@@ -353,6 +353,27 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  /payments/moyasar/callback:
+    post:
+      operationId: receiveMoyasarPaymentCallback
+      tags: [checkout]
+      summary: Confirm a Moyasar invoice callback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoyasarCallbackInput"
+      responses:
+        "200":
+          description: Callback accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoyasarCallbackResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
   /orders/{orderNumber}:
     get:
       operationId: getOrder
@@ -912,7 +933,7 @@ paths:
         - $ref: "#/components/parameters/AdminSearch"
         - name: status
           in: query
-          schema: { type: string, enum: [all, new, processing, ready, completed, shipped, delivered, cancelled], default: all }
+          schema: { type: string, enum: [all, cancelled, returned, pending_review, preparing, out_for_delivery, delivered, pending_payment], default: all }
       responses: { "200": { description: Orders, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminOrder" } } } } } }
     post:
       operationId: adminCreateOrder
@@ -937,6 +958,15 @@ paths:
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrderUpdate" } } } }
       responses: { "200": { description: Order, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrder" } } } } }
+  /admin/orders/{id}/payment-link:
+    post:
+      operationId: adminSendOrderPaymentLink
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200": { description: Payment link result, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrderPaymentLinkResponse" } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
   /admin/invoices:
     get:
       operationId: adminListInvoices
@@ -2968,7 +2998,7 @@ components:
           type: number
         status:
           type: string
-          enum: [new, processing, shipped, delivered, cancelled]
+          enum: [cancelled, returned, pending_review, preparing, out_for_delivery, delivered, pending_payment]
         paymentStatus:
           type: string
           enum: [pending, paid, failed, refunded]
@@ -3087,7 +3117,7 @@ components:
         deviceLabel: { type: string }
         browser: { type: string }
         operatingSystem: { type: string }
-        expiresAt: { type: string, format: date-time }
+        expiresAt: { type: string }
         createdAt: { type: string, format: date-time }
         isCurrent: { type: boolean }
     OwnerSessionNotification:
@@ -3741,29 +3771,37 @@ components:
         isActive: { type: boolean }
     AdminOrder:
       type: object
-      required: [id, userId, orderNumber, subtotal, shippingCost, discount, tax, total, status, paymentStatus, shippingMethod, paymentMethod, createdAt, updatedAt]
+      required: [id, userId, customerName, orderNumber, subtotal, shippingCost, discount, tax, total, status, paymentStatus, shippingMethod, paymentMethod, createdAt, updatedAt]
       properties:
         id: { type: number }
         userId: { type: number }
+        customerName: { type: string }
         orderNumber: { type: string }
         subtotal: { type: number }
         shippingCost: { type: number }
         discount: { type: number }
         tax: { type: number }
         total: { type: number }
-        status: { type: string, enum: [new, processing, ready, completed, shipped, delivered, cancelled] }
+        status: { type: string, enum: [cancelled, returned, pending_review, preparing, out_for_delivery, delivered, pending_payment] }
         paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
         trackingNumber: { type: [string, "null"] }
         address: { type: string }
         shippingMethod: { type: string }
         paymentMethod: { type: string }
         adminNotes: { type: [string, "null"] }
+        paymentLink:
+          type: object
+          required: [sent, status, expiresAt]
+          properties:
+            sent: { type: boolean }
+            status: { type: string }
+            expiresAt: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     AdminOrderUpdate:
       type: object
       properties:
-        status: { type: string, enum: [new, processing, ready, completed, shipped, delivered, cancelled] }
+        status: { type: string, enum: [cancelled, returned, pending_review, preparing, out_for_delivery, delivered, pending_payment] }
         paymentStatus: { type: string, enum: [pending, paid, failed, refunded] }
         trackingNumber: { type: [string, "null"] }
         adminNotes: { type: [string, "null"] }
@@ -3787,6 +3825,25 @@ components:
         paymentMethod: { type: string, enum: [cash, bank-transfer, moyasar] }
         shippingCost: { type: number, minimum: 0 }
         adminNotes: { type: [string, "null"] }
+        sendPaymentLink: { type: boolean }
+    AdminOrderPaymentLinkResponse:
+      type: object
+      required: [sent, expiresAt, status]
+      properties:
+        sent: { type: boolean }
+        expiresAt: { type: string }
+        status: { type: string }
+    MoyasarCallbackInput:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, minLength: 1 }
+    MoyasarCallbackResult:
+      type: object
+      required: [accepted, duplicate]
+      properties:
+        accepted: { type: boolean }
+        duplicate: { type: boolean }
     AdminInvoice:
       type: object
       required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]

@@ -150,9 +150,9 @@ describe("admin campaigns and coupon safety", () => {
       couponCode: `CAMPAIGN-B-${suffix}`,
     };
     const orders = await db.insert(ordersTable).values([
-      { ...common, orderNumber: `CAMPAIGN-PAID-${suffix}`, total: 120, paymentStatus: "paid", status: "new", createdAt: new Date("2027-01-15T12:00:00.000Z") },
+      { ...common, orderNumber: `CAMPAIGN-PAID-${suffix}`, total: 120, paymentStatus: "paid", status: "pending_review", createdAt: new Date("2027-01-15T12:00:00.000Z") },
       { ...common, orderNumber: `CAMPAIGN-CANCELLED-${suffix}`, total: 80, paymentStatus: "paid", status: "cancelled", createdAt: new Date("2027-01-16T12:00:00.000Z") },
-      { ...common, orderNumber: `CAMPAIGN-PENDING-${suffix}`, total: 40, paymentStatus: "pending", status: "new", createdAt: new Date("2027-01-17T12:00:00.000Z") },
+      { ...common, orderNumber: `CAMPAIGN-PENDING-${suffix}`, total: 40, paymentStatus: "pending", status: "pending_review", createdAt: new Date("2027-01-17T12:00:00.000Z") },
     ]).returning();
     orderIds.push(...orders.map((order) => order.id));
 

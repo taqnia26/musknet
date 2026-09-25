@@ -12,8 +12,10 @@
     "check": "drizzle-kit check --config ./drizzle.config.ts",
     "accounting:integrity": "node ./scripts/install-accounting-integrity.mjs",
     "accounting:integrity:verify": "node ./scripts/install-accounting-integrity.mjs --verify",
-    "push": "drizzle-kit push --config ./drizzle.config.ts && pnpm run accounting:integrity",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts && pnpm run accounting:integrity"
+    "order-status:preflight": "node ./scripts/install-order-status.mjs --preflight",
+    "order-status:install": "node ./scripts/install-order-status.mjs",
+    "push": "pnpm run order-status:preflight && pnpm run order-status:install && drizzle-kit push --config ./drizzle.config.ts && pnpm run order-status:install && pnpm run accounting:integrity",
+    "push-force": "pnpm run order-status:preflight && pnpm run order-status:install && drizzle-kit push --force --config ./drizzle.config.ts && pnpm run order-status:install && pnpm run accounting:integrity"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",

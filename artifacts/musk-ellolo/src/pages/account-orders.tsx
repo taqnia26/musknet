@@ -4,7 +4,6 @@ import { useListOrders } from '@workspace/api-client-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PackageX } from 'lucide-react';
 import { Link } from 'wouter';
-import { Button } from '@/components/ui/button';
 import { Money } from '@/components/money';
 
 export default function Orders() {
@@ -13,21 +12,25 @@ export default function Orders() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'new': return 'bg-blue-100 text-blue-800';
-      case 'processing': return 'bg-accent text-accent-foreground';
-      case 'shipped': return 'bg-primary text-primary-foreground';
+      case 'pending_review': return 'bg-blue-100 text-blue-800';
+      case 'preparing': return 'bg-accent text-accent-foreground';
+      case 'out_for_delivery': return 'bg-primary text-primary-foreground';
       case 'delivered': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-destructive/10 text-destructive';
+      case 'returned': return 'bg-orange-100 text-orange-800';
+      case 'pending_payment': return 'bg-amber-100 text-amber-800';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
   const statusTranslations: Record<string, { ar: string, en: string }> = {
-    new: { ar: 'جديد', en: 'New' },
-    processing: { ar: 'قيد التجهيز', en: 'Processing' },
-    shipped: { ar: 'تم الشحن', en: 'Shipped' },
+    pending_review: { ar: 'بانتظار المراجعة', en: 'Pending review' },
+    preparing: { ar: 'جاري تجهيز الطلب', en: 'Preparing order' },
+    out_for_delivery: { ar: 'جاري التوصيل', en: 'Out for delivery' },
     delivered: { ar: 'تم التوصيل', en: 'Delivered' },
     cancelled: { ar: 'ملغي', en: 'Cancelled' },
+    returned: { ar: 'مسترجع', en: 'Returned' },
+    pending_payment: { ar: 'بانتظار الدفع', en: 'Pending payment' },
   };
 
   return (

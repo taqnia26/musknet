@@ -6,6 +6,16 @@ import { Package, Clock, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Money } from '@/components/money';
 
+const orderStatusLabels: Record<string, { ar: string; en: string }> = {
+  pending_review: { ar: 'بانتظار المراجعة', en: 'Pending review' },
+  preparing: { ar: 'جاري تجهيز الطلب', en: 'Preparing order' },
+  out_for_delivery: { ar: 'جاري التوصيل', en: 'Out for delivery' },
+  delivered: { ar: 'تم التوصيل', en: 'Delivered' },
+  cancelled: { ar: 'ملغي', en: 'Cancelled' },
+  returned: { ar: 'مسترجع', en: 'Returned' },
+  pending_payment: { ar: 'بانتظار الدفع', en: 'Pending payment' },
+};
+
 export default function Account() {
   const { t, lang } = useLanguage();
   const { data: user } = useGetCurrentUser();
@@ -38,7 +48,7 @@ export default function Account() {
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <p className="font-bold text-2xl">{orders?.filter(o => ['new', 'processing'].includes(o.status)).length || 0}</p>
+              <p className="font-bold text-2xl">{orders?.filter(o => !['delivered', 'cancelled', 'returned'].includes(o.status)).length || 0}</p>
               <p className="text-muted-foreground text-sm">{t('طلبات قيد التنفيذ', 'Active Orders')}</p>
             </div>
           </div>
@@ -72,7 +82,11 @@ export default function Account() {
                   </div>
                   <div className="text-right">
                     <Money value={order.total} lang={lang} className="font-bold" />
-                    <p className="text-sm text-primary">{t(order.status, order.status)}</p>
+                    <p className="text-sm text-primary">
+                      {orderStatusLabels[order.status]
+                        ? t(orderStatusLabels[order.status].ar, orderStatusLabels[order.status].en)
+                        : order.status}
+                    </p>
                   </div>
                 </div>
               ))}

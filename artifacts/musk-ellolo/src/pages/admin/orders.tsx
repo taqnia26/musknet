@@ -7,17 +7,19 @@ import {
   AdminOrderUpdatePaymentStatus, 
   useGetAdminMe,
   useAdminGetOrder,
+  useAdminSendOrderPaymentLink,
   getAdminListOrdersQueryKey,
   getAdminGetOrderQueryKey
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { Money } from '@/components/money';
 import { hasPermission } from '@/lib/permissions';
+import { getAdminToken } from '@/lib/auth-token';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck, Clock3, ClipboardCheck, PackageCheck, Package, Check, Ban, CreditCard, MoreHorizontal } from 'lucide-react';
+import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck, Clock3, ClipboardCheck, PackageCheck, Package, Ban, CreditCard, MoreHorizontal, PackageX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,12 +28,9 @@ import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { CreateOrderDialog } from '@/components/admin/create-order-dialog';
 
-type OrderStage = 'all' | 'cancelled' | 'awaiting_payment' | 'awaiting_review' | 'processing' | 'ready' | 'completed' | 'shipped' | 'delivered';
-function stageOf(order: AdminOrder): OrderStage {
-  if (order.status === 'cancelled') return 'cancelled';
-  if (order.status === 'new') return order.paymentStatus === 'paid' ? 'awaiting_review' : 'awaiting_payment';
-  if (order.status === 'processing' || order.status === 'ready' || order.status === 'completed' || order.status === 'shipped' || order.status === 'delivered') return order.status;
-  return 'all';
+type OrderStage = 'all' | OrderStatus;
+function stageOf(order: AdminOrder): OrderStatus {
+  return order.status as string as OrderStatus;
 }
 
 export default function AdminOrders() {
@@ -45,16 +44,19 @@ export default function AdminOrders() {
   const { data: currentUser } = useGetAdminMe();
   const { data: orders, isLoading, isError } = useAdminListOrders({ search });
   const updateMutation = useAdminUpdateOrder();
+  const [paymentLinkResult, setPaymentLinkResult] = useState<{ orderId: number; message: string; error: boolean } | null>(null);
+  const paymentLinkMutation = useAdminSendOrderPaymentLink({
+    request: { headers: { Authorization: `Bearer ${getAdminToken() ?? ''}` } },
+  });
   const visibleOrders = statusFilter === 'all' ? orders : orders?.filter((order) => stageOf(order) === statusFilter);
   const stages = [
-    { key: 'cancelled', ar: 'ملغي', en: 'Cancelled', icon: Ban, dot: 'bg-slate-400' },
-    { key: 'awaiting_payment', ar: 'بانتظار الدفع', en: 'Awaiting payment', icon: CreditCard, dot: 'bg-rose-500' },
-    { key: 'awaiting_review', ar: 'بانتظار المراجعة', en: 'Awaiting review', icon: Clock3, dot: 'bg-slate-500' },
-    { key: 'processing', ar: 'قيد التنفيذ', en: 'In progress', icon: ClipboardCheck, dot: 'bg-amber-500' },
-    { key: 'ready', ar: 'قيد التسليم', en: 'Ready for handoff', icon: Package, dot: 'bg-sky-500' },
-    { key: 'completed', ar: 'تم التنفيذ', en: 'Completed', icon: Check, dot: 'bg-emerald-500' },
-    { key: 'shipped', ar: 'جاري التوصيل', en: 'Out for delivery', icon: Truck, dot: 'bg-teal-500' },
+    { key: 'pending_review', ar: 'بانتظار المراجعة', en: 'Pending review', icon: Clock3, dot: 'bg-slate-500' },
+    { key: 'preparing', ar: 'جاري تجهيز الطلب', en: 'Preparing order', icon: ClipboardCheck, dot: 'bg-amber-500' },
+    { key: 'out_for_delivery', ar: 'جاري التوصيل', en: 'Out for delivery', icon: Truck, dot: 'bg-teal-500' },
     { key: 'delivered', ar: 'تم التوصيل', en: 'Delivered', icon: PackageCheck, dot: 'bg-green-500' },
+    { key: 'cancelled', ar: 'ملغي', en: 'Cancelled', icon: Ban, dot: 'bg-slate-400' },
+    { key: 'returned', ar: 'مسترجع', en: 'Returned', icon: PackageX, dot: 'bg-orange-500' },
+    { key: 'pending_payment', ar: 'بانتظار الدفع', en: 'Pending payment', icon: CreditCard, dot: 'bg-rose-500' },
   ] as const;
 
   const { data: orderDetail, isLoading: isDetailLoading, isError: isDetailError } = useAdminGetOrder(
@@ -94,13 +96,13 @@ export default function AdminOrders() {
   };
 
   const statusMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
-    'new': { label: t('جديد', 'New'), variant: 'default', className: 'bg-primary/20 text-primary hover:bg-primary/30' },
-    'processing': { label: t('قيد التجهيز', 'Processing'), variant: 'secondary', className: 'bg-primary/15 text-primary hover:bg-primary/25' },
-    'ready': { label: t('قيد التسليم', 'Ready for handoff'), variant: 'secondary' },
-    'completed': { label: t('تم التنفيذ', 'Completed'), variant: 'secondary' },
-    'shipped': { label: t('مشحون', 'Shipped'), variant: 'outline', className: 'bg-accent/20 text-accent-foreground hover:bg-accent/30 border-accent/30' },
+    'pending_review': { label: t('بانتظار المراجعة', 'Pending review'), variant: 'secondary', className: 'bg-primary/15 text-primary hover:bg-primary/25' },
+    'preparing': { label: t('جاري تجهيز الطلب', 'Preparing order'), variant: 'secondary' },
+    'out_for_delivery': { label: t('جاري التوصيل', 'Out for delivery'), variant: 'outline', className: 'bg-accent/20 text-accent-foreground hover:bg-accent/30 border-accent/30' },
     'delivered': { label: t('تم التوصيل', 'Delivered'), variant: 'default', className: 'bg-success/20 text-success hover:bg-success/30' },
     'cancelled': { label: t('ملغي', 'Cancelled'), variant: 'destructive', className: 'bg-destructive/30 text-destructive-foreground hover:bg-destructive/40' },
+    'returned': { label: t('مسترجع', 'Returned'), variant: 'outline', className: 'border-orange-500 text-orange-700' },
+    'pending_payment': { label: t('بانتظار الدفع', 'Pending payment'), variant: 'secondary', className: 'bg-accent text-accent-foreground' },
   };
 
   const paymentMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
@@ -169,10 +171,11 @@ export default function AdminOrders() {
       )}
 
       <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
-        <Table className="min-w-[760px]">
+        <Table className="min-w-[860px]">
           <TableHeader className="bg-muted/30">
             <TableRow>
               <TableHead>{t('رقم الطلب', 'Order #')}</TableHead>
+              <TableHead>{t('العميل', 'Customer')}</TableHead>
               <TableHead>{t('التاريخ', 'Date')}</TableHead>
               <TableHead>{t('الإجمالي', 'Total')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>
@@ -182,15 +185,23 @@ export default function AdminOrders() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground animate-pulse">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
             ) : isError ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-12 text-destructive">{t('تعذر تحميل الطلبات', 'Could not load orders')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-destructive">{t('تعذر تحميل الطلبات', 'Could not load orders')}</TableCell></TableRow>
             ) : visibleOrders?.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-12 text-muted-foreground">{t('لا توجد طلبات', 'No orders found')}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">{t('لا توجد طلبات', 'No orders found')}</TableCell></TableRow>
             ) : (
               visibleOrders?.map((order) => (
                 <TableRow key={order.id} data-testid={`row-order-${order.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">#{order.orderNumber}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{order.customerName}</span>
+                      {['pending_review', 'pending_payment'].includes(order.status as string) && (
+                        <Badge variant="secondary" data-testid={`badge-new-order-${order.id}`}>{t('جديد', 'New')}</Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{format(new Date(order.createdAt), 'yyyy-MM-dd')}</TableCell>
                   <TableCell className="font-semibold"><Money value={order.total} lang={lang} fractionDigits={2} /></TableCell>
                   <TableCell>
@@ -199,13 +210,13 @@ export default function AdminOrders() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="new">{t('جديد', 'New')}</SelectItem>
-                        <SelectItem value="processing">{t('قيد التجهيز', 'Processing')}</SelectItem>
-                        <SelectItem value="ready">{t('قيد التسليم', 'Ready for handoff')}</SelectItem>
-                        <SelectItem value="completed">{t('تم التنفيذ', 'Completed')}</SelectItem>
-                        <SelectItem value="shipped">{t('مشحون', 'Shipped')}</SelectItem>
+                        <SelectItem value="pending_review">{t('بانتظار المراجعة', 'Pending review')}</SelectItem>
+                        <SelectItem value="preparing">{t('جاري تجهيز الطلب', 'Preparing order')}</SelectItem>
+                        <SelectItem value="out_for_delivery">{t('جاري التوصيل', 'Out for delivery')}</SelectItem>
                         <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
                         <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
+                        <SelectItem value="returned">{t('مسترجع', 'Returned')}</SelectItem>
+                        <SelectItem value="pending_payment">{t('بانتظار الدفع', 'Pending payment')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>
@@ -285,13 +296,13 @@ export default function AdminOrders() {
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="new">{t('جديد', 'New')}</SelectItem>
-                                        <SelectItem value="processing">{t('قيد التجهيز', 'Processing')}</SelectItem>
-                                        <SelectItem value="ready">{t('قيد التسليم', 'Ready for handoff')}</SelectItem>
-                                        <SelectItem value="completed">{t('تم التنفيذ', 'Completed')}</SelectItem>
-                                        <SelectItem value="shipped">{t('مشحون', 'Shipped')}</SelectItem>
+                                        <SelectItem value="pending_review">{t('بانتظار المراجعة', 'Pending review')}</SelectItem>
+                                        <SelectItem value="preparing">{t('جاري تجهيز الطلب', 'Preparing order')}</SelectItem>
+                                        <SelectItem value="out_for_delivery">{t('جاري التوصيل', 'Out for delivery')}</SelectItem>
                                         <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
                                         <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
+                                        <SelectItem value="returned">{t('مسترجع', 'Returned')}</SelectItem>
+                                        <SelectItem value="pending_payment">{t('بانتظار الدفع', 'Pending payment')}</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
@@ -308,6 +319,54 @@ export default function AdminOrders() {
                                         <SelectItem value="refunded">{t('مسترجع', 'Refunded')}</SelectItem>
                                       </SelectContent>
                                     </Select>
+                                    {(orderDetail.status as string) === 'pending_payment' && orderDetail.paymentMethod === 'moyasar' && hasPermission(currentUser, 'orders', 'edit') && (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full"
+                                        disabled={paymentLinkMutation.isPending}
+                                        data-testid={`button-resend-payment-link-${orderDetail.id}`}
+                                        onClick={() => {
+                                          setPaymentLinkResult(null);
+                                          paymentLinkMutation.mutate({ id: orderDetail.id }, {
+                                            onSuccess: (result) => {
+                                              setPaymentLinkResult({
+                                                orderId: orderDetail.id,
+                                                error: !result.sent,
+                                                message: result.sent
+                                                  ? `${t('تم إرسال رابط الدفع', 'Payment link sent')} — ${t('ينتهي في', 'expires')} ${format(new Date(result.expiresAt), 'PPpp')} (${result.status})`
+                                                  : `${t('لم يتم إرسال رابط الدفع', 'Payment link was not sent')} (${result.status})`,
+                                              });
+                                              queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
+                                              queryClient.invalidateQueries({ queryKey: getAdminGetOrderQueryKey(orderDetail.id) });
+                                            },
+                                            onError: (error) => {
+                                              const apiError = error as { data?: { error?: string }; message?: string };
+                                              setPaymentLinkResult({
+                                                orderId: orderDetail.id,
+                                                error: true,
+                                                message: apiError.data?.error ?? apiError.message ?? t('تعذر إرسال رابط الدفع', 'Unable to send payment link'),
+                                              });
+                                            },
+                                          });
+                                        }}
+                                      >
+                                        <CreditCard className="me-2 h-4 w-4" />
+                                        {paymentLinkMutation.isPending
+                                          ? t('جاري إرسال الرابط...', 'Sending link...')
+                                          : t('إعادة إرسال رابط الدفع', 'Resend payment link')}
+                                      </Button>
+                                    )}
+                                    {paymentLinkResult?.orderId === orderDetail.id && (
+                                      <p
+                                        role={paymentLinkResult.error ? 'alert' : 'status'}
+                                        data-testid={`payment-link-result-${orderDetail.id}`}
+                                        className={`text-xs ${paymentLinkResult.error ? 'text-destructive' : 'text-success'}`}
+                                      >
+                                        {paymentLinkResult.message}
+                                      </p>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -478,3 +537,5 @@ export default function AdminOrders() {
   );
 }
 
+
+type OrderStatus = 'pending_review' | 'preparing' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'returned' | 'pending_payment';

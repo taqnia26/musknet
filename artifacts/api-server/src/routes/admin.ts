@@ -98,6 +98,7 @@ import { createInvoicePdf, sendInvoiceEmail } from "../lib/invoice-email";
 import { assertShippingStatusTransition, canApplyCarrierShippingStatus, ShippingStatusTransitionError } from "../lib/shipping-status";
 import { extractVatFromGross } from "../lib/vat";
 import { normalizeIntakeAddress } from "../lib/intake-address";
+import { issueOrderPaymentLink, confirmMoyasarInvoice, cancelUnpaidMoyasarOrder, PaymentLinkError } from "../lib/moyasar-payment-links";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -431,7 +432,7 @@ router.get("/admin/dashboard", permit("dashboard", "view"), route(async (_req, r
     db.select({ value: count() }).from(customersTable),
     db.select({ value: count() }).from(productsTable).where(eq(productsTable.isActive, true)),
     db.select({ value: count() }).from(productsTable).where(and(eq(productsTable.isActive, true), sql`${productsTable.stockQuantity} <= 10`)),
-    db.select({ value: count() }).from(ordersTable).where(eq(ordersTable.status, "new")),
+    db.select({ value: count() }).from(ordersTable).where(inArray(ordersTable.status, ["pending_review", "pending_payment"])),
     db.select({ value: count() }).from(couponsTable).where(eq(couponsTable.isActive, true)),
     db.select({ value: count() }).from(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.isActive, true)),
   ]);
@@ -1661,13 +1662,26 @@ router.delete("/admin/categories/:id", permit("categories", "delete"), route(asy
 
 router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => {
   const query = parse(Api.AdminListOrdersQueryParams, req.query, res); if (!query) return;
-  let rows = await db.select().from(ordersTable).orderBy(sql`${ordersTable.createdAt} desc`);
-  rows = searchFilter(rows, query.search, ["orderNumber", "trackingNumber"]);
-  if (query.status !== "all") rows = rows.filter((row) => row.status === query.status);
-  res.json(Api.AdminListOrdersResponse.parse(rows));
+  let rows = await db.select({ order: ordersTable, customerName: customersTable.name })
+    .from(ordersTable).innerJoin(customersTable, eq(ordersTable.userId, customersTable.id))
+    .orderBy(sql`${ordersTable.createdAt} desc`);
+  if (query.search) {
+    const needle = query.search.trim().toLocaleLowerCase();
+    rows = rows.filter(row =>
+      [row.customerName, row.order.orderNumber, row.order.trackingNumber]
+        .some(value => value?.toLocaleLowerCase().includes(needle)));
+  }
+  if (query.status !== "all") rows = rows.filter((row) => row.order.status === query.status);
+  res.json(Api.AdminListOrdersResponse.parse(rows.map(({ order, customerName }) => ({ ...order, customerName }))));
 }));
 router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
+  if (body.sendPaymentLink && body.paymentMethod !== "moyasar") {
+    res.status(400).json({ error: "Payment links require Moyasar as the payment method" }); return;
+  }
+  if (body.sendPaymentLink && (!process.env.MOYASAR_SECRET_KEY || !process.env.MOYASAR_CALLBACK_URL)) {
+    res.status(503).json({ error: "Moyasar payment links are not configured" }); return;
+  }
   const suppliedCountry = body.orderAddress.country?.trim() || null;
   const country = suppliedCountry?.toUpperCase() ?? null;
   const domestic = country === null || country === "SA";
@@ -1714,9 +1728,11 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
 
   try {
     const order = await db.transaction(async (tx) => {
-      const [customer] = await tx.select({ id: customersTable.id, isActive: customersTable.isActive })
+      const [customer] = await tx.select({ id: customersTable.id, isActive: customersTable.isActive, email: customersTable.email })
         .from(customersTable).where(eq(customersTable.id, body.userId)).limit(1);
       if (!customer?.isActive) throw new Error("CUSTOMER_UNAVAILABLE");
+      if (body.sendPaymentLink && (!customer.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email.trim())))
+        throw new Error("CUSTOMER_EMAIL_REQUIRED");
 
       const selectedProducts: Array<{
         product: typeof productsTable.$inferSelect;
@@ -1756,6 +1772,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         address: JSON.stringify(cleanedAddress),
         shippingMethod: body.shippingMethod,
         paymentMethod: body.paymentMethod,
+        status: body.sendPaymentLink ? "pending_payment" : "pending_review",
         adminNotes: body.adminNotes ?? null,
       }).returning();
 
@@ -1826,12 +1843,21 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       await postFulfillmentCogs(tx, created.id, res.locals.admin.id, created.orderNumber, created.createdAt.toISOString().slice(0, 10));
       return created;
     });
-    res.status(201).json(Api.AdminCreateOrderResponse.parse(order));
+    let paymentLink;
+    if (body.sendPaymentLink) {
+      try { paymentLink = await issueOrderPaymentLink(order.id); }
+      catch (error) { paymentLink = { sent: false, status: error instanceof Error ? error.message : "Payment link failed", expiresAt: new Date().toISOString() }; }
+    }
+    const [customer] = await db.select({ name: customersTable.name }).from(customersTable).where(eq(customersTable.id, order.userId));
+    res.status(201).json(Api.AdminCreateOrderResponse.parse({ ...order, customerName: customer.name, ...(paymentLink ? { paymentLink } : {}) }));
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message === "CUSTOMER_UNAVAILABLE") {
       res.status(400).json({ error: "Customer was not found or is inactive" });
       return;
+    }
+    if (message === "CUSTOMER_EMAIL_REQUIRED") {
+      res.status(400).json({ error: "A valid saved customer email is required for payment links" }); return;
     }
     if (message === "PRODUCT_UNAVAILABLE") {
       res.status(400).json({ error: "A selected product was not found or is inactive" });
@@ -1846,6 +1872,27 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       res.status(409).json({ error: "Inventory changed while the order was being created. Please try again." });
       return;
     }
+    throw error;
+  }
+}));
+router.post("/admin/orders/:id/payment-link", permit("orders", "edit"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) { res.status(400).json({ error: "Invalid order ID" }); return; }
+  try {
+    res.json(Api.AdminSendOrderPaymentLinkResponse.parse(await issueOrderPaymentLink(id)));
+  } catch (error) {
+    if (error instanceof PaymentLinkError) {
+      res.status(error.statusCode).json({ error: error.message }); return;
+    }
+    res.status(502).json({ error: error instanceof Error ? error.message : "Payment link failed" });
+  }
+}));
+router.post("/payments/moyasar/callback", route(async (req, res) => {
+  const id = req.body?.id;
+  if (typeof id !== "string") { res.status(400).json({ error: "Invoice ID required" }); return; }
+  try { res.json(await confirmMoyasarInvoice(id)); }
+  catch (error) {
+    if (error instanceof PaymentLinkError) { res.status(error.statusCode).json({ error: error.message }); return; }
     throw error;
   }
 }));
@@ -1887,6 +1934,7 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
     : null;
   res.json(Api.AdminGetOrderResponse.parse({
     ...row,
+    customerName: customer.name,
     customer,
     orderAddress: {
       label: address.label, city: address.city, district: address.district, street: address.street,
@@ -1901,9 +1949,25 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
 router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateOrderParams, req.params, res);
   const body = parse(Api.AdminUpdateOrderBody, req.body, res); if (!params || !body) return;
-  const row = await updateOrderAndIssueInvoice(params.id, body, process.env, res.locals.admin.id);
+  let row;
+  if (body.status === "cancelled") {
+    const [current] = await db.select({ status: ordersTable.status, paymentMethod: ordersTable.paymentMethod })
+      .from(ordersTable).where(eq(ordersTable.id, params.id));
+    if (current?.status === "pending_payment" && current.paymentMethod === "moyasar") {
+      if (body.paymentStatus !== undefined || body.adminNotes !== undefined || body.trackingNumber !== undefined) {
+        res.status(400).json({ error: "Cancel the payment-link order separately from other edits" }); return;
+      }
+      try { row = await cancelUnpaidMoyasarOrder(params.id, res.locals.admin.id); }
+      catch (error) {
+        if (error instanceof PaymentLinkError) { res.status(error.statusCode).json({ error: error.message }); return; }
+        res.status(502).json({ error: error instanceof Error ? error.message : "Could not verify Moyasar invoice cancellation" }); return;
+      }
+    }
+  }
+  row ??= await updateOrderAndIssueInvoice(params.id, body, process.env, res.locals.admin.id);
   if (!row) { res.status(404).json({ error: "Order not found" }); return; }
-  res.json(Api.AdminUpdateOrderResponse.parse(row));
+  const [customer] = await db.select({ name: customersTable.name }).from(customersTable).where(eq(customersTable.id, row.userId));
+  res.json(Api.AdminUpdateOrderResponse.parse({ ...row, customerName: customer.name }));
 }));
 
 router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res) => {
@@ -2366,6 +2430,10 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
   }
   const [existing] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Shipment not found" }); return; }
+  if (existing.orderId && (body.status !== undefined && body.status !== existing.status)) {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, existing.orderId));
+    if (order?.status === "pending_payment") { res.status(409).json({ error: "Cannot advance shipping before payment confirmation" }); return; }
+  }
   const channel = existing.channel as "online" | "b2b";
   if (channel === "b2b" && [body.companyName, body.recipientName, body.recipientPhone].some((value) => value !== undefined)
     && !validCompanyShipmentContact({ ...existing, ...body })) {
@@ -2436,6 +2504,10 @@ router.post("/admin/shipping/:id/label", permit("shipping", "edit"), route(async
   const row = (await shippingRows("online")).find((item) => item.shipment.id === params.id)
     ?? (await shippingRows("b2b")).find((item) => item.shipment.id === params.id);
   if (!row) { res.status(404).json({ error: "Shipment not found" }); return; }
+  if (row.shipment.orderId) {
+    const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, row.shipment.orderId));
+    if (order?.status === "pending_payment") { res.status(409).json({ error: "Cannot create a shipping label before payment" }); return; }
+  }
   const channel = row.shipment.channel as "online" | "b2b";
   if (!(await canUseShipping(res, channel, "edit"))) {
     res.status(403).json({ error: "Insufficient permission" }); return;
@@ -2549,7 +2621,13 @@ router.post("/shipping/webhooks/:carrier", route(async (req, res) => {
   const status = carrierStatusToShipmentStatus[body.status];
   const occurredAt = body.occurredAt ? new Date(body.occurredAt) : new Date();
   await db.transaction(async (tx) => {
-    const shouldAdvance = canApplyCarrierShippingStatus(shipment.status, status);
+    if (shipment.orderId) await tx.execute(sql`select id from storefront_orders where id = ${shipment.orderId} for update`);
+    const [order] = shipment.orderId
+      ? await tx.select({ status: ordersTable.status, paymentStatus: ordersTable.paymentStatus })
+          .from(ordersTable).where(eq(ordersTable.id, shipment.orderId))
+      : [];
+    const shouldAdvance = (!order || order.status !== "pending_payment") &&
+      canApplyCarrierShippingStatus(shipment.status, status);
     await tx.update(shipmentsTable).set({
       ...(shouldAdvance ? { status } : {}),
       integrationStatus: "active",
@@ -2560,11 +2638,11 @@ router.post("/shipping/webhooks/:carrier", route(async (req, res) => {
     }).where(eq(shipmentsTable.id, shipment.id));
     if (shipment.orderId && shouldAdvance) {
       const orderStatus = status === "delivered" ? "delivered"
-        : status === "in_transit" ? "shipped"
+        : status === "in_transit" ? "out_for_delivery"
         : undefined;
       if (orderStatus) {
         await tx.update(ordersTable).set({ status: orderStatus })
-          .where(eq(ordersTable.id, shipment.orderId));
+          .where(and(eq(ordersTable.id, shipment.orderId), sql`${ordersTable.status} <> 'pending_payment'`));
       }
     }
     await tx.insert(shipmentEventsTable).values({

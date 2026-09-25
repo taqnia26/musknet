@@ -5,12 +5,14 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminOrderPaymentLink } from './adminOrderPaymentLink';
 import type { AdminOrderPaymentStatus } from './adminOrderPaymentStatus';
 import type { AdminOrderStatus } from './adminOrderStatus';
 
 export interface AdminOrder {
   id: number;
   userId: number;
+  customerName: string;
   orderNumber: string;
   subtotal: number;
   shippingCost: number;
@@ -26,6 +28,7 @@ export interface AdminOrder {
   paymentMethod: string;
   /** @nullable */
   adminNotes?: string | null;
+  paymentLink?: AdminOrderPaymentLink;
   createdAt: Date;
   updatedAt: Date;
 }

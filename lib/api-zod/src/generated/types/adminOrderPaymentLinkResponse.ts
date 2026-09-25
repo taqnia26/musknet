@@ -6,12 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface OwnerSession {
-  id: number;
-  deviceLabel: string;
-  browser: string;
-  operatingSystem: string;
+export interface AdminOrderPaymentLinkResponse {
+  sent: boolean;
   expiresAt: string;
-  createdAt: Date;
-  isCurrent: boolean;
+  status: string;
 }

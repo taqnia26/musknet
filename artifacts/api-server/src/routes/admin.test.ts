@@ -938,9 +938,9 @@ describe.sequential("admin route authorization", () => {
     const response = await request(app)
       .patch(`/api/admin/orders/${orderId}`)
       .set("Authorization", `Bearer ${superToken}`)
-      .send({ status: "shipped", paymentStatus: "paid" })
+      .send({ status: "out_for_delivery", paymentStatus: "paid" })
       .expect(200);
-    expect(response.body.status).toBe("shipped");
+    expect(response.body.status).toBe("out_for_delivery");
     expect(response.body.paymentStatus).toBe("paid");
     expect(response.body.trackingNumber).toBeNull();
   });
@@ -1125,7 +1125,7 @@ describe.sequential("admin route authorization", () => {
     const response = await request(app)
       .patch(`/api/admin/orders/${orderId}`)
       .set("Authorization", `Bearer ${viewerToken}`)
-      .send({ status: "processing" })
+      .send({ status: "preparing" })
       .expect(403);
     expect(response.body.error).toMatch(/permission/i);
   });

@@ -654,11 +654,13 @@ export type OrderStatus = typeof OrderStatus[keyof typeof OrderStatus];
 
 
 export const OrderStatus = {
-  new: 'new',
-  processing: 'processing',
-  shipped: 'shipped',
-  delivered: 'delivered',
   cancelled: 'cancelled',
+  returned: 'returned',
+  pending_review: 'pending_review',
+  preparing: 'preparing',
+  out_for_delivery: 'out_for_delivery',
+  delivered: 'delivered',
+  pending_payment: 'pending_payment',
 } as const;
 
 export type OrderPaymentStatus = typeof OrderPaymentStatus[keyof typeof OrderPaymentStatus];
@@ -1739,13 +1741,13 @@ export type AdminOrderStatus = typeof AdminOrderStatus[keyof typeof AdminOrderSt
 
 
 export const AdminOrderStatus = {
-  new: 'new',
-  processing: 'processing',
-  ready: 'ready',
-  completed: 'completed',
-  shipped: 'shipped',
-  delivered: 'delivered',
   cancelled: 'cancelled',
+  returned: 'returned',
+  pending_review: 'pending_review',
+  preparing: 'preparing',
+  out_for_delivery: 'out_for_delivery',
+  delivered: 'delivered',
+  pending_payment: 'pending_payment',
 } as const;
 
 export type AdminOrderPaymentStatus = typeof AdminOrderPaymentStatus[keyof typeof AdminOrderPaymentStatus];
@@ -1758,9 +1760,15 @@ export const AdminOrderPaymentStatus = {
   refunded: 'refunded',
 } as const;
 
+export type AdminOrderPaymentLink = {
+  sent: boolean;
+  status: string;
+  expiresAt: string;
+};
 export interface AdminOrder {
   id: number;
   userId: number;
+  customerName: string;
   orderNumber: string;
   subtotal: number;
   shippingCost: number;
@@ -1776,6 +1784,7 @@ export interface AdminOrder {
   paymentMethod: string;
   /** @nullable */
   adminNotes?: string | null;
+  paymentLink?: AdminOrderPaymentLink;
   createdAt: string;
   updatedAt: string;
 }
@@ -1784,13 +1793,13 @@ export type AdminOrderUpdateStatus = typeof AdminOrderUpdateStatus[keyof typeof 
 
 
 export const AdminOrderUpdateStatus = {
-  new: 'new',
-  processing: 'processing',
-  ready: 'ready',
-  completed: 'completed',
-  shipped: 'shipped',
-  delivered: 'delivered',
   cancelled: 'cancelled',
+  returned: 'returned',
+  pending_review: 'pending_review',
+  preparing: 'preparing',
+  out_for_delivery: 'out_for_delivery',
+  delivered: 'delivered',
+  pending_payment: 'pending_payment',
 } as const;
 
 export type AdminOrderUpdatePaymentStatus = typeof AdminOrderUpdatePaymentStatus[keyof typeof AdminOrderUpdatePaymentStatus];
@@ -1860,6 +1869,13 @@ export interface AdminOrderInput {
   shippingCost?: number;
   /** @nullable */
   adminNotes?: string | null;
+  sendPaymentLink?: boolean;
+}
+
+export interface AdminOrderPaymentLinkResponse {
+  sent: boolean;
+  expiresAt: string;
+  status: string;
 }
 
 export type AdminInvoiceHistorical = typeof AdminInvoiceHistorical[keyof typeof AdminInvoiceHistorical];
@@ -4870,13 +4886,13 @@ export type AdminListOrdersStatus = typeof AdminListOrdersStatus[keyof typeof Ad
 
 export const AdminListOrdersStatus = {
   all: 'all',
-  new: 'new',
-  processing: 'processing',
-  ready: 'ready',
-  completed: 'completed',
-  shipped: 'shipped',
-  delivered: 'delivered',
   cancelled: 'cancelled',
+  returned: 'returned',
+  pending_review: 'pending_review',
+  preparing: 'preparing',
+  out_for_delivery: 'out_for_delivery',
+  delivered: 'delivered',
+  pending_payment: 'pending_payment',
 } as const;
 
 export type AdminListInvoicesParams = {
@@ -5252,4 +5268,14 @@ export const AdminInvoiceHistorical = {
 export interface HistoricalInvoiceCreated {
   id: number;
   invoiceNumber: string;
+}
+
+export interface MoyasarCallbackInput {
+  /** @minLength 1 */
+  id: string;
+}
+
+export interface MoyasarCallbackResult {
+  accepted: boolean;
+  duplicate: boolean;
 }

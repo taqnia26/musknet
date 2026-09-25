@@ -10,6 +10,7 @@ import {
   useGetAdminMe,
   getAdminListCustomersQueryKey,
   type AdminOrderInputPaymentMethod,
+  type AdminOrderInput,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { sortProductsForSelection } from '@/lib/product-sort';
 import { hasPermission } from '@/lib/permissions';
 import { createCustomerSchema, customerPayload, customerCreateError, type CreateCustomerValues } from '@/lib/customer-create';
@@ -53,8 +55,10 @@ export function CreateOrderDialog() {
   const [address, setAddress] = useState(initialAddress);
   const [shippingMethod, setShippingMethod] = useState('admin-standard');
   const [paymentMethod, setPaymentMethod] = useState<AdminOrderInputPaymentMethod>('cash');
+  const [sendPaymentLink, setSendPaymentLink] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [paymentLinkFailure, setPaymentLinkFailure] = useState<{ orderNumber: string; message: string } | null>(null);
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [customerError, setCustomerError] = useState<string | null>(null);
   const [newCustomer, setNewCustomer] = useState<{ id: number; name: string; phone: string } | null>(null);
@@ -82,8 +86,10 @@ export function CreateOrderDialog() {
     setAddress(initialAddress);
     setShippingMethod('admin-standard');
     setPaymentMethod('cash');
+    setSendPaymentLink(false);
     setAdminNotes('');
     setError(null);
+    setPaymentLinkFailure(null);
     setAddingCustomer(false);
     setCustomerError(null);
     setNewCustomer(null);
@@ -115,7 +121,7 @@ export function CreateOrderDialog() {
   };
 
   const submit = () => {
-    if (createOrder.isPending) return;
+    if (createOrder.isPending || paymentLinkFailure) return;
     setError(null);
     if (!customerId || lines.some((line) => !line.productId || line.quantity < 1)) {
       setError(t('اختر العميل والمنتجات والكميات أولاً', 'Select a customer, products, and quantities first'));
@@ -133,30 +139,52 @@ export function CreateOrderDialog() {
       return;
     }
 
-    createOrder.mutate({
-      data: {
-        userId: Number(customerId),
-        items: lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
-        orderAddress: {
-           label: address.label,
-           country: address.country.trim(),
-           city: address.city.trim(),
-           nationalAddressShortCode: address.country === 'SA' ? address.nationalAddressShortCode.trim() : null,
-           district: address.country === 'SA' ? '' : address.district.trim(),
-           street: address.country === 'SA' ? '' : address.street.trim(),
-           buildingNo: address.country === 'SA' ? '' : address.buildingNo.trim(),
-           additionalInfo: address.country === 'SA' ? null : address.additionalInfo.trim() || null,
-          isDefault: false,
-        },
-        shippingMethod,
-        paymentMethod,
-        adminNotes: adminNotes.trim() || null,
+    const orderInput = {
+      userId: Number(customerId),
+      items: lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
+      orderAddress: {
+        label: address.label,
+        country: address.country.trim(),
+        city: address.city.trim(),
+        nationalAddressShortCode: address.country === 'SA' ? address.nationalAddressShortCode.trim() : null,
+        district: address.country === 'SA' ? '' : address.district.trim(),
+        street: address.country === 'SA' ? '' : address.street.trim(),
+        buildingNo: address.country === 'SA' ? '' : address.buildingNo.trim(),
+        additionalInfo: address.country === 'SA' ? null : address.additionalInfo.trim() || null,
+        isDefault: false,
       },
+      shippingMethod,
+      paymentMethod,
+      adminNotes: adminNotes.trim() || null,
+      ...(sendPaymentLink && paymentMethod === 'moyasar' ? { sendPaymentLink: true } : {}),
+    } as AdminOrderInput & { sendPaymentLink?: boolean };
+    createOrder.mutate({
+      data: orderInput,
     }, {
       onSuccess: (order) => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetAdminShippingDashboardQueryKey() });
+        if (sendPaymentLink) {
+          const paymentLink = (order as typeof order & {
+            paymentLink?: { sent: boolean; expiresAt: string; status: string };
+          }).paymentLink;
+          if (paymentLink?.sent) {
+            toast({
+              title: t('تم إنشاء الطلب وإرسال رابط الدفع', 'Order created and payment link sent'),
+              description: `${t('رقم الطلب', 'Order number')}: ${order.orderNumber}${paymentLink.expiresAt ? ` — ${t('ينتهي في', 'expires')} ${new Date(paymentLink.expiresAt).toLocaleString(lang === 'ar' ? 'ar-SA' : 'en-GB')}` : ''}`,
+            });
+            setOpen(false);
+            reset();
+            return;
+          }
+          const paymentStatus = paymentLink?.status ? ` (${paymentLink.status})` : '';
+          setPaymentLinkFailure({
+            orderNumber: order.orderNumber,
+            message: `${t('تم إنشاء الطلب رقم', 'Order')} #${order.orderNumber}${t(' لكن تعذر إرسال رابط الدفع', ', but the payment link was not sent')}${paymentStatus}. ${t('لا تنشئ الطلب مرة أخرى. افتح الطلب من قائمة الإدارة وأعد إرسال رابط الدفع من التفاصيل.', 'Do not create this order again. Open it from the admin orders list and resend the payment link from its details.')}`,
+          });
+          return;
+        }
         toast({
           title: t('تم إنشاء الطلب', 'Order created'),
           description: `${t('رقم الطلب', 'Order number')}: ${order.orderNumber}`,
@@ -165,7 +193,8 @@ export function CreateOrderDialog() {
         reset();
       },
       onError: (mutationError) => {
-        const message = mutationError instanceof Error ? mutationError.message : t('تعذر إنشاء الطلب', 'Unable to create order');
+        const apiError = mutationError as { data?: { error?: string }; message?: string };
+        const message = apiError.data?.error ?? apiError.message ?? t('تعذر إنشاء الطلب', 'Unable to create order');
         setError(message);
       },
     });
@@ -316,7 +345,10 @@ export function CreateOrderDialog() {
             </div>
             <div className="space-y-2">
               <Label>{t('طريقة الدفع', 'Payment method')}</Label>
-              <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as AdminOrderInputPaymentMethod)}>
+              <Select value={paymentMethod} onValueChange={(value) => {
+                setPaymentMethod(value as AdminOrderInputPaymentMethod);
+                if (value !== 'moyasar') setSendPaymentLink(false);
+              }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cash">{t('نقدي', 'Cash')}</SelectItem>
@@ -326,17 +358,43 @@ export function CreateOrderDialog() {
               </Select>
             </div>
           </div>
+          {paymentMethod === 'moyasar' && (
+            <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
+              <Checkbox
+                checked={sendPaymentLink}
+                onCheckedChange={(checked) => setSendPaymentLink(checked === true)}
+                data-testid="checkbox-send-payment-link"
+              />
+              <span>
+                <span className="block font-medium">{t('إرسال رابط دفع للعميل', 'Send a payment link to the customer')}</span>
+                <span className="text-muted-foreground">{t('سيتم إرسال رابط الدفع عند إنشاء الطلب', 'The payment link will be sent when the order is created')}</span>
+              </span>
+            </label>
+          )}
           <div className="space-y-2">
             <Label htmlFor="order-admin-notes">{t('ملاحظات داخلية', 'Internal notes')}</Label>
             <Textarea id="order-admin-notes" value={adminNotes} onChange={(event) => setAdminNotes(event.target.value)} />
           </div>
 
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {paymentLinkFailure && (
+            <p role="alert" data-testid="payment-link-create-failure" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {paymentLinkFailure.message}
+            </p>
+          )}
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t('إلغاء', 'Cancel')}</Button>
-            <Button type="button" onClick={submit} disabled={createOrder.isPending}>
-              {createOrder.isPending ? t('جاري الإنشاء...', 'Creating...') : t('إنشاء الطلب', 'Create order')}
-            </Button>
+            {paymentLinkFailure ? (
+              <Button type="button" onClick={() => { setOpen(false); reset(); }}>
+                {t('إغلاق لإعادة الإرسال من تفاصيل الطلب', 'Close and resend from order details')}
+              </Button>
+            ) : (
+              <>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t('إلغاء', 'Cancel')}</Button>
+                <Button type="button" onClick={submit} disabled={createOrder.isPending}>
+                  {createOrder.isPending ? t('جاري الإنشاء...', 'Creating...') : t('إنشاء الطلب', 'Create order')}
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -77,6 +77,7 @@ import type {
   AdminOrder,
   AdminOrderDetail,
   AdminOrderInput,
+  AdminOrderPaymentLinkResponse,
   AdminOrderUpdate,
   AdminPermission,
   AdminPermissionAssignment,
@@ -195,6 +196,8 @@ import type {
   ManufacturingInput,
   ManufacturingInputsInput,
   MonthlyFinanceMetrics,
+  MoyasarCallbackInput,
+  MoyasarCallbackResult,
   NotFoundResponse,
   OpeningBalanceApprovalInput,
   OpeningBalanceImport,
@@ -1334,6 +1337,11 @@ export const useCreateOrder = <TError = ErrorType<BadRequestResponse>,
       return useMutation(getCreateOrderMutationOptions(options));
     }
 
+export const getReceiveMoyasarPaymentCallbackUrl = () => {
+
+
+  return `/api/payments/moyasar/callback`
+}
 export const getGetOrderUrl = (orderNumber: string,) => {
 
 
@@ -5183,6 +5191,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getAdminUpdateOrderMutationOptions(options));
     }
 
+export const getAdminSendOrderPaymentLinkUrl = (id: number,) => {
+
+
+  return `/api/admin/orders/${id}/payment-link`
+}
 export const getAdminListInvoicesUrl = (params?: AdminListInvoicesParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -13670,3 +13683,105 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
   return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSendOrderPaymentLinkMutationError = ErrorType<NotFoundResponse>
+
+    export const useAdminSendOrderPaymentLink = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendOrderPaymentLink>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSendOrderPaymentLink>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminSendOrderPaymentLinkMutationOptions(options));
+    }
+
+    export type ReceiveMoyasarPaymentCallbackMutationBody = BodyType<MoyasarCallbackInput>
+
+    /**
+ * @summary Confirm a Moyasar invoice callback
+ */
+export const useReceiveMoyasarPaymentCallback = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveMoyasarPaymentCallback>>, TError,{data: BodyType<MoyasarCallbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof receiveMoyasarPaymentCallback>>,
+        TError,
+        {data: BodyType<MoyasarCallbackInput>},
+        TContext
+      > => {
+      return useMutation(getReceiveMoyasarPaymentCallbackMutationOptions(options));
+    }
+
+    export type ReceiveMoyasarPaymentCallbackMutationResult = NonNullable<Awaited<ReturnType<typeof receiveMoyasarPaymentCallback>>>
+
+    export type ReceiveMoyasarPaymentCallbackMutationError = ErrorType<BadRequestResponse>
+
+export const adminSendOrderPaymentLink = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<AdminOrderPaymentLinkResponse> => {
+
+  return customFetch<AdminOrderPaymentLinkResponse>(getAdminSendOrderPaymentLinkUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+export const getAdminSendOrderPaymentLinkMutationOptions = <TError = ErrorType<NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendOrderPaymentLink>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSendOrderPaymentLink>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminSendOrderPaymentLink'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSendOrderPaymentLink>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminSendOrderPaymentLink(id,requestOptions)
+        }
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+/**
+ * @summary Confirm a Moyasar invoice callback
+ */
+export const receiveMoyasarPaymentCallback = async (moyasarCallbackInput: MoyasarCallbackInput, options?: Parameters<typeof customFetch>[1]): Promise<MoyasarCallbackResult> => {
+
+  return customFetch<MoyasarCallbackResult>(getReceiveMoyasarPaymentCallbackUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(moyasarCallbackInput)
+  }
+);}
+
+export const getReceiveMoyasarPaymentCallbackMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveMoyasarPaymentCallback>>, TError,{data: BodyType<MoyasarCallbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof receiveMoyasarPaymentCallback>>, TError,{data: BodyType<MoyasarCallbackInput>}, TContext> => {
+
+const mutationKey = ['receiveMoyasarPaymentCallback'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof receiveMoyasarPaymentCallback>>, {data: BodyType<MoyasarCallbackInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  receiveMoyasarPaymentCallback(data,requestOptions)
+        }
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSendOrderPaymentLinkMutationResult = NonNullable<Awaited<ReturnType<typeof adminSendOrderPaymentLink>>>

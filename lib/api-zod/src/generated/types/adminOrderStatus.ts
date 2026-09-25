@@ -10,11 +10,11 @@ export type AdminOrderStatus = typeof AdminOrderStatus[keyof typeof AdminOrderSt
 
 
 export const AdminOrderStatus = {
-  new: 'new',
-  processing: 'processing',
-  ready: 'ready',
-  completed: 'completed',
-  shipped: 'shipped',
-  delivered: 'delivered',
   cancelled: 'cancelled',
+  returned: 'returned',
+  pending_review: 'pending_review',
+  preparing: 'preparing',
+  out_for_delivery: 'out_for_delivery',
+  delivered: 'delivered',
+  pending_payment: 'pending_payment',
 } as const;

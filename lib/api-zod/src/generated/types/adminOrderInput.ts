@@ -22,4 +22,5 @@ export interface AdminOrderInput {
   shippingCost?: number;
   /** @nullable */
   adminNotes?: string | null;
+  sendPaymentLink?: boolean;
 }
