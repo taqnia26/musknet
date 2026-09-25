@@ -37,4 +37,6 @@ export interface GiftingIssueUpdate {
      * @nullable
      */
   reason?: string | null;
+  /** @maxLength 500 */
+  comment?: string;
 }

@@ -393,6 +393,13 @@
       "when": 1790277991423,
       "tag": "0055_remarkable_puppet_master",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1790278353208,
+      "tag": "0056_freezing_cannonball",
+      "breakpoints": true
     }
   ]
 }

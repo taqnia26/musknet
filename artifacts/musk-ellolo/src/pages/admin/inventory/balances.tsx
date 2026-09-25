@@ -60,11 +60,20 @@ export function RowActions({
   const handleEdit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const requiredNames = ['nameAr', 'nameEn', 'displayNameAr', 'displayNameEn', 'invoiceNameAr', 'invoiceNameEn'];
+    if (requiredNames.some((name) => !(fd.get(name) as string | null)?.trim())) {
+      toast({ title: t('يرجى إدخال أسماء المنتج باللغتين لكل نوع', 'Enter Arabic and English names for all name types'), variant: 'destructive' });
+      return;
+    }
     editMutation.mutate({
       id: item.id,
       data: {
         nameAr: fd.get('nameAr') as string,
         nameEn: fd.get('nameEn') as string,
+        displayNameAr: (fd.get('displayNameAr') as string).trim(),
+        displayNameEn: (fd.get('displayNameEn') as string).trim(),
+        invoiceNameAr: (fd.get('invoiceNameAr') as string).trim(),
+        invoiceNameEn: (fd.get('invoiceNameEn') as string).trim(),
         sku: fd.get('sku') as string,
         categoryId: Number(fd.get('categoryId')),
         barcode: (fd.get('barcode') as string) || null,
@@ -159,12 +168,28 @@ export function RowActions({
           </DialogHeader>
           <form onSubmit={handleEdit} className="grid grid-cols-2 gap-4">
             <div className="col-span-2 sm:col-span-1">
-              <Label>{t('الاسم (عربي)', 'Name (Ar)')}</Label>
+              <Label>{t('الاسم الداخلي (عربي)', 'Internal name (Ar)')}</Label>
               <Input name="nameAr" required defaultValue={item.nameAr} className="mt-1" />
             </div>
             <div className="col-span-2 sm:col-span-1">
-              <Label>{t('الاسم (إنجليزي)', 'Name (En)')}</Label>
+              <Label>{t('الاسم الداخلي (إنجليزي)', 'Internal name (En)')}</Label>
               <Input name="nameEn" required defaultValue={item.nameEn} className="mt-1" />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <Label>{t('اسم العرض (عربي)', 'Display name (Ar)')}</Label>
+              <Input name="displayNameAr" required defaultValue={item.displayNameAr ?? item.nameAr} className="mt-1" />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <Label>{t('اسم العرض (إنجليزي)', 'Display name (En)')}</Label>
+              <Input name="displayNameEn" required defaultValue={item.displayNameEn ?? item.nameEn} className="mt-1" />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <Label>{t('اسم الفاتورة (عربي)', 'Invoice name (Ar)')}</Label>
+              <Input name="invoiceNameAr" required defaultValue={item.invoiceNameAr ?? item.nameAr} className="mt-1" />
+            </div>
+            <div className="col-span-2 sm:col-span-1">
+              <Label>{t('اسم الفاتورة (إنجليزي)', 'Invoice name (En)')}</Label>
+              <Input name="invoiceNameEn" required defaultValue={item.invoiceNameEn ?? item.nameEn} className="mt-1" />
             </div>
             <div className="col-span-2">
                 <Label>SKU</Label>
@@ -356,10 +381,19 @@ export default function AdminInventoryBalances() {
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    const requiredNames = ['nameAr', 'nameEn', 'displayNameAr', 'displayNameEn', 'invoiceNameAr', 'invoiceNameEn'];
+    if (requiredNames.some((name) => !(fd.get(name) as string | null)?.trim())) {
+      toast({ title: t('يرجى إدخال أسماء المنتج باللغتين لكل نوع', 'Enter Arabic and English names for all name types'), variant: 'destructive' });
+      return;
+    }
     createMutation.mutate({
       data: {
         nameAr: fd.get('nameAr') as string,
         nameEn: fd.get('nameEn') as string,
+        displayNameAr: (fd.get('displayNameAr') as string).trim(),
+        displayNameEn: (fd.get('displayNameEn') as string).trim(),
+        invoiceNameAr: (fd.get('invoiceNameAr') as string).trim(),
+        invoiceNameEn: (fd.get('invoiceNameEn') as string).trim(),
         sku: fd.get('sku') as string,
         categoryId: Number(fd.get('categoryId')),
         barcode: (fd.get('barcode') as string) || null,
@@ -421,12 +455,28 @@ export default function AdminInventoryBalances() {
             </DialogHeader>
             <form onSubmit={handleCreate} className="grid grid-cols-2 gap-4">
               <div className="col-span-2 sm:col-span-1">
-                <Label>{t('الاسم (عربي)', 'Name (Ar)')}</Label>
+                <Label>{t('الاسم الداخلي (عربي)', 'Internal name (Ar)')}</Label>
                 <Input name="nameAr" required className="mt-1" />
               </div>
               <div className="col-span-2 sm:col-span-1">
-                <Label>{t('الاسم (إنجليزي)', 'Name (En)')}</Label>
+                <Label>{t('الاسم الداخلي (إنجليزي)', 'Internal name (En)')}</Label>
                 <Input name="nameEn" required className="mt-1" />
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <Label>{t('اسم العرض (عربي)', 'Display name (Ar)')}</Label>
+                <Input name="displayNameAr" required className="mt-1" />
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <Label>{t('اسم العرض (إنجليزي)', 'Display name (En)')}</Label>
+                <Input name="displayNameEn" required className="mt-1" />
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <Label>{t('اسم الفاتورة (عربي)', 'Invoice name (Ar)')}</Label>
+                <Input name="invoiceNameAr" required className="mt-1" />
+              </div>
+              <div className="col-span-2 sm:col-span-1">
+                <Label>{t('اسم الفاتورة (إنجليزي)', 'Invoice name (En)')}</Label>
+                <Input name="invoiceNameEn" required className="mt-1" />
               </div>
               <div className="col-span-2">
                   <Label>SKU</Label>

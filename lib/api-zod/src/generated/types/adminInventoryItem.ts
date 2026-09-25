@@ -12,6 +12,10 @@ export interface AdminInventoryItem {
   id: number;
   nameAr: string;
   nameEn: string;
+  displayNameAr?: string;
+  displayNameEn?: string;
+  invoiceNameAr?: string;
+  invoiceNameEn?: string;
   /** @nullable */
   sku: string | null;
   /** @nullable */

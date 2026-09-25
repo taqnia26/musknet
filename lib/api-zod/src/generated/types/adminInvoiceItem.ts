@@ -11,6 +11,8 @@ export interface AdminInvoiceItem {
   productId: number;
   productName: string;
   /** @nullable */
+  productNameEn: string | null;
+  /** @nullable */
   sku: string | null;
   quantity: number;
   unitPrice: number;

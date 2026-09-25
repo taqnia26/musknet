@@ -1331,6 +1331,10 @@ export interface AdminProduct {
   id: number;
   nameAr: string;
   nameEn: string;
+  displayNameAr: string;
+  displayNameEn: string;
+  invoiceNameAr: string;
+  invoiceNameEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
   descriptionRichAr: RichDescription | null;
@@ -1466,6 +1470,14 @@ export interface AdminProductInput {
   nameAr: string;
   /** @minLength 1 */
   nameEn: string;
+  /** @minLength 1 */
+  displayNameAr: string;
+  /** @minLength 1 */
+  displayNameEn: string;
+  /** @minLength 1 */
+  invoiceNameAr: string;
+  /** @minLength 1 */
+  invoiceNameEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
   descriptionRichAr?: RichDescription | null;
@@ -1572,6 +1584,14 @@ export interface AdminProductUpdate {
   nameAr?: string;
   /** @minLength 1 */
   nameEn?: string;
+  /** @minLength 1 */
+  displayNameAr?: string;
+  /** @minLength 1 */
+  displayNameEn?: string;
+  /** @minLength 1 */
+  invoiceNameAr?: string;
+  /** @minLength 1 */
+  invoiceNameEn?: string;
   descriptionAr?: string;
   descriptionEn?: string;
   descriptionRichAr?: RichDescription | null;
@@ -1701,7 +1721,19 @@ export interface AdminCategoryInput {
   isActive?: boolean;
 }
 
-export type AdminCategoryUpdate = AdminCategoryInput;
+export interface AdminCategoryUpdate {
+  /** @minLength 1 */
+  nameAr?: string;
+  /** @minLength 1 */
+  nameEn?: string;
+  /** @minLength 1 */
+  slug?: string;
+  /** @nullable */
+  parentId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  isActive?: boolean;
+}
 
 export type AdminOrderStatus = typeof AdminOrderStatus[keyof typeof AdminOrderStatus];
 
@@ -1886,6 +1918,8 @@ export interface AdminInvoiceItem {
   id: number;
   productId: number;
   productName: string;
+  /** @nullable */
+  productNameEn: string | null;
   /** @nullable */
   sku: string | null;
   quantity: number;
@@ -2947,6 +2981,7 @@ export type AdminProfileAddress = {
   /** @nullable */
   additionalInfo: string | null;
 } | null;
+
 export interface AdminCustomer {
   id: number;
   phone: string;
@@ -2978,6 +3013,7 @@ export interface AdminProfileAddressInput {
   /** @nullable */
   additionalInfo?: string | null;
 }
+
 export interface AdminCustomerInput {
   /** @minLength 1 */
   name: string;
@@ -3017,6 +3053,10 @@ export interface AdminInventoryItem {
   id: number;
   nameAr: string;
   nameEn: string;
+  displayNameAr?: string;
+  displayNameEn?: string;
+  invoiceNameAr?: string;
+  invoiceNameEn?: string;
   /** @nullable */
   sku: string | null;
   /** @nullable */
@@ -3065,6 +3105,14 @@ export interface AdminInventoryProductInput {
   nameAr: string;
   /** @minLength 1 */
   nameEn: string;
+  /** @minLength 1 */
+  displayNameAr: string;
+  /** @minLength 1 */
+  displayNameEn: string;
+  /** @minLength 1 */
+  invoiceNameAr: string;
+  /** @minLength 1 */
+  invoiceNameEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
   /** @minLength 1 */
@@ -3104,6 +3152,14 @@ export interface AdminInventoryProductUpdate {
   nameAr: string;
   /** @minLength 1 */
   nameEn: string;
+  /** @minLength 1 */
+  displayNameAr: string;
+  /** @minLength 1 */
+  displayNameEn: string;
+  /** @minLength 1 */
+  invoiceNameAr: string;
+  /** @minLength 1 */
+  invoiceNameEn: string;
   /** @minLength 1 */
   sku: string;
   /** @nullable */
@@ -3267,6 +3323,7 @@ export interface AdminDistributorUpdate {
   notes?: string | null;
   isActive?: boolean;
 }
+
 export interface AdminStaffInput {
   email: string;
   /** @minLength 1 */
@@ -4263,6 +4320,8 @@ export type GiftingIssueInput = ({
   occasion?: string;
   /** @maxLength 500 */
   reason?: string;
+  /** @maxLength 500 */
+  comment?: string;
   /**
      * @minLength 1
      * @maxLength 200
@@ -4300,6 +4359,8 @@ export interface GiftingIssueUpdate {
      * @nullable
      */
   reason?: string | null;
+  /** @maxLength 500 */
+  comment?: string;
 }
 
 export interface TesterStockAvailability {

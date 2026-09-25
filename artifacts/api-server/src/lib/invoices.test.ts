@@ -7,6 +7,7 @@ import {
   uploadedContractFilesTable,
 } from "@workspace/db";
 import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, updateOrderAndIssueInvoice } from "./invoices";
+import { invoiceItemName } from "./invoice-email";
 
 const base = 1_700_000_000 + (Date.now() % 100_000_000);
 const customerId = base;
@@ -123,6 +124,8 @@ afterAll(async () => {
   await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, [distributorId, inactiveDistributorId, internationalDistributorId, concurrentDistributorId]));
   await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
   await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
+  const onlineInvoices = await db.select({ id: invoicesTable.id }).from(invoicesTable).where(inArray(invoicesTable.orderId, orderIds));
+  if (onlineInvoices.length) await db.delete(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, onlineInvoices.map((invoice) => invoice.id)));
   await db.delete(productsTable).where(eq(productsTable.id, productId));
   await db.delete(invoicesTable).where(inArray(invoicesTable.orderId, orderIds));
   await db.delete(orderItemsTable).where(inArray(orderItemsTable.orderId, orderIds));
@@ -166,6 +169,14 @@ describe.sequential("atomic invoice issuance", () => {
       VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
       VAT_REGISTRATION_NUMBER: "300000000000003",
     };
+    await db.insert(orderItemsTable).values({
+      orderId: orderIds[1], productId, productName: "اسم العرض المحفوظ", quantity: 1,
+      unitPrice: 10, totalPrice: 10,
+    });
+    await db.update(productsTable).set({
+      invoiceNameAr: "اسم الفاتورة عند الإصدار",
+      invoiceNameEn: "English invoice name at issue",
+    }).where(eq(productsTable.id, productId));
     await Promise.all([
       updateOrderAndIssueInvoice(orderIds[0], { paymentStatus: "paid" }, env),
       updateOrderAndIssueInvoice(orderIds[0], { paymentStatus: "paid" }, env),
@@ -178,10 +189,32 @@ describe.sequential("atomic invoice issuance", () => {
     const sequences = rows.map((row) => row.sequenceNumber).sort((a, b) => a - b);
     expect(sequences).toEqual([sequences[0], sequences[0] + 1, sequences[0] + 2]);
     expect(new Set(rows.map((row) => row.invoiceNumber)).size).toBe(3);
+    const invoice = rows.find((row) => row.orderId === orderIds[1])!;
+    const [line] = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id));
+    expect(line.productName).toBe("اسم الفاتورة عند الإصدار");
+    expect(line.productNameEn).toBe("English invoice name at issue");
+    await db.update(productsTable).set({
+      invoiceNameAr: "اسم الفاتورة بعد الإصدار",
+      invoiceNameEn: "Changed English invoice name",
+    }).where(eq(productsTable.id, productId));
+    const [preservedInvoiceLine] = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id));
+    const [preservedOrderLine] = await db.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, orderIds[1]));
+    expect(preservedInvoiceLine.productName).toBe("اسم الفاتورة عند الإصدار");
+    expect(invoiceItemName(preservedInvoiceLine, "ar")).toBe("اسم الفاتورة عند الإصدار");
+    expect(invoiceItemName(preservedInvoiceLine, "en")).toBe("English invoice name at issue");
+    expect(preservedOrderLine.productName).toBe("اسم العرض المحفوظ");
+    await db.update(productsTable).set({
+      invoiceNameAr: "منتج فاتورة موزع",
+      invoiceNameEn: "Distributor invoice product",
+    }).where(eq(productsTable.id, productId));
     expect(rows.every((row) => /^INV-[0-9]+$/.test(row.invoiceNumber))).toBe(true);
   });
 
   it("preserves legacy totals and destination treatment on late invoice issuance", async () => {
+    await db.insert(orderItemsTable).values({
+      orderId: orderIds[3], productId, productName: "Legacy display snapshot",
+      quantity: 1, unitPrice: 100, totalPrice: 100,
+    });
     await updateOrderAndIssueInvoice(orderIds[3], { paymentStatus: "paid" }, {
       VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
       VAT_REGISTRATION_NUMBER: "300000000000003",
@@ -194,6 +227,13 @@ describe.sequential("atomic invoice issuance", () => {
       taxTreatment: "international",
     });
     expect(Number(invoice.vatRate)).toBe(15);
+    const [line] = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id));
+    expect(line).toMatchObject({
+      subtotal: 100, vatAmount: 15, totalAmount: 115,
+      productName: "منتج فاتورة موزع", productNameEn: "Distributor invoice product",
+    });
+    expect(line.subtotal + line.vatAmount + 15).toBe(invoice.totalAmount);
+    await db.delete(orderItemsTable).where(eq(orderItemsTable.orderId, orderIds[3]));
   });
 
   it("cancels legacy and inclusive orders by reversing the posted journal lines", async () => {
@@ -310,7 +350,7 @@ describe.sequential("distributor invoice issuance", () => {
     expect(invoice.buyerCommercialRegistrationNumber).toBe(`CR-${base}`);
     expect(invoice.items).toHaveLength(1);
     expect(invoice.items[0]).toMatchObject({
-      productId, productName: "منتج فاتورة موزع", quantity: 3, unitPrice: 19.99,
+      productId, productName: "منتج فاتورة موزع", productNameEn: "Distributor invoice product", quantity: 3, unitPrice: 19.99,
       subtotal: 52.15, vatAmount: 7.82, totalAmount: 59.97,
     });
     const [product] = await db.select({ stockQuantity: productsTable.stockQuantity }).from(productsTable).where(eq(productsTable.id, productId));

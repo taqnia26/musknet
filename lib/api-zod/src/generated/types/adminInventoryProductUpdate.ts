@@ -13,6 +13,14 @@ export interface AdminInventoryProductUpdate {
   /** @minLength 1 */
   nameEn: string;
   /** @minLength 1 */
+  displayNameAr: string;
+  /** @minLength 1 */
+  displayNameEn: string;
+  /** @minLength 1 */
+  invoiceNameAr: string;
+  /** @minLength 1 */
+  invoiceNameEn: string;
+  /** @minLength 1 */
   sku: string;
   /** @nullable */
   barcode?: string | null;

@@ -13,6 +13,10 @@ export interface AdminProduct {
   id: number;
   nameAr: string;
   nameEn: string;
+  displayNameAr: string;
+  displayNameEn: string;
+  invoiceNameAr: string;
+  invoiceNameEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
   descriptionRichAr: RichDescription | null;

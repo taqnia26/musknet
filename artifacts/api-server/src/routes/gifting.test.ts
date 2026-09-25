@@ -2,7 +2,7 @@ import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import {
-  accountingAccountsTable, adminUsersTable, categoriesTable, db, giftingIssuesTable,
+  accountingAccountsTable, adminUsersTable, categoriesTable, db, giftingIssueReturnsTable, giftingIssuesTable,
   inventoryBalancesTable, inventoryLocationsTable, inventoryMovementsTable, journalEntriesTable, journalEntryLinesTable,
   journalEntryAuditTable, productsTable,
 } from "@workspace/db";
@@ -16,6 +16,7 @@ let adminId: number;
 let categoryId: number;
 let productId: number;
 let secondProductId: number;
+let influencerProductId: number;
 let token: string;
 
 beforeAll(async () => {
@@ -39,17 +40,24 @@ beforeAll(async () => {
     price: 60, categoryId, stockQuantity: 4, averageCost: "8.0000", sku: `GIFT-SECOND-${suffix}`,
   }).returning();
   secondProductId = secondProduct.id;
+  const [influencerProduct] = await db.insert(productsTable).values({
+    id: baseId + 3, nameAr: "منتج مؤثر", nameEn: "Influencer product", slug: `influencer-product-${suffix}`,
+    price: 50, categoryId, stockQuantity: 5, averageCost: "10.0000", sku: `GIFT-INFLUENCER-${suffix}`,
+  }).returning();
+  influencerProductId = influencerProduct.id;
 });
 
 afterAll(async () => {
   const issues = await db.select({ id: giftingIssuesTable.id }).from(giftingIssuesTable)
-    .where(inArray(giftingIssuesTable.productId, [productId, secondProductId]));
+    .where(inArray(giftingIssuesTable.productId, [productId, secondProductId, influencerProductId]));
   const entries = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
     .where(or(
       and(eq(journalEntriesTable.sourceType, "gifting_issue"), inArray(journalEntriesTable.sourceId, issues.map((issue) => String(issue.id)))),
       and(eq(journalEntriesTable.sourceType, "gifting_issue_batch"), eq(journalEntriesTable.sourceId, `multi-%_${suffix}`)),
       and(eq(journalEntriesTable.sourceType, "gifting_issue_void"), inArray(journalEntriesTable.sourceId, issues.map((issue) => String(issue.id)))),
       and(eq(journalEntriesTable.sourceType, "gifting_issue_adjustment"), inArray(sql<string>`split_part(${journalEntriesTable.sourceId}, ':', 1)`, issues.map((issue) => String(issue.id)))),
+      and(eq(journalEntriesTable.sourceType, "gifting_issue_return"), inArray(sql<string>`split_part(${journalEntriesTable.sourceId}, ':', 1)`, issues.map((issue) => String(issue.id)))),
+      and(eq(journalEntriesTable.sourceType, "b2b_evaluation_return"), inArray(sql<string>`split_part(${journalEntriesTable.sourceId}, ':', 1)`, issues.map((issue) => String(issue.id)))),
     ));
   if (entries.length) {
     await db.execute(sql`alter table journal_entry_lines disable trigger journal_entry_lines_immutable`);
@@ -62,10 +70,11 @@ afterAll(async () => {
     await db.execute(sql`alter table journal_entry_lines enable trigger journal_entry_lines_immutable`);
     await db.execute(sql`alter table journal_entries enable trigger journal_entries_immutable`);
   }
-  await db.delete(inventoryMovementsTable).where(inArray(inventoryMovementsTable.productId, [productId, secondProductId]));
-  await db.delete(giftingIssuesTable).where(inArray(giftingIssuesTable.productId, [productId, secondProductId]));
-  await db.delete(inventoryBalancesTable).where(inArray(inventoryBalancesTable.productId, [productId, secondProductId]));
-  await db.delete(productsTable).where(inArray(productsTable.id, [productId, secondProductId]));
+  await db.delete(giftingIssueReturnsTable).where(inArray(giftingIssueReturnsTable.issueId, issues.map((issue) => issue.id)));
+  await db.delete(inventoryMovementsTable).where(inArray(inventoryMovementsTable.productId, [productId, secondProductId, influencerProductId]));
+  await db.delete(giftingIssuesTable).where(inArray(giftingIssuesTable.productId, [productId, secondProductId, influencerProductId]));
+  await db.delete(inventoryBalancesTable).where(inArray(inventoryBalancesTable.productId, [productId, secondProductId, influencerProductId]));
+  await db.delete(productsTable).where(inArray(productsTable.id, [productId, secondProductId, influencerProductId]));
   await db.delete(categoriesTable).where(eq(categoriesTable.id, categoryId));
   delete process.env.ADMIN_EMAIL;
   delete process.env.ADMIN_PASSWORD;
@@ -75,13 +84,14 @@ describe.sequential("gifting issue operations", () => {
   it("atomically issues stock and posts a balanced journal with optional fields", async () => {
     const payload = {
       productId, category: "VIP_GIFT", quantity: 2, issueDate: "2026-09-19",
-      recipientName: "عميل مهم", occasion: "إطلاق المنتج", idempotencyKey: `gift-${suffix}`,
+      recipientName: "عميل مهم", occasion: "إطلاق المنتج", reason: "Reason", comment: "Separate note",
+      idempotencyKey: `gift-${suffix}`,
     };
     const response = await request(app).post("/api/admin/gifting-issues")
       .set("Authorization", `Bearer ${token}`).send(payload).expect(201);
     expect(response.body).toMatchObject({
       productId, category: "VIP_GIFT", quantity: 2, totalCost: "25.00000000",
-      recipientName: "عميل مهم", occasion: "إطلاق المنتج",
+      recipientName: "عميل مهم", occasion: "إطلاق المنتج", reason: "Reason", comment: "Separate note",
     });
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
     expect(product.stockQuantity).toBe(3);
@@ -106,6 +116,8 @@ describe.sequential("gifting issue operations", () => {
     const duplicate = await request(app).post("/api/admin/gifting-issues")
       .set("Authorization", `Bearer ${token}`).send(payload).expect(201);
     expect(duplicate.body.id).toBe(response.body.id);
+    await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`).send({ ...payload, comment: "Different note" }).expect(409);
     expect((await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId)))).toHaveLength(1);
   });
 
@@ -113,10 +125,14 @@ describe.sequential("gifting issue operations", () => {
     const before = new Date().toISOString().slice(0, 10);
     const response = await request(app).post("/api/admin/gifting-issues")
       .set("Authorization", `Bearer ${token}`)
-      .send({ productId, category: "TESTER", quantity: 1, idempotencyKey: `optional-${suffix}` }).expect(201);
-    expect(response.body).toMatchObject({ recipientName: null, occasion: null });
+      .send({ productId, category: "TESTER", quantity: 1, reason: "Legacy reason", idempotencyKey: `optional-${suffix}` }).expect(201);
+    expect(response.body).toMatchObject({ recipientName: null, occasion: null, reason: "Legacy reason", comment: "Legacy reason" });
     expect(response.body.issueDate.slice(0, 10)).toBe(before);
 
+    await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ productId, category: "VIP_GIFT", quantity: 1, comment: "x".repeat(501), idempotencyKey: `long-comment-${suffix}` })
+      .expect(400);
     await request(app).post("/api/admin/gifting-issues")
       .set("Authorization", `Bearer ${token}`)
       .send({ productId, category: "INFLUENCERS", quantity: 99, idempotencyKey: `short-${suffix}` }).expect(409);
@@ -132,20 +148,31 @@ describe.sequential("gifting issue operations", () => {
       .send({
         productId: secondProductId, category: "VIP_GIFT", quantity: 1,
         recipientName: "مستلم قديم", city: "الرياض", country: "السعودية",
+        reason: "Initial reason",
         idempotencyKey: `editable-${suffix}`,
       }).expect(201);
     expect(created.body).toMatchObject({ city: "الرياض", country: "السعودية" });
 
     const updated = await request(app).patch(`/api/admin/gifting-issues/${created.body.id}`)
       .set("Authorization", `Bearer ${token}`)
-      .send({ quantity: 2, recipientName: "مستلم جديد", city: "جدة", country: "السعودية" }).expect(200);
+      .send({
+        quantity: 2, recipientName: "مستلم جديد", city: "جدة", country: "السعودية",
+        reason: "Updated reason", comment: "A distinct note",
+      }).expect(200);
     expect(updated.body).toMatchObject({
       quantity: 2,
       totalCost: "16.00000000",
       recipientName: "مستلم جديد",
       city: "جدة",
       country: "السعودية",
+      reason: "Updated reason",
+      comment: "A distinct note",
     });
+    const reasonOnlyUpdate = await request(app).patch(`/api/admin/gifting-issues/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`).send({ reason: "Reason without changing note" }).expect(200);
+    expect(reasonOnlyUpdate.body).toMatchObject({ reason: "Reason without changing note", comment: "A distinct note" });
+    await request(app).patch(`/api/admin/gifting-issues/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`).send({ comment: "x".repeat(501) }).expect(400);
     const [afterUpdate] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
     expect(afterUpdate.stockQuantity).toBe(2);
     const [adjustment] = await db.select().from(inventoryMovementsTable).where(and(
@@ -243,6 +270,54 @@ describe.sequential("gifting issue operations", () => {
       .where(sql`${giftingIssuesTable.dedupeKey} = ${`manual:rollback-${suffix}:batch`}`)).toHaveLength(0);
   });
 
+  it("allows partial new, used, and mixed influencer returns idempotently and locks returned movements", async () => {
+    const created = await request(app).post("/api/admin/gifting-issues")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        productId: influencerProductId, category: "INFLUENCERS", quantity: 3,
+        recipientName: "مؤثر", idempotencyKey: `influencer-return-${suffix}`,
+      }).expect(201);
+    const first = await request(app).post(`/api/admin/gifting-issues/${created.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ quantity: 1, condition: "new", idempotencyKey: `influencer-new-${suffix}` }).expect(200);
+    expect(first.body).toMatchObject({ returnedQuantity: 1, returnCondition: "new", quantity: 1, condition: "new" });
+    const firstReplay = await request(app).post(`/api/admin/gifting-issues/${created.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ quantity: 1, condition: "new", idempotencyKey: `influencer-new-${suffix}` }).expect(200);
+    expect(firstReplay.body).toEqual(first.body);
+
+    const mixed = await request(app).post(`/api/admin/gifting-issues/${created.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ quantity: 1, condition: "used", idempotencyKey: `influencer-used-${suffix}` }).expect(200);
+    expect(mixed.body).toMatchObject({ returnedQuantity: 2, returnCondition: "mixed" });
+    await request(app).patch(`/api/admin/gifting-issues/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`).send({ recipientName: "Changed after return" }).expect(409);
+    await request(app).patch(`/api/admin/gifting-issues/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`).send({ quantity: 2 }).expect(409);
+    await request(app).delete(`/api/admin/gifting-issues/${created.body.id}`)
+      .set("Authorization", `Bearer ${token}`).expect(409);
+
+    const finalReturn = await request(app).post(`/api/admin/gifting-issues/${created.body.id}/return`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ quantity: 1, condition: "new", idempotencyKey: `influencer-final-${suffix}` }).expect(200);
+    expect(finalReturn.body).toMatchObject({ returnedQuantity: 3, returnCondition: "mixed" });
+    const returnRows = await db.select().from(giftingIssueReturnsTable)
+      .where(eq(giftingIssueReturnsTable.issueId, created.body.id));
+    expect(returnRows).toHaveLength(3);
+    const returnMovements = await db.select().from(inventoryMovementsTable)
+      .where(and(eq(inventoryMovementsTable.sourceType, "gifting_issue_return"), eq(inventoryMovementsTable.productId, influencerProductId)));
+    expect(returnMovements).toHaveLength(3);
+    const returnEntries = await db.select().from(journalEntriesTable)
+      .where(and(eq(journalEntriesTable.sourceType, "gifting_issue_return"), sql`${journalEntriesTable.sourceId} like ${`${created.body.id}:%`}`));
+    expect(returnEntries).toHaveLength(3);
+    const [product] = await db.select().from(productsTable).where(eq(productsTable.id, influencerProductId));
+    const [opened] = await db.select({ available: inventoryBalancesTable.available }).from(inventoryBalancesTable)
+      .innerJoin(inventoryLocationsTable, eq(inventoryBalancesTable.locationId, inventoryLocationsTable.id))
+      .where(and(eq(inventoryBalancesTable.productId, influencerProductId), eq(inventoryLocationsTable.code, "B2B_USED_RETURN")));
+    expect(product.stockQuantity).toBe(4);
+    expect(opened.available).toBe(1);
+  });
+
   it("reuses opened B2B testers separately and records mixed returns safely", async () => {
     let [location] = await db.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.code, "B2B_USED_RETURN")).limit(1);
     if (!location) {
@@ -278,7 +353,8 @@ describe.sequential("gifting issue operations", () => {
       .set("Authorization", `Bearer ${token}`).send({ quantity: 1, condition: "new", idempotencyKey: `mixed-new-${suffix}` }).expect(200);
     expect(firstReplay.body).toEqual(firstNormalReturn.body);
     const [product] = await db.select().from(productsTable).where(eq(productsTable.id, secondProductId));
-    const [openedBalance] = await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.locationId, location.id));
+    const [openedBalance] = await db.select().from(inventoryBalancesTable)
+      .where(and(eq(inventoryBalancesTable.locationId, location.id), eq(inventoryBalancesTable.productId, secondProductId)));
     expect(product.stockQuantity).toBe(1);
     expect(openedBalance.available).toBe(2);
 

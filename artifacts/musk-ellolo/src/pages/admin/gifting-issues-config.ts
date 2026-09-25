@@ -4,7 +4,7 @@ export const issueUses: Array<{ value: string; ar: string; en: string }> = [
   { value: 'B2B_EVALUATION', ar: 'تقييم B2B (قابل للاسترجاع)', en: 'B2B evaluation (returnable)' },
   { value: 'TESTER', ar: 'تستر (صرف نهائي)', en: 'Tester (final issue)' },
   { value: 'VIP_GIFT', ar: 'هدية VIP', en: 'VIP Gift' },
-  { value: 'INFLUENCERS', ar: 'المشاهير', en: 'Influencers' },
+  { value: 'INFLUENCERS', ar: 'المشاهير (قابل للاسترجاع)', en: 'Influencers (returnable)' },
   { value: 'DAMAGED', ar: 'تالف', en: 'Damaged' },
   { value: 'OTHER', ar: 'أخرى', en: 'Other' },
 ];

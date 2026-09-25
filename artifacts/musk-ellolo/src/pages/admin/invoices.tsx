@@ -150,7 +150,7 @@ function InvoiceTemplate({
             {invoice.items.length > 0 ? (
               invoice.items.map((item, idx) => (
                 <tr key={idx}>
-                  <td className="py-3 px-4 sm:px-6 font-medium text-gray-900">{item.productName}</td>
+                  <td className="py-3 px-4 sm:px-6 font-medium text-gray-900">{lang === 'en' ? item.productNameEn ?? item.productName : item.productName}</td>
                   <td className="py-3 px-3 sm:px-4 text-center text-gray-600">{item.quantity}</td>
                   <td className="py-3 px-3 sm:px-4 text-end text-gray-600 font-mono"><Money value={item.unitPrice} lang={lang} fractionDigits={2} /></td>
                 </tr>

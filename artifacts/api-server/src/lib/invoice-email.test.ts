@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createInvoicePdf, getInvoiceTotalRows, invoiceBusinessIssueDate, invoiceMoneyLabel } from "./invoice-email";
+import { createInvoicePdf, getInvoiceTotalRows, invoiceBusinessIssueDate, invoiceItemName, invoiceMoneyLabel } from "./invoice-email";
 
 const baseInvoice = {
   invoiceNumber: "TEST-100",
@@ -79,6 +79,18 @@ describe("invoice email PDF", () => {
     const englishPdf = await createInvoicePdf(invoice, "en");
     expect(arabicPdf.toString("latin1")).not.toContain(" SAR");
     expect(englishPdf.equals(arabicPdf)).toBe(false);
+  });
+
+  it("renders each invoice language from its own immutable line snapshot", async () => {
+    const item = { productName: "اسم الفاتورة", productNameEn: "English invoice label", quantity: 1, unitPrice: 100, totalAmount: 115 };
+    expect(invoiceItemName(item, "ar")).toBe("اسم الفاتورة");
+    expect(invoiceItemName(item, "en")).toBe("English invoice label");
+    expect(invoiceItemName({ ...item, productNameEn: null }, "en")).toBe("اسم الفاتورة");
+    const arabicPdf = await createInvoicePdf({ ...baseInvoice, items: [item] }, "ar");
+    const englishPdf = await createInvoicePdf({ ...baseInvoice, items: [item] }, "en");
+    expect(arabicPdf.equals(englishPdf)).toBe(false);
+    expect(arabicPdf.length).toBeGreaterThan(2000);
+    expect(englishPdf.length).toBeGreaterThan(2000);
   });
 
   it("embeds the invoice logo and ZATCA QR on a readable light page", async () => {

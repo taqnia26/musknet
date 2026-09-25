@@ -349,6 +349,10 @@ async function seedCatalog() {
       id: product.id,
       nameAr: product.nameAr,
       nameEn: product.nameEn,
+      displayNameAr: product.nameAr,
+      displayNameEn: product.nameEn,
+      invoiceNameAr: product.nameAr,
+      invoiceNameEn: product.nameEn,
       descriptionAr: product.descriptionAr,
       descriptionEn: product.descriptionEn,
       slug: product.slug,
@@ -395,8 +399,8 @@ function mapDatabaseProduct(
   const imageUrls = product.images.map(({ url }) => url);
   return {
     id: product.id,
-    nameAr: product.nameAr,
-    nameEn: product.nameEn,
+    nameAr: product.displayNameAr,
+    nameEn: product.displayNameEn,
     slug: product.slug,
     price: product.price,
     compareAtPrice: product.compareAtPrice,
@@ -930,7 +934,7 @@ export async function createOrderForUser(
     const createdItems = await tx.insert(orderItemsTable).values(items.map(({ record, product }) => ({
       orderId: created.id,
       productId: product.id,
-      productName: product.nameAr,
+      productName: product.displayNameAr,
       quantity: record.quantity,
       unitPrice: product.price,
       totalPrice: product.price * record.quantity,

@@ -313,6 +313,10 @@ describe.sequential("admin route authorization", () => {
       .send({
         nameAr: "منتج ببيانات تفصيلية",
         nameEn: "Product with catalog details",
+        displayNameAr: "منتج للمتجر",
+        displayNameEn: "Store product",
+        invoiceNameAr: "منتج الفاتورة",
+        invoiceNameEn: "Invoice product",
         slug,
         price: 209,
         categoryId,
@@ -329,6 +333,8 @@ describe.sequential("admin route authorization", () => {
     try {
       expect(created.body).toMatchObject({
         slug, price: 209, stockQuantity: 0, weightKg: 0.5, costPrice: 100,
+        displayNameAr: "منتج للمتجر", displayNameEn: "Store product",
+        invoiceNameAr: "منتج الفاتورة", invoiceNameEn: "Invoice product",
         barcode: "6287020840098", mpn: "MPN-CATALOG-1",
         maxPerCustomer: 2, tags: ["عطر", "مسك"],
         seoTitleAr: "عنوان فهرسة المنتج", allowCustomerNote: true,
@@ -338,8 +344,30 @@ describe.sequential("admin route authorization", () => {
       expect(persisted[0].stockQuantity).toBe(0);
       expect(persisted[0].averageCost).toBe("0.0000");
       expect(persisted[0].tags).toEqual(["عطر", "مسك"]);
+      const publicProduct = await request(app).get(`/api/products/${slug}`).expect(200);
+      expect(publicProduct.body.nameAr).toBe("منتج للمتجر");
+      expect(publicProduct.body.nameEn).toBe("Store product");
     } finally {
       await db.delete(productsTable).where(eq(productsTable.id, created.body.id));
+    }
+  });
+
+  it("deletes only unreferenced categories and offers deactivation for retained products", async () => {
+    const auth = { Authorization: `Bearer ${superToken}` };
+    const created = await request(app).post("/api/admin/categories").set(auth)
+      .send({ nameAr: "قسم مؤقت", nameEn: "Temporary category", slug: `temporary-category-${Date.now()}` }).expect(201);
+    const category = created.body.id as number;
+    try {
+      await db.update(productsTable).set({ categoryId: category, isActive: false }).where(eq(productsTable.id, productId));
+      const blocked = await request(app).delete(`/api/admin/categories/${category}`).set(auth).expect(409);
+      expect(blocked.body.error).toMatch(/deactivate|reclassify/i);
+      expect(blocked.body.references.inactiveProducts).toBeGreaterThan(0);
+      await request(app).patch(`/api/admin/categories/${category}`).set(auth).send({ isActive: false }).expect(200);
+      await db.update(productsTable).set({ categoryId, isActive: true }).where(eq(productsTable.id, productId));
+      await request(app).delete(`/api/admin/categories/${category}`).set(auth).expect(204);
+    } finally {
+      await db.update(productsTable).set({ categoryId, isActive: true }).where(eq(productsTable.id, productId));
+      await db.delete(categoriesTable).where(eq(categoriesTable.id, category));
     }
   });
 
@@ -1133,6 +1161,8 @@ describe.sequential("admin route authorization", () => {
       .set("Authorization", `Bearer ${superToken}`)
       .send({
         nameAr: "منتج مخزون جديد", nameEn: "New inventory product", sku: `INV-${Date.now()}`,
+        displayNameAr: "منتج مخزون جديد", displayNameEn: "New inventory product",
+        invoiceNameAr: "منتج مخزون جديد", invoiceNameEn: "New inventory product",
         categoryId, price: 75, openingQuantity: 9, openingUnitCost: 30, reorderPoint: 4, targetStockQuantity: 18,
       })
       .expect(201);
@@ -1165,7 +1195,7 @@ describe.sequential("admin route authorization", () => {
     const sku = `INV-ZERO-${Date.now()}`;
     const response = await request(app).post("/api/admin/inventory")
       .set("Authorization", `Bearer ${superToken}`)
-      .send({ nameAr: "صفر", nameEn: "Zero", sku, categoryId, price: 10, openingQuantity: 0, openingUnitCost: 30, reorderPoint: 0, targetStockQuantity: 0 })
+      .send({ nameAr: "صفر", nameEn: "Zero", displayNameAr: "صفر", displayNameEn: "Zero", invoiceNameAr: "صفر", invoiceNameEn: "Zero", sku, categoryId, price: 10, openingQuantity: 0, openingUnitCost: 30, reorderPoint: 0, targetStockQuantity: 0 })
       .expect(201);
     const entries = await db.select().from(journalEntriesTable)
       .where(and(eq(journalEntriesTable.sourceType, "product_creation"), eq(journalEntriesTable.sourceId, String(response.body.id))));
@@ -1181,7 +1211,7 @@ describe.sequential("admin route authorization", () => {
     const failure = vi.spyOn(accounting, "postJournalEntry").mockRejectedValueOnce(new Error("forced journal failure"));
     await request(app).post("/api/admin/inventory")
       .set("Authorization", `Bearer ${superToken}`)
-      .send({ nameAr: "فشل", nameEn: "Rollback", sku, categoryId, price: 10, openingQuantity: 3, openingUnitCost: 30, reorderPoint: 0, targetStockQuantity: 0 })
+      .send({ nameAr: "فشل", nameEn: "Rollback", displayNameAr: "فشل", displayNameEn: "Rollback", invoiceNameAr: "فشل", invoiceNameEn: "Rollback", sku, categoryId, price: 10, openingQuantity: 3, openingUnitCost: 30, reorderPoint: 0, targetStockQuantity: 0 })
       .expect(500);
     failure.mockRestore();
     expect(await db.select({ id: productsTable.id }).from(productsTable)).toHaveLength(beforeProducts.length);

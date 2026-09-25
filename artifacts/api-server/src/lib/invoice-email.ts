@@ -28,10 +28,12 @@ type InvoiceForEmail = {
   paidAmount: number;
   outstandingAmount: number;
   qrCodeData: string;
-  items: Array<{ productName: string; quantity: number; unitPrice: number; totalAmount: number }>;
+  items: Array<{ productName: string; productNameEn?: string | null; quantity: number; unitPrice: number; totalAmount: number }>;
 };
 
 export type InvoiceLanguage = "ar" | "en";
+export const invoiceItemName = (item: InvoiceForEmail["items"][number], language: InvoiceLanguage) =>
+  language === "en" ? item.productNameEn ?? item.productName : item.productName;
 
 const money = (value: number) => value.toFixed(2);
 export const invoiceMoneyLabel = (value: number, language: InvoiceLanguage) =>
@@ -164,7 +166,7 @@ export async function createInvoicePdf(invoice: InvoiceForEmail, language: Invoi
   y += 31;
   for (const item of invoice.items) {
     if (y > 665) { document.addPage(); y = 50; }
-    document.fillColor("#111827").font("Helvetica").fontSize(9).text(item.productName, 54, y + 7, { width: 230 });
+    document.fillColor("#111827").font("Helvetica").fontSize(9).text(invoiceItemName(item, language), 54, y + 7, { width: 230 });
     document.fillColor("#4b5563").text(String(item.quantity), 300, y + 7, { width: 45, align: "center" });
     drawInvoiceMoney(document, item.unitPrice, language, 347, y + 7, 193, 10);
     document.moveTo(42, y + 25).lineTo(right, y + 25).strokeColor("#e5e7eb").stroke();

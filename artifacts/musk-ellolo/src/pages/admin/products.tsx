@@ -61,8 +61,12 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/av
 const stringToNull = (val: string | undefined | null) => (val === '' ? null : val || null);
 
 const productSchema = z.object({
-  nameAr: z.string().min(1, 'Required / مطلوب'),
-  nameEn: z.string().min(1, 'Required / مطلوب'),
+  nameAr: z.string().trim().min(1, 'Required / مطلوب'),
+  nameEn: z.string().trim().min(1, 'Required / مطلوب'),
+  displayNameAr: z.string().trim().min(1, 'Required / مطلوب'),
+  displayNameEn: z.string().trim().min(1, 'Required / مطلوب'),
+  invoiceNameAr: z.string().trim().min(1, 'Required / مطلوب'),
+  invoiceNameEn: z.string().trim().min(1, 'Required / مطلوب'),
   descriptionAr: z.string().optional(),
   descriptionEn: z.string().optional(),
   descriptionRichAr: z.custom<RichDescription>().optional(),
@@ -103,6 +107,10 @@ type ProductFormValues = z.infer<typeof productSchema>;
 const emptyProduct: ProductFormValues = {
   nameAr: '',
   nameEn: '',
+  displayNameAr: '',
+  displayNameEn: '',
+  invoiceNameAr: '',
+  invoiceNameEn: '',
   descriptionAr: '',
   descriptionEn: '',
   descriptionRichAr: legacyTextToRichDescription(''),
@@ -478,6 +486,10 @@ export default function AdminProducts() {
     form.reset({
       nameAr: product.nameAr,
       nameEn: product.nameEn,
+      displayNameAr: product.displayNameAr ?? product.nameAr,
+      displayNameEn: product.displayNameEn ?? product.nameEn,
+      invoiceNameAr: product.invoiceNameAr ?? product.nameAr,
+      invoiceNameEn: product.invoiceNameEn ?? product.nameEn,
       descriptionAr: product.descriptionAr || '',
       descriptionEn: product.descriptionEn || '',
       descriptionRichAr: normalizeRichDescription(product.descriptionRichAr)
@@ -687,10 +699,22 @@ export default function AdminProducts() {
                     
                     <div className="grid gap-5 sm:grid-cols-2">
                       <FormField control={form.control} name="nameAr" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الاسم بالعربية', 'Name (AR)')} *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('الاسم الداخلي بالعربية', 'Internal name (AR)')} *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="nameEn" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الاسم بالإنجليزية', 'Name (EN)')} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('الاسم الداخلي بالإنجليزية', 'Internal name (EN)')} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="displayNameAr" render={({ field }) => (
+                        <FormItem><FormLabel>{t('اسم العرض بالعربية', 'Display name (AR)')} *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="displayNameEn" render={({ field }) => (
+                        <FormItem><FormLabel>{t('اسم العرض بالإنجليزية', 'Display name (EN)')} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="invoiceNameAr" render={({ field }) => (
+                        <FormItem><FormLabel>{t('اسم الفاتورة بالعربية', 'Invoice name (AR)')} *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="invoiceNameEn" render={({ field }) => (
+                        <FormItem><FormLabel>{t('اسم الفاتورة بالإنجليزية', 'Invoice name (EN)')} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
 

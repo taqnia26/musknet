@@ -61,6 +61,8 @@ export const invoiceItemsTable = pgTable("tax_invoice_items", {
   invoiceId: integer("invoice_id").notNull().references(() => taxInvoicesTable.id, { onDelete: "cascade" }),
   productId: integer("product_id").notNull().references(() => productsTable.id, { onDelete: "restrict" }),
   productName: text("product_name").notNull(),
+  // Null for invoices issued before bilingual snapshots existed.
+  productNameEn: text("product_name_en"),
   sku: text("sku"),
   quantity: integer("quantity").notNull(),
   unitPrice: doublePrecision("unit_price").notNull(),

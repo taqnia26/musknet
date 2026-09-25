@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useAdminListCategories, useAdminCreateCategory, useAdminUpdateCategory, useAdminDisableCategory, useGetAdminMe } from '@workspace/api-client-react';
+import { useAdminListCategories, useAdminCreateCategory, useAdminUpdateCategory, useAdminDeleteCategory, useGetAdminMe } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { hasPermission } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListCategoriesQueryKey, getListCategoriesQueryKey } from '@workspace/api-client-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const categorySchema = z.object({
   nameAr: z.string().min(1),
@@ -28,6 +29,8 @@ export default function AdminCategories() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [deleteError, setDeleteError] = useState('');
 
   const queryClient = useQueryClient();
   const { data: currentUser } = useGetAdminMe();
@@ -35,17 +38,38 @@ export default function AdminCategories() {
 
   const createMutation = useAdminCreateCategory();
   const updateMutation = useAdminUpdateCategory();
-  const disableMutation = useAdminDisableCategory();
+  const deleteMutation = useAdminDeleteCategory();
 
-  const handleDisable = (id: number) => {
-    if (confirm(t('هل أنت متأكد من تعطيل/حذف هذا القسم؟', 'Are you sure you want to disable/delete this category?'))) {
-      disableMutation.mutate({ id }, {
+  const refreshCategories = () => {
+    queryClient.invalidateQueries({ queryKey: getAdminListCategoriesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+  };
+
+  const handleDeactivate = (id: number) => {
+    if (confirm(t('هل أنت متأكد من تعطيل هذا القسم؟ سيبقى محفوظاً ويمكن إعادة تفعيله.', 'Deactivate this category? It will be preserved and can be reactivated.'))) {
+      updateMutation.mutate({ id, data: { isActive: false } }, {
         onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getAdminListCategoriesQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+          refreshCategories();
         }
       });
     }
+  };
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    deleteMutation.mutate({ id: deleteTarget.id }, {
+      onSuccess: () => {
+        refreshCategories();
+        setDeleteTarget(null);
+        setDeleteError('');
+      },
+      onError: (error) => {
+        const apiError = error as { data?: { error?: string; message?: string }; message?: string };
+        setDeleteError([apiError.data?.error, apiError.data?.message].filter(Boolean).join(' ') ||
+          apiError.message ||
+          t('تعذر حذف القسم. قد يكون مرتبطاً بمنتجات أو سجلات محفوظة.', 'Could not delete this category. It may be referenced by products or retained records.'));
+      },
+    });
   };
 
   const form = useForm<z.infer<typeof categorySchema>>({
@@ -127,6 +151,36 @@ export default function AdminCategories() {
         )}
       </div>
 
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => {
+        if (!open && !deleteMutation.isPending) {
+          setDeleteTarget(null);
+          setDeleteError('');
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('حذف القسم نهائياً؟', 'Permanently delete category?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(
+                `سيتم حذف «${deleteTarget?.name ?? ''}» نهائياً. لا يمكن الحذف إذا كان القسم مرتبطاً بمنتجات نشطة أو غير نشطة أو أقسام فرعية أو سجلات تاريخية. استخدم «تعطيل» للاحتفاظ بهذه البيانات.`,
+                `“${deleteTarget?.name ?? ''}” will be permanently deleted. Deletion is blocked if the category is referenced by active or inactive products, child categories, or historical records. Choose “Deactivate” to preserve this data.`,
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && <p role="alert" className="text-sm text-destructive">{deleteError}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>{t('إلغاء', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => { event.preventDefault(); handleDelete(); }}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? t('جارٍ الحذف...', 'Deleting...') : t('حذف نهائي', 'Delete permanently')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground rtl:right-2.5 rtl:left-auto" />
@@ -173,7 +227,16 @@ export default function AdminCategories() {
                         <DropdownMenuItem onClick={() => handleEdit(category)} disabled={updateMutation.isPending}><Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                       )}
                       {hasPermission(currentUser, 'categories', 'delete') && category.isActive && (
-                        <DropdownMenuItem onClick={() => handleDisable(category.id)} disabled={disableMutation.isPending} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDeactivate(category.id)} disabled={updateMutation.isPending}><Trash2 className="h-4 w-4" />{t('تعطيل', 'Deactivate')}</DropdownMenuItem>
+                      )}
+                      {hasPermission(currentUser, 'categories', 'delete') && (
+                        <DropdownMenuItem
+                          onClick={() => { setDeleteError(''); setDeleteTarget({ id: category.id, name: lang === 'ar' ? category.nameAr : category.nameEn }); }}
+                          disabled={deleteMutation.isPending}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />{t('حذف نهائي', 'Delete permanently')}
+                        </DropdownMenuItem>
                       )}
                         </DropdownMenuContent>
                       </DropdownMenu>

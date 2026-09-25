@@ -896,11 +896,13 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCategoryUpdate" } } } }
       responses: { "200": { description: Category, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCategory" } } } } }
     delete:
-      operationId: adminDisableCategory
+      operationId: adminDeleteCategory
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
-      responses: { "204": { description: Disabled } }
+      responses:
+        "204": { description: Permanently deleted unreferenced category }
+        "409": { description: Category is referenced; deactivate or reclassify first }
   /admin/orders:
     get:
       operationId: adminListOrders
@@ -1894,7 +1896,7 @@ paths:
         "404": { description: Not found }
   /admin/gifting-issues/{id}/return:
     post:
-      operationId: returnAdminB2BEvaluation
+      operationId: returnAdminGiftingIssue
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       parameters:
@@ -1905,7 +1907,7 @@ paths:
           application/json: { schema: { $ref: "#/components/schemas/B2BEvaluationReturnInput" } }
       responses:
         "200":
-          description: Returned B2B evaluation stock
+          description: Returned B2B evaluation or influencer stock
           content:
             application/json: { schema: { $ref: "#/components/schemas/GiftingIssue" } }
         "400": { $ref: "#/components/responses/BadRequest" }
@@ -3497,11 +3499,15 @@ components:
         distributorImageOverride: { type: [string, "null"] }
     AdminProduct:
       type: object
-      required: [id, nameAr, nameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, averageCost, sku, barcode, sellable, isActive, isFeatured, isBestseller, showOnDistributors, weightKg, costPrice, discountPrice, discountEndsOn, mpn, brand, subtitleAr, promotionalTitleAr, maxPerCustomer, requiresShipping, allowOrderAttachment, allowCustomerNote, taxable, registrationNumber, tags, seoTitleAr, seoDescriptionAr, descriptionRichAr, descriptionRichEn, createdAt, updatedAt]
+      required: [id, nameAr, nameEn, displayNameAr, displayNameEn, invoiceNameAr, invoiceNameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, averageCost, sku, barcode, sellable, isActive, isFeatured, isBestseller, showOnDistributors, weightKg, costPrice, discountPrice, discountEndsOn, mpn, brand, subtitleAr, promotionalTitleAr, maxPerCustomer, requiresShipping, allowOrderAttachment, allowCustomerNote, taxable, registrationNumber, tags, seoTitleAr, seoDescriptionAr, descriptionRichAr, descriptionRichEn, createdAt, updatedAt]
       properties:
         id: { type: number }
         nameAr: { type: string }
         nameEn: { type: string }
+        displayNameAr: { type: string }
+        displayNameEn: { type: string }
+        invoiceNameAr: { type: string }
+        invoiceNameEn: { type: string }
         descriptionAr: { type: string }
         descriptionEn: { type: string }
         descriptionRichAr:
@@ -3572,10 +3578,14 @@ components:
         imageUrl: { type: string }
     AdminProductInput:
       type: object
-      required: [nameAr, nameEn, slug, price, categoryId]
+      required: [nameAr, nameEn, displayNameAr, displayNameEn, invoiceNameAr, invoiceNameEn, slug, price, categoryId]
       properties:
         nameAr: { type: string, minLength: 1 }
         nameEn: { type: string, minLength: 1 }
+        displayNameAr: { type: string, minLength: 1 }
+        displayNameEn: { type: string, minLength: 1 }
+        invoiceNameAr: { type: string, minLength: 1 }
+        invoiceNameEn: { type: string, minLength: 1 }
         descriptionAr: { type: string, default: "" }
         descriptionEn: { type: string, default: "" }
         descriptionRichAr:
@@ -3626,6 +3636,10 @@ components:
       properties:
         nameAr: { type: string, minLength: 1 }
         nameEn: { type: string, minLength: 1 }
+        displayNameAr: { type: string, minLength: 1 }
+        displayNameEn: { type: string, minLength: 1 }
+        invoiceNameAr: { type: string, minLength: 1 }
+        invoiceNameEn: { type: string, minLength: 1 }
         descriptionAr: { type: string }
         descriptionEn: { type: string }
         descriptionRichAr:
@@ -3693,7 +3707,14 @@ components:
         imageUrl: { type: [string, "null"] }
         isActive: { type: boolean }
     AdminCategoryUpdate:
-      allOf: [{ $ref: "#/components/schemas/AdminCategoryInput" }]
+      type: object
+      properties:
+        nameAr: { type: string, minLength: 1 }
+        nameEn: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        parentId: { type: [number, "null"] }
+        imageUrl: { type: [string, "null"] }
+        isActive: { type: boolean }
     AdminOrder:
       type: object
       required: [id, userId, orderNumber, subtotal, shippingCost, discount, tax, total, status, paymentStatus, shippingMethod, paymentMethod, createdAt, updatedAt]
@@ -3786,11 +3807,12 @@ components:
         createdAt: { type: string, format: date-time }
     AdminInvoiceItem:
       type: object
-      required: [id, productId, productName, sku, quantity, unitPrice, subtotal, vatAmount, totalAmount]
+      required: [id, productId, productName, productNameEn, sku, quantity, unitPrice, subtotal, vatAmount, totalAmount]
       properties:
         id: { type: number }
         productId: { type: number }
         productName: { type: string }
+        productNameEn: { type: [string, "null"] }
         sku: { type: [string, "null"] }
         quantity: { type: number }
         unitPrice: { type: number }
@@ -4339,6 +4361,10 @@ components:
         id: { type: number }
         nameAr: { type: string }
         nameEn: { type: string }
+        displayNameAr: { type: string }
+        displayNameEn: { type: string }
+        invoiceNameAr: { type: string }
+        invoiceNameEn: { type: string }
         sku: { type: [string, "null"] }
         barcode: { type: [string, "null"] }
         operationalType: { type: string, enum: [finished_good, raw_material, packaging] }
@@ -4372,10 +4398,14 @@ components:
         summary: { $ref: "#/components/schemas/AdminInventorySummary" }
     AdminInventoryProductInput:
       type: object
-      required: [nameAr, nameEn, sku, categoryId, price, openingQuantity, reorderPoint, targetStockQuantity]
+      required: [nameAr, nameEn, displayNameAr, displayNameEn, invoiceNameAr, invoiceNameEn, sku, categoryId, price, openingQuantity, reorderPoint, targetStockQuantity]
       properties:
         nameAr: { type: string, minLength: 1 }
         nameEn: { type: string, minLength: 1 }
+        displayNameAr: { type: string, minLength: 1 }
+        displayNameEn: { type: string, minLength: 1 }
+        invoiceNameAr: { type: string, minLength: 1 }
+        invoiceNameEn: { type: string, minLength: 1 }
         descriptionAr: { type: string, default: "" }
         descriptionEn: { type: string, default: "" }
         sku: { type: string, minLength: 1 }
@@ -4392,10 +4422,14 @@ components:
         targetStockQuantity: { type: number, minimum: 0, multipleOf: 1 }
     AdminInventoryProductUpdate:
       type: object
-      required: [nameAr, nameEn, sku, categoryId, operationalType, unitOfMeasure, sellable, price, reorderPoint, targetStockQuantity]
+      required: [nameAr, nameEn, displayNameAr, displayNameEn, invoiceNameAr, invoiceNameEn, sku, categoryId, operationalType, unitOfMeasure, sellable, price, reorderPoint, targetStockQuantity]
       properties:
         nameAr: { type: string, minLength: 1 }
         nameEn: { type: string, minLength: 1 }
+        displayNameAr: { type: string, minLength: 1 }
+        displayNameEn: { type: string, minLength: 1 }
+        invoiceNameAr: { type: string, minLength: 1 }
+        invoiceNameEn: { type: string, minLength: 1 }
         sku: { type: string, minLength: 1 }
         barcode: { type: [string, "null"] }
         operationalType: { type: string, enum: [finished_good, raw_material, packaging] }
@@ -5010,6 +5044,7 @@ components:
             country: { type: string, maxLength: 120 }
             occasion: { type: string, maxLength: 500 }
             reason: { type: string, maxLength: 500 }
+            comment: { type: string, maxLength: 500 }
             idempotencyKey: { type: string, minLength: 1, maxLength: 200 }
         - oneOf:
             - type: object
@@ -5033,6 +5068,7 @@ components:
         country: { type: ["string", "null"], maxLength: 120 }
         occasion: { type: ["string", "null"], maxLength: 500 }
         reason: { type: ["string", "null"], maxLength: 500 }
+        comment: { type: string, maxLength: 500 }
     TesterStockAvailability:
       type: object
       required: [productId, normalAvailable, usedReturnAvailable, totalAvailable]

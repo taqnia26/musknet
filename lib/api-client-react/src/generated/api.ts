@@ -5887,7 +5887,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getAdminUpdateCategoryMutationOptions(options));
     }
 
-export const getAdminDisableCategoryUrl = (id: number,) => {
+export const getAdminDeleteCategoryUrl = (id: number,) => {
 
 
 
@@ -5895,9 +5895,9 @@ export const getAdminDisableCategoryUrl = (id: number,) => {
   return `/api/admin/categories/${id}`
 }
 
-export const adminDisableCategory = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+export const adminDeleteCategory = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
 
-  return customFetch<void>(getAdminDisableCategoryUrl(id),
+  return customFetch<void>(getAdminDeleteCategoryUrl(id),
   {
     ...options,
     method: 'DELETE'
@@ -5910,11 +5910,11 @@ export const adminDisableCategory = async (id: number, options?: Parameters<type
 
 
 
-export const getAdminDisableCategoryMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDisableCategory>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof adminDisableCategory>>, TError,{id: number}, TContext> => {
+export const getAdminDeleteCategoryMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteCategory>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteCategory>>, TError,{id: number}, TContext> => {
 
-const mutationKey = ['adminDisableCategory'];
+const mutationKey = ['adminDeleteCategory'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -5924,10 +5924,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDisableCategory>>, {id: number}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteCategory>>, {id: number}> = (props) => {
           const {id} = props ?? {};
 
-          return  adminDisableCategory(id,requestOptions)
+          return  adminDeleteCategory(id,requestOptions)
         }
 
 
@@ -5937,19 +5937,19 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type AdminDisableCategoryMutationResult = NonNullable<Awaited<ReturnType<typeof adminDisableCategory>>>
+    export type AdminDeleteCategoryMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteCategory>>>
 
-    export type AdminDisableCategoryMutationError = ErrorType<unknown>
+    export type AdminDeleteCategoryMutationError = ErrorType<void>
 
-    export const useAdminDisableCategory = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDisableCategory>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    export const useAdminDeleteCategory = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteCategory>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof adminDisableCategory>>,
+        Awaited<ReturnType<typeof adminDeleteCategory>>,
         TError,
         {id: number},
         TContext
       > => {
-      return useMutation(getAdminDisableCategoryMutationOptions(options));
+      return useMutation(getAdminDeleteCategoryMutationOptions(options));
     }
 
 export const getAdminListOrdersUrl = (params?: AdminListOrdersParams,) => {
@@ -12932,7 +12932,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getDeleteAdminGiftingIssueMutationOptions(options));
     }
 
-export const getReturnAdminB2BEvaluationUrl = (id: number,) => {
+export const getReturnAdminGiftingIssueUrl = (id: number,) => {
 
 
 
@@ -12940,10 +12940,10 @@ export const getReturnAdminB2BEvaluationUrl = (id: number,) => {
   return `/api/admin/gifting-issues/${id}/return`
 }
 
-export const returnAdminB2BEvaluation = async (id: number,
+export const returnAdminGiftingIssue = async (id: number,
     b2BEvaluationReturnInput: B2BEvaluationReturnInput, options?: Parameters<typeof customFetch>[1]): Promise<GiftingIssue> => {
 
-  return customFetch<GiftingIssue>(getReturnAdminB2BEvaluationUrl(id),
+  return customFetch<GiftingIssue>(getReturnAdminGiftingIssueUrl(id),
   {
     ...options,
     method: 'POST',
@@ -12956,11 +12956,11 @@ export const returnAdminB2BEvaluation = async (id: number,
 
 
 
-export const getReturnAdminB2BEvaluationMutationOptions = <TError = ErrorType<BadRequestResponse | void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext> => {
+export const getReturnAdminGiftingIssueMutationOptions = <TError = ErrorType<BadRequestResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof returnAdminGiftingIssue>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof returnAdminGiftingIssue>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext> => {
 
-const mutationKey = ['returnAdminB2BEvaluation'];
+const mutationKey = ['returnAdminGiftingIssue'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -12970,10 +12970,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>, {id: number;data: BodyType<B2BEvaluationReturnInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof returnAdminGiftingIssue>>, {id: number;data: BodyType<B2BEvaluationReturnInput>}> = (props) => {
           const {id,data} = props ?? {};
 
-          return  returnAdminB2BEvaluation(id,data,requestOptions)
+          return  returnAdminGiftingIssue(id,data,requestOptions)
         }
 
 
@@ -12983,19 +12983,19 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type ReturnAdminB2BEvaluationMutationResult = NonNullable<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>>
-    export type ReturnAdminB2BEvaluationMutationBody = BodyType<B2BEvaluationReturnInput>
-    export type ReturnAdminB2BEvaluationMutationError = ErrorType<BadRequestResponse | void>
+    export type ReturnAdminGiftingIssueMutationResult = NonNullable<Awaited<ReturnType<typeof returnAdminGiftingIssue>>>
+    export type ReturnAdminGiftingIssueMutationBody = BodyType<B2BEvaluationReturnInput>
+    export type ReturnAdminGiftingIssueMutationError = ErrorType<BadRequestResponse | void>
 
-    export const useReturnAdminB2BEvaluation = <TError = ErrorType<BadRequestResponse | void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof returnAdminB2BEvaluation>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    export const useReturnAdminGiftingIssue = <TError = ErrorType<BadRequestResponse | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof returnAdminGiftingIssue>>, TError,{id: number;data: BodyType<B2BEvaluationReturnInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof returnAdminB2BEvaluation>>,
+        Awaited<ReturnType<typeof returnAdminGiftingIssue>>,
         TError,
         {id: number;data: BodyType<B2BEvaluationReturnInput>},
         TContext
       > => {
-      return useMutation(getReturnAdminB2BEvaluationMutationOptions(options));
+      return useMutation(getReturnAdminGiftingIssueMutationOptions(options));
     }
 
 export const getInfluencerLoginUrl = () => {

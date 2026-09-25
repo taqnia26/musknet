@@ -152,7 +152,7 @@ export async function createExhibitionInvoice(
       if (product.stockQuantity < item.quantity) throw new DistributorInvoiceConflictError(`Insufficient stock for ${product.nameAr}`);
       const grossCents = cents(item.unitPrice) * item.quantity;
       const amounts = extractVatFromGross(grossCents, 15);
-      lines.push({ productId: item.productId, productName: product.nameAr || product.nameEn, sku: product.sku, quantity: item.quantity, unitPrice: item.unitPrice,
+      lines.push({ productId: item.productId, productName: product.invoiceNameAr, productNameEn: product.invoiceNameEn, sku: product.sku, quantity: item.quantity, unitPrice: item.unitPrice,
         subtotal: fromCents(amounts.netCents), vatAmount: fromCents(amounts.vatCents), totalAmount: fromCents(amounts.grossCents),
         stockBefore: product.stockQuantity, unitCost: product.averageCost, allocationId: allocation.id, soldBefore: allocation.quantitySold });
       totalCost += Number(product.averageCost) * item.quantity;
@@ -321,10 +321,10 @@ export async function createDistributorInvoice(
     for (const productId of sortedProductIds) {
       await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${productId} for update`);
     }
-    const products: Array<{ id: number; nameAr: string; nameEn: string; sku: string | null; isActive: boolean; stockQuantity: number; averageCost: string }> = [];
+    const products: Array<{ id: number; nameAr: string; nameEn: string; invoiceNameAr: string; invoiceNameEn: string; sku: string | null; isActive: boolean; stockQuantity: number; averageCost: string }> = [];
     for (const item of input.items) {
       const [product] = await tx.select({
-        id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
+        id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn, invoiceNameAr: productsTable.invoiceNameAr, invoiceNameEn: productsTable.invoiceNameEn,
         sku: productsTable.sku, isActive: productsTable.isActive,
         stockQuantity: productsTable.stockQuantity, averageCost: productsTable.averageCost,
       }).from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
@@ -342,7 +342,8 @@ export async function createDistributorInvoice(
       const amounts = extractVatFromGross(grossCents, vatRate);
       return {
         productId: item.productId,
-        productName: products[index].nameAr || products[index].nameEn,
+        productName: products[index].invoiceNameAr,
+        productNameEn: products[index].invoiceNameEn,
         sku: products[index].sku,
         quantity: item.quantity,
         unitPrice: fromCents(cents(item.unitPrice)),
@@ -611,7 +612,7 @@ export async function updateOrderAndIssueInvoice(
             invoiceTotal: money(total),
             vatTotal: money(vatTotal),
           });
-          await tx.insert(invoicesTable).values({
+          const [createdInvoice] = await tx.insert(invoicesTable).values({
             orderId: order.id,
             sequenceNumber,
             invoiceNumber,
@@ -625,7 +626,34 @@ export async function updateOrderAndIssueInvoice(
               taxTreatment: orderTaxSnapshot.taxTreatment,
               vatRate: String(orderTaxSnapshot.vatRate),
             qrCodeData: qrCodeBase64,
-          });
+          }).returning({ id: invoicesTable.id });
+          const orderLines = await tx.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
+          for (const line of orderLines) {
+            const [product] = await tx.select({
+              invoiceNameAr: productsTable.invoiceNameAr,
+              invoiceNameEn: productsTable.invoiceNameEn,
+              sku: productsTable.sku,
+            }).from(productsTable).where(eq(productsTable.id, line.productId)).limit(1);
+            if (!product) throw new Error(`Product ${line.productId} not found for invoice`);
+            const lineAmountCents = cents(line.totalPrice);
+            // Legacy order lines stored pre-VAT prices; later orders store VAT-inclusive prices.
+            // Keep that historical arithmetic in the issued invoice-line snapshot as well.
+            const { netCents, vatCents } = orderTaxSnapshot.legacy
+              ? { netCents: lineAmountCents, vatCents: Math.round(lineAmountCents * orderTaxSnapshot.vatRate / 100) }
+              : extractVatFromGross(lineAmountCents, orderTaxSnapshot.vatRate);
+            await tx.insert(invoiceItemsTable).values({
+              invoiceId: createdInvoice.id,
+              productId: line.productId,
+              productName: product.invoiceNameAr,
+              productNameEn: product.invoiceNameEn,
+              sku: product.sku,
+              quantity: line.quantity,
+              unitPrice: line.unitPrice,
+              subtotal: fromCents(netCents),
+              vatAmount: fromCents(vatCents),
+              totalAmount: fromCents(netCents + vatCents),
+            });
+          }
         }
       }
     }

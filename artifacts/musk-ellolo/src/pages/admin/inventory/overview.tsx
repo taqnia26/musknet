@@ -2,22 +2,37 @@ import { useLanguage } from '@/hooks/use-language';
 import { Money } from '@/components/money';
 import { formatInteger } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAdminListInventory, useListInventoryAlerts, useListInventoryLocations, type InventoryLocation } from '@workspace/api-client-react';
-import { Boxes, CircleDollarSign, AlertTriangle, XCircle, MapPin } from 'lucide-react';
+import { useAdminListInventory, useListInventoryAlerts, useListInventoryBalances, useListInventoryLocations, type InventoryBalance, type InventoryLocation } from '@workspace/api-client-react';
+import { Boxes, CircleDollarSign, AlertTriangle, XCircle, MapPin, PackageOpen } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useMemo } from 'react';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function AdminInventoryOverview() {
   const { t, lang } = useLanguage();
   
   const { data: inventoryData } = useAdminListInventory();
   const { data: alerts = [] } = useListInventoryAlerts();
-  const { data: rawLocations } = useListInventoryLocations();
+  const { data: rawLocations, isLoading: locationsLoading, isError: locationsError } = useListInventoryLocations();
+  const { data: rawBalances, isLoading: balancesLoading, isError: balancesError } = useListInventoryBalances();
   const locations = (rawLocations as unknown as InventoryLocation[] | undefined) ?? [];
+  const balances = (rawBalances as unknown as InventoryBalance[] | undefined) ?? [];
   
   const summary = inventoryData?.summary ?? { totalUnits: 0, totalValue: 0, lowStockProducts: 0, outOfStockProducts: 0 };
   const items = inventoryData?.items ?? [];
+  const openedTesterLocationId = locations.find(location => location.code === 'B2B_USED_RETURN')?.id;
+  const openedTesterBalances = useMemo(() => {
+    if (openedTesterLocationId === undefined) return [];
+    const productNames = new Map(items.map(item => [item.id, lang === 'ar' ? item.nameAr : item.nameEn]));
+    return balances
+      .filter(balance => balance.locationId === openedTesterLocationId && balance.available > 0)
+      .map(balance => ({
+        ...balance,
+        productName: productNames.get(balance.productId) ?? `Product #${formatInteger(balance.productId, lang)}`
+      }))
+      .sort((a, b) => a.productName.localeCompare(b.productName, lang === 'ar' ? 'ar' : 'en'));
+  }, [balances, items, lang, openedTesterLocationId]);
 
   const chartData = useMemo(() => 
     sortProductsForSelection(items, lang).slice(0, 10).map((item) => ({
@@ -106,6 +121,53 @@ export default function AdminInventoryOverview() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <PackageOpen className="h-4 w-4 text-amber-600" />
+            {t('أرصدة التيستر المفتوح حسب المنتج', 'Opened tester balances by product')}
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {t('هذه الأرصدة منفصلة عن إجمالي المخزون القابل للبيع.', 'These balances are separate from the sellable inventory total.')}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {balancesLoading || locationsLoading ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">{t('جاري تحميل الأرصدة...', 'Loading balances...')}</p>
+          ) : balancesError || locationsError ? (
+            <p role="alert" className="py-6 text-center text-sm text-destructive">{t('تعذر تحميل أرصدة التيستر المفتوح', 'Could not load opened tester balances')}</p>
+          ) : openedTesterBalances.length === 0 ? (
+            <div className="flex min-h-28 flex-col items-center justify-center text-center text-sm text-muted-foreground">
+              <PackageOpen className="mb-2 h-6 w-6 opacity-50" />
+              <p>{t('لا توجد أرصدة للتيستر المفتوح', 'No opened tester balances')}</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('المنتج', 'Product')}</TableHead>
+                  <TableHead className="text-end">{t('المتاح', 'Available')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {openedTesterBalances.map(balance => {
+                  const product = items.find(item => item.id === balance.productId);
+                  return (
+                    <TableRow key={balance.id}>
+                      <TableCell>
+                        <div className="font-medium">{balance.productName}</div>
+                        {product?.sku && <div className="text-xs text-muted-foreground">{product.sku}</div>}
+                      </TableCell>
+                      <TableCell className="text-end font-semibold">{formatInteger(balance.available, lang)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

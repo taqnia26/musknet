@@ -5,6 +5,17 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminCategoryInput } from './adminCategoryInput';
 
-export type AdminCategoryUpdate = AdminCategoryInput;
+export interface AdminCategoryUpdate {
+  /** @minLength 1 */
+  nameAr?: string;
+  /** @minLength 1 */
+  nameEn?: string;
+  /** @minLength 1 */
+  slug?: string;
+  /** @nullable */
+  parentId?: number | null;
+  /** @nullable */
+  imageUrl?: string | null;
+  isActive?: boolean;
+}

@@ -1473,7 +1473,7 @@ router.get("/admin/products", permit("products", "view"), route(async (req, res)
     categoryNameAr: categoryById.get(row.categoryId)?.nameAr ?? "",
     categoryNameEn: categoryById.get(row.categoryId)?.nameEn ?? "",
   }));
-  rows = statusFilter(searchFilter(searchableRows, query.search, ["nameAr", "nameEn", "slug", "sku", "barcode", "descriptionAr", "descriptionEn", "categoryNameAr", "categoryNameEn"]), query.status);
+  rows = statusFilter(searchFilter(searchableRows, query.search, ["nameAr", "nameEn", "displayNameAr", "displayNameEn", "invoiceNameAr", "invoiceNameEn", "slug", "sku", "barcode", "descriptionAr", "descriptionEn", "categoryNameAr", "categoryNameEn"]), query.status);
   res.json(Api.AdminListProductsResponse.parse(rows));
 }));
 router.post("/admin/products", permit("products", "edit"), route(async (req, res) => {
@@ -1481,6 +1481,8 @@ router.post("/admin/products", permit("products", "edit"), route(async (req, res
   const richDescriptionError = validateRawRichDescriptionFields(req.body);
   if (richDescriptionError) { res.status(400).json({ error: richDescriptionError }); return; }
   const body = parse(Api.AdminCreateProductBody, req.body, res); if (!body) return;
+  const nameFields = ["nameAr", "nameEn", "displayNameAr", "displayNameEn", "invoiceNameAr", "invoiceNameEn"] as const;
+  if (nameFields.some((field) => !body[field]?.trim())) { res.status(400).json({ error: "All six product names are required" }); return; }
   if (body.discountPrice !== null && body.discountPrice !== undefined && body.discountPrice > body.price) {
     res.status(400).json({ error: "Discount price must not exceed regular price" }); return;
   }
@@ -1489,7 +1491,9 @@ router.post("/admin/products", permit("products", "edit"), route(async (req, res
     .where(eq(categoriesTable.id, body.categoryId))
     .limit(1);
   if (!category) { res.status(400).json({ error: "Category not found" }); return; }
-  const productValues = prepareProductDescriptionCreate(body as unknown as Record<string, unknown>);
+  const productValues = prepareProductDescriptionCreate({
+    ...body, ...Object.fromEntries(nameFields.map((field) => [field, body[field].trim()])),
+  } as unknown as Record<string, unknown>);
   const row = await db.transaction(async (tx) => {
     const [created] = await tx.insert(productsTable).values(productValues as InsertProduct).returning();
     if (created.stockQuantity > 0) {
@@ -1535,6 +1539,8 @@ router.patch("/admin/products/:id", permit("products", "edit"), route(async (req
   const richDescriptionError = validateRawRichDescriptionFields(req.body);
   if (richDescriptionError) { res.status(400).json({ error: richDescriptionError }); return; }
   const body = parse(Api.AdminUpdateProductBody, req.body, res); if (!params || !body) return;
+  const nameFields = ["nameAr", "nameEn", "displayNameAr", "displayNameEn", "invoiceNameAr", "invoiceNameEn"] as const;
+  if (nameFields.some((field) => body[field] !== undefined && !body[field]?.trim())) { res.status(400).json({ error: "Product names cannot be blank" }); return; }
   const [existingProduct] = await db.select()
     .from(productsTable)
     .where(eq(productsTable.id, params.id))
@@ -1557,7 +1563,7 @@ router.patch("/admin/products/:id", permit("products", "edit"), route(async (req
     if (!category) { res.status(400).json({ error: "Category not found" }); return; }
   }
   const productValues = prepareProductDescriptionUpdate(
-    body as unknown as Record<string, unknown>,
+    { ...body, ...Object.fromEntries(nameFields.filter((field) => body[field] !== undefined).map((field) => [field, body[field]!.trim()])) } as unknown as Record<string, unknown>,
     existingProduct,
   );
   const [row] = await db.update(productsTable).set(productValues as Partial<InsertProduct>).where(eq(productsTable.id, params.id)).returning();
@@ -1593,8 +1599,63 @@ router.patch("/admin/categories/:id", permit("categories", "edit"), route(async 
 }));
 router.delete("/admin/categories/:id", permit("categories", "delete"), route(async (req, res) => {
   if (res.headersSent) return;
-  const params = parse(Api.AdminDisableCategoryParams, req.params, res); if (!params) return;
-  await db.update(categoriesTable).set({ isActive: false }).where(eq(categoriesTable.id, params.id)); res.sendStatus(204);
+  const params = parse(Api.AdminDeleteCategoryParams, req.params, res); if (!params) return;
+  let result: { deleted: boolean; references?: { activeProducts: number; inactiveProducts: number; childCategories: number } };
+  try {
+    result = await db.transaction(async (tx) => {
+      const [category] = await tx.select({ id: categoriesTable.id })
+        .from(categoriesTable)
+        .where(eq(categoriesTable.id, params.id))
+        .for("update")
+        .limit(1);
+      if (!category) return { deleted: false };
+
+      const [activeProducts] = await tx.select({ total: count() })
+        .from(productsTable)
+        .where(and(eq(productsTable.categoryId, params.id), eq(productsTable.isActive, true)));
+      const [inactiveProducts] = await tx.select({ total: count() })
+        .from(productsTable)
+        .where(and(eq(productsTable.categoryId, params.id), eq(productsTable.isActive, false)));
+      const [childCategories] = await tx.select({ total: count() })
+        .from(categoriesTable)
+        .where(eq(categoriesTable.parentId, params.id));
+      const references = {
+        activeProducts: Number(activeProducts.total),
+        inactiveProducts: Number(inactiveProducts.total),
+        childCategories: Number(childCategories.total),
+      };
+      if (references.activeProducts + references.inactiveProducts + references.childCategories > 0) {
+        return { deleted: false, references };
+      }
+
+      const [deleted] = await tx.delete(categoriesTable)
+        .where(eq(categoriesTable.id, params.id))
+        .returning({ id: categoriesTable.id });
+      return { deleted: Boolean(deleted) };
+    });
+  } catch (error) {
+    // Keep the database FK restriction as the final guard against references
+    // created concurrently after the explicit reference check.
+    const dbError = error as { code?: string; cause?: { code?: string } };
+    if (dbError.code === "23503" || dbError.cause?.code === "23503") {
+      res.status(409).json({
+        error: "Category cannot be permanently deleted because it is still referenced by products, child categories, or retained historical records. Deactivate it instead.",
+      });
+      return;
+    }
+    throw error;
+  }
+  if (!result.deleted && !result.references) { res.status(404).json({ error: "Category not found" }); return; }
+  if (!result.deleted && result.references) {
+    const { activeProducts, inactiveProducts, childCategories } = result.references;
+    res.status(409).json({
+      error: "Category cannot be permanently deleted while it has product or child-category references. Products include inactive items and products retained for historical records; deactivate the category to preserve them.",
+      references: result.references,
+      message: `References found: ${activeProducts} active products, ${inactiveProducts} inactive products, and ${childCategories} child categories.`,
+    });
+    return;
+  }
+  res.sendStatus(204);
 }));
 
 router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => {
@@ -1730,7 +1791,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       await tx.insert(orderItemsTable).values(selectedProducts.map(({ product, quantity }) => ({
         orderId: created.id,
         productId: product.id,
-        productName: product.nameAr,
+        productName: product.displayNameAr,
         quantity,
         unitPrice: product.price,
         totalPrice: Math.round(product.price * quantity * 100) / 100,
@@ -2946,13 +3007,15 @@ router.get("/admin/inventory", permit("inventory", "view"), route(async (req, re
   const query = parse(Api.AdminListInventoryQueryParams, req.query, res); if (!query) return;
   let rows = (await db.select({
     id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
+    displayNameAr: productsTable.displayNameAr, displayNameEn: productsTable.displayNameEn,
+    invoiceNameAr: productsTable.invoiceNameAr, invoiceNameEn: productsTable.invoiceNameEn,
     sku: productsTable.sku, barcode: productsTable.barcode, operationalType: productsTable.operationalType, unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier, sellable: productsTable.sellable, price: productsTable.price, averageCost: productsTable.averageCost,
     categoryId: productsTable.categoryId, categoryNameAr: categoriesTable.nameAr, categoryNameEn: categoriesTable.nameEn,
     stockQuantity: productsTable.stockQuantity, reorderPoint: productsTable.reorderPoint,
     targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
   }).from(productsTable).innerJoin(categoriesTable, eq(productsTable.categoryId, categoriesTable.id))
     .where(eq(productsTable.isActive, true)));
-  rows = searchFilter(rows, query.search, ["nameAr", "nameEn", "sku"]);
+  rows = searchFilter(rows, query.search, ["nameAr", "nameEn", "displayNameAr", "displayNameEn", "invoiceNameAr", "invoiceNameEn", "sku"]);
   if (query.categoryId) rows = rows.filter((row) => row.categoryId === query.categoryId);
   const enriched = rows.map((row) => ({
     ...row,
@@ -3200,6 +3263,9 @@ router.post("/admin/inventory/cycle-counts/:id/approve", permit("inventory", "ed
 }));
 router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateInventoryProductBody, req.body, res); if (!body) return;
+  if ([body.nameAr, body.nameEn, body.displayNameAr, body.displayNameEn, body.invoiceNameAr, body.invoiceNameEn].some((name) => !name.trim())) {
+    res.status(400).json({ error: "All six product names are required" }); return;
+  }
   const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, body.categoryId)).limit(1);
   if (!category) { res.status(400).json({ error: "Category not found" }); return; }
   const [existingProduct] = await db.select({ id: productsTable.id })
@@ -3221,6 +3287,8 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
     const slugBase = body.sku.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `product-${Date.now()}`;
     const [created] = await tx.insert(productsTable).values({
       nameAr: body.nameAr.trim(), nameEn: body.nameEn.trim(),
+      displayNameAr: body.displayNameAr.trim(), displayNameEn: body.displayNameEn.trim(),
+      invoiceNameAr: body.invoiceNameAr.trim(), invoiceNameEn: body.invoiceNameEn.trim(),
       descriptionAr: (body.descriptionAr ?? "").trim(), descriptionEn: (body.descriptionEn ?? "").trim(),
       sku: body.sku.trim(),
       barcode: body.barcode ?? null, operationalType: body.operationalType ?? "finished_good", unitOfMeasure: body.unitOfMeasure ?? "unit", preferredSupplier: body.preferredSupplier ?? null, sellable: body.sellable ?? true,
@@ -3260,7 +3328,9 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
       }, tx);
     }
     return {
-      id: created.id, nameAr: created.nameAr, nameEn: created.nameEn, sku: created.sku,
+      id: created.id, nameAr: created.nameAr, nameEn: created.nameEn,
+      displayNameAr: created.displayNameAr, displayNameEn: created.displayNameEn,
+      invoiceNameAr: created.invoiceNameAr, invoiceNameEn: created.invoiceNameEn, sku: created.sku,
       barcode: created.barcode, operationalType: created.operationalType, unitOfMeasure: created.unitOfMeasure, preferredSupplier: created.preferredSupplier, sellable: created.sellable,
       price: created.price, averageCost: Number(created.averageCost), categoryId: created.categoryId,
       categoryNameAr: category.nameAr, categoryNameEn: category.nameEn, stockQuantity: created.stockQuantity,
@@ -3391,6 +3461,9 @@ router.post("/admin/inventory/:id/adjust", permit("inventory", "edit"), route(as
 router.patch("/admin/inventory/:id", permit("inventory", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateInventoryProductParams, req.params, res);
   const body = parse(Api.AdminUpdateInventoryProductBody, req.body, res); if (!params || !body) return;
+  if ([body.nameAr, body.nameEn, body.displayNameAr, body.displayNameEn, body.invoiceNameAr, body.invoiceNameEn].some((name) => !name.trim())) {
+    res.status(400).json({ error: "All six product names are required" }); return;
+  }
   const [category] = await db.select().from(categoriesTable).where(eq(categoriesTable.id, body.categoryId)).limit(1);
   if (!category) { res.status(400).json({ error: "Category not found" }); return; }
   const [duplicate] = await db.select({ id: productsTable.id }).from(productsTable)
@@ -3399,6 +3472,10 @@ router.patch("/admin/inventory/:id", permit("inventory", "edit"), route(async (r
   const [updated] = await db.update(productsTable).set({
     nameAr: body.nameAr.trim(),
     nameEn: body.nameEn.trim(),
+    displayNameAr: body.displayNameAr.trim(),
+    displayNameEn: body.displayNameEn.trim(),
+    invoiceNameAr: body.invoiceNameAr.trim(),
+    invoiceNameEn: body.invoiceNameEn.trim(),
     sku: body.sku.trim(),
     barcode: body.barcode?.trim() || null,
     operationalType: body.operationalType,

@@ -35,6 +35,8 @@ export type GiftingIssueInput = ({
   occasion?: string;
   /** @maxLength 500 */
   reason?: string;
+  /** @maxLength 500 */
+  comment?: string;
   /**
      * @minLength 1
      * @maxLength 200

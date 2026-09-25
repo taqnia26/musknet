@@ -59,6 +59,9 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
     const country = typeof req.body?.country === "string" ? req.body.country.trim() || null : null;
     const occasion = typeof req.body?.occasion === "string" ? req.body.occasion.trim() || null : null;
     const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+    const comment = req.body?.comment === undefined
+      ? reason || ""
+      : typeof req.body.comment === "string" ? req.body.comment.trim() : "";
     const issueDateText = typeof req.body?.issueDate === "string" && req.body.issueDate ? req.body.issueDate : null;
     const productIds = lines.map((line) => line.productId);
     const hasInvalidSource = lines.some((line) => line.stockSource !== undefined && line.stockSource !== "normal" && line.stockSource !== "used_return");
@@ -73,6 +76,8 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
       hasInvalidSource ||
       (["TESTER", "B2B_EVALUATION"].includes(category) && Array.isArray(req.body?.lines) && lines.some((line) => line.stockSource === undefined)) ||
       (!["TESTER", "B2B_EVALUATION"].includes(category) && normalizedLines.some((line) => line.stockSource === "used_return")) ||
+      (req.body?.comment !== undefined && req.body.comment !== null &&
+        (typeof req.body.comment !== "string" || req.body.comment.trim().length > 500)) ||
       new Set(sourcePairs).size !== sourcePairs.length ||
       !newCategories.has(category) || !idempotencyKey || idempotencyKey.length > 200 ||
       ((category === "DAMAGED" || category === "OTHER") && (!reason || reason.length > 500)) ||
@@ -107,6 +112,7 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
           existing.recipientName === recipientName && existing.occasion === occasion &&
           existing.city === city && existing.country === country &&
           existing.reason === (reason || null) &&
+          existing.comment === comment &&
           (!issueDateText || existing.issueDate.toISOString().slice(0, 10) === issueDate.toISOString().slice(0, 10)) &&
           existingRows.length === canonicalLines.length &&
           existingRows.every((row, index) => row.productId === canonicalLines[index].productId &&
@@ -152,7 +158,7 @@ router.post("/admin/gifting-issues", permit("inventory", "edit"), async (req, re
         const { line, product, usedBalance, totalCost } = item;
         const [issue] = await tx.insert(giftingIssuesTable).values({
           recipientName, city, country, category, occasion, reason: reason || null,
-          comment: reason || "", productId: product.id,
+          comment, productId: product.id,
           barcode: product.barcode ?? product.sku ?? String(product.id),
           descriptionSnapshot: product.nameAr || product.nameEn,
           quantity: line.quantity, stockSource: line.stockSource, totalCost, issueDate,
@@ -241,7 +247,9 @@ router.post("/admin/gifting-issues/:id/return", permit("inventory", "edit"), asy
         }
         return priorReturn.responseSnapshot;
       }
-      if (issue.category !== "B2B_EVALUATION") throw Object.assign(new Error("Only B2B evaluation issues can be returned"), { status: 409 });
+      if (issue.category !== "B2B_EVALUATION" && issue.category !== "INFLUENCERS") {
+        throw Object.assign(new Error("Only B2B evaluation and influencer issues can be returned"), { status: 409 });
+      }
       if (issue.stockSource === "used_return" && condition === "new") {
         throw Object.assign(new Error("An opened tester cannot be returned as new"), { status: 409 });
       }
@@ -289,18 +297,20 @@ router.post("/admin/gifting-issues/:id/return", permit("inventory", "edit"), asy
       }
       const returnedQuantity = issue.returnedQuantity + quantity;
       const nextReturnCondition = issue.returnCondition && issue.returnCondition !== condition ? "mixed" : condition;
+      const returnSourceType = issue.category === "INFLUENCERS" ? "gifting_issue_return" : "b2b_evaluation_return";
       await tx.insert(inventoryMovementsTable).values({
         productId: product.id, movementType: "increase", quantityChange: quantity,
-        quantityBefore, quantityAfter, reason: `B2B evaluation return (${condition})`,
+        quantityBefore, quantityAfter, reason: `${issue.category === "INFLUENCERS" ? "Influencer" : "B2B evaluation"} return (${condition})`,
         unitCost: unitCost.toFixed(4), totalCost: returnCost,
-         sourceType: "b2b_evaluation_return",
-         sourceId: `${issue.id}:${returnedQuantity}`, eventKey: `b2b:return:${issue.id}:${returnedQuantity}:${condition}`,
+        sourceType: returnSourceType,
+        sourceId: `${issue.id}:${returnedQuantity}`,
+        eventKey: `${issue.category === "INFLUENCERS" ? "gifting" : "b2b"}:return:${issue.id}:${returnedQuantity}:${condition}`,
         performedBy: actorId,
       });
       await postJournalEntry({
         entryDate: new Date().toISOString().slice(0, 10),
-        description: `B2B evaluation return #${issue.id} (${condition})`,
-        createdBy: actorId, sourceType: "b2b_evaluation_return", sourceId: `${issue.id}:${returnedQuantity}`,
+        description: `${issue.category === "INFLUENCERS" ? "Influencer" : "B2B evaluation"} return #${issue.id} (${condition})`,
+        createdBy: actorId, sourceType: returnSourceType, sourceId: `${issue.id}:${returnedQuantity}`,
         lines: [{ accountCode: "1140", debit: returnCost }, { accountCode: "6160", credit: returnCost }],
       }, tx);
       const [result] = await tx.update(giftingIssuesTable).set({
@@ -354,7 +364,8 @@ router.patch("/admin/gifting-issues/:id", permit("inventory", "edit"), async (re
       ...(req.body?.city !== undefined ? { city: nullableText(req.body.city, 120) } : {}),
       ...(req.body?.country !== undefined ? { country: nullableText(req.body.country, 120) } : {}),
       ...(req.body?.occasion !== undefined ? { occasion: nullableText(req.body.occasion, 500) } : {}),
-      ...(req.body?.reason !== undefined ? { reason: nullableText(req.body.reason, 500), comment: nullableText(req.body.reason, 500) ?? "" } : {}),
+      ...(req.body?.reason !== undefined ? { reason: nullableText(req.body.reason, 500) } : {}),
+      ...(req.body?.comment !== undefined ? { comment: nullableText(req.body.comment, 500) ?? "" } : {}),
     };
     if (!Object.keys(values).length) return res.status(400).json({ error: "At least one field is required" });
     if (quantity !== undefined) await ensureStandardAccountingChart();
@@ -364,15 +375,13 @@ router.patch("/admin/gifting-issues/:id", permit("inventory", "edit"), async (re
       const [issue] = await tx.select().from(giftingIssuesTable)
         .where(and(eq(giftingIssuesTable.id, id), isNull(giftingIssuesTable.voidedAt))).limit(1);
       if (!issue) return undefined;
-      if (category !== undefined && category !== issue.category &&
-        ((issue.category === "B2B_EVALUATION") !== (category === "B2B_EVALUATION"))) {
-        throw Object.assign(new Error("A posted movement cannot change between returnable B2B evaluation and non-returnable categories"), { status: 409 });
+      const wasReturnable = issue.category === "B2B_EVALUATION" || issue.category === "INFLUENCERS";
+      const isReturnable = category === "B2B_EVALUATION" || category === "INFLUENCERS";
+      if (category !== undefined && category !== issue.category && wasReturnable !== isReturnable) {
+        throw Object.assign(new Error("A posted movement cannot change between returnable and non-returnable categories"), { status: 409 });
       }
-      if (category !== undefined && category !== issue.category && issue.returnedQuantity > 0) {
-        throw Object.assign(new Error("A movement with returns cannot change category"), { status: 409 });
-      }
-      if (quantity !== undefined && issue.category === "B2B_EVALUATION" && issue.returnedQuantity > 0) {
-        throw Object.assign(new Error("Quantity cannot be edited after a B2B return"), { status: 409 });
+      if (issue.returnedQuantity > 0) {
+        throw Object.assign(new Error("A movement cannot be edited after a return"), { status: 409 });
       }
 
       const quantityDelta = quantity === undefined ? 0 : quantity - issue.quantity;

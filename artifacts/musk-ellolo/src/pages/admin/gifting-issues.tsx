@@ -11,7 +11,7 @@ import {
   useGetAdminGiftingIssues,
   useGetAdminGiftingIssue,
   useGetAdminTesterAvailability,
-  useReturnAdminB2BEvaluation,
+  useReturnAdminGiftingIssue,
   useUpdateAdminGiftingIssue,
 } from '@workspace/api-client-react';
 import type { GiftingIssue, GiftingIssueCategory, GiftingIssueInputCategory } from '@workspace/api-client-react';
@@ -44,6 +44,7 @@ const initialForm = {
   country: '',
   occasion: '',
   reason: '',
+  comment: '',
 };
 
 export default function AdminGiftingIssues() {
@@ -57,7 +58,7 @@ export default function AdminGiftingIssues() {
   const [editing, setEditing] = useState<GiftingIssue | null>(null);
   const [returning, setReturning] = useState<GiftingIssue | null>(null);
   const [returnForm, setReturnForm] = useState({ quantity: '1', condition: 'new' as 'new' | 'used' });
-  const [editForm, setEditForm] = useState({ category: '' as GiftingIssueCategory | '', quantity: '', issueDate: '', recipientName: '', city: '', country: '', occasion: '', reason: '' });
+  const [editForm, setEditForm] = useState({ category: '' as GiftingIssueCategory | '', quantity: '', issueDate: '', recipientName: '', city: '', country: '', occasion: '', reason: '', comment: '' });
   const [form, setForm] = useState(initialForm);
   const [cityLookupPending, setCityLookupPending] = useState(false);
   const [editCityLookupPending, setEditCityLookupPending] = useState(false);
@@ -69,7 +70,7 @@ export default function AdminGiftingIssues() {
   const mutation = useCreateAdminGiftingIssue();
   const updateMutation = useUpdateAdminGiftingIssue();
   const deleteMutation = useDeleteAdminGiftingIssue();
-  const returnMutation = useReturnAdminB2BEvaluation();
+  const returnMutation = useReturnAdminGiftingIssue();
   const idempotencyKeyRef = useRef(crypto.randomUUID());
   const lastAttemptedFormRef = useRef('');
   const returnIdempotencyKeyRef = useRef(crypto.randomUUID());
@@ -203,6 +204,7 @@ export default function AdminGiftingIssues() {
   }, [editForm.city, editing, lang]);
 
   const openEdit = (row: GiftingIssue) => {
+    setSelected(row.id);
     setEditing(row);
     setEditForm({
       category: row.category,
@@ -213,6 +215,7 @@ export default function AdminGiftingIssues() {
       country: row.country ?? '',
       occasion: row.occasion ?? '',
       reason: row.reason ?? '',
+      comment: row.comment ?? '',
     });
   };
 
@@ -234,7 +237,7 @@ export default function AdminGiftingIssues() {
       toast({ title: t('أدخل كمية موجبة صحيحة', 'Enter a valid positive quantity'), variant: 'destructive' });
       return;
     }
-    updateMutation.mutate({ id: editing.id, data: {
+    const updateData = {
       category: editForm.category,
       quantity,
       issueDate: editForm.issueDate,
@@ -243,7 +246,9 @@ export default function AdminGiftingIssues() {
       country: editForm.country.trim() || null,
       occasion: editForm.occasion.trim() || null,
       reason: editForm.reason.trim() || null,
-    } }, {
+      comment: editForm.comment.trim(),
+    };
+    updateMutation.mutate({ id: editing.id, data: updateData }, {
       onSuccess: async () => {
         setEditing(null);
         await Promise.all([
@@ -375,7 +380,7 @@ export default function AdminGiftingIssues() {
       lastAttemptedFormRef.current = currentFormState;
     }
 
-    mutation.mutate({ data: {
+    const createData = {
       category: form.category as GiftingIssueInputCategory,
       lines: validLines,
       idempotencyKey: idempotencyKeyRef.current,
@@ -385,7 +390,9 @@ export default function AdminGiftingIssues() {
       ...(form.country.trim() ? { country: form.country.trim() } : {}),
       ...(form.occasion.trim() ? { occasion: form.occasion.trim() } : {}),
       ...(form.reason.trim() ? { reason: form.reason.trim() } : {}),
-    } }, {
+      comment: form.comment.trim(),
+    };
+    mutation.mutate({ data: createData }, {
       onSuccess: async () => {
         setForm(initialForm);
         lastAttemptedFormRef.current = '';
@@ -496,6 +503,16 @@ export default function AdminGiftingIssues() {
                   />
                 </div>
               )}
+              <div className="md:col-span-2 lg:col-span-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{t('ملاحظة / تعليق (اختياري)', 'Note / comment (optional)')}</Label>
+                <Input
+                  className="h-10"
+                  maxLength={500}
+                  value={form.comment}
+                  onChange={(e) => setForm(f => ({ ...f, comment: e.target.value }))}
+                  placeholder={t('أضف ملاحظة منفصلة عن السبب...', 'Add a note separate from the reason...')}
+                />
+              </div>
             </div>
 
             <div className="rounded-xl border border-border/60 bg-card overflow-hidden">
@@ -647,7 +664,7 @@ export default function AdminGiftingIssues() {
                     <TableHead className="w-[120px]">{t('التاريخ', 'Date')}</TableHead>
                     <TableHead>{t('التصنيف', 'Category')}</TableHead>
                     <TableHead>{t('المنتج', 'Product')}</TableHead>
-                    <TableHead>{t('الشخص / السبب', 'Person / Reason')}</TableHead>
+                    <TableHead>{t('الشخص / التفاصيل', 'Person / details')}</TableHead>
                     <TableHead>{t('المدينة', 'City')}</TableHead>
                     <TableHead>{t('الدولة', 'Country')}</TableHead>
                     <TableHead className="text-center w-[80px]">{t('الكمية', 'Qty')}</TableHead>
@@ -669,7 +686,7 @@ export default function AdminGiftingIssues() {
                       <TableCell>
                         <div className="font-medium truncate max-w-[200px] text-sm" title={row.descriptionSnapshot}>{row.descriptionSnapshot}</div>
                          <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{row.barcode}</div>
-                         {(row.category === 'B2B_EVALUATION' || row.category === 'TESTER') && (
+                         {(row.category === 'B2B_EVALUATION' || row.category === 'TESTER' || row.category === 'INFLUENCERS') && (
                            <div className="mt-1 text-[11px] text-muted-foreground">
                              {row.stockSource === 'used_return' ? t('من تيستر مفتوح', 'From opened-tester stock') : t('من المخزون الرئيسي', 'From main stock')}
                            </div>
@@ -677,16 +694,23 @@ export default function AdminGiftingIssues() {
                       </TableCell>
                       <TableCell>
                         <div className="text-sm font-medium">{row.recipientName || '—'}</div>
-                        {(row.occasion || row.reason) && (
-                          <div className="text-[11px] text-muted-foreground mt-0.5 truncate max-w-[180px]">
-                            {row.reason || row.occasion}
-                          </div>
-                        )}
+                        <div className="mt-0.5 max-w-[180px] space-y-0.5 text-[11px] text-muted-foreground">
+                          {row.reason && <div className="truncate"><span className="font-medium">{t('السبب:', 'Reason:')}</span> {row.reason}</div>}
+                          {row.comment && <div className="truncate"><span className="font-medium">{t('ملاحظة:', 'Note:')}</span> {row.comment}</div>}
+                          {row.occasion && <div className="truncate"><span className="font-medium">{t('المناسبة:', 'Occasion:')}</span> {row.occasion}</div>}
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap">{row.city || '—'}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">{row.country || '—'}</TableCell>
                       <TableCell className="text-center font-mono">
-                         {formatInteger(row.quantity, lang)}
+                         <div>{formatInteger(row.quantity, lang)}</div>
+                         {(row.category === 'B2B_EVALUATION' || row.category === 'INFLUENCERS') && (
+                           <div className="mt-1 text-[10px] text-muted-foreground whitespace-nowrap">
+                             {t('مسترجع', 'Returned')}: {formatInteger(row.returnedQuantity, lang)}/{formatInteger(row.quantity, lang)} · {row.returnCondition
+                               ? row.returnCondition === 'new' ? t('جديد', 'New') : row.returnCondition === 'used' ? t('مفتوح', 'Opened') : t('جديد ومفتوح', 'New and opened')
+                               : t('غير مسترجع', 'Not returned')}
+                           </div>
+                         )}
                       </TableCell>
                       <TableCell className="text-right rtl:text-left font-mono font-medium">
                          <Money value={row.totalCost} lang={lang} />
@@ -696,10 +720,10 @@ export default function AdminGiftingIssues() {
                            <DropdownMenu>
                              <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')} onClick={(event) => event.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-                               <DropdownMenuItem onClick={() => openEdit(row)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
-                                {row.category === 'B2B_EVALUATION' && row.returnedQuantity < row.quantity && <DropdownMenuItem onClick={() => openReturn(row)}><RotateCcw className="h-4 w-4 mr-2" />{t('استرجاع', 'Return')}</DropdownMenuItem>}
+                               <DropdownMenuItem disabled={row.returnedQuantity > 0} onClick={() => openEdit(row)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                                {(row.category === 'B2B_EVALUATION' || row.category === 'INFLUENCERS') && row.returnedQuantity < row.quantity && <DropdownMenuItem onClick={() => openReturn(row)}><RotateCcw className="h-4 w-4 mr-2" />{t('استرجاع', 'Return')}</DropdownMenuItem>}
                                <DropdownMenuSeparator />
-                               <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending} onClick={() => removeMovement(row)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
+                               <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending || row.returnedQuantity > 0} onClick={() => removeMovement(row)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
                              </DropdownMenuContent>
                            </DropdownMenu>
                          </div>
@@ -713,33 +737,24 @@ export default function AdminGiftingIssues() {
         </CardContent>
       </Card>
 
-      <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="sm:max-w-[450px]">
+      <Dialog open={selected !== null} onOpenChange={(open) => {
+        if (!open) {
+          setSelected(null);
+          setEditing(null);
+        }
+      }}>
+        <DialogContent className={editing ? 'sm:max-w-[560px] max-h-[90vh] overflow-y-auto' : 'sm:max-w-[450px]'}>
           <DialogHeader>
-            <DialogTitle className="text-xl">{t('تفاصيل العملية', 'Movement details')}</DialogTitle>
+            <DialogTitle className="text-xl">{editing ? t('تعديل بيانات الحركة', 'Edit movement details') : t('تفاصيل العملية', 'Movement details')}</DialogTitle>
           </DialogHeader>
-          {detail.data ? (
-            <Detail row={detail.data} lang={lang} />
-          ) : (
-            <div className="h-40 flex items-center justify-center">
-              <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-primary"></div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="sm:max-w-[560px]">
-          <DialogHeader>
-            <DialogTitle>{t('تعديل بيانات الحركة', 'Edit movement details')}</DialogTitle>
-          </DialogHeader>
+          {editing ? (
           <form onSubmit={saveEdit} className="grid gap-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>{t('التصنيف', 'Category')}</Label>
-                <Select value={editForm.category} disabled={editing?.category === 'B2B_EVALUATION'} onValueChange={(value) => setEditForm((current) => ({ ...current, category: value as GiftingIssueCategory }))}>
+                <Select value={editForm.category} onValueChange={(value) => setEditForm((current) => ({ ...current, category: value as GiftingIssueCategory }))}>
                   <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>{Object.entries(labels).filter(([value]) => value !== 'B2B_EVALUATION' || editing?.category === 'B2B_EVALUATION').map(([value, label]) => <SelectItem key={value} value={value}>{lang === 'ar' ? label.ar : label.en}</SelectItem>)}</SelectContent>
+                  <SelectContent>{Object.entries(labels).map(([value, label]) => <SelectItem key={value} value={value}>{lang === 'ar' ? label.ar : label.en}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
@@ -769,7 +784,11 @@ export default function AdminGiftingIssues() {
             </div>
             <div>
               <Label>{t('السبب', 'Reason')}</Label>
-              <Input className="mt-1.5" value={editForm.reason} onChange={(e) => setEditForm((current) => ({ ...current, reason: e.target.value }))} />
+              <Input className="mt-1.5" maxLength={500} value={editForm.reason} onChange={(e) => setEditForm((current) => ({ ...current, reason: e.target.value }))} />
+            </div>
+            <div>
+              <Label>{t('ملاحظة / تعليق', 'Note / comment')}</Label>
+              <Input className="mt-1.5" maxLength={500} value={editForm.comment} onChange={(e) => setEditForm((current) => ({ ...current, comment: e.target.value }))} />
             </div>
             <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
               {t('عند تعديل الكمية، يُحدّث المخزون والتكلفة والقيد المحاسبي تلقائيًا. لا يمكن تغيير المنتج من هذه النافذة.', 'Changing the quantity automatically updates inventory, cost, and accounting. The product cannot be changed here.')}
@@ -779,13 +798,27 @@ export default function AdminGiftingIssues() {
               <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ التعديل', 'Save changes')}</Button>
             </div>
           </form>
+          ) : detail.data ? (
+            <>
+              <Detail row={detail.data} lang={lang} />
+              <div className="flex justify-end">
+                <Button type="button" variant="outline" disabled={detail.data.returnedQuantity > 0} onClick={() => openEdit(detail.data!)}>
+                  <Pencil className="h-4 w-4 mr-2" />{t('تعديل البيانات', 'Edit details')}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="h-40 flex items-center justify-center">
+              <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-primary"></div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
       <Dialog open={returning !== null} onOpenChange={(open) => !open && setReturning(null)}>
         <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
-            <DialogTitle>{t('استرجاع تقييم شركة', 'Return B2B evaluation stock')}</DialogTitle>
+            <DialogTitle>{t('استرجاع حركة قابلة للاسترجاع', 'Return movement')}</DialogTitle>
           </DialogHeader>
           {returning && (
             <form onSubmit={submitReturn} className="grid gap-4">
@@ -902,7 +935,7 @@ function Detail({ row, lang }: { row: GiftingIssue; lang: 'ar' | 'en' }) {
       <div>
         <div className="font-semibold text-foreground text-[15px]">{row.descriptionSnapshot}</div>
         <div className="text-xs text-muted-foreground mt-1 font-mono">{row.barcode}</div>
-        {(row.category === 'B2B_EVALUATION' || row.category === 'TESTER') && (
+        {(row.category === 'B2B_EVALUATION' || row.category === 'TESTER' || row.category === 'INFLUENCERS') && (
           <div className="mt-1 text-xs text-muted-foreground">
             {lang === 'ar' ? 'مصدر الصرف' : 'Issued from'}: {row.stockSource === 'used_return'
               ? (lang === 'ar' ? 'مخزون تيستر مفتوح' : 'Opened-tester stock')
@@ -920,7 +953,7 @@ function Detail({ row, lang }: { row: GiftingIssue; lang: 'ar' | 'en' }) {
         <div className="rounded-xl bg-muted/40 border border-border/60 p-4 space-y-3 mt-4">
           {row.occasion && <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{lang === 'ar' ? 'المناسبة' : 'Occasion'}</span><div className="mt-1 text-sm">{row.occasion}</div></div>}
           {row.reason && <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{lang === 'ar' ? 'السبب' : 'Reason'}</span><div className="mt-1 text-sm">{row.reason}</div></div>}
-          {row.comment && <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{lang === 'ar' ? 'التعليق' : 'Comment'}</span><div className="mt-1 text-sm">{row.comment}</div></div>}
+          {row.comment && <div><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{lang === 'ar' ? 'ملاحظة / تعليق' : 'Note / comment'}</span><div className="mt-1 text-sm">{row.comment}</div></div>}
         </div>
       )}
 
@@ -934,10 +967,15 @@ function Detail({ row, lang }: { row: GiftingIssue; lang: 'ar' | 'en' }) {
            <div className="text-xl font-bold font-mono"><Money value={row.totalCost} lang={lang} /></div>
         </div>
       </div>
-      {row.category === 'B2B_EVALUATION' && (
+      {(row.category === 'B2B_EVALUATION' || row.category === 'INFLUENCERS') && (
         <div className="rounded-lg border bg-muted/20 p-3 text-xs">
-          {lang === 'ar' ? 'المسترجع' : 'Returned'}: {formatInteger(row.returnedQuantity, lang)} / {formatInteger(row.quantity, lang)}
+          <div className="font-medium">{labels[row.category]?.[lang] ?? row.category} · {lang === 'ar' ? 'حالة الاسترجاع' : 'Return status'}</div>
+          <div className="mt-1">{lang === 'ar' ? 'المسترجع' : 'Returned'}: {formatInteger(row.returnedQuantity, lang)} / {formatInteger(row.quantity, lang)}
            {row.returnCondition ? ` · ${row.returnCondition === 'new' ? (lang === 'ar' ? 'جديد' : 'New') : row.returnCondition === 'used' ? (lang === 'ar' ? 'مفتوح' : 'Opened') : (lang === 'ar' ? 'جديد ومفتوح' : 'New and opened')}` : ''}
+          </div>
+          {row.returnedQuantity < row.quantity && <div className="mt-1 text-muted-foreground">
+            {lang === 'ar' ? 'المتبقي للاسترجاع' : 'Still returnable'}: {formatInteger(row.quantity - row.returnedQuantity, lang)}
+          </div>}
         </div>
       )}
 
