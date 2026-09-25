@@ -38,6 +38,7 @@ import {
 import { format } from 'date-fns';
 import { hasPermission } from '@/lib/permissions';
 import { CreateDistributorInvoiceDialog } from '@/components/admin/create-distributor-invoice-dialog';
+import { CreateHistoricalInvoiceDialog } from '@/components/admin/create-historical-invoice-dialog';
 import { CreateExhibitionInvoiceDialog } from '@/components/admin/create-exhibition-invoice-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatRiyadhBusinessDate } from '@/lib/riyadh-business-date';
@@ -115,7 +116,8 @@ function InvoiceTemplate({
             <img src={`${import.meta.env.BASE_URL}site-assets/invoice-logo-black.png`} alt="Musk Ellolo" data-testid="invoice-logo-black" className="invoice-logo-black h-auto w-48 sm:w-56 object-contain" />
             <img src={`${import.meta.env.BASE_URL}site-assets/invoice-logo-white.png`} alt="Musk Ellolo" data-testid="invoice-logo-white" className="invoice-logo-white h-auto w-48 sm:w-56 object-contain" />
           </div>
-          <h1 data-testid="invoice-title" className="mt-2 text-xl font-semibold tracking-wide text-[#292728]">{t('فاتورة ضريبية', 'Tax Invoice')}</h1>
+          <h1 data-testid="invoice-title" className="mt-2 text-xl font-semibold tracking-wide text-[#292728]">{invoice.historical === 'yes' ? t('نسخة فاتورة سابقة', 'Prior Invoice Copy') : t('فاتورة ضريبية', 'Tax Invoice')}</h1>
+          {invoice.historical === 'yes' && <p className="text-xs text-stone-600">{t('أصل خارجي، ليس إصداراً ضريبياً جديداً أو اعتماد ZATCA', 'External original; not a new tax issuance or ZATCA certification')}</p>}
         </div>
         <div className="invoice-heading-seller min-w-0">
           <div data-testid="invoice-seller" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-w-0">
@@ -166,15 +168,21 @@ function InvoiceTemplate({
 
       {/* Totals & QR */}
       <div data-testid="invoice-summary" className="invoice-summary flex flex-col sm:flex-row justify-between sm:items-end gap-6">
-         <div data-testid="invoice-qr-surface" className="invoice-qr-surface w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
+         {invoice.historical !== 'yes' && <div data-testid="invoice-qr-surface" className="invoice-qr-surface w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
           {qrUrl ? (
             <img src={qrUrl} alt="ZATCA QR" data-testid="invoice-qr" onLoad={onQrLoad} className="w-full h-full object-contain" />
           ) : (
             <div className="animate-pulse w-full h-full bg-gray-100 rounded-lg"></div>
           )}
-        </div>
+        </div>}
         <div className="w-full sm:w-80 space-y-4">
-          {usesContractTerms ? (
+          {invoice.historical === 'yes' ? (
+            <>
+              <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('صافي المبلغ الأصلي', 'Original net')}</span><span><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span></div>
+              <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('الخصم الأصلي (ضمن الصافي)', 'Original discount (already reflected)')}</span><span><Money value={invoice.discountAmount} lang={lang} fractionDigits={2} /></span></div>
+              <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('الضريبة الأصلية', 'Original VAT')}</span><span><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span></div>
+            </>
+          ) : usesContractTerms ? (
             <>
               <div className="flex justify-between text-gray-600 px-2 text-sm">
                 <span>{internationalDistributor ? t('الإجمالي قبل الخصم', 'Gross before discount') : t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</span>
@@ -272,7 +280,7 @@ function InvoicePreviewDialog({
     invoice?.id as number,
     { 
       query: { 
-        enabled: !!invoice, 
+        enabled: !!invoice && invoice.historical !== 'yes',
         queryKey: invoice ? getAdminGetInvoiceQrQueryKey(invoice.id) : ['invoice-qr-null']
       }
     }
@@ -297,11 +305,11 @@ function InvoicePreviewDialog({
   }, [qrBlob]);
 
   useEffect(() => {
-    if (!open || !printOnReady || !qrReady || hasPrinted.current) return;
+    if (!open || !printOnReady || (invoice?.historical !== 'yes' && !qrReady) || hasPrinted.current) return;
     hasPrinted.current = true;
     const timer = window.setTimeout(() => window.print(), 0);
     return () => window.clearTimeout(timer);
-  }, [open, printOnReady, qrReady]);
+  }, [open, printOnReady, qrReady, invoice?.historical]);
 
   const downloadPdf = async () => {
     if (!invoice || downloading) return;
@@ -734,7 +742,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
             ? t('عرض فواتير الطلبات المدفوعة عبر الموقع الإلكتروني فقط', 'Online order invoices only')
             : t('إدارة فواتير الشركات والموزعين فقط', 'Manage distributor invoices only')}</p>
         </div>
-        {channel === 'companies' && hasPermission(currentUser, 'invoices', 'edit') && <CreateDistributorInvoiceDialog />}
+        {channel === 'companies' && hasPermission(currentUser, 'invoices', 'edit') && <div className="flex flex-wrap gap-2"><CreateHistoricalInvoiceDialog /><CreateDistributorInvoiceDialog /></div>}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -798,7 +806,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
             ) : (
               invoices?.map((invoice) => (
                 <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`} className="group hover:bg-muted/10 transition-colors">
-                  <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                  <TableCell className="font-medium">{invoice.invoiceNumber}{invoice.historical === 'yes' && <Badge variant="outline" className="ms-2">{t('فاتورة سابقة', 'Prior invoice')}</Badge>}</TableCell>
                   <TableCell>{invoice.orderNumber ?? <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell>{channel === 'online' ? (invoice.buyerName ?? '-') : (
                     <div>

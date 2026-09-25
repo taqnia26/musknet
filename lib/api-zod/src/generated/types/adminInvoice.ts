@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminInvoiceHistorical } from './adminInvoiceHistorical';
 import type { AdminInvoiceItem } from './adminInvoiceItem';
 import type { AdminInvoicePaymentStatus } from './adminInvoicePaymentStatus';
 import type { AdminInvoicePaymentTerm } from './adminInvoicePaymentTerm';
@@ -13,6 +14,7 @@ import type { ReceivablePayment } from './receivablePayment';
 
 export interface AdminInvoice {
   id: number;
+  historical: AdminInvoiceHistorical;
   /** @nullable */
   orderId: number | null;
   /** @nullable */

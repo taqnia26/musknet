@@ -74,6 +74,7 @@ import {
 } from "../lib/admin-auth";
 import { hashOwnerPassword } from "../lib/owner-auth";
 import { createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
+import { createHistoricalInvoice, reconcileHistoricalInvoice } from "../lib/historical-company-invoices";
 import {
   AccountingConflictError,
   AccountingNotFoundError,
@@ -1910,6 +1911,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
   const search = query.search?.trim();
   const rows = await db.select({
     id: invoicesTable.id,
+    historical: invoicesTable.historical,
     orderId: invoicesTable.orderId,
     orderNumber: ordersTable.orderNumber,
     distributorId: invoicesTable.distributorId,
@@ -1963,7 +1965,9 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
         ilike(exhibitionsTable.name, `%${search}%`),
       ) : undefined,
     ))
-    .orderBy(desc(invoicesTable.sequenceNumber));
+    .orderBy(...(query.channel === "companies"
+      ? [desc(invoicesTable.issueDatetime), desc(invoicesTable.sequenceNumber)]
+      : [desc(invoicesTable.sequenceNumber)]));
   const itemRows = rows.length
     ? await db.select().from(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, rows.map((row) => row.id))).orderBy(invoiceItemsTable.id)
     : [];
@@ -1991,10 +1995,39 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
   res.json(Api.AdminListInvoicesResponse.parse(enriched));
 }));
 
+router.post("/admin/invoices/historical/reconcile", permit("invoices", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminReconcileHistoricalInvoiceBody, req.body, res); if (!body) return;
+  try {
+    res.json(Api.AdminReconcileHistoricalInvoiceResponse.parse(await reconcileHistoricalInvoice({
+      ...body, issueDate: isoDate(body.issueDate), dueDate: isoDate(body.dueDate),
+      payments: body.payments.map(p => ({ ...p, paymentDate: isoDate(p.paymentDate) })),
+    })));
+  } catch (error) {
+    if (error instanceof DistributorInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
+    if (error instanceof DistributorInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
+    throw error;
+  }
+}));
+router.post("/admin/invoices/historical", permit("invoices", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateHistoricalInvoiceBody, req.body, res); if (!body) return;
+  try {
+    const invoice = await createHistoricalInvoice({
+      ...body, issueDate: isoDate(body.issueDate), dueDate: isoDate(body.dueDate),
+      payments: body.payments.map(p => ({ ...p, paymentDate: isoDate(p.paymentDate) })),
+    }, res.locals.admin.id);
+    res.status(201).json(Api.AdminCreateHistoricalInvoiceResponse.parse({ id: invoice.id, invoiceNumber: invoice.invoiceNumber }));
+  } catch (error) {
+    if (error instanceof DistributorInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
+    if (error instanceof DistributorInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
+    throw error;
+  }
+}));
+
 router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), route(async (req, res) => {
   const params = parse(Api.AdminDownloadInvoicePdfParams, req.params, res); if (!params) return;
   const [invoice] = await db.select({
     id: invoicesTable.id,
+    historical: invoicesTable.historical,
     invoiceNumber: invoicesTable.invoiceNumber,
     orderNumber: ordersTable.orderNumber,
     sellerName: invoicesTable.sellerName,
@@ -2140,7 +2173,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
   const params = parse(Api.AdminSendInvoiceEmailParams, req.params, res);
   const body = parse(Api.AdminSendInvoiceEmailBody, req.body, res); if (!params || !body) return;
   const [invoice] = await db.select({
-    id: invoicesTable.id, invoiceNumber: invoicesTable.invoiceNumber, orderNumber: ordersTable.orderNumber,
+    id: invoicesTable.id, historical: invoicesTable.historical, invoiceNumber: invoicesTable.invoiceNumber, orderNumber: ordersTable.orderNumber,
     sellerName: invoicesTable.sellerName, sellerVatNumber: invoicesTable.sellerVatNumber,
      taxTreatment: invoicesTable.taxTreatment, vatRate: invoicesTable.vatRate,
      contractDiscountPercent: invoicesTable.contractDiscountPercent,
@@ -2182,9 +2215,10 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
 
 router.get("/admin/invoices/:id/qr", permit("invoices", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetInvoiceQrParams, req.params, res); if (!params) return;
-  const [invoice] = await db.select({ qrCodeBase64: invoicesTable.qrCodeData })
+  const [invoice] = await db.select({ qrCodeBase64: invoicesTable.qrCodeData, historical: invoicesTable.historical })
     .from(invoicesTable).where(eq(invoicesTable.id, params.id)).limit(1);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
+  if (invoice.historical === "yes") { res.status(404).json({ error: "External original has no ZATCA QR" }); return; }
   const png = await QRCode.toBuffer(invoice.qrCodeBase64, {
     type: "png",
     errorCorrectionLevel: "M",

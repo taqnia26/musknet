@@ -1862,6 +1862,7 @@ export interface AdminOrderInput {
   adminNotes?: string | null;
 }
 
+export type AdminInvoiceHistorical = typeof AdminInvoiceHistorical[keyof typeof AdminInvoiceHistorical];
 /**
  * @nullable
  */
@@ -1916,7 +1917,8 @@ export interface ReceivablePayment {
 
 export interface AdminInvoiceItem {
   id: number;
-  productId: number;
+  /** @nullable */
+  productId: number | null;
   productName: string;
   /** @nullable */
   productNameEn: string | null;
@@ -1931,6 +1933,7 @@ export interface AdminInvoiceItem {
 
 export interface AdminInvoice {
   id: number;
+  historical: AdminInvoiceHistorical;
   /** @nullable */
   orderId: number | null;
   /** @nullable */
@@ -1990,6 +1993,10 @@ export interface AdminInvoice {
   createdAt: string;
 }
 
+export interface HistoricalInvoiceReview {
+  conflicts: string[];
+  warnings: string[];
+}
 export interface DistributorInvoiceLineInput {
   /** @minimum 1 */
   productId: number;
@@ -5141,3 +5148,108 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
+
+export type HistoricalCompanyPaymentInputPaymentMethod = typeof HistoricalCompanyPaymentInputPaymentMethod[keyof typeof HistoricalCompanyPaymentInputPaymentMethod];
+
+export const HistoricalCompanyPaymentInputPaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+} as const;
+
+export type HistoricalCompanyInvoiceInputTaxTreatment = typeof HistoricalCompanyInvoiceInputTaxTreatment[keyof typeof HistoricalCompanyInvoiceInputTaxTreatment];
+
+export const HistoricalCompanyInvoiceInputTaxTreatment = {
+  domestic: 'domestic',
+  international: 'international',
+} as const;
+
+export interface HistoricalCompanyLineInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  productName: string;
+  /** @nullable */
+  sku?: string | null;
+  /** @minimum 1 */
+  quantity: number;
+  /** @minimum 0 */
+  unitPrice: number;
+  /** @minimum 0 */
+  subtotal: number;
+  /** @minimum 0 */
+  vatAmount: number;
+  /** @minimum 0 */
+  totalAmount: number;
+}
+
+export interface HistoricalCompanyPaymentInput {
+  /**
+     * @minLength 16
+     * @maxLength 100
+     */
+  paymentKey: string;
+  paymentDate: string;
+  /** @exclusiveMinimum 0 */
+  amount: number;
+  paymentMethod: HistoricalCompanyPaymentInputPaymentMethod;
+  /**
+     * @maxLength 200
+     * @nullable
+     */
+  reference?: string | null;
+}
+
+export interface HistoricalCompanyInvoiceInput {
+  /**
+     * @minLength 16
+     * @maxLength 100
+     */
+  creationKey: string;
+  /** @minimum 1 */
+  distributorId: number;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  invoiceNumber: string;
+  issueDate: string;
+  dueDate: string;
+  /** @minLength 1 */
+  buyerName: string;
+  /** @nullable */
+  buyerTaxNumber?: string | null;
+  /** @nullable */
+  buyerAddress?: string | null;
+  /** @nullable */
+  buyerCommercialRegistrationNumber?: string | null;
+  /** @minLength 1 */
+  sellerName: string;
+  /** @minLength 1 */
+  sellerVatNumber: string;
+  taxTreatment: HistoricalCompanyInvoiceInputTaxTreatment;
+  /** @minimum 0 */
+  subtotal: number;
+  /** @minimum 0 */
+  discountAmount: number;
+  /** @minimum 0 */
+  vatAmount: number;
+  /** @exclusiveMinimum 0 */
+  totalAmount: number;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  items: HistoricalCompanyLineInput[];
+  payments: HistoricalCompanyPaymentInput[];
+}
+
+export const AdminInvoiceHistorical = {
+  yes: 'yes',
+  no: 'no',
+} as const;
+
+export interface HistoricalInvoiceCreated {
+  id: number;
+  invoiceNumber: string;
+}

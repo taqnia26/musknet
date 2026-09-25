@@ -1,0 +1,1 @@
+ALTER TABLE "tax_invoices" ADD COLUMN "historical_creation_fingerprint" text;

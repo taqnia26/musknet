@@ -971,6 +971,30 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Distributor or product is unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/historical/reconcile:
+    post:
+      operationId: adminReconcileHistoricalInvoice
+      summary: Read-only reconciliation with existing invoices and historical journals
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/HistoricalCompanyInvoiceInput" } } } }
+      responses:
+        "200": { description: Reconciliation findings, content: { application/json: { schema: { $ref: "#/components/schemas/HistoricalInvoiceReview" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/invoices/historical:
+    post:
+      operationId: adminCreateHistoricalInvoice
+      summary: Record an externally issued company invoice without issuing a new invoice or affecting inventory
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/HistoricalCompanyInvoiceInput" } } } }
+      responses:
+        "201": { description: Historical invoice, content: { application/json: { schema: { $ref: "#/components/schemas/HistoricalInvoiceCreated" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Reconciliation requires manual review, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/invoices/exhibitions:
     post:
       operationId: adminCreateExhibitionInvoice
@@ -3765,9 +3789,10 @@ components:
         adminNotes: { type: [string, "null"] }
     AdminInvoice:
       type: object
-      required: [id, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
+      required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
       properties:
         id: { type: number }
+        historical: { type: string, enum: [yes, no] }
         orderId: { type: [number, "null"] }
         orderNumber: { type: [string, "null"] }
         distributorId: { type: [number, "null"] }
@@ -3810,7 +3835,7 @@ components:
       required: [id, productId, productName, productNameEn, sku, quantity, unitPrice, subtotal, vatAmount, totalAmount]
       properties:
         id: { type: number }
-        productId: { type: number }
+        productId: { type: [number, "null"] }
         productName: { type: string }
         productNameEn: { type: [string, "null"] }
         sku: { type: [string, "null"] }
@@ -3819,6 +3844,60 @@ components:
         subtotal: { type: number }
         vatAmount: { type: number }
         totalAmount: { type: number }
+    HistoricalInvoiceReview:
+      type: object
+      required: [conflicts, warnings]
+      properties:
+        conflicts: { type: array, items: { type: string } }
+        warnings: { type: array, items: { type: string } }
+    HistoricalInvoiceCreated:
+      type: object
+      required: [id, invoiceNumber]
+      properties:
+        id: { type: number }
+        invoiceNumber: { type: string }
+    HistoricalCompanyLineInput:
+      type: object
+      required: [productName, quantity, unitPrice, subtotal, vatAmount, totalAmount]
+      properties:
+        productName: { type: string, minLength: 1, maxLength: 200 }
+        sku: { type: [string, "null"] }
+        quantity: { type: number, minimum: 1, multipleOf: 1 }
+        unitPrice: { type: number, minimum: 0 }
+        subtotal: { type: number, minimum: 0 }
+        vatAmount: { type: number, minimum: 0 }
+        totalAmount: { type: number, minimum: 0 }
+    HistoricalCompanyPaymentInput:
+      type: object
+      required: [paymentKey, paymentDate, amount, paymentMethod]
+      properties:
+        paymentKey: { type: string, minLength: 16, maxLength: 100 }
+        paymentDate: { type: string, format: date }
+        amount: { type: number, exclusiveMinimum: 0 }
+        paymentMethod: { type: string, enum: [cash, bank_transfer] }
+        reference: { type: [string, "null"], maxLength: 200 }
+    HistoricalCompanyInvoiceInput:
+      type: object
+      required: [creationKey, distributorId, invoiceNumber, issueDate, dueDate, buyerName, sellerName, sellerVatNumber, taxTreatment, subtotal, discountAmount, vatAmount, totalAmount, items, payments]
+      properties:
+        creationKey: { type: string, minLength: 16, maxLength: 100 }
+        distributorId: { type: number, minimum: 1, multipleOf: 1 }
+        invoiceNumber: { type: string, minLength: 1, maxLength: 100 }
+        issueDate: { type: string, format: date }
+        dueDate: { type: string, format: date }
+        buyerName: { type: string, minLength: 1 }
+        buyerTaxNumber: { type: [string, "null"] }
+        buyerAddress: { type: [string, "null"] }
+        buyerCommercialRegistrationNumber: { type: [string, "null"] }
+        sellerName: { type: string, minLength: 1 }
+        sellerVatNumber: { type: string, minLength: 1 }
+        taxTreatment: { type: string, enum: [domestic, international] }
+        subtotal: { type: number, minimum: 0 }
+        discountAmount: { type: number, minimum: 0 }
+        vatAmount: { type: number, minimum: 0 }
+        totalAmount: { type: number, exclusiveMinimum: 0 }
+        items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/HistoricalCompanyLineInput" } }
+        payments: { type: array, items: { $ref: "#/components/schemas/HistoricalCompanyPaymentInput" } }
     DistributorInvoiceLineInput:
       type: object
       required: [productId, quantity, unitPrice]

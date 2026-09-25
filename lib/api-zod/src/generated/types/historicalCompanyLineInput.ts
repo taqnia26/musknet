@@ -6,18 +6,22 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AdminInvoiceItem {
-  id: number;
-  /** @nullable */
-  productId: number | null;
+export interface HistoricalCompanyLineInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
   productName: string;
   /** @nullable */
-  productNameEn: string | null;
-  /** @nullable */
-  sku: string | null;
+  sku?: string | null;
+  /** @minimum 1 */
   quantity: number;
+  /** @minimum 0 */
   unitPrice: number;
+  /** @minimum 0 */
   subtotal: number;
+  /** @minimum 0 */
   vatAmount: number;
+  /** @minimum 0 */
   totalAmount: number;
 }

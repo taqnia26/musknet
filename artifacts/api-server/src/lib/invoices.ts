@@ -5,8 +5,24 @@ import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 import { adjustOperationalBalances } from "./operations";
 import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType, type TaxTreatment } from "./vat";
 import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, saudiCalendarDate } from "./invoice-dates";
+import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
+
+export async function nextLiveInvoiceNumber(tx: any, prefix: "INV" | "LC") {
+  // Caller holds INVOICE_NUMBER_LOCK. Historical external references occupy the
+  // same namespace, but never consume the live sequence.
+  const [{ next }] = await tx.select({ next: sql<number>`greatest(coalesce(max(${invoicesTable.sequenceNumber}), 0), 0) + 1` }).from(invoicesTable);
+  const sequenceNumber = Number(next);
+  let candidate = sequenceNumber;
+  while (true) {
+    const invoiceNumber = `${prefix}-${String(candidate).padStart(6, "0")}`;
+    const [reserved] = await tx.select({ id: invoicesTable.id }).from(invoicesTable)
+      .where(sql`lower(${invoicesTable.invoiceNumber}) = lower(${invoiceNumber})`).limit(1);
+    if (!reserved) return { sequenceNumber: candidate, invoiceNumber };
+    candidate += 1;
+  }
+}
 const DISTRIBUTOR_CONTRACT_LOCK_NAMESPACE = 752_101;
 
 const money = (value: number) => value.toFixed(2);
@@ -163,9 +179,7 @@ export async function createExhibitionInvoice(
     const configuration = zatcaSellerConfiguration(environment);
     const issuedAt = new Date(`${input.saleDate}T12:00:00.000Z`);
     await tx.execute(sql`select pg_advisory_xact_lock(${INVOICE_NUMBER_LOCK})`);
-    const [{ next }] = await tx.select({ next: sql<number>`coalesce(max(${invoicesTable.sequenceNumber}), 0) + 1` }).from(invoicesTable);
-    const sequenceNumber = Number(next);
-    const invoiceNumber = `INV-${String(sequenceNumber).padStart(6, "0")}`;
+    const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "INV");
     const [invoice] = await tx.insert(invoicesTable).values({
       exhibitionId: exhibition.id, creationKey: input.creationKey, sequenceNumber, invoiceNumber,
       sellerName: configuration.sellerName, sellerVatNumber: configuration.vatRegistrationNumber, issueDatetime: issuedAt,
@@ -369,11 +383,7 @@ export async function createDistributorInvoice(
     }
     const configuration = zatcaSellerConfiguration(environment);
     const issueDatetime = new Date();
-    const [{ next }] = await tx.select({
-      next: sql<number>`coalesce(max(${invoicesTable.sequenceNumber}), 0) + 1`,
-    }).from(invoicesTable);
-    const sequenceNumber = Number(next);
-    const invoiceNumber = `LC-${String(sequenceNumber).padStart(6, "0")}`;
+    const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "LC");
     const qrCodeData = zatcaPhaseOneBase64({
       ...configuration,
       timestamp: issueDatetime.toISOString(),
@@ -494,12 +504,27 @@ export async function createReceivablePayment(
   return db.transaction(async (tx) => {
     const [previous] = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.paymentKey, input.paymentKey)).limit(1);
     if (previous) {
-      if (previous.invoiceId !== invoiceId) throw new DistributorInvoiceConflictError("Payment key is already used");
+      if (previous.invoiceId !== invoiceId || previous.paymentDate !== dateOnly(input.paymentDate) ||
+        cents(previous.amount) !== cents(input.amount) || previous.paymentMethod !== input.paymentMethod ||
+        previous.reference !== (input.reference?.trim() || null)) throw new DistributorInvoiceConflictError("Payment key is already used with different details");
       return previous;
     }
     await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${invoiceId} for update`);
     const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
     if (!invoice || invoice.distributorId === null) throw new ReceivablePaymentNotFoundError("Company invoice not found");
+    const [afterLock] = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.paymentKey, input.paymentKey)).limit(1);
+    if (afterLock) {
+      if (afterLock.invoiceId !== invoiceId || afterLock.paymentDate !== dateOnly(input.paymentDate) ||
+        cents(afterLock.amount) !== cents(input.amount) || afterLock.paymentMethod !== input.paymentMethod ||
+        afterLock.reference !== (input.reference?.trim() || null)) throw new DistributorInvoiceConflictError("Payment key is already used with different details");
+      return afterLock;
+    }
+    if (invoice.historical === "yes") {
+      const conflicts = await reconcileHistoricalPayment(invoice.distributorId, {
+        paymentDate: dateOnly(input.paymentDate), amount: input.amount, reference: input.reference,
+      }, tx);
+      if (conflicts.length) throw new DistributorInvoiceConflictError(`Collection reconciliation required: ${conflicts.join("; ")}`);
+    }
     const payments = await tx.select({ amount: receivablePaymentsTable.amount })
       .from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoiceId));
     const outstandingCents = cents(invoice.totalAmount) - payments.reduce((sum, payment) => sum + cents(payment.amount), 0);
@@ -598,11 +623,7 @@ export async function updateOrderAndIssueInvoice(
         if (!afterLock) {
           const configuration = zatcaSellerConfiguration(environment);
           const issuedAt = new Date();
-          const [{ next }] = await tx.select({
-            next: sql<number>`coalesce(max(${invoicesTable.sequenceNumber}), 0) + 1`,
-          }).from(invoicesTable);
-          const sequenceNumber = Number(next);
-          const invoiceNumber = `INV-${String(sequenceNumber).padStart(6, "0")}`;
+          const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "INV");
           const total = values.total ?? order.total;
           const vatTotal = values.tax ?? order.tax;
           const orderTaxSnapshot = orderInvoiceTaxSnapshot(order);

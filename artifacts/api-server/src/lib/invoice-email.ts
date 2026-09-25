@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { saudiCalendarDate } from "./invoice-dates";
 
 type InvoiceForEmail = {
+  historical?: string;
   invoiceNumber: string;
   orderNumber: string | null;
   sellerName: string;
@@ -95,7 +96,11 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
   const inclusiveOrderSnapshot = Boolean(invoice.orderNumber) &&
     Math.round(invoice.subtotal * 100) + Math.round(invoice.vatAmount * 100) === Math.round(invoice.totalAmount * 100);
   const totalRows: Array<[string, number]> = [];
-  if (companyContractInvoice) {
+  if (invoice.historical === "yes") {
+    totalRows.push(["Original net (after discount)", invoice.subtotal],
+      ["Original discount (already included)", invoice.discountAmount ?? 0],
+      ["Original VAT", invoice.vatAmount]);
+  } else if (companyContractInvoice) {
     const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     totalRows.push(
       ["Gross before discount (VAT included)", grossBeforeDiscount],
@@ -107,7 +112,7 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
     totalRows.push(["Subtotal", invoice.subtotal], [vatLabel, invoice.vatAmount]);
   }
   if ((invoice.shippingAmount ?? 0) > 0 && !inclusiveOrderSnapshot) totalRows.push(["Shipping", invoice.shippingAmount!]);
-  if (!inclusiveOrderSnapshot && !companyContractInvoice) {
+  if (invoice.historical !== "yes" && !inclusiveOrderSnapshot && !companyContractInvoice) {
     totalRows.push(["Discount", -(invoice.discountAmount ?? 0)]);
   }
   if (invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount) {
@@ -122,7 +127,7 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
 export async function createInvoicePdf(invoice: InvoiceForEmail, language: InvoiceLanguage = "ar") {
   if (!invoiceLogo) throw new Error("Invoice brand logo is missing from the application assets");
   if (!invoiceFooter) throw new Error("Invoice footer is missing from the application assets");
-  const qr = await QRCode.toBuffer(invoice.qrCodeData, { type: "png", errorCorrectionLevel: "M", margin: 2 });
+  const qr = invoice.historical === "yes" ? null : await QRCode.toBuffer(invoice.qrCodeData, { type: "png", errorCorrectionLevel: "M", margin: 2 });
   const document = new PDFDocument({ size: "A4", margin: 42, bufferPages: true, info: { Title: invoice.invoiceNumber } });
   const chunks: Buffer[] = [];
   document.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
@@ -133,7 +138,8 @@ export async function createInvoicePdf(invoice: InvoiceForEmail, language: Invoi
 
   const right = 553;
   document.image(invoiceLogo, 185, 28, { fit: [225, 58], align: "center", valign: "center" });
-  document.fillColor("#292728").font("Helvetica-Bold").fontSize(17).text("TAX INVOICE", 185, 99, { width: 225, align: "center" });
+  document.fillColor("#292728").font("Helvetica-Bold").fontSize(17).text(invoice.historical === "yes" ? "PRIOR INVOICE COPY" : "TAX INVOICE", 160, 99, { width: 275, align: "center" });
+  if (invoice.historical === "yes") document.fontSize(8).text("External original - not newly issued or ZATCA certified", 130, 126, { width: 335, align: "center" });
   document.fillColor("#57534e").fontSize(9).text("FROM", 42, 152);
   document.fillColor("#292728").fontSize(12).text(invoice.sellerName, 42, 173, { width: 244, height: 35 });
   document.fillColor("#78716c").font("Helvetica").fontSize(9).text(`VAT Number: ${invoice.sellerVatNumber}`, 42, 213, { width: 244 });
@@ -181,7 +187,7 @@ export async function createInvoicePdf(invoice: InvoiceForEmail, language: Invoi
   } else {
     y = Math.max(y, 535);
   }
-  document.image(qr, 48, y, { width: 105, height: 105 });
+  if (qr) document.image(qr, 48, y, { width: 105, height: 105 });
   const totalsX = 325;
   totalRows.forEach(([label, value], index) => {
     document.fillColor("#4b5563").font("Helvetica").fontSize(9).text(String(label), totalsX, y + index * 23, { width: 110 });
@@ -215,8 +221,8 @@ export async function sendInvoiceEmail(input: { recipient: string; invoice: Invo
   const body = {
       from,
       to: [input.recipient],
-      subject: `Tax Invoice ${input.invoice.invoiceNumber} - Musk Ellolo`,
-      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>فاتورة ضريبية ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة الضريبية مرفقة بصيغة PDF.</p><p>${vatDescription}: <strong>${money(input.invoice.vatAmount)} ريال سعودي</strong></p><p>الإجمالي: <strong>${money(input.invoice.totalAmount)} ريال سعودي</strong></p><p>الرصيد المستحق: <strong>${money(input.invoice.outstandingAmount)} ريال سعودي</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
+      subject: `${input.invoice.historical === "yes" ? "Prior invoice copy" : "Tax Invoice"} ${input.invoice.invoiceNumber} - Musk Ellolo`,
+      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>${input.invoice.historical === "yes" ? "نسخة فاتورة سابقة (ليست إصداراً ضريبياً جديداً)" : "فاتورة ضريبية"} ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة مرفقة بصيغة PDF.</p><p>${vatDescription}: <strong>${money(input.invoice.vatAmount)} ريال سعودي</strong></p><p>الإجمالي: <strong>${money(input.invoice.totalAmount)} ريال سعودي</strong></p><p>الرصيد المستحق: <strong>${money(input.invoice.outstandingAmount)} ريال سعودي</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
       attachments: [{ filename: `${input.invoice.invoiceNumber}.pdf`, content: input.pdf.toString("base64") }],
   };
   const apiKey = process.env.RESEND_API_KEY?.trim();

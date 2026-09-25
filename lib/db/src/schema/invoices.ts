@@ -24,6 +24,8 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   vatRate: numeric("vat_rate", { precision: 5, scale: 2 }),
   exhibitionId: integer("exhibition_id").references(() => exhibitionsTable.id, { onDelete: "restrict" }),
   creationKey: text("creation_key"),
+  historical: text("historical").notNull().default("no"),
+  historicalCreationFingerprint: text("historical_creation_fingerprint"),
   sequenceNumber: integer("sequence_number").notNull(),
   invoiceNumber: text("invoice_number").notNull(),
   sellerName: text("seller_name").notNull(),
@@ -59,7 +61,7 @@ export type Invoice = typeof taxInvoicesTable.$inferSelect;
 export const invoiceItemsTable = pgTable("tax_invoice_items", {
   id: serial("id").primaryKey(),
   invoiceId: integer("invoice_id").notNull().references(() => taxInvoicesTable.id, { onDelete: "cascade" }),
-  productId: integer("product_id").notNull().references(() => productsTable.id, { onDelete: "restrict" }),
+  productId: integer("product_id").references(() => productsTable.id, { onDelete: "restrict" }),
   productName: text("product_name").notNull(),
   // Null for invoices issued before bilingual snapshots existed.
   productNameEn: text("product_name_en"),

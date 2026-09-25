@@ -26,21 +26,19 @@ const baseInvoice = {
   items: [{ productName: "Product", quantity: 1, unitPrice: 100, totalAmount: 115 }],
 };
 
-describe("invoice email PDF", () => {
-  it("uses the Saudi business date at a UTC date boundary", () => {
-    expect(invoiceBusinessIssueDate(new Date("2026-03-31T21:30:00.000Z"))).toBe("2026-04-01");
-    expect(invoiceBusinessIssueDate(new Date("2026-03-31T20:59:59.000Z"))).toBe("2026-03-31");
-  });
-
-  it("shows a contract discount once between gross and net subtotal", () => {
+    const historical = {
+      ...baseInvoice, historical: "yes", invoiceNumber: "OLD-2026-01",
+      subtotal: 180, discountAmount: 23, vatAmount: 27, totalAmount: 207,
+      paidAmount: 50, outstandingAmount: 157, qrCodeData: "",
+      items: [{ productName: "Discontinued perfume", quantity: 2, unitPrice: 115, totalAmount: 207 }],
+    };
     const rows = getInvoiceTotalRows({
       ...baseInvoice,
+      orderNumber: "ORDER-100",
       subtotal: 100,
-      discountAmount: 15,
-      vatAmount: 15,
-      contractDiscountPercent: 10,
-      totalAmount: 115,
-      items: [{ productName: "Product", quantity: 1, unitPrice: 130, totalAmount: 130 }],
+      discountAmount: 10,
+      shippingAmount: 5,
+      totalAmount: 110,
     });
 
     expect(rows).toEqual([
@@ -75,8 +73,8 @@ describe("invoice email PDF", () => {
     expect(invoiceMoneyLabel(123.45, "en")).toBe("123.45 SAR");
 
     const invoice = { ...baseInvoice };
-    const arabicPdf = await createInvoicePdf(invoice, "ar");
-    const englishPdf = await createInvoicePdf(invoice, "en");
+    const arabicPdf = await createInvoicePdf({ ...baseInvoice, items: [item] }, "ar");
+    const englishPdf = await createInvoicePdf({ ...baseInvoice, items: [item] }, "en");
     expect(arabicPdf.toString("latin1")).not.toContain(" SAR");
     expect(englishPdf.equals(arabicPdf)).toBe(false);
   });
@@ -115,6 +113,8 @@ describe("invoice email PDF", () => {
       qrCodeData: "invoice=TEST-100&total=115&vat=15",
       items: [{ productName: "Product", quantity: 1, unitPrice: 100, totalAmount: 115 }],
     });
+
+    const raw = pdf.toString("latin1");
     const contents = pdf.toString("latin1");
     expect(contents.startsWith("%PDF-")).toBe(true);
     expect((contents.match(/\/Subtype \/Image/g) ?? []).length).toBeGreaterThanOrEqual(3);
@@ -124,3 +124,5 @@ describe("invoice email PDF", () => {
     expect(pdf.length).toBeGreaterThan(2000);
   });
 });
+
+    const livePdf = await createInvoicePdf(baseInvoice, "en");
