@@ -577,7 +577,7 @@ export async function inventoryValueReport() {
   return rows.map((row) => ({ ...row, value: (row.available + row.reserved) * Number(row.averageCost) }));
 }
 
-export async function inventoryReorderSuggestions() {
+export async function inventoryReorderSuggestions(persistAlerts = true, includeCoveredByIncoming = false) {
   const products = await db.select().from(productsTable).where(eq(productsTable.isActive, true));
   const balances = await db.select({
     productId: inventoryBalancesTable.productId,
@@ -592,13 +592,15 @@ export async function inventoryReorderSuggestions() {
     const incoming = rows.reduce((n, b) => n + b.incoming, 0);
     const reorderQuantity = Math.max(0, product.targetStockQuantity - available - incoming);
     return { productId: product.id, sku: product.sku, available, incoming, reorderPoint: product.reorderPoint, reorderQuantity, status: available <= 0 ? "out" : available <= product.reorderPoint ? "low" : "ok" };
-  }).filter((x) => x.reorderQuantity > 0);
-  await db.transaction(async (tx) => {
-    for (const item of suggestions) {
-      await tx.insert(inventoryAlertsTable).values({ productId: item.productId, kind: item.status, reorderQuantity: item.reorderQuantity })
-        .onConflictDoNothing();
-    }
-  });
+  }).filter((x) => x.reorderQuantity > 0 || (includeCoveredByIncoming && x.status !== "ok"));
+  if (persistAlerts) {
+    await db.transaction(async (tx) => {
+      for (const item of suggestions.filter((suggestion) => suggestion.reorderQuantity > 0)) {
+        await tx.insert(inventoryAlertsTable).values({ productId: item.productId, kind: item.status, reorderQuantity: item.reorderQuantity })
+          .onConflictDoNothing();
+      }
+    });
+  }
   return suggestions;
 }
 

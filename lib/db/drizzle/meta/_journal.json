@@ -428,6 +428,13 @@
       "when": 1790335331786,
       "tag": "0062_lush_victor_mancha",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1790355837964,
+      "tag": "0063_sudden_supernaut",
+      "breakpoints": true
     }
   ]
 }

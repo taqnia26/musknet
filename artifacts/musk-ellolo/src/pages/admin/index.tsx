@@ -27,6 +27,9 @@ import AdminStaff from '@/pages/admin/staff';
 import AdminHR from '@/pages/admin/hr';
 import AdminFinance from '@/pages/admin/finance';
 import AdminManufacturing from '@/pages/admin/manufacturing';
+import AdminProductionPlans from '@/pages/admin/production-plans';
+import AdminProductionFunding from '@/pages/admin/production-funding';
+import AdminB2bAgenda from '@/pages/admin/b2b-agenda';
 import AdminExhibitions from '@/pages/admin/exhibitions';
 import AdminInvoices, { AdminOnlineInvoices, AdminExhibitionInvoices } from '@/pages/admin/invoices';
 import AdminChatbot from '@/pages/admin/chatbot';
@@ -102,6 +105,9 @@ export default function AdminRoutes() {
         <Route path="/admin/site-content" component={AdminSiteContent} />
         <Route path="/admin/hr" component={AdminHR} />
         <Route path="/admin/finance" component={AdminFinance} />
+        <Route path="/admin/finance/production-funding" component={AdminProductionFunding} />
+        <Route path="/admin/production/plans" component={AdminProductionPlans} />
+        <Route path="/admin/b2b/agenda" component={AdminB2bAgenda} />
         <Route path="/admin/finance/expenses" component={AdminFinance} />
         <Route path="/admin/finance/purchases" component={AdminPurchases} />
         <Route path="/admin/finance/reports" component={AdminFinance} />

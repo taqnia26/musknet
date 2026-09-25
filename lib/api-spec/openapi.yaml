@@ -1658,6 +1658,39 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       responses: { "204": { description: Disabled } }
+  /admin/b2b/agenda:
+    get:
+      operationId: adminGetB2bAnnualAgenda
+      summary: List builtin and custom agenda occurrences in a Gregorian year
+      description: Builtin national/founding days and Umm al-Qura Ramadan and Eid dates are read-only. Islamic dates are estimates. Custom exhibitions are manually entered per year. Annual Gregorian recurrence maps February 29 to February 28 in non-leap years.
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema: { type: number, multipleOf: 1, minimum: 1900, maximum: 2100 }
+      responses: { "200": { description: Agenda occurrences for the selected year, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AnnualAgendaOccurrence" } } } } } }
+    post:
+      operationId: adminCreateB2bAgendaEvent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AnnualAgendaEventInput" } } } }
+      responses: { "201": { description: Created custom agenda event, content: { application/json: { schema: { $ref: "#/components/schemas/AnnualAgendaOccurrence" } } } } }
+  /admin/b2b/agenda/{id}:
+    patch:
+      operationId: adminUpdateB2bAgendaEvent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AnnualAgendaEventUpdate" } } } }
+      responses: { "200": { description: Updated custom agenda event, content: { application/json: { schema: { $ref: "#/components/schemas/AnnualAgendaOccurrence" } } } } }
+    delete:
+      operationId: adminDeleteB2bAgendaEvent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }]
+      responses: { "204": { description: Custom agenda event permanently deleted } }
   /admin/staff:
     get:
       operationId: adminListStaff
@@ -1993,6 +2026,54 @@ paths:
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ManufacturingBatchInput" } } } }
       responses: { "201": { description: Batch, content: { application/json: { schema: { $ref: "#/components/schemas/ManufacturingBatch" } } } } }
+
+  /admin/production/plans:
+    get:
+      operationId: adminListProductionPlans
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Production plans, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ProductionPlan" } } } } } }
+    post:
+      operationId: adminCreateProductionPlan
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductionPlanInput" } } } }
+      responses: { "201": { description: Production plan, content: { application/json: { schema: { $ref: "#/components/schemas/ProductionPlan" } } } } }
+  /admin/production/catalog-products:
+    get:
+      operationId: adminListProductionCatalogProducts
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Active finished goods available for production planning, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ProductionCatalogProduct" } } } } } }
+  /admin/production/plans/{id}:
+    patch:
+      operationId: adminUpdateProductionPlan
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductionPlanUpdate" } } } }
+      responses: { "200": { description: Updated plan, content: { application/json: { schema: { $ref: "#/components/schemas/ProductionPlan" } } } } }
+  /admin/production/plans/{id}/secure-funds:
+    post:
+      operationId: adminSecureProductionFunds
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ProductionFundingConfirmation" } } } }
+      responses: { "200": { description: Finance confirmed funds available, content: { application/json: { schema: { $ref: "#/components/schemas/ProductionPlan" } } } } }
+  /admin/finance/production-funding:
+    get:
+      operationId: adminListProductionFunding
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Approved plans and funding confirmations, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ProductionPlan" } } } } } }
+  /admin/production/reorder-alerts:
+    get:
+      operationId: adminListProductionReorderAlerts
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses: { "200": { description: Finished goods needing production, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ProductionReorderAlert" } } } } } }
+
   /admin/manufacturing/batches/{id}:
     get:
       operationId: adminGetManufacturingBatch
@@ -5028,6 +5109,39 @@ components:
       properties:
         item: { $ref: "#/components/schemas/AdminInventoryItem" }
         movement: { $ref: "#/components/schemas/AdminInventoryMovement" }
+    AnnualAgendaOccurrence:
+      type: object
+      required: [id, title, type, startDate, endDate, recurrence, note, source, estimated]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        title: { type: string }
+        type: { type: string, enum: [exhibition, occasion, holiday, launch, other] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        recurrence: { type: string, enum: [none, annual_gregorian] }
+        note: { type: [string, "null"] }
+        source: { type: string, enum: [builtin, custom] }
+        estimated: { type: boolean }
+    AnnualAgendaEventInput:
+      type: object
+      required: [title, type, startDate, endDate, recurrence]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 160 }
+        type: { type: string, enum: [exhibition, occasion, holiday, launch, other] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        recurrence: { type: string, enum: [none, annual_gregorian] }
+        note: { type: ["string", "null"], maxLength: 2000 }
+    AnnualAgendaEventUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 160 }
+        type: { type: string, enum: [exhibition, occasion, holiday, launch, other] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        recurrence: { type: string, enum: [none, annual_gregorian] }
+        note: { type: ["string", "null"], maxLength: 2000 }
     AdminDistributor:
       type: object
       required: [id, companyName, contactName, phone, isActive, createdAt, updatedAt]
@@ -5482,11 +5596,12 @@ components:
             month: { type: string, pattern: "^\\d{4}-\\d{2}$" }
     ManufacturingBatch:
       type: object
-      required: [id, batchNumber, productId, quantityProduced, productionDate, expiryDate, costPerUnit, status]
+      required: [id, batchNumber, productId, productionPlanId, quantityProduced, productionDate, expiryDate, costPerUnit, status]
       properties:
         id: { type: number }
         batchNumber: { type: string }
         productId: { type: number }
+        productionPlanId: { type: [number, "null"], multipleOf: 1 }
         quantityProduced: { type: number, multipleOf: 1, minimum: 1 }
         productionDate: { type: string, format: date }
         expiryDate: { type: [string, "null"], format: date }
@@ -5498,6 +5613,7 @@ components:
       properties:
         batchNumber: { type: string, minLength: 1 }
         productId: { type: number }
+        productionPlanId: { type: [number, "null"], multipleOf: 1 }
         quantityProduced: { type: number, multipleOf: 1, minimum: 1 }
         productionDate: { type: string, format: date }
         expiryDate: { type: [string, "null"], format: date }
@@ -5505,6 +5621,91 @@ components:
         status: { type: string, enum: [in_production, completed, quality_check, approved, rejected] }
     ManufacturingBatchUpdate:
       allOf: [{ $ref: "#/components/schemas/ManufacturingBatchInput" }]
+    ProductionPlan:
+      type: object
+      required: [id, productId, productName, category, productType, priority, targetLaunchDate, targetProductionDate, plannedQuantity, manufacturingCountry, factory, estimatedCost, status, notes, approvedAt, securedAt, securedBy, fundingNote, fundingStatus, createdBy, createdAt, updatedAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        productId: { type: [number, "null"], multipleOf: 1 }
+        productName: { type: string }
+        category: { type: string }
+        productType: { type: string }
+        priority: { type: string, enum: [low, normal, high, urgent] }
+        targetLaunchDate: { type: [string, "null"], format: date }
+        targetProductionDate: { type: [string, "null"], format: date }
+        plannedQuantity: { type: number, multipleOf: 1 }
+        manufacturingCountry: { type: string }
+        factory: { type: string }
+        estimatedCost: { type: string }
+        status: { type: string, enum: [future, planning, under_review, approved, scheduled, in_production, completed, on_hold, cancelled] }
+        notes: { type: string }
+        approvedAt: { type: [string, "null"], format: date-time }
+        securedAt: { type: [string, "null"], format: date-time }
+        securedBy: { type: [number, "null"], multipleOf: 1 }
+        fundingNote: { type: [string, "null"] }
+        fundingStatus: { type: string, enum: [not_requested, pending, secured] }
+        createdBy: { type: [number, "null"], multipleOf: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProductionPlanInput:
+      type: object
+      required: [productName, category, productType, priority, plannedQuantity, manufacturingCountry, factory, estimatedCost, status]
+      properties:
+        productId: { type: [number, "null"], multipleOf: 1, minimum: 1 }
+        productName: { type: string, minLength: 1, maxLength: 160 }
+        category: { type: string, minLength: 1, maxLength: 120 }
+        productType: { type: string, minLength: 1, maxLength: 120 }
+        priority: { type: string, enum: [low, normal, high, urgent] }
+        targetLaunchDate: { type: [string, "null"], format: date }
+        targetProductionDate: { type: [string, "null"], format: date }
+        plannedQuantity: { type: number, multipleOf: 1, minimum: 1 }
+        manufacturingCountry: { type: string, minLength: 1, maxLength: 120 }
+        factory: { type: string, minLength: 1, maxLength: 160 }
+        estimatedCost: { type: string, pattern: "^\\d+(\\.\\d{1,4})?$" }
+        status: { type: string, enum: [future, planning, under_review, approved, scheduled, in_production, completed, on_hold, cancelled] }
+        notes: { type: string, maxLength: 5000 }
+    ProductionPlanUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        productId: { type: [number, "null"], multipleOf: 1, minimum: 1 }
+        productName: { type: string, minLength: 1, maxLength: 160 }
+        category: { type: string, minLength: 1, maxLength: 120 }
+        productType: { type: string, minLength: 1, maxLength: 120 }
+        priority: { type: string, enum: [low, normal, high, urgent] }
+        targetLaunchDate: { type: [string, "null"], format: date }
+        targetProductionDate: { type: [string, "null"], format: date }
+        plannedQuantity: { type: number, multipleOf: 1, minimum: 1 }
+        manufacturingCountry: { type: string, minLength: 1, maxLength: 120 }
+        factory: { type: string, minLength: 1, maxLength: 160 }
+        estimatedCost: { type: string, pattern: "^\\d+(\\.\\d{1,4})?$" }
+        status: { type: string, enum: [future, planning, under_review, approved, scheduled, in_production, completed, on_hold, cancelled] }
+        notes: { type: string, maxLength: 5000 }
+    ProductionFundingConfirmation:
+      type: object
+      properties:
+        note: { type: string, maxLength: 2000 }
+    ProductionReorderAlert:
+      type: object
+      required: [productId, nameAr, nameEn, sku, available, incoming, reorderPoint, reorderQuantity, status, activePlanIds]
+      properties:
+        productId: { type: number, multipleOf: 1 }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        sku: { type: [string, "null"] }
+        available: { type: number, multipleOf: 1 }
+        incoming: { type: number, multipleOf: 1 }
+        reorderPoint: { type: number, multipleOf: 1 }
+        reorderQuantity: { type: number, multipleOf: 1 }
+        status: { type: string, enum: [out, low] }
+        activePlanIds: { type: array, items: { type: number, multipleOf: 1 } }
+    ProductionCatalogProduct:
+      type: object
+      required: [id, nameAr, nameEn]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        nameAr: { type: string }
+        nameEn: { type: string }
     Exhibition:
       type: object
       required: [id, name, location, startDate, endDate, budget, status, notes]

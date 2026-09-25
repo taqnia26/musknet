@@ -7,6 +7,8 @@ import { open } from "node:fs/promises";
 import { constants } from "node:fs";
 import { suggestContractSignedDate } from "../lib/contract-signed-date";
 import { createSocialMarketingRouter } from "./social-marketing";
+import { createProductionPlansRouter } from "./production-plans";
+import { createAnnualAgendaRouter } from "./annual-agenda";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
 import {
@@ -30,6 +32,7 @@ import {
   purchasesTable,
   billingSettingsTable,
   manufacturingBatchesTable,
+  productionPlansTable,
   exhibitionsTable,
   exhibitionProductsTable,
   inventoryMovementsTable,
@@ -168,6 +171,8 @@ export function permit(module: string, action: "view" | "edit" | "delete") {
   };
 }
 router.use(createSocialMarketingRouter(permit));
+router.use(createProductionPlansRouter(permit));
+router.use(createAnnualAgendaRouter(permit));
 
 function permitExhibitionInvoiceRead(_req: Request, res: Response, next: NextFunction) {
   (async () => {
@@ -4273,6 +4278,19 @@ router.get("/admin/accounting/trial-balance", permit("accounting", "view"), rout
   }, res);
 }));
 
+async function checkBatchProductionPlan(planId: number | null | undefined, productId: number, existingPlanId: number | null = null, approving = false): Promise<string | null> {
+  if (planId == null) return null;
+  const [plan] = await db.select().from(productionPlansTable).where(eq(productionPlansTable.id, planId)).limit(1);
+  if (!plan) return "Production plan not found";
+  if (plan.productId !== productId) return "Batch product must match the linked production plan";
+  const keepingExistingLink = existingPlanId === planId;
+  if (!plan.securedAt || (!["approved", "scheduled", "in_production"].includes(plan.status)
+    && !(keepingExistingLink && ["completed", "on_hold"].includes(plan.status)))
+    || (approving && plan.status === "cancelled")) {
+    return "The linked production plan must be active and funded before creating a batch";
+  }
+  return null;
+}
 router.get("/admin/manufacturing/batches", permit("manufacturing", "view"), route(async (_req, res) => {
   const rows = await db.select().from(manufacturingBatchesTable).orderBy(sql`${manufacturingBatchesTable.productionDate} desc`, manufacturingBatchesTable.id);
   parsedJson(Api.AdminListManufacturingBatchesResponse, rows, res);
@@ -4283,6 +4301,8 @@ router.post("/admin/manufacturing/batches", permit("manufacturing", "edit"), rou
   if (body.expiryDate && !validDateRange(body.productionDate, body.expiryDate)) { res.status(400).json({ error: "Expiry date cannot precede production date" }); return; }
   const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, body.productId)).limit(1);
   if (!product) { res.status(400).json({ error: "Product not found" }); return; }
+  const planError = await checkBatchProductionPlan(body.productionPlanId, body.productId);
+  if (planError) { res.status(400).json({ error: planError }); return; }
   const [row] = await db.insert(manufacturingBatchesTable).values({
     ...body, productionDate: isoDate(body.productionDate), expiryDate: body.expiryDate ? isoDate(body.expiryDate) : null,
   }).returning();
@@ -4323,6 +4343,8 @@ router.patch("/admin/manufacturing/batches/:id", permit("manufacturing", "edit")
     const [product] = await db.select({ id: productsTable.id }).from(productsTable).where(eq(productsTable.id, body.productId)).limit(1);
     if (!product) { res.status(400).json({ error: "Product not found" }); return; }
   }
+  const planError = await checkBatchProductionPlan(body.productionPlanId === undefined ? existing.productionPlanId : body.productionPlanId, body.productId ?? existing.productId, existing.productionPlanId, body.status === "approved");
+  if (planError) { res.status(400).json({ error: planError }); return; }
   const wantsApprove = body.status === "approved";
   if (wantsApprove) {
     const { status: _status, ...updates } = body;

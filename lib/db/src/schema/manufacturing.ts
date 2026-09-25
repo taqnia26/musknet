@@ -2,6 +2,7 @@ import { check, date, doublePrecision, integer, pgEnum, pgTable, serial, text, u
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { productsTable } from "./products";
+import { productionPlansTable } from "./production-plans";
 
 export const manufacturingBatchStatusEnum = pgEnum("manufacturing_batch_status", ["in_production", "completed", "quality_check", "approved", "rejected"]);
 
@@ -9,6 +10,7 @@ export const manufacturingBatchesTable = pgTable("manufacturing_batches", {
   id: serial("id").primaryKey(),
   batchNumber: text("batch_number").notNull(),
   productId: integer("product_id").notNull().references(() => productsTable.id, { onDelete: "restrict" }),
+  productionPlanId: integer("production_plan_id").references(() => productionPlansTable.id, { onDelete: "set null" }),
   quantityProduced: integer("quantity_produced").notNull(),
   productionDate: date("production_date", { mode: "string" }).notNull(),
   expiryDate: date("expiry_date", { mode: "string" }),

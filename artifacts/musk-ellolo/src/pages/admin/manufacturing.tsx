@@ -5,9 +5,11 @@ import {
   useAdminUpdateManufacturingBatch,
   useAdminDeleteManufacturingBatch,
   useAdminListProducts,
+  useAdminListProductionPlans,
   useAdminAddManufacturingInputs,
   useGetAdminMe,
-  getAdminListManufacturingBatchesQueryKey
+  getAdminListManufacturingBatchesQueryKey,
+  getAdminListProductionPlansQueryKey
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { quantityInputClass } from '@/lib/quantity-input';
@@ -34,7 +36,12 @@ export default function AdminManufacturing() {
   const [editingBatch, setEditingBatch] = useState<any>(null);
   const [inputLines, setInputLines] = useState<{ materialProductId: string; quantity: string }[]>([]);
   
-  const { data: batches, isLoading } = useAdminListManufacturingBatches();
+  const { data: batches, isLoading, isError, refetch } = useAdminListManufacturingBatches();
+  const { data: plans } = useAdminListProductionPlans({query:{enabled:hasPermission(currentUser,'manufacturing','view'),queryKey:getAdminListProductionPlansQueryKey()}});
+  const eligiblePlans = plans?.filter(p =>
+    (p.securedAt && ['approved','scheduled','in_production'].includes(p.status)) ||
+    (p.id === editingBatch?.productionPlanId && ['completed','on_hold'].includes(p.status))
+  ) ?? [];
   const { data: products } = useAdminListProducts({});
   const productOptions = useMemo(() => sortProductsForSelection(products ?? [], lang), [products, lang]);
   
@@ -59,6 +66,7 @@ export default function AdminManufacturing() {
     const data = {
       batchNumber: formData.get('batchNumber') as string,
       productId: Number(formData.get('productId')),
+      productionPlanId: formData.get('productionPlanId') ? Number(formData.get('productionPlanId')) : null,
       quantityProduced: Number(formData.get('quantityProduced')),
       costPerUnit: Number(formData.get('costPerUnit')),
       productionDate: prodDate,
@@ -113,6 +121,8 @@ export default function AdminManufacturing() {
     return p ? (lang === 'ar' ? p.nameAr : p.nameEn) : id;
   };
 
+  if (currentUser && !hasPermission(currentUser, 'manufacturing', 'view')) return <div className="rounded-md border bg-card p-8 text-center">{t('ليس لديك صلاحية لعرض دفعات التصنيع', 'You do not have access to manufacturing batches')}</div>;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -138,6 +148,15 @@ export default function AdminManufacturing() {
                     <option value="">{t('اختر منتج...', 'Select product...')}</option>
                     {productOptions.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.nameAr : p.nameEn}</option>)}
                   </select>
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <label className="text-sm font-medium">{t('خطة الإنتاج المرتبطة (اختياري)', 'Linked production plan (optional)')}</label>
+                  <select name="productionPlanId" defaultValue={editingBatch?.productionPlanId ?? ''} className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm" data-testid="select-batch-production-plan">
+                    <option value="">{t('بدون خطة مرتبطة', 'No linked plan')}</option>
+                    {eligiblePlans.map(p=><option key={p.id} value={p.id}>{p.productName} · #{p.id}</option>)}
+                    {editingBatch?.productionPlanId && !eligiblePlans.some(p=>p.id===editingBatch.productionPlanId) && <option value={editingBatch.productionPlanId}>#{editingBatch.productionPlanId}</option>}
+                  </select>
+                  <p className="text-xs text-muted-foreground">{t('تظهر الخطط المعتمدة والممولة، أو المجدولة وقيد الإنتاج؛ تبقى الخطة المكتملة أو المعلقة المرتبطة متاحة عند تعديل الدفعة. ترك الحقل فارغاً لا يغيّر سير الدفعات.', 'Funded approved, scheduled and in-production plans are available; linked completed or on-hold plans remain when editing. Leaving this blank preserves the existing batch flow.')}</p>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('الكمية', 'Quantity')}</label>
@@ -201,6 +220,7 @@ export default function AdminManufacturing() {
             <TableRow>
               <TableHead>{t('رقم الدفعة', 'Batch No')}</TableHead>
               <TableHead>{t('المنتج', 'Product')}</TableHead>
+              <TableHead>{t('خطة الإنتاج', 'Production plan')}</TableHead>
               <TableHead>{t('الكمية', 'Quantity')}</TableHead>
               <TableHead>{t('تاريخ الإنتاج', 'Production')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>
@@ -208,12 +228,14 @@ export default function AdminManufacturing() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? <TableRow><TableCell colSpan={6} className="text-center">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow> : 
-             !batches?.length ? <TableRow><TableCell colSpan={6} className="text-center">{t('لا توجد بيانات', 'No data')}</TableCell></TableRow> :
+            {isLoading ? <TableRow><TableCell colSpan={7} className="text-center"><div className="h-12 animate-pulse rounded bg-muted/50" /></TableCell></TableRow> :
+             isError ? <TableRow><TableCell colSpan={7} className="py-8 text-center">{t('تعذر تحميل الدفعات', 'Could not load batches')} <Button variant="outline" size="sm" onClick={() => refetch()}>{t('إعادة المحاولة', 'Retry')}</Button></TableCell></TableRow> :
+             !batches?.length ? <TableRow><TableCell colSpan={7} className="py-8 text-center">{t('لا توجد دفعات تصنيع بعد', 'No manufacturing batches yet')}</TableCell></TableRow> :
              batches.map(batch => (
                <TableRow key={batch.id}>
                  <TableCell className="font-medium">{batch.batchNumber}</TableCell>
                  <TableCell>{getProductName(batch.productId)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{batch.productionPlanId ? `${t('خطة','Plan')} #${batch.productionPlanId}` : '—'}</TableCell>
                  <TableCell>{batch.quantityProduced}</TableCell>
                  <TableCell>{format(new Date(batch.productionDate), 'yyyy-MM-dd')}</TableCell>
                  <TableCell>

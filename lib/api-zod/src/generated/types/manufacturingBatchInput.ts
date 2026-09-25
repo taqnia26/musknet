@@ -11,6 +11,8 @@ export interface ManufacturingBatchInput {
   /** @minLength 1 */
   batchNumber: string;
   productId: number;
+  /** @nullable */
+  productionPlanId?: number | null;
   /** @minimum 1 */
   quantityProduced: number;
   productionDate: Date;

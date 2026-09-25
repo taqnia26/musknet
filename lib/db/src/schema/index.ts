@@ -62,3 +62,5 @@ export * from "./operations-documents";
 export * from "./shipments";
 export * from "./inventory-operations";
 export * from "./whatsapp";
+export * from "./annual-agenda";
+export * from "./production-plans";

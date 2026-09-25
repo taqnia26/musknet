@@ -133,9 +133,10 @@ export const navStructure = [
     ]
   },
   {
-    labelEn: 'Procurement', labelAr: 'المشتريات', icon: Truck, module: 'inventory',
+    labelEn: 'Production & Manufacturing', labelAr: 'الإنتاج والتصنيع', icon: Factory, module: 'manufacturing',
     children: [
-      { href: '/admin/manufacturing', labelEn: 'Manufacturing', labelAr: 'التصنيع', module: 'manufacturing' },
+      { href: '/admin/production/plans', labelEn: 'Production Planning', labelAr: 'تخطيط الإنتاج', module: 'manufacturing' },
+      { href: '/admin/manufacturing', labelEn: 'Manufacturing Batches', labelAr: 'دفعات التصنيع', module: 'manufacturing' },
     ]
   },
   {
@@ -156,6 +157,7 @@ export const navStructure = [
     children: [
       { href: '/admin/finance/expenses', labelEn: 'Expenses', labelAr: 'المصروفات', module: 'finance' },
       { href: '/admin/finance/purchases', labelEn: 'Purchases', labelAr: 'المشتريات', module: 'finance' },
+      { href: '/admin/finance/production-funding', labelEn: 'Production Funding', labelAr: 'تأمين الإنتاج', module: 'finance' },
       { href: '/admin/finance/reports', labelEn: 'Reports', labelAr: 'التقارير', module: 'finance' },
       { href: '/admin/accounting/accounts', labelEn: 'Accounting', labelAr: 'المحاسبة', module: 'accounting' },
       { href: '/admin/accounting/journal-entries', labelEn: 'Journal entries', labelAr: 'القيود اليومية', module: 'accounting' },
@@ -168,6 +170,7 @@ export const navStructure = [
     children: [
       { href: '/admin/contracts', labelEn: 'Contracts', labelAr: 'العقود', module: 'contracts' },
       { href: '/admin/distributor-catalog', labelEn: 'B2B Catalog', labelAr: 'كتالوج B2B', module: 'distributors' },
+      { href: '/admin/b2b/agenda', labelEn: 'Annual Agenda', labelAr: 'جدول الأعمال السنوي', module: 'distributors' },
     ]
   },
   {
