@@ -5,6 +5,7 @@ import * as Api from "@workspace/api-zod";
 import { db, influencersTable, influencerSessionsTable, influencerVisitsTable, influencerCouponsTable, couponsTable, orderAttributionsTable, ordersTable } from "@workspace/db";
 import { createInfluencerSession, hashInfluencerPassword, influencerFromToken, revokeInfluencerSession, verifyInfluencerPassword } from "../lib/influencer-auth";
 import { adminFromToken, publicAdmin } from "../lib/admin-auth";
+import { influencerConflict } from "../lib/influencer-conflict";
 
 const router = Router();
 const bearer = (req: Request) => req.header("authorization")?.replace(/^Bearer /, "");
@@ -83,7 +84,7 @@ router.get("/influencer/capture", asyncRoute(async (req, res) => {
   res.json({ referralCode: user.referralCode });
 }));
 
-router.post("/admin/influencers", asyncRoute(async (req, res) => { if (!await admin(req, res, "edit")) return; const body = parse(Api.CreateInfluencerBody, req.body, res); if (!body) return; const extra = req.body as { imageUrl?: string | null; isActive?: boolean }; try { const [created] = await db.insert(influencersTable).values({ name: body.name, email: body.email.toLowerCase(), referralCode: body.referralCode.toUpperCase(), imageUrl: extra.imageUrl ?? null, commissionRate: body.commissionRate ?? 10, isActive: extra.isActive ?? true, passwordHash: await hashInfluencerPassword(body.password) }).returning(); res.status(201).json(profile(created)); } catch { res.status(409).json({ error: "Email or referral code already exists" }); } }));
+router.post("/admin/influencers", asyncRoute(async (req, res) => { if (!await admin(req, res, "edit")) return; const body = parse(Api.CreateInfluencerBody, req.body, res); if (!body) return; const extra = req.body as { imageUrl?: string | null; isActive?: boolean }; try { const [created] = await db.insert(influencersTable).values({ name: body.name, email: body.email.toLowerCase(), referralCode: body.referralCode.toUpperCase(), imageUrl: extra.imageUrl ?? null, commissionRate: body.commissionRate ?? 10, isActive: extra.isActive ?? true, passwordHash: await hashInfluencerPassword(body.password) }).returning(); res.status(201).json(profile(created)); } catch (error) { const conflict = influencerConflict(error); if (!conflict) throw error; res.status(409).json({ error: conflict }); } }));
 router.get("/admin/influencers", asyncRoute(async (req, res) => {
   if (!await admin(req, res, "view")) return;
   const users = await db.select().from(influencersTable);

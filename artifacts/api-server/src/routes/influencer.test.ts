@@ -1,10 +1,12 @@
 import request from "supertest";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, afterAll, describe, expect, it } from "vitest";
 import { and, eq, inArray } from "drizzle-orm";
-import { db, customersTable, influencersTable, influencerSessionsTable, influencerVisitsTable, influencerCouponsTable, couponsTable, orderAttributionsTable, ordersTable } from "@workspace/db";
+import { db, customersTable, influencersTable, influencerSessionsTable, influencerVisitsTable, influencerCouponsTable, couponsTable, orderAttributionsTable, ordersTable, adminUsersTable, adminSessionsTable, adminPermissionsTable, adminUserPermissionsTable } from "@workspace/db";
 import * as Api from "@workspace/api-zod";
 import app from "../app";
 import { createInfluencerSession, hashInfluencerPassword, influencerFromToken } from "../lib/influencer-auth";
+import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
+import { influencerConflict } from "../lib/influencer-conflict";
 
 const emails: string[] = [];
 const phones: string[] = [];
@@ -57,6 +59,87 @@ describe.sequential("influencer auth and referral isolation", () => {
     expect(result.body.orders).toEqual([]);
     expect(result.body.summary.attributedPaidOrders).toBe(0);
     expect(result.body).not.toHaveProperty(second.email);
+  });
+});
+
+describe.sequential("admin influencer creation", () => {
+  const suffix = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  let editorId: number, viewerId: number, editorToken: string, viewerToken: string;
+  const payload = (label: string) => ({
+    name: "Independent Test Influencer",
+    email: `create-${label}-${suffix}@example.com`,
+    password: "independent-test-password",
+    referralCode: `CREATE${label}${suffix}`.replace(/[^A-Z0-9]/gi, ""),
+    commissionRate: 12,
+  });
+
+  beforeAll(async () => {
+    await db.insert(adminPermissionsTable).values([
+      { module: "influencers", action: "edit" },
+      { module: "influencers", action: "view" },
+    ]).onConflictDoNothing();
+    const passwordHash = await hashAdminPassword("independent-admin-password");
+    const users = await db.insert(adminUsersTable).values([
+      { name: "Influencer Editor", email: `editor-${suffix}@example.com`, passwordHash },
+      { name: "Influencer Viewer", email: `viewer-${suffix}@example.com`, passwordHash },
+    ]).returning();
+    [editorId, viewerId] = users.map(user => user.id);
+    const permissions = await db.select().from(adminPermissionsTable).where(eq(adminPermissionsTable.module, "influencers"));
+    const editId = permissions.find(p => p.action === "edit")!.id;
+    const viewId = permissions.find(p => p.action === "view")!.id;
+    await db.insert(adminUserPermissionsTable).values([
+      { adminUserId: editorId, permissionId: editId },
+      { adminUserId: editorId, permissionId: viewId },
+      { adminUserId: viewerId, permissionId: viewId },
+    ]);
+    [editorToken, viewerToken] = await Promise.all([createAdminSession(editorId), createAdminSession(viewerId)]);
+  });
+
+  afterAll(async () => {
+    await db.delete(adminSessionsTable).where(inArray(adminSessionsTable.adminUserId, [editorId, viewerId]));
+    await db.delete(adminUserPermissionsTable).where(inArray(adminUserPermissionsTable.adminUserId, [editorId, viewerId]));
+    await db.delete(adminUsersTable).where(inArray(adminUsersTable.id, [editorId, viewerId]));
+  });
+
+  it("creates a valid account that appears in the admin list", async () => {
+    const body = payload("success");
+    const created = await request(app).post("/api/admin/influencers").set("Authorization", `Bearer ${editorToken}`).send(body).expect(201);
+    ids.push(created.body.id);
+    expect(created.body).toMatchObject({ name: body.name, email: body.email, referralCode: body.referralCode.toUpperCase(), commissionRate: 12 });
+    const listed = await request(app).get("/api/admin/influencers").set("Authorization", `Bearer ${editorToken}`).expect(200);
+    expect(listed.body).toContainEqual(expect.objectContaining({ id: created.body.id, email: body.email }));
+  });
+
+  it("rejects short passwords before persistence", async () => {
+    const body = { ...payload("short"), password: "short" };
+    await request(app).post("/api/admin/influencers").set("Authorization", `Bearer ${editorToken}`).send(body).expect(400);
+    expect(await db.select().from(influencersTable).where(eq(influencersTable.email, body.email))).toHaveLength(0);
+  });
+
+  it("reports the correct duplicate field without exposing database details", async () => {
+    const body = payload("duplicate");
+    const created = await request(app).post("/api/admin/influencers").set("Authorization", `Bearer ${editorToken}`).send(body).expect(201);
+    ids.push(created.body.id);
+    const email = await request(app).post("/api/admin/influencers").set("Authorization", `Bearer ${editorToken}`)
+      .send({ ...payload("other"), email: body.email }).expect(409);
+    expect(email.body).toEqual({ error: "Influencer email already exists" });
+    const code = await request(app).post("/api/admin/influencers").set("Authorization", `Bearer ${editorToken}`)
+      .send({ ...payload("other"), referralCode: body.referralCode.toLowerCase() }).expect(409);
+    expect(code.body).toEqual({ error: "Influencer referral code already exists" });
+  });
+
+  it("requires a valid session with edit permission", async () => {
+    const body = payload("denied");
+    await request(app).post("/api/admin/influencers").send(body).expect(401);
+    await request(app).post("/api/admin/influencers").set("Authorization", `Bearer ${viewerToken}`).send(body).expect(403);
+    expect(await db.select().from(influencersTable).where(eq(influencersTable.email, body.email))).toHaveLength(0);
+  });
+
+  it("does not classify unrelated database failures as duplicate accounts", () => {
+    expect(influencerConflict({ code: "23505", constraint: "other_unique" })).toBeNull();
+    expect(influencerConflict({ code: "23503", constraint: "influencers_email_unique" })).toBeNull();
+    expect(influencerConflict(new Error("database unavailable"))).toBeNull();
+    expect(influencerConflict({ cause: { code: "23505", constraint: "influencers_email_unique" } })).toBe("Influencer email already exists");
   });
 });
 

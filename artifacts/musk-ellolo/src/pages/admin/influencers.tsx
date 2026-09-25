@@ -36,6 +36,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatInteger, formatPercent } from '@/lib/formatters';
+import { influencerSaveError, validateInfluencerForm } from './influencer-form';
 
 type Performance = {
   orders?: number;
@@ -177,11 +178,12 @@ export default function AdminInfluencers() {
   const save = (event: React.FormEvent) => {
     event.preventDefault();
     setMessage('');
-    const commissionRate = Number(form.commissionRate);
-    if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 100) {
-      setMessage(t('يجب أن تكون نسبة العمولة بين 0 و100٪. أدخل قيمة صحيحة قبل الحفظ.', 'Commission must be between 0 and 100%. Enter a valid value before saving.'));
+    const validation = validateInfluencerForm(form, selected !== null, t);
+    if (validation) {
+      setMessage(validation);
       return;
     }
+    const commissionRate = Number(form.commissionRate);
     const data: {
       name: string;
       email: string;
@@ -204,7 +206,7 @@ export default function AdminInfluencers() {
           closeDialog();
           void refresh();
         },
-        onError: () => setMessage(t('تعذر تحديث الحساب', 'Could not update account')),
+        onError: (error) => setMessage(influencerSaveError(error, t, true)),
       });
     } else {
       create.mutate({ data: { ...data, password: form.password } }, {
@@ -212,7 +214,7 @@ export default function AdminInfluencers() {
           closeDialog();
           void refresh();
         },
-        onError: () => setMessage(t('تعذر إنشاء الحساب', 'Could not create account')),
+        onError: (error) => setMessage(influencerSaveError(error, t, false)),
       });
     }
   };
@@ -262,7 +264,7 @@ export default function AdminInfluencers() {
             <DialogTitle className="px-0">{selected ? t('تعديل حساب المشهور', 'Edit influencer account') : t('إضافة مشهور جديد', 'Add a new influencer')}</DialogTitle>
             <DialogDescription>{t('بيانات الحساب ورمز التتبع ونسبة العمولة.', 'Account, tracking code and commission settings.')}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={save} className="grid gap-4 sm:grid-cols-2">
+          <form onSubmit={save} noValidate className="grid gap-4 sm:grid-cols-2">
             {([
               ['name', t('الاسم', 'Name')],
               ['email', t('البريد الإلكتروني', 'Email')],
@@ -275,7 +277,8 @@ export default function AdminInfluencers() {
                 {label}
                 <Input
                   className="mt-2"
-                  required={!selected && ['name', 'email', 'password', 'referralCode'].includes(key)}
+                   required={['name', 'email', 'referralCode'].includes(key) || (key === 'password' && !selected)}
+                   minLength={key === 'password' ? 8 : undefined}
                   type={key === 'password' ? 'password' : key === 'commissionRate' ? 'number' : key === 'email' ? 'email' : 'text'}
                   min={key === 'commissionRate' ? 0 : undefined}
                   max={key === 'commissionRate' ? 100 : undefined}
@@ -285,6 +288,7 @@ export default function AdminInfluencers() {
                   data-testid={`input-influencer-${key}`}
                   onChange={(event) => setForm({ ...form, [key]: event.target.value })}
                 />
+                {key === 'password' && <span className="mt-1 block text-xs text-muted-foreground">{t('8 أحرف على الأقل', 'At least 8 characters')}</span>}
               </label>
             ))}
             <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
