@@ -63,7 +63,7 @@ export function Navbar() {
   ];
 
   return (
-    <div className={cn("w-full flex flex-col", isProductRoute && "product-navbar")}>
+    <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className={cn("w-full flex flex-col", isProductRoute && "product-navbar")}>
       {/* Top Bar */}
       <div className={cn("w-full border-b border-gray-100 bg-white px-4 py-2 text-xs text-gray-500 md:flex md:items-center md:justify-between lg:px-8", isProductRoute ? "flex items-center justify-start" : "hidden")}>
         <div className="flex min-w-0 items-center">
@@ -106,25 +106,26 @@ export function Navbar() {
 
       {/* Main Header */}
       <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 transition-all">
-        <div className="flex h-20 min-w-0 items-center justify-between px-4 md:h-24 lg:px-8">
+        <div className="grid h-20 min-w-0 grid-cols-[88px_minmax(0,1fr)_88px] items-center px-4 md:h-24 lg:flex lg:justify-between lg:px-8">
           
           {/* Mobile Menu Button */}
-          <div className={cn("flex min-w-0 flex-1 lg:hidden", isProductRoute ? "order-1 justify-start" : "order-3 justify-end")}>
+          <div className="flex min-w-0 items-center justify-start lg:hidden">
             <Button
               variant="ghost"
               size="icon"
               aria-label={isOpen ? 'Close menu' : 'Open menu'}
+              data-testid="button-mobile-menu"
               onClick={() => setIsOpen(!isOpen)}
-              className="min-h-11 min-w-11 text-black"
+              className="h-11 w-11 shrink-0 text-black"
             >
               {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-            {isProductRoute && <Link href="/products" aria-label={t('البحث عن المنتجات', 'Search products')} className="inline-flex h-11 w-11 items-center justify-center"><Search className="h-5 w-5" /></Link>}
+            <Link href="/products" aria-label={t('البحث عن المنتجات', 'Search products')} data-testid="link-mobile-search" className="inline-flex h-11 w-11 shrink-0 items-center justify-center"><Search className="h-5 w-5" /></Link>
           </div>
 
           {/* Logo */}
-          <div className={cn("order-2 flex min-w-0 flex-1 lg:order-1", isProductRoute ? "justify-center lg:justify-start" : "justify-start")}>
-            <Link href="/">
+          <div className="flex min-w-0 items-center justify-center lg:order-1 lg:flex-1 lg:justify-start">
+            <Link href="/" className="min-w-0 max-w-full" data-testid="link-storefront-home">
               <img 
                 src={siteAsset('Ca44RuZ7R2vL2wTsJKCO2bG6rWGMyqxB0CVdsvxb-63014f950a.png')} 
                 alt="Musk Ellolo" 
@@ -157,18 +158,18 @@ export function Navbar() {
           </nav>
 
           {/* Actions */}
-          <div className={cn("flex min-w-0 flex-1 items-center justify-end gap-0 text-black md:gap-1 lg:order-3 lg:gap-3 xl:gap-5", isProductRoute ? "order-3" : "order-1")}>
-            <Link href="/products" aria-label="Search" className={cn("min-h-11 min-w-11 p-2 transition-opacity hover:opacity-70", isProductRoute && "hidden lg:inline-flex lg:items-center lg:justify-center")}>
+          <div className="flex min-w-0 items-center justify-end gap-0 text-black lg:order-3 lg:flex-1 lg:gap-3 xl:gap-5">
+            <Link href="/products" aria-label="Search" data-testid="link-desktop-search" className="hidden min-h-11 min-w-11 items-center justify-center p-2 transition-opacity hover:opacity-70 lg:inline-flex">
               <Search className="h-5 w-5" />
             </Link>
-            <Link href="/account" aria-label="Account" className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 transition-opacity hover:opacity-70">
+            <Link href="/account" aria-label="Account" data-testid="link-storefront-account" className="inline-flex h-11 w-11 shrink-0 items-center justify-center p-2 transition-opacity hover:opacity-70">
               <User className="h-5 w-5" />
             </Link>
-            <Link href="/cart" aria-label="Cart" className="relative inline-flex min-h-11 min-w-11 items-center justify-center p-2 transition-opacity hover:opacity-70">
+            <Link href="/cart" aria-label="Cart" data-testid="link-storefront-cart" className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center p-2 transition-opacity hover:opacity-70">
               <ShoppingBag className="h-5 w-5" />
               {cartItemCount > 0 && (
-                <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-black text-[0.6rem] font-bold text-white rtl:left-0.5 rtl:right-auto">
-                  {cartItemCount}
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-0.5 text-[0.6rem] font-bold text-white rtl:left-0.5 rtl:right-auto">
+                  {cartItemCount > 99 ? '99+' : cartItemCount}
                 </span>
               )}
             </Link>
