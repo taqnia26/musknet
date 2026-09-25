@@ -116,7 +116,7 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
                   <Input name="nationalId" required defaultValue={editingEmployee?.nationalId} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">{t('الهاتف', 'Phone')}</label>
+                  <label className="text-sm font-medium">{t('رقم الجوال', 'Phone')}</label>
                   <Input name="phone" required defaultValue={editingEmployee?.phone} />
                 </div>
                 <div className="space-y-2">

@@ -104,7 +104,7 @@ export default function VerifyOtp() {
           
           <div className="text-center pt-4">
             <button type="button" onClick={() => setLocation(`/auth/register?returnTo=${encodeURIComponent(returnTo)}`)} className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4">
-              {t('تغيير رقم الهاتف', 'Change phone number')}
+              {t('تغيير رقم الجوال', 'Change phone number')}
             </button>
           </div>
         </form>

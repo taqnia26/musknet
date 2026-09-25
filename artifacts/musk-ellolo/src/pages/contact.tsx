@@ -63,7 +63,7 @@ export default function Contact() {
                   <Phone className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg mb-1">{t('رقم الهاتف', 'Phone')}</h3>
+                  <h3 className="font-bold text-lg mb-1">{t('رقم الجوال', 'Phone')}</h3>
                   <p className="text-muted-foreground" dir="ltr">+966 50 123 4567</p>
                 </div>
               </div>
@@ -105,8 +105,8 @@ export default function Contact() {
                 <Input required type="email" placeholder={t('أدخل بريدك الإلكتروني', 'Enter your email')} className="h-14 bg-background" />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold">{t('رقم الهاتف', 'Phone Number')}</label>
-                <Input required type="tel" placeholder={t('أدخل رقم هاتفك', 'Enter your phone number')} className="h-14 bg-background" />
+                <label className="text-sm font-bold">{t('رقم الجوال', 'Phone Number')}</label>
+                <Input required type="tel" placeholder={t('أدخل رقم جوالك', 'Enter your phone number')} className="h-14 bg-background" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold">{t('الرسالة', 'Message')}</label>

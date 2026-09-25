@@ -40,7 +40,7 @@ export default function AdminCustomers() {
   });
   const errorMessage = (error: unknown, fallback: string) => {
     const cause = error as { status?: number; data?: { error?: string } };
-    if (cause.status === 409) return t('رقم الهاتف مسجل لعميل آخر', 'This phone number already belongs to a customer');
+    if (cause.status === 409) return t('رقم الجوال مسجل لعميل آخر', 'This phone number already belongs to a customer');
     return cause.data?.error ?? fallback;
   };
   const close = () => {
@@ -71,7 +71,7 @@ export default function AdminCustomers() {
       },
       onError: (error) => toast({
         title: t('تعذر إضافة العميل', 'Could not add customer'),
-         description: customerCreateError(error, t('تحقق من البيانات والصلاحيات ثم حاول مرة أخرى', 'Check the details and permissions, then try again'), t('رقم الهاتف مسجل لعميل آخر', 'This phone number already belongs to a customer')),
+         description: customerCreateError(error, t('تحقق من البيانات والصلاحيات ثم حاول مرة أخرى', 'Check the details and permissions, then try again'), t('رقم الجوال مسجل لعميل آخر', 'This phone number already belongs to a customer')),
         variant: 'destructive',
       }),
     });
@@ -121,7 +121,7 @@ export default function AdminCustomers() {
                   <FormItem><FormLabel>{t('اسم العميل *', 'Customer name *')}</FormLabel><FormControl><Input {...field} data-testid="input-customer-name" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={createForm.control} name="phone" render={({ field }) => (
-                  <FormItem><FormLabel>{t('رقم الهاتف *', 'Phone number *')}</FormLabel><FormControl><Input {...field} data-testid="input-customer-phone" type="tel" dir="ltr" placeholder="966501234567" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>{t('رقم الجوال *', 'Phone number *')}</FormLabel><FormControl><Input {...field} data-testid="input-customer-phone" type="tel" dir="ltr" placeholder="966501234567" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={createForm.control} name="email" render={({ field }) => (
                    <FormItem><FormLabel>{t('البريد الإلكتروني *', 'Email *')}</FormLabel><FormControl><Input {...field} type="email" dir="ltr" /></FormControl><FormMessage /></FormItem>
@@ -163,14 +163,14 @@ export default function AdminCustomers() {
       <div className="flex items-center gap-2">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground rtl:right-2.5 rtl:left-auto" />
-          <Input placeholder={t('البحث برقم الهاتف أو الاسم...', 'Search customers...')} className="pl-9 rtl:pr-9 rtl:pl-3" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input placeholder={t('البحث برقم الجوال أو الاسم...', 'Search customers...')} className="pl-9 rtl:pr-9 rtl:pl-3" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
       </div>
       <div className="border rounded-md">
         <Table>
           <TableHeader><TableRow>
             <TableHead>{t('الاسم', 'Name')}</TableHead>
-            <TableHead>{t('الهاتف', 'Phone')}</TableHead>
+            <TableHead>{t('رقم الجوال', 'Phone')}</TableHead>
             <TableHead>{t('البريد الإلكتروني', 'Email')}</TableHead>
             <TableHead>{t('الحالة', 'Status')}</TableHead>
             <TableHead className="w-[100px]"></TableHead>

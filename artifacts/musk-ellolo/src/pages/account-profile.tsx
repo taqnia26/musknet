@@ -78,14 +78,14 @@ export default function Profile() {
               )} />
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">{t('رقم الهاتف', 'Phone Number')}</label>
+                <label className="text-sm font-medium">{t('رقم الجوال', 'Phone Number')}</label>
                 <div className="flex items-center gap-4">
                   <Input value={user?.phone || ''} disabled className="h-12 bg-muted/50 cursor-not-allowed" dir="ltr" />
                   <span className="text-xs font-bold px-3 py-1 bg-green-100 text-green-800 rounded-full shrink-0">
                     {t('موثق', 'Verified')}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground">{t('لا يمكن تغيير رقم الهاتف بعد التوثيق.', 'Phone number cannot be changed after verification.')}</p>
+                <p className="text-xs text-muted-foreground">{t('لا يمكن تغيير رقم الجوال بعد التوثيق.', 'Phone number cannot be changed after verification.')}</p>
               </div>
             </div>
 

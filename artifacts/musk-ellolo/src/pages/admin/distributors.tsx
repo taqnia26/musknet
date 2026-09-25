@@ -38,7 +38,7 @@ const distributorSchema = z.object({
   phone: z.preprocess(
     (value) => normalizePhone(String(value ?? '')),
     z.string().regex(/^(?=(?:\D*\d){8,15}\D*$)\+?[\d\s().-]+$/, {
-      message: 'رقم الهاتف غير صالح. استخدم 8-15 رقماً (مثال: ‎+966 50 123 4567) / Invalid phone. Use 8-15 digits (e.g. +966 50 123 4567).',
+      message: 'رقم الجوال غير صالح. استخدم 8-15 رقماً (مثال: ‎+966 50 123 4567) / Invalid phone. Use 8-15 digits (e.g. +966 50 123 4567).',
     }),
   ),
   email: z.union([z.string().email(), z.literal('')]).nullable().optional(),
@@ -221,7 +221,7 @@ export default function AdminDistributors() {
                   const labels: Record<string, string> = {
                     companyName: t('اسم الشركة', 'Company name'),
                     contactName: t('اسم المسؤول', 'Contact name'),
-                    phone: t('رقم الهاتف', 'Phone'),
+                    phone: t('رقم الجوال', 'Phone'),
                     email: t('البريد الإلكتروني', 'Email'),
                   };
                   const firstError = Object.entries(errors)[0];
@@ -271,7 +271,7 @@ export default function AdminDistributors() {
                 )} />}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField control={form.control} name="phone" render={({ field }) => (
-                    <FormItem><FormLabel>{t('رقم الهاتف', 'Phone')}</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>{t('رقم الجوال', 'Phone')}</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="email" render={({ field }) => (
                     <FormItem><FormLabel>{t('البريد الإلكتروني', 'Email')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
@@ -336,7 +336,7 @@ export default function AdminDistributors() {
             <TableRow>
               <TableHead>{t('الشركة', 'Company')}</TableHead>
               <TableHead>{t('المسؤول', 'Contact')}</TableHead>
-              <TableHead>{t('الهاتف', 'Phone')}</TableHead>
+              <TableHead>{t('رقم الجوال', 'Phone')}</TableHead>
               <TableHead>{t('المدينة', 'City')}</TableHead>
               <TableHead>{t('حد الائتمان', 'Credit Limit')}</TableHead>
               <TableHead>{t('الحالة', 'Status')}</TableHead>

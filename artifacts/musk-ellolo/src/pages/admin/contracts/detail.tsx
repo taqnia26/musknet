@@ -290,7 +290,7 @@ export default function AdminContractDetail() {
                 <div className="font-medium">{contract.buyerRepTitle || '—'}</div>
               </div>
               <div className="col-span-2 md:col-span-1">
-                <div className="text-muted-foreground mb-1">الهاتف</div>
+                <div className="text-muted-foreground mb-1">رقم الجوال</div>
                 <div className="font-medium font-mono" dir="ltr">{contract.buyerPhone || '—'}</div>
               </div>
               <div className="col-span-2 md:col-span-1">

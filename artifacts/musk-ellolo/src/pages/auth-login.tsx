@@ -21,7 +21,7 @@ export default function Login() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (phone.length < 8) {
-      toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('رقم الهاتف غير صالح', 'Invalid phone number') });
+      toast({ variant: 'destructive', title: t('خطأ', 'Error'), description: t('رقم الجوال غير صالح', 'Invalid phone number') });
       return;
     }
 
@@ -61,14 +61,14 @@ export default function Login() {
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold mb-3">{t('تسجيل الدخول', 'Sign In')}</h1>
           <p className="text-muted-foreground text-sm">
-            {t('أدخل رقم هاتفك لتسجيل الدخول أو إنشاء حساب جديد', 'Enter your phone number to sign in or create a new account')}
+            {t('أدخل رقم جوالك لتسجيل الدخول أو إنشاء حساب جديد', 'Enter your phone number to sign in or create a new account')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <label className="text-sm font-bold block" dir={document.documentElement.dir}>
-              {t('رقم الهاتف', 'Phone Number')}
+              {t('رقم الجوال', 'Phone Number')}
             </label>
             <div className="relative" dir="ltr">
               <Input 

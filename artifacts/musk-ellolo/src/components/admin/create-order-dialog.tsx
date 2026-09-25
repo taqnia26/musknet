@@ -105,7 +105,7 @@ export function CreateOrderDialog() {
       onError: (cause) => setCustomerError(customerCreateError(
         cause,
         t('تحقق من البيانات والصلاحيات ثم حاول مرة أخرى', 'Check the details and permissions, then try again'),
-        t('رقم الهاتف مسجل لعميل آخر', 'This phone number already belongs to a customer'),
+        t('رقم الجوال مسجل لعميل آخر', 'This phone number already belongs to a customer'),
       )),
     });
   };
@@ -214,7 +214,7 @@ export function CreateOrderDialog() {
                      <FormItem><FormLabel>{t('اسم العميل *', 'Customer name *')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                    )} />
                    <FormField control={customerForm.control} name="phone" render={({ field }) => (
-                     <FormItem><FormLabel>{t('رقم الهاتف *', 'Phone number *')}</FormLabel><FormControl><Input {...field} dir="ltr" type="tel" /></FormControl><FormMessage /></FormItem>
+                     <FormItem><FormLabel>{t('رقم الجوال *', 'Phone number *')}</FormLabel><FormControl><Input {...field} dir="ltr" type="tel" /></FormControl><FormMessage /></FormItem>
                    )} />
                    <FormField control={customerForm.control} name="email" render={({ field }) => (
                       <FormItem><FormLabel>{t('البريد الإلكتروني *', 'Email *')}</FormLabel><FormControl><Input {...field} dir="ltr" type="email" /></FormControl><FormMessage /></FormItem>

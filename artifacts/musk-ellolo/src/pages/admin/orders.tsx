@@ -327,7 +327,7 @@ export default function AdminOrders() {
                                       <span className="font-medium break-words">{orderDetail.customer.name}</span>
                                     </div>
                                     <div className="grid grid-cols-[100px_minmax(0,1fr)] gap-2">
-                                      <span className="text-muted-foreground">{t('الهاتف', 'Phone')}:</span>
+                                      <span className="text-muted-foreground">{t('رقم الجوال', 'Phone')}:</span>
                                       <span className="font-medium break-all" dir="ltr">{orderDetail.customer.phone}</span>
                                     </div>
                                     {orderDetail.customer.email && (

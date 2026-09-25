@@ -13,7 +13,7 @@ export const createCustomerSchema = z.object({
   phone: z.string().refine((value) => {
     const phone = normalizePhone(value);
     return /^\+?[\d\s().-]+$/.test(phone) && /^\d{8,15}$/.test(phone.replace(/\D/g, ''));
-  }, 'أدخل رقم هاتف من 8 إلى 15 رقماً / Enter a phone number with 8–15 digits'),
+  }, 'أدخل رقم جوال من 8 إلى 15 رقماً / Enter a phone number with 8–15 digits'),
   email: z.string().email('أدخل بريداً إلكترونياً صالحاً / Enter a valid email address'),
   profileAddress: intakeAddressSchema,
 });

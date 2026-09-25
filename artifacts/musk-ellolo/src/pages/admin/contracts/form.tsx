@@ -504,7 +504,7 @@ export default function AdminContractForm() {
                 name="buyerPhone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>الهاتف *</FormLabel>
+                    <FormLabel>رقم الجوال *</FormLabel>
                     <FormControl><Input dir="ltr" {...field} value={field.value || ''} /></FormControl>
                     <FormMessage />
                   </FormItem>

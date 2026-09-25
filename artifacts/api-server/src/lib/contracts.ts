@@ -139,7 +139,7 @@ export async function createContractPdf(contract: DistributorContract, verificat
      line("المنشأة", contract.buyerCompanyName);
      line("الممثل", `${contract.buyerRepName ?? ""} (${contract.buyerRepTitle ?? ""})`);
      line("البريد الإلكتروني", contract.buyerEmail);
-     line("الهاتف", contract.buyerPhone);
+     line("رقم الجوال", contract.buyerPhone);
      doc.moveDown().fontSize(9).text("التوقيعات الإلكترونية دليل مسجل ولا تعني وحدها تحقق الصلاحية القانونية.", { align: "right" });
     doc.image(qrDataUrl, { fit: [120, 120], align: "center" });
     doc.fontSize(8).text(verificationUrl, { align: "center" });
