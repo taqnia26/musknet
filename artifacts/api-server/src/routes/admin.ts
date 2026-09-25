@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { open } from "node:fs/promises";
 import { constants } from "node:fs";
 import { suggestContractSignedDate } from "../lib/contract-signed-date";
+import { createSocialMarketingRouter } from "./social-marketing";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
 import {
@@ -163,6 +164,7 @@ export function permit(module: string, action: "view" | "edit" | "delete") {
    } catch (error) { next(error); }
   };
 }
+router.use(createSocialMarketingRouter(permit));
 
 function permitExhibitionInvoiceRead(_req: Request, res: Response, next: NextFunction) {
   (async () => {

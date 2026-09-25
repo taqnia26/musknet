@@ -4781,6 +4781,181 @@ export const AdminPauseCampaignResponse = zod.object({
 })
 
 
+export const adminListSocialPostsResponseIdMultipleOf = 1;
+
+export const adminListSocialPostsResponseCampaignIdMultipleOf = 1;
+
+
+
+export const AdminListSocialPostsResponseItem = zod.object({
+  "id": zod.number().multipleOf(adminListSocialPostsResponseIdMultipleOf),
+  "title": zod.string(),
+  "caption": zod.string(),
+  "platforms": zod.array(zod.enum(['instagram', 'facebook', 'tiktok', 'x', 'linkedin'])),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['draft', 'scheduled', 'published_manual']),
+  "scheduledAt": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "campaignId": zod.number().multipleOf(adminListSocialPostsResponseCampaignIdMultipleOf).nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const AdminListSocialPostsResponse = zod.array(AdminListSocialPostsResponseItem)
+
+
+export const adminCreateSocialPostBodyTitleMax = 120;
+
+export const adminCreateSocialPostBodyCaptionMax = 5000;
+
+export const adminCreateSocialPostBodyPlatformsMax = 5;
+
+export const adminCreateSocialPostBodyMediaUrlsItemMax = 400;
+
+export const adminCreateSocialPostBodyMediaUrlsMax = 6;
+
+export const adminCreateSocialPostBodyCampaignIdMultipleOf = 1;
+
+
+
+export const AdminCreateSocialPostBody = zod.object({
+  "title": zod.string().min(1).max(adminCreateSocialPostBodyTitleMax),
+  "caption": zod.string().min(1).max(adminCreateSocialPostBodyCaptionMax),
+  "platforms": zod.array(zod.enum(['instagram', 'facebook', 'tiktok', 'x', 'linkedin'])).min(1).max(adminCreateSocialPostBodyPlatformsMax),
+  "mediaUrls": zod.array(zod.string().max(adminCreateSocialPostBodyMediaUrlsItemMax)).max(adminCreateSocialPostBodyMediaUrlsMax),
+  "status": zod.enum(['draft', 'scheduled']),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "campaignId": zod.number().multipleOf(adminCreateSocialPostBodyCampaignIdMultipleOf).nullish()
+})
+
+export const adminCreateSocialPostResponseIdMultipleOf = 1;
+
+export const adminCreateSocialPostResponseCampaignIdMultipleOf = 1;
+
+
+
+export const AdminCreateSocialPostResponse = zod.object({
+  "id": zod.number().multipleOf(adminCreateSocialPostResponseIdMultipleOf),
+  "title": zod.string(),
+  "caption": zod.string(),
+  "platforms": zod.array(zod.enum(['instagram', 'facebook', 'tiktok', 'x', 'linkedin'])),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['draft', 'scheduled', 'published_manual']),
+  "scheduledAt": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "campaignId": zod.number().multipleOf(adminCreateSocialPostResponseCampaignIdMultipleOf).nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminUpdateSocialPostParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminUpdateSocialPostBodyTitleMax = 120;
+
+export const adminUpdateSocialPostBodyCaptionMax = 5000;
+
+export const adminUpdateSocialPostBodyPlatformsMax = 5;
+
+export const adminUpdateSocialPostBodyMediaUrlsItemMax = 400;
+
+export const adminUpdateSocialPostBodyMediaUrlsMax = 6;
+
+export const adminUpdateSocialPostBodyCampaignIdMultipleOf = 1;
+
+
+
+export const AdminUpdateSocialPostBody = zod.object({
+  "title": zod.string().min(1).max(adminUpdateSocialPostBodyTitleMax).optional(),
+  "caption": zod.string().min(1).max(adminUpdateSocialPostBodyCaptionMax).optional(),
+  "platforms": zod.array(zod.enum(['instagram', 'facebook', 'tiktok', 'x', 'linkedin'])).min(1).max(adminUpdateSocialPostBodyPlatformsMax).optional(),
+  "mediaUrls": zod.array(zod.string().max(adminUpdateSocialPostBodyMediaUrlsItemMax)).max(adminUpdateSocialPostBodyMediaUrlsMax).optional(),
+  "status": zod.enum(['draft', 'scheduled']).optional(),
+  "scheduledAt": zod.coerce.date().nullish(),
+  "campaignId": zod.number().multipleOf(adminUpdateSocialPostBodyCampaignIdMultipleOf).nullish()
+})
+
+export const adminUpdateSocialPostResponseIdMultipleOf = 1;
+
+export const adminUpdateSocialPostResponseCampaignIdMultipleOf = 1;
+
+
+
+export const AdminUpdateSocialPostResponse = zod.object({
+  "id": zod.number().multipleOf(adminUpdateSocialPostResponseIdMultipleOf),
+  "title": zod.string(),
+  "caption": zod.string(),
+  "platforms": zod.array(zod.enum(['instagram', 'facebook', 'tiktok', 'x', 'linkedin'])),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['draft', 'scheduled', 'published_manual']),
+  "scheduledAt": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "campaignId": zod.number().multipleOf(adminUpdateSocialPostResponseCampaignIdMultipleOf).nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AdminDeleteSocialPostParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminDeleteSocialPostResponse = zod.void()
+
+
+export const AdminMarkSocialPostPublishedManuallyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminMarkSocialPostPublishedManuallyResponseIdMultipleOf = 1;
+
+export const adminMarkSocialPostPublishedManuallyResponseCampaignIdMultipleOf = 1;
+
+
+
+export const AdminMarkSocialPostPublishedManuallyResponse = zod.object({
+  "id": zod.number().multipleOf(adminMarkSocialPostPublishedManuallyResponseIdMultipleOf),
+  "title": zod.string(),
+  "caption": zod.string(),
+  "platforms": zod.array(zod.enum(['instagram', 'facebook', 'tiktok', 'x', 'linkedin'])),
+  "mediaUrls": zod.array(zod.string()),
+  "status": zod.enum(['draft', 'scheduled', 'published_manual']),
+  "scheduledAt": zod.coerce.date().nullable(),
+  "publishedAt": zod.coerce.date().nullable(),
+  "campaignId": zod.number().multipleOf(adminMarkSocialPostPublishedManuallyResponseCampaignIdMultipleOf).nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const adminRequestSocialMediaUploadBodySizeMax = 10485760;
+export const adminRequestSocialMediaUploadBodySizeMultipleOf = 1;
+
+
+
+export const AdminRequestSocialMediaUploadBody = zod.object({
+  "contentType": zod.string(),
+  "size": zod.number().min(1).max(adminRequestSocialMediaUploadBodySizeMax).multipleOf(adminRequestSocialMediaUploadBodySizeMultipleOf)
+})
+
+export const AdminRequestSocialMediaUploadResponse = zod.object({
+  "uploadUrl": zod.string(),
+  "objectPath": zod.string(),
+  "imageUrl": zod.string()
+})
+
+
+export const adminGetSocialMediaPathKeyRegExp = new RegExp('^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+
+
+export const AdminGetSocialMediaParams = zod.object({
+  "key": zod.coerce.string().regex(adminGetSocialMediaPathKeyRegExp)
+})
+
+export const AdminGetSocialMediaResponse = zod.unknown()
+
+
 export const adminListCustomersQueryStatusDefault = `all`;
 
 export const AdminListCustomersQueryParams = zod.object({

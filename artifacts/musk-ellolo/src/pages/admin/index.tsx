@@ -40,6 +40,7 @@ import AdminGiftingIssues from '@/pages/admin/gifting-issues';
 import OwnerCredentialsSettings from '@/pages/admin/owner-credentials';
 import AdminInfluencers from '@/pages/admin/influencers';
 import AdminCampaigns from '@/pages/admin/campaigns';
+import { MarketingOverview, MarketingContent, MarketingCalendar, MarketingChannels } from '@/pages/admin/social-marketing';
 import AdminOnlineShipping from '@/pages/admin/shipping/online';
 import AdminB2BShipping from '@/pages/admin/shipping/b2b';
 
@@ -64,6 +65,10 @@ export default function AdminRoutes() {
         <Route path="/admin/sales/companies" component={AdminInvoices} />
         <Route path="/admin/sales/exhibitions" component={AdminExhibitionInvoices} />
         <Route path="/admin/marketing/coupons" component={AdminCoupons} />
+        <Route path="/admin/marketing/overview" component={MarketingOverview} />
+        <Route path="/admin/marketing/content" component={MarketingContent} />
+        <Route path="/admin/marketing/calendar" component={MarketingCalendar} />
+        <Route path="/admin/marketing/channels" component={MarketingChannels} />
         <Route path="/admin/revenue-analytics" component={AdminRevenueAnalytics} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/admin/products" component={AdminProducts} />

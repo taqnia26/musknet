@@ -4,6 +4,7 @@
 - [Drizzle push and custom SQL](drizzle-push-custom-sql.md) — schema push does not install handwritten PostgreSQL functions or triggers; chain an idempotent installer into provisioning.
 - [Playwright on NixOS](playwright-nixos-runtime.md) — downloaded Chromium still needs its shared libraries declared in the workspace Nix configuration.
 - [OpenAPI email validation](openapi-email-validation.md) — use a pattern instead of format: email until the Orval/Zod generator versions are aligned.
+- [OpenAPI UUID validation](openapi-uuid-validation.md) — use a pattern instead of format: uuid until the Orval/Zod generator versions are aligned.
 - [Generated Zod initialization](generated-zod-initialization.md) — generated schemas may reference validation constants declared later, causing TDZ failures in source-based tests.
 - [Lazy video request tests](lazy-video-request-tests.md) — currentSrc can be selected without a fetch; assert actual requests and readyState when testing preload="none".
 - [Integration readiness states](integration-readiness-states.md) — distinguish saved setup from a verified live connection, and never persist provider secrets in app tables.

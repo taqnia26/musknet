@@ -34,7 +34,9 @@ describe('admin commercial navigation', () => {
       ['Company Sales', 'مبيعات الشركات'],
       ['Exhibition Sales', 'مبيعات المعارض'],
     ]);
-    expect(group('Marketing').children?.map(({ labelEn }) => labelEn)).toEqual(['Campaigns', 'Coupons']);
+    expect(group('Marketing').children?.map(({ labelEn }) => labelEn)).toEqual([
+      'Marketing Overview', 'Social Content', 'Content Calendar', 'Social Channels', 'Campaigns', 'Coupons',
+    ]);
   });
 
   it('keeps order navigation on the order management screen', () => {

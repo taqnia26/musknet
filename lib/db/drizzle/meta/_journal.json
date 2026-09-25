@@ -414,6 +414,13 @@
       "when": 1790299500042,
       "tag": "0058_sudden_manta",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1790335395082,
+      "tag": "0059_hard_magik",
+      "breakpoints": true
     }
   ]
 }

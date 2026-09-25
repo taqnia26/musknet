@@ -29,6 +29,7 @@ export * from "./categories";
 export * from "./products";
 export * from "./coupons";
 export * from "./campaigns";
+export * from "./social-marketing";
 export * from "./order-addresses";
 export * from "./admin-users";
 export * from "./admin-sessions";

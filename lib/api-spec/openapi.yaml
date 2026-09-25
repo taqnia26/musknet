@@ -1360,6 +1360,83 @@ paths:
         "200": { description: Paused campaign, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCampaign" } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /admin/social/posts:
+    get:
+      operationId: adminListSocialPosts
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses:
+        "200": { description: Planned social content, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AdminSocialPost" } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      operationId: adminCreateSocialPost
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSocialPostInput" } } } }
+      responses:
+        "201": { description: Planned content, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSocialPost" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/social/posts/{id}:
+    patch:
+      operationId: adminUpdateSocialPost
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSocialPostUpdate" } } } }
+      responses:
+        "200": { description: Planned content, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSocialPost" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      operationId: adminDeleteSocialPost
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "204": { description: Draft or planned content deleted }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/social/posts/{id}/published-manually:
+    post:
+      operationId: adminMarkSocialPostPublishedManually
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200": { description: Manually published content, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSocialPost" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/social/media/upload-url:
+    post:
+      operationId: adminRequestSocialMediaUpload
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSocialMediaUploadInput" } } } }
+      responses:
+        "200": { description: Presigned image upload, content: { application/json: { schema: { $ref: "#/components/schemas/AdminSocialMediaUpload" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/social/media/{key}:
+    get:
+      operationId: adminGetSocialMedia
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - { name: key, in: path, required: true, schema: { type: string, pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" } }
+      responses:
+        "200":
+          description: Private, validated marketing image
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "415": { description: Stored file is not a supported image }
   /admin/customers:
     get:
       operationId: adminListCustomers
@@ -4422,6 +4499,61 @@ components:
         revenue: { type: number }
         byChannel: { type: array, items: { $ref: "#/components/schemas/AdminCampaignChannelResult" } }
         campaigns: { type: array, items: { $ref: "#/components/schemas/AdminCampaignResult" } }
+    AdminSocialPlatform:
+      type: string
+      enum: [instagram, facebook, tiktok, x, linkedin]
+    AdminSocialPost:
+      type: object
+      required: [id, title, caption, platforms, mediaUrls, status, scheduledAt, publishedAt, campaignId, createdAt, updatedAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        title: { type: string }
+        caption: { type: string }
+        platforms: { type: array, items: { $ref: "#/components/schemas/AdminSocialPlatform" } }
+        mediaUrls: { type: array, items: { type: string } }
+        status: { type: string, enum: [draft, scheduled, published_manual] }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        publishedAt: { type: ["string", "null"], format: date-time }
+        campaignId: { type: ["number", "null"], multipleOf: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminSocialPostInput:
+      type: object
+      required: [title, caption, platforms, mediaUrls, status]
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        caption: { type: string, minLength: 1, maxLength: 5000 }
+        platforms: { type: array, minItems: 1, maxItems: 5, uniqueItems: true, items: { $ref: "#/components/schemas/AdminSocialPlatform" } }
+        mediaUrls: { type: array, maxItems: 6, items: { type: string, maxLength: 400 } }
+        status: { type: string, enum: [draft, scheduled] }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        campaignId: { type: ["number", "null"], multipleOf: 1 }
+    AdminSocialPostUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        caption: { type: string, minLength: 1, maxLength: 5000 }
+        platforms: { type: array, minItems: 1, maxItems: 5, uniqueItems: true, items: { $ref: "#/components/schemas/AdminSocialPlatform" } }
+        mediaUrls: { type: array, maxItems: 6, items: { type: string, maxLength: 400 } }
+        status: { type: string, enum: [draft, scheduled] }
+        scheduledAt: { type: ["string", "null"], format: date-time }
+        campaignId: { type: ["number", "null"], multipleOf: 1 }
+    AdminSocialMediaUploadInput:
+      type: object
+      required: [contentType, size]
+      properties:
+        contentType: { type: string }
+        size: { type: number, multipleOf: 1, minimum: 1, maximum: 10485760 }
+    AdminSocialMediaUpload:
+      type: object
+      required: [uploadUrl, objectPath, imageUrl]
+      properties:
+        uploadUrl: { type: string }
+        objectPath: { type: string }
+        imageUrl: { type: string }
     AdminCampaignInput:
       type: object
       required: [name, channel, status, startsAt, endsAt, couponIds]

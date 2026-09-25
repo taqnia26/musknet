@@ -3090,6 +3090,130 @@ export interface AdminCampaignResults {
   campaigns: AdminCampaignResult[];
 }
 
+export type AdminSocialPlatform = typeof AdminSocialPlatform[keyof typeof AdminSocialPlatform];
+
+
+export const AdminSocialPlatform = {
+  instagram: 'instagram',
+  facebook: 'facebook',
+  tiktok: 'tiktok',
+  x: 'x',
+  linkedin: 'linkedin',
+} as const;
+
+export type AdminSocialPostStatus = typeof AdminSocialPostStatus[keyof typeof AdminSocialPostStatus];
+
+
+export const AdminSocialPostStatus = {
+  draft: 'draft',
+  scheduled: 'scheduled',
+  published_manual: 'published_manual',
+} as const;
+
+export interface AdminSocialPost {
+  id: number;
+  title: string;
+  caption: string;
+  platforms: AdminSocialPlatform[];
+  mediaUrls: string[];
+  status: AdminSocialPostStatus;
+  /** @nullable */
+  scheduledAt: string | null;
+  /** @nullable */
+  publishedAt: string | null;
+  /** @nullable */
+  campaignId: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AdminSocialPostInputStatus = typeof AdminSocialPostInputStatus[keyof typeof AdminSocialPostInputStatus];
+
+
+export const AdminSocialPostInputStatus = {
+  draft: 'draft',
+  scheduled: 'scheduled',
+} as const;
+
+export interface AdminSocialPostInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  caption: string;
+  /**
+     * @minItems 1
+     * @maxItems 5
+     */
+  platforms: AdminSocialPlatform[];
+  /**
+     * @maxItems 6
+     * @items.maxLength 400
+     */
+  mediaUrls: string[];
+  status: AdminSocialPostInputStatus;
+  /** @nullable */
+  scheduledAt?: string | null;
+  /** @nullable */
+  campaignId?: number | null;
+}
+
+export type AdminSocialPostUpdateStatus = typeof AdminSocialPostUpdateStatus[keyof typeof AdminSocialPostUpdateStatus];
+
+
+export const AdminSocialPostUpdateStatus = {
+  draft: 'draft',
+  scheduled: 'scheduled',
+} as const;
+
+export interface AdminSocialPostUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title?: string;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  caption?: string;
+  /**
+     * @minItems 1
+     * @maxItems 5
+     */
+  platforms?: AdminSocialPlatform[];
+  /**
+     * @maxItems 6
+     * @items.maxLength 400
+     */
+  mediaUrls?: string[];
+  status?: AdminSocialPostUpdateStatus;
+  /** @nullable */
+  scheduledAt?: string | null;
+  /** @nullable */
+  campaignId?: number | null;
+}
+
+export interface AdminSocialMediaUploadInput {
+  contentType: string;
+  /**
+     * @minimum 1
+     * @maximum 10485760
+     */
+  size: number;
+}
+
+export interface AdminSocialMediaUpload {
+  uploadUrl: string;
+  objectPath: string;
+  imageUrl: string;
+}
+
 export type AdminCampaignInputStatus = typeof AdminCampaignInputStatus[keyof typeof AdminCampaignInputStatus];
 
 

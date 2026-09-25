@@ -8,8 +8,8 @@ router.get("/storage/objects/*objectPath", async (req, res) => {
   try {
     const value = req.params.objectPath;
     const relativePath = Array.isArray(value) ? value.join("/") : value;
-    // Contract documents are only served through the permission-checked admin download route.
-    if (relativePath.startsWith("uploads/contracts/files/") || relativePath.startsWith("local/contracts/")) {
+    // Contract documents and draft marketing assets require permission-checked admin routes.
+    if (relativePath.startsWith("uploads/contracts/files/") || relativePath.startsWith("local/contracts/") || relativePath.startsWith("uploads/marketing/")) {
       res.status(404).json({ error: "Object not found" });
       return;
     }

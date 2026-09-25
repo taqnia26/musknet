@@ -108,6 +108,10 @@ export const navStructure = [
   {
     labelEn: 'Marketing', labelAr: 'التسويق', icon: Tags,
     children: [
+      { href: '/admin/marketing/overview', labelEn: 'Marketing Overview', labelAr: 'لوحة التسويق', module: 'campaigns' },
+      { href: '/admin/marketing/content', labelEn: 'Social Content', labelAr: 'المحتوى الاجتماعي', module: 'campaigns' },
+      { href: '/admin/marketing/calendar', labelEn: 'Content Calendar', labelAr: 'تقويم المحتوى', module: 'campaigns' },
+      { href: '/admin/marketing/channels', labelEn: 'Social Channels', labelAr: 'القنوات الاجتماعية', module: 'campaigns' },
       { href: '/admin/marketing', labelEn: 'Campaigns', labelAr: 'الحملات', module: 'campaigns' },
       { href: '/admin/marketing/coupons', labelEn: 'Coupons', labelAr: 'الكوبونات', module: 'coupons' },
     ]
