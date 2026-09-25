@@ -2144,7 +2144,7 @@ paths:
       operationId: listInventoryLocations
       security: [{ adminBearerAuth: [] }]
       tags: [Admin Inventory]
-      responses: { "200": { description: Inventory locations } }
+      responses: { "200": { description: Inventory locations, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryLocation" } } } } } }
     post:
       operationId: createInventoryLocation
       tags: [Admin Inventory]
@@ -3553,7 +3553,7 @@ components:
         distributorImageOverride: { type: [string, "null"] }
     AdminProduct:
       type: object
-      required: [id, nameAr, nameEn, displayNameAr, displayNameEn, invoiceNameAr, invoiceNameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, averageCost, sku, barcode, sellable, isActive, isFeatured, isBestseller, showOnDistributors, weightKg, costPrice, discountPrice, discountEndsOn, mpn, brand, subtitleAr, promotionalTitleAr, maxPerCustomer, requiresShipping, allowOrderAttachment, allowCustomerNote, taxable, registrationNumber, tags, seoTitleAr, seoDescriptionAr, descriptionRichAr, descriptionRichEn, createdAt, updatedAt]
+      required: [id, nameAr, nameEn, displayNameAr, displayNameEn, invoiceNameAr, invoiceNameEn, slug, price, categoryId, images, notes, stockQuantity, reorderPoint, targetStockQuantity, averageCost, sku, barcode, sellable, isActive, isFeatured, isBestseller, showOnDistributors, weightKg, costPrice, discountPrice, discountEndsOn, mpn, brand, subtitleAr, promotionalTitleAr, maxPerCustomer, requiresShipping, allowOrderAttachment, allowCustomerNote, taxable, registrationNumber, tags, seoTitleAr, seoDescriptionAr, descriptionRichAr, descriptionRichEn, inventoryNotes, operationalType, unitOfMeasure, createdAt, updatedAt]
       properties:
         id: { type: number }
         nameAr: { type: string }
@@ -3600,6 +3600,9 @@ components:
         targetStockQuantity: { type: number }
         sku: { type: [string, "null"] }
         barcode: { type: [string, "null"], maxLength: 100 }
+        inventoryNotes: { type: string }
+        operationalType: { type: string, enum: [finished_good, raw_material, packaging] }
+        unitOfMeasure: { type: string }
         averageCost: { type: string }
         sellable: { type: boolean }
         isActive: { type: boolean }
@@ -3678,6 +3681,9 @@ components:
         targetStockQuantity: { type: number, minimum: 0, multipleOf: 1, default: 20 }
         sku: { type: [string, "null"] }
         barcode: { type: [string, "null"], maxLength: 100 }
+        inventoryNotes: { type: string, maxLength: 2000 }
+        operationalType: { type: string, enum: [finished_good, raw_material, packaging] }
+        unitOfMeasure: { type: string, minLength: 1 }
         isActive: { type: boolean }
         isFeatured: { type: boolean }
         isBestseller: { type: boolean }
@@ -4492,7 +4498,7 @@ components:
         isActive: { type: boolean }
     AdminInventoryItem:
       type: object
-      required: [id, nameAr, nameEn, sku, barcode, operationalType, unitOfMeasure, preferredSupplier, sellable, price, averageCost, categoryId, categoryNameAr, categoryNameEn, stockQuantity, reorderPoint, targetStockQuantity, stockStatus, inventoryValue, isActive]
+      required: [id, nameAr, nameEn, sku, barcode, operationalType, unitOfMeasure, preferredSupplier, sellable, price, averageCost, categoryId, categoryNameAr, categoryNameEn, stockQuantity, reorderPoint, targetStockQuantity, stockStatus, inventoryValue, isActive, inventoryNotes]
       properties:
         id: { type: number }
         nameAr: { type: string }
@@ -4503,6 +4509,7 @@ components:
         invoiceNameEn: { type: string }
         sku: { type: [string, "null"] }
         barcode: { type: [string, "null"] }
+        inventoryNotes: { type: string }
         operationalType: { type: string, enum: [finished_good, raw_material, packaging] }
         unitOfMeasure: { type: string }
         preferredSupplier: { type: [string, "null"] }
@@ -4546,6 +4553,9 @@ components:
         descriptionEn: { type: string, default: "" }
         sku: { type: string, minLength: 1 }
         barcode: { type: [string, "null"] }
+        inventoryNotes: { type: string, maxLength: 2000 }
+        openingLocationId: { type: number, minimum: 1, multipleOf: 1 }
+        isActive: { type: boolean, default: true }
         operationalType: { type: string, enum: [finished_good, raw_material, packaging], default: finished_good }
         unitOfMeasure: { type: string, default: unit }
         preferredSupplier: { type: [string, "null"] }
@@ -4568,6 +4578,8 @@ components:
         invoiceNameEn: { type: string, minLength: 1 }
         sku: { type: string, minLength: 1 }
         barcode: { type: [string, "null"] }
+        inventoryNotes: { type: string, maxLength: 2000 }
+        isActive: { type: boolean }
         operationalType: { type: string, enum: [finished_good, raw_material, packaging] }
         unitOfMeasure: { type: string, minLength: 1 }
         preferredSupplier: { type: [string, "null"] }

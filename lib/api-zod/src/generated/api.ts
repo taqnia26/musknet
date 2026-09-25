@@ -2374,6 +2374,9 @@ export const AdminListProductsResponseItem = zod.object({
   "targetStockQuantity": zod.number(),
   "sku": zod.string().nullable(),
   "barcode": zod.string().max(adminListProductsResponseBarcodeMax).nullable(),
+  "inventoryNotes": zod.string(),
+  "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
+  "unitOfMeasure": zod.string(),
   "averageCost": zod.string(),
   "sellable": zod.boolean(),
   "isActive": zod.boolean(),
@@ -2473,6 +2476,9 @@ export const adminCreateProductBodyTargetStockQuantityMultipleOf = 1;
 
 export const adminCreateProductBodyBarcodeMax = 100;
 
+export const adminCreateProductBodyInventoryNotesMax = 2000;
+
+
 
 
 export const AdminCreateProductBody = zod.object({
@@ -2551,6 +2557,9 @@ export const AdminCreateProductBody = zod.object({
   "targetStockQuantity": zod.number().min(adminCreateProductBodyTargetStockQuantityMin).multipleOf(adminCreateProductBodyTargetStockQuantityMultipleOf).default(adminCreateProductBodyTargetStockQuantityDefault),
   "sku": zod.string().nullish(),
   "barcode": zod.string().max(adminCreateProductBodyBarcodeMax).nullish(),
+  "inventoryNotes": zod.string().max(adminCreateProductBodyInventoryNotesMax).optional(),
+  "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']).optional(),
+  "unitOfMeasure": zod.string().min(1).optional(),
   "isActive": zod.boolean().optional(),
   "isFeatured": zod.boolean().optional(),
   "isBestseller": zod.boolean().optional(),
@@ -2703,6 +2712,9 @@ export const AdminCreateProductResponse = zod.object({
   "targetStockQuantity": zod.number(),
   "sku": zod.string().nullable(),
   "barcode": zod.string().max(adminCreateProductResponseBarcodeMax).nullable(),
+  "inventoryNotes": zod.string(),
+  "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
+  "unitOfMeasure": zod.string(),
   "averageCost": zod.string(),
   "sellable": zod.boolean(),
   "isActive": zod.boolean(),
@@ -2882,6 +2894,9 @@ export const AdminGetProductResponse = zod.object({
   "targetStockQuantity": zod.number(),
   "sku": zod.string().nullable(),
   "barcode": zod.string().max(adminGetProductResponseBarcodeMax).nullable(),
+  "inventoryNotes": zod.string(),
+  "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
+  "unitOfMeasure": zod.string(),
   "averageCost": zod.string(),
   "sellable": zod.boolean(),
   "isActive": zod.boolean(),
@@ -3202,6 +3217,9 @@ export const AdminUpdateProductResponse = zod.object({
   "targetStockQuantity": zod.number(),
   "sku": zod.string().nullable(),
   "barcode": zod.string().max(adminUpdateProductResponseBarcodeMax).nullable(),
+  "inventoryNotes": zod.string(),
+  "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
+  "unitOfMeasure": zod.string(),
   "averageCost": zod.string(),
   "sellable": zod.boolean(),
   "isActive": zod.boolean(),
@@ -4926,6 +4944,7 @@ export const AdminListInventoryResponse = zod.object({
   "invoiceNameEn": zod.string().optional(),
   "sku": zod.string().nullable(),
   "barcode": zod.string().nullable(),
+  "inventoryNotes": zod.string(),
   "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
   "unitOfMeasure": zod.string(),
   "preferredSupplier": zod.string().nullable(),
@@ -4959,6 +4978,11 @@ export const AdminListInventoryResponse = zod.object({
 
 export const adminCreateInventoryProductBodyDescriptionArDefault = ``;
 export const adminCreateInventoryProductBodyDescriptionEnDefault = ``;
+export const adminCreateInventoryProductBodyInventoryNotesMax = 2000;
+
+export const adminCreateInventoryProductBodyOpeningLocationIdMultipleOf = 1;
+
+export const adminCreateInventoryProductBodyIsActiveDefault = true;
 export const adminCreateInventoryProductBodyOperationalTypeDefault = `finished_good`;
 export const adminCreateInventoryProductBodyUnitOfMeasureDefault = `unit`;
 export const adminCreateInventoryProductBodySellableDefault = true;
@@ -4990,6 +5014,9 @@ export const AdminCreateInventoryProductBody = zod.object({
   "descriptionEn": zod.string().default(adminCreateInventoryProductBodyDescriptionEnDefault),
   "sku": zod.string().min(1),
   "barcode": zod.string().nullish(),
+  "inventoryNotes": zod.string().max(adminCreateInventoryProductBodyInventoryNotesMax).optional(),
+  "openingLocationId": zod.number().min(1).multipleOf(adminCreateInventoryProductBodyOpeningLocationIdMultipleOf).optional(),
+  "isActive": zod.boolean().default(adminCreateInventoryProductBodyIsActiveDefault),
   "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']).default(adminCreateInventoryProductBodyOperationalTypeDefault),
   "unitOfMeasure": zod.string().default(adminCreateInventoryProductBodyUnitOfMeasureDefault),
   "preferredSupplier": zod.string().nullish(),
@@ -5012,6 +5039,7 @@ export const AdminCreateInventoryProductResponse = zod.object({
   "invoiceNameEn": zod.string().optional(),
   "sku": zod.string().nullable(),
   "barcode": zod.string().nullable(),
+  "inventoryNotes": zod.string(),
   "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
   "unitOfMeasure": zod.string(),
   "preferredSupplier": zod.string().nullable(),
@@ -5062,6 +5090,8 @@ export const AdminUpdateInventoryProductParams = zod.object({
 
 
 
+export const adminUpdateInventoryProductBodyInventoryNotesMax = 2000;
+
 
 export const adminUpdateInventoryProductBodyCategoryIdMultipleOf = 1;
 
@@ -5084,6 +5114,8 @@ export const AdminUpdateInventoryProductBody = zod.object({
   "invoiceNameEn": zod.string().min(1),
   "sku": zod.string().min(1),
   "barcode": zod.string().nullish(),
+  "inventoryNotes": zod.string().max(adminUpdateInventoryProductBodyInventoryNotesMax).optional(),
+  "isActive": zod.boolean().optional(),
   "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
   "unitOfMeasure": zod.string().min(1),
   "preferredSupplier": zod.string().nullish(),
@@ -5104,6 +5136,7 @@ export const AdminUpdateInventoryProductResponse = zod.object({
   "invoiceNameEn": zod.string().optional(),
   "sku": zod.string().nullable(),
   "barcode": zod.string().nullable(),
+  "inventoryNotes": zod.string(),
   "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
   "unitOfMeasure": zod.string(),
   "preferredSupplier": zod.string().nullable(),
@@ -5163,6 +5196,7 @@ export const AdminAdjustInventoryResponse = zod.object({
   "invoiceNameEn": zod.string().optional(),
   "sku": zod.string().nullable(),
   "barcode": zod.string().nullable(),
+  "inventoryNotes": zod.string(),
   "operationalType": zod.enum(['finished_good', 'raw_material', 'packaging']),
   "unitOfMeasure": zod.string(),
   "preferredSupplier": zod.string().nullable(),
@@ -7810,7 +7844,22 @@ export const GetOwnerOpeningBalanceReconciliationResponse = zod.object({
 }))
 
 
-export const ListInventoryLocationsResponse = zod.unknown()
+export const listInventoryLocationsResponseIdMultipleOf = 1;
+
+
+
+export const ListInventoryLocationsResponseItem = zod.object({
+  "id": zod.number().multipleOf(listInventoryLocationsResponseIdMultipleOf),
+  "name": zod.string(),
+  "code": zod.string(),
+  "managerName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "type": zod.enum(['warehouse', 'store', 'virtual']),
+  "isDefault": zod.boolean(),
+  "active": zod.boolean()
+})
+export const ListInventoryLocationsResponse = zod.array(ListInventoryLocationsResponseItem)
 
 
 export const createInventoryLocationBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');

@@ -26,19 +26,14 @@ const baseInvoice = {
   items: [{ productName: "Product", quantity: 1, unitPrice: 100, totalAmount: 115 }],
 };
 
-    const historical = {
-      ...baseInvoice, historical: "yes", invoiceNumber: "OLD-2026-01",
-      subtotal: 180, discountAmount: 23, vatAmount: 27, totalAmount: 207,
-      paidAmount: 50, outstandingAmount: 157, qrCodeData: "",
-      items: [{ productName: "Discontinued perfume", quantity: 2, unitPrice: 115, totalAmount: 207 }],
-    };
+describe("invoice PDF formatting", () => {
+  it("keeps contract discounts and VAT in the totals", () => {
     const rows = getInvoiceTotalRows({
       ...baseInvoice,
-      orderNumber: "ORDER-100",
+      contractDiscountPercent: 10,
+      items: [{ productName: "Product", quantity: 1, unitPrice: 130, totalAmount: 115 }],
       subtotal: 100,
-      discountAmount: 10,
-      shippingAmount: 5,
-      totalAmount: 110,
+      discountAmount: 15,
     });
 
     expect(rows).toEqual([
@@ -72,9 +67,8 @@ const baseInvoice = {
     expect(invoiceMoneyLabel(123.45, "ar")).toBe("123.45");
     expect(invoiceMoneyLabel(123.45, "en")).toBe("123.45 SAR");
 
-    const invoice = { ...baseInvoice };
-    const arabicPdf = await createInvoicePdf({ ...baseInvoice, items: [item] }, "ar");
-    const englishPdf = await createInvoicePdf({ ...baseInvoice, items: [item] }, "en");
+    const arabicPdf = await createInvoicePdf(baseInvoice, "ar");
+    const englishPdf = await createInvoicePdf(baseInvoice, "en");
     expect(arabicPdf.toString("latin1")).not.toContain(" SAR");
     expect(englishPdf.equals(arabicPdf)).toBe(false);
   });
@@ -114,7 +108,6 @@ const baseInvoice = {
       items: [{ productName: "Product", quantity: 1, unitPrice: 100, totalAmount: 115 }],
     });
 
-    const raw = pdf.toString("latin1");
     const contents = pdf.toString("latin1");
     expect(contents.startsWith("%PDF-")).toBe(true);
     expect((contents.match(/\/Subtype \/Image/g) ?? []).length).toBeGreaterThanOrEqual(3);
@@ -124,5 +117,3 @@ const baseInvoice = {
     expect(pdf.length).toBeGreaterThan(2000);
   });
 });
-
-    const livePdf = await createInvoicePdf(baseInvoice, "en");

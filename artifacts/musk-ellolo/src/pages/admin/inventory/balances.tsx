@@ -10,6 +10,7 @@ import {
   useAdminListInventoryMovements,
   useAdminListCategories, 
   useGetAdminMe,
+  useListInventoryLocations,
   getAdminListInventoryQueryKey,
   getAdminListInventoryMovementsQueryKey
 } from '@workspace/api-client-react';
@@ -31,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { BarcodeScanner } from '@/components/admin/inventory/barcode-scanner';
 import { sortProductsForSelection } from '@/lib/product-sort';
 import { quantityInputClass } from '@/lib/quantity-input';
+import { Textarea } from '@/components/ui/textarea';
 
 export function RowActions({
   item, 
@@ -61,7 +63,10 @@ export function RowActions({
   const handleEdit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const requiredNames = ['nameAr', 'nameEn', 'displayNameAr', 'displayNameEn', 'invoiceNameAr', 'invoiceNameEn'];
+    const sellable = fd.get('sellable') === 'on';
+    const requiredNames = sellable
+      ? ['nameAr', 'nameEn', 'displayNameAr', 'displayNameEn', 'invoiceNameAr', 'invoiceNameEn']
+      : ['nameAr', 'nameEn'];
     if (requiredNames.some((name) => !(fd.get(name) as string | null)?.trim())) {
       toast({ title: t('يرجى إدخال أسماء المنتج باللغتين لكل نوع', 'Enter Arabic and English names for all name types'), variant: 'destructive' });
       return;
@@ -71,17 +76,19 @@ export function RowActions({
       data: {
         nameAr: fd.get('nameAr') as string,
         nameEn: fd.get('nameEn') as string,
-        displayNameAr: (fd.get('displayNameAr') as string).trim(),
-        displayNameEn: (fd.get('displayNameEn') as string).trim(),
-        invoiceNameAr: (fd.get('invoiceNameAr') as string).trim(),
-        invoiceNameEn: (fd.get('invoiceNameEn') as string).trim(),
+        displayNameAr: String(fd.get('displayNameAr') || (sellable ? '' : fd.get('nameAr'))).trim(),
+        displayNameEn: String(fd.get('displayNameEn') || (sellable ? '' : fd.get('nameEn'))).trim(),
+        invoiceNameAr: String(fd.get('invoiceNameAr') || (sellable ? '' : fd.get('nameAr'))).trim(),
+        invoiceNameEn: String(fd.get('invoiceNameEn') || (sellable ? '' : fd.get('nameEn'))).trim(),
         sku: fd.get('sku') as string,
         categoryId: Number(fd.get('categoryId')),
         barcode: (fd.get('barcode') as string) || null,
+        inventoryNotes: String(fd.get('inventoryNotes') || '').trim(),
+        isActive: fd.get('isActive') === 'on',
         operationalType: fd.get('operationalType') as any,
         unitOfMeasure: fd.get('unitOfMeasure') as string,
         preferredSupplier: (fd.get('preferredSupplier') as string) || null,
-        sellable: fd.get('sellable') === 'on',
+        sellable,
         price: Number(fd.get('price')),
         reorderPoint: Number(fd.get('reorderPoint')),
         targetStockQuantity: Number(fd.get('targetStockQuantity'))
@@ -91,7 +98,8 @@ export function RowActions({
         toast({ title: t('تم تعديل المنتج', 'Product updated') });
         setEditOpen(false);
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
-      }
+      },
+      onError: (error) => toast({ title: t('تعذر تعديل الصنف', 'Could not update item'), description: error.message, variant: 'destructive' }),
     });
   };
 
@@ -219,7 +227,7 @@ export function RowActions({
                 <SelectContent>{categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{lang === 'ar' ? category.nameAr : category.nameEn}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>{t('الباركود', 'Barcode')}</Label><Input name="barcode" defaultValue={item.barcode || ''} className="mt-1" /></div>
+            <div><Label>{t('الباركود GTIN', 'GTIN barcode')}</Label><Input name="barcode" dir="ltr" defaultValue={item.barcode || ''} className="mt-1" /></div>
             <div>
               <Label>{t('النوع التشغيلي', 'Operational type')}</Label>
               <Select name="operationalType" defaultValue={item.operationalType}>
@@ -232,6 +240,8 @@ export function RowActions({
               </Select>
             </div>
             <div><Label>{t('وحدة القياس', 'Unit of measure')}</Label><Input name="unitOfMeasure" required defaultValue={item.unitOfMeasure} className="mt-1" /></div>
+            <div className="col-span-2"><Label>{t('ملاحظات الصنف', 'Item notes')}</Label><Textarea name="inventoryNotes" defaultValue={item.inventoryNotes} className="mt-1" /></div>
+            <div className="flex items-center gap-2"><input type="checkbox" name="isActive" defaultChecked={item.isActive} id={`active-edit-${item.id}`} /><Label htmlFor={`active-edit-${item.id}`}>{t('نشط', 'Active')}</Label></div>
             <div><Label>{t('المورد المفضل', 'Preferred supplier')}</Label><Input name="preferredSupplier" defaultValue={item.preferredSupplier || ''} className="mt-1" /></div>
             <div className="flex items-center gap-2 pt-8">
               <input type="checkbox" name="sellable" defaultChecked={item.sellable} id={`sellable-edit-${item.id}`} />
@@ -371,6 +381,7 @@ export default function AdminInventoryBalances() {
   const canEdit = hasPermission(currentUser, 'inventory', 'edit');
   const canDelete = hasPermission(currentUser, 'inventory', 'delete');
   const { data: categories = [] } = useAdminListCategories({ status: 'active' });
+  const { data: locations = [] } = useListInventoryLocations();
   
   const { data, isLoading } = useAdminListInventory({ 
     search: search || undefined
@@ -382,7 +393,10 @@ export default function AdminInventoryBalances() {
   const handleCreate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const requiredNames = ['nameAr', 'nameEn', 'displayNameAr', 'displayNameEn', 'invoiceNameAr', 'invoiceNameEn'];
+    const sellable = fd.get('sellable') === 'on';
+    const requiredNames = sellable
+      ? ['nameAr', 'nameEn', 'displayNameAr', 'displayNameEn', 'invoiceNameAr', 'invoiceNameEn']
+      : ['nameAr', 'nameEn'];
     if (requiredNames.some((name) => !(fd.get(name) as string | null)?.trim())) {
       toast({ title: t('يرجى إدخال أسماء المنتج باللغتين لكل نوع', 'Enter Arabic and English names for all name types'), variant: 'destructive' });
       return;
@@ -391,18 +405,22 @@ export default function AdminInventoryBalances() {
       data: {
         nameAr: fd.get('nameAr') as string,
         nameEn: fd.get('nameEn') as string,
-        displayNameAr: (fd.get('displayNameAr') as string).trim(),
-        displayNameEn: (fd.get('displayNameEn') as string).trim(),
-        invoiceNameAr: (fd.get('invoiceNameAr') as string).trim(),
-        invoiceNameEn: (fd.get('invoiceNameEn') as string).trim(),
+        displayNameAr: String(fd.get('displayNameAr') || (sellable ? '' : fd.get('nameAr'))).trim(),
+        displayNameEn: String(fd.get('displayNameEn') || (sellable ? '' : fd.get('nameEn'))).trim(),
+        invoiceNameAr: String(fd.get('invoiceNameAr') || (sellable ? '' : fd.get('nameAr'))).trim(),
+        invoiceNameEn: String(fd.get('invoiceNameEn') || (sellable ? '' : fd.get('nameEn'))).trim(),
         sku: fd.get('sku') as string,
         categoryId: Number(fd.get('categoryId')),
         barcode: (fd.get('barcode') as string) || null,
+        inventoryNotes: String(fd.get('inventoryNotes') || '').trim(),
+        isActive: fd.get('isActive') === 'on',
+        ...(fd.get('openingLocationId') && fd.get('openingLocationId') !== 'default' ? { openingLocationId: Number(fd.get('openingLocationId')) } : {}),
+        ...(fd.get('openingUnitCost') !== '' ? { openingUnitCost: Number(fd.get('openingUnitCost')) } : {}),
         operationalType: fd.get('operationalType') as any,
         unitOfMeasure: fd.get('unitOfMeasure') as string,
         preferredSupplier: (fd.get('preferredSupplier') as string) || null,
-        sellable: fd.get('sellable') === 'on',
-        price: Number(fd.get('price')),
+        sellable,
+        price: sellable ? Number(fd.get('price')) : 0,
         openingQuantity: Number(fd.get('openingQuantity')),
         reorderPoint: Number(fd.get('reorderPoint')),
         targetStockQuantity: Number(fd.get('targetStockQuantity'))
@@ -412,7 +430,8 @@ export default function AdminInventoryBalances() {
         toast({ title: t('تم إضافة المنتج', 'Product added') });
         setCreateOpen(false);
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
-      }
+      },
+      onError: (error) => toast({ title: t('تعذر إنشاء الصنف', 'Could not create item'), description: error.message, variant: 'destructive' }),
     });
   };
 
@@ -465,19 +484,19 @@ export default function AdminInventoryBalances() {
               </div>
               <div className="col-span-2 sm:col-span-1">
                 <Label>{t('اسم العرض (عربي)', 'Display name (Ar)')}</Label>
-                <Input name="displayNameAr" required className="mt-1" />
+                <Input name="displayNameAr" className="mt-1" />
               </div>
               <div className="col-span-2 sm:col-span-1">
                 <Label>{t('اسم العرض (إنجليزي)', 'Display name (En)')}</Label>
-                <Input name="displayNameEn" required className="mt-1" />
+                <Input name="displayNameEn" className="mt-1" />
               </div>
               <div className="col-span-2 sm:col-span-1">
                 <Label>{t('اسم الفاتورة (عربي)', 'Invoice name (Ar)')}</Label>
-                <Input name="invoiceNameAr" required className="mt-1" />
+                <Input name="invoiceNameAr" className="mt-1" />
               </div>
               <div className="col-span-2 sm:col-span-1">
                 <Label>{t('اسم الفاتورة (إنجليزي)', 'Invoice name (En)')}</Label>
-                <Input name="invoiceNameEn" required className="mt-1" />
+                <Input name="invoiceNameEn" className="mt-1" />
               </div>
               <div className="col-span-2">
                   <Label>SKU</Label>
@@ -503,9 +522,11 @@ export default function AdminInventoryBalances() {
                 <Label>{t('التصنيف', 'Category')}</Label>
                 <Select name="categoryId" defaultValue={categories[0] ? String(categories[0].id) : undefined}><SelectTrigger className="mt-1"><SelectValue placeholder={t('اختر التصنيف', 'Select category')} /></SelectTrigger><SelectContent>{categories.map((category) => <SelectItem key={category.id} value={String(category.id)}>{lang === 'ar' ? category.nameAr : category.nameEn}</SelectItem>)}</SelectContent></Select>
               </div>
-              <div><Label>{t('الباركود', 'Barcode')}</Label><Input name="barcode" className="mt-1" /></div>
+              <div><Label>{t('الباركود GTIN', 'GTIN barcode')}</Label><Input name="barcode" dir="ltr" className="mt-1" /></div>
               <div><Label>{t('النوع التشغيلي', 'Operational type')}</Label><Select name="operationalType" defaultValue="finished_good"><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="finished_good">{t('منتج نهائي', 'Finished good')}</SelectItem><SelectItem value="raw_material">{t('مادة خام', 'Raw material')}</SelectItem><SelectItem value="packaging">{t('مادة تعبئة', 'Packaging')}</SelectItem></SelectContent></Select></div>
               <div><Label>{t('وحدة القياس', 'Unit of measure')}</Label><Input name="unitOfMeasure" required defaultValue="unit" className="mt-1" /></div>
+              <div className="col-span-2"><Label>{t('ملاحظات الصنف', 'Item notes')}</Label><Textarea name="inventoryNotes" className="mt-1" /></div>
+              <div className="flex items-center gap-2"><input type="checkbox" name="isActive" defaultChecked id="inventory-active" /><Label htmlFor="inventory-active">{t('نشط', 'Active')}</Label></div>
               <div><Label>{t('المورد المفضل', 'Preferred supplier')}</Label><Input name="preferredSupplier" className="mt-1" /></div>
               <div className="flex items-center gap-2"><input type="checkbox" name="sellable" defaultChecked id="sellable" /><Label htmlFor="sellable">{t('قابل للبيع', 'Sellable')}</Label></div>
               <div>
@@ -516,6 +537,8 @@ export default function AdminInventoryBalances() {
                 <Label>{t('الرصيد الافتتاحي', 'Opening Quantity')}</Label>
                 <Input name="openingQuantity" type="number" required defaultValue="0" className={`mt-1 ${quantityInputClass}`} />
               </div>
+              <div><Label>{t('تكلفة الوحدة الافتتاحية', 'Opening unit cost')}</Label><Input name="openingUnitCost" type="number" min="0" step="0.01" className="mt-1" /></div>
+              <div><Label>{t('موقع الرصيد الافتتاحي', 'Opening stock location')}</Label><Select name="openingLocationId" defaultValue="default"><SelectTrigger className="mt-1"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">{t('الموقع الافتراضي', 'Default location')}</SelectItem>{locations.filter((location) => location.active).map((location) => <SelectItem key={location.id} value={String(location.id)}>{location.name}</SelectItem>)}</SelectContent></Select></div>
               <div>
                 <Label>{t('حد إعادة الطلب', 'Reorder Point')}</Label>
                 <Input name="reorderPoint" type="number" required defaultValue="10" className={`mt-1 ${quantityInputClass}`} />

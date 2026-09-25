@@ -26,6 +26,11 @@ export interface AdminInventoryProductInput {
   sku: string;
   /** @nullable */
   barcode?: string | null;
+  /** @maxLength 2000 */
+  inventoryNotes?: string;
+  /** @minimum 1 */
+  openingLocationId?: number;
+  isActive?: boolean;
   operationalType?: AdminInventoryProductInputOperationalType;
   unitOfMeasure?: string;
   /** @nullable */

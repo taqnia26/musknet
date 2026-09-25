@@ -91,6 +91,7 @@ export const productsTable = pgTable("storefront_products", {
   operationalType: text("operational_type").notNull().default("finished_good"),
   unitOfMeasure: text("unit_of_measure").notNull().default("unit"),
   preferredSupplier: text("preferred_supplier"),
+  inventoryNotes: text("inventory_notes").notNull().default(""),
   sellable: boolean("sellable").notNull().default(true),
   isActive: boolean("is_active").notNull().default(true),
   isFeatured: boolean("is_featured").notNull().default(false),

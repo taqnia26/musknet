@@ -193,6 +193,28 @@ function parse<T>(schema: { safeParse(value: unknown): { success: boolean; data?
   return result.data!;
 }
 
+function validGtin(value: string) {
+  if (!/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(value)) return false;
+  const digits = [...value].map(Number);
+  const check = digits.pop()!;
+  const sum = digits.reverse().reduce((total, digit, index) => total + digit * (index % 2 === 0 ? 3 : 1), 0);
+  return (10 - sum % 10) % 10 === check;
+}
+
+async function barcodeError(barcode: string | null | undefined, excludeId?: number) {
+  const value = barcode?.trim();
+  if (!value) return null;
+  if (excludeId !== undefined) {
+    const [existing] = await db.select({ barcode: productsTable.barcode }).from(productsTable)
+      .where(eq(productsTable.id, excludeId)).limit(1);
+    if (existing?.barcode === value) return null;
+  }
+  if (!validGtin(value)) return "Invalid GTIN: use 8, 12, 13 or 14 digits with a valid check digit";
+  const [duplicate] = await db.select({ id: productsTable.id }).from(productsTable)
+    .where(eq(productsTable.barcode, value)).limit(1);
+  return duplicate && duplicate.id !== excludeId ? "GTIN already belongs to another item" : null;
+}
+
 const statusFilter = <T extends { isActive: boolean }>(rows: T[], status?: string) =>
   status === "active" ? rows.filter((r) => r.isActive) : status === "inactive" ? rows.filter((r) => !r.isActive) : rows;
 const searchFilter = <T>(rows: T[], search: string | undefined, fields: Array<keyof T>) => {
@@ -1483,6 +1505,8 @@ router.post("/admin/products", permit("products", "edit"), route(async (req, res
   const richDescriptionError = validateRawRichDescriptionFields(req.body);
   if (richDescriptionError) { res.status(400).json({ error: richDescriptionError }); return; }
   const body = parse(Api.AdminCreateProductBody, req.body, res); if (!body) return;
+  const gtinError = await barcodeError(body.barcode);
+  if (gtinError) { res.status(400).json({ error: gtinError }); return; }
   const nameFields = ["nameAr", "nameEn", "displayNameAr", "displayNameEn", "invoiceNameAr", "invoiceNameEn"] as const;
   if (nameFields.some((field) => !body[field]?.trim())) { res.status(400).json({ error: "All six product names are required" }); return; }
   if (body.discountPrice !== null && body.discountPrice !== undefined && body.discountPrice > body.price) {
@@ -1541,6 +1565,10 @@ router.patch("/admin/products/:id", permit("products", "edit"), route(async (req
   const richDescriptionError = validateRawRichDescriptionFields(req.body);
   if (richDescriptionError) { res.status(400).json({ error: richDescriptionError }); return; }
   const body = parse(Api.AdminUpdateProductBody, req.body, res); if (!params || !body) return;
+  if (body.barcode !== undefined) {
+    const gtinError = await barcodeError(body.barcode, params.id);
+    if (gtinError) { res.status(400).json({ error: gtinError }); return; }
+  }
   const nameFields = ["nameAr", "nameEn", "displayNameAr", "displayNameEn", "invoiceNameAr", "invoiceNameEn"] as const;
   if (nameFields.some((field) => body[field] !== undefined && !body[field]?.trim())) { res.status(400).json({ error: "Product names cannot be blank" }); return; }
   const [existingProduct] = await db.select()
@@ -3121,7 +3149,7 @@ router.get("/admin/inventory", permit("inventory", "view"), route(async (req, re
     id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
     displayNameAr: productsTable.displayNameAr, displayNameEn: productsTable.displayNameEn,
     invoiceNameAr: productsTable.invoiceNameAr, invoiceNameEn: productsTable.invoiceNameEn,
-    sku: productsTable.sku, barcode: productsTable.barcode, operationalType: productsTable.operationalType, unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier, sellable: productsTable.sellable, price: productsTable.price, averageCost: productsTable.averageCost,
+    sku: productsTable.sku, barcode: productsTable.barcode, inventoryNotes: productsTable.inventoryNotes, operationalType: productsTable.operationalType, unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier, sellable: productsTable.sellable, price: productsTable.price, averageCost: productsTable.averageCost,
     categoryId: productsTable.categoryId, categoryNameAr: categoriesTable.nameAr, categoryNameEn: categoriesTable.nameEn,
     stockQuantity: productsTable.stockQuantity, reorderPoint: productsTable.reorderPoint,
     targetStockQuantity: productsTable.targetStockQuantity, isActive: productsTable.isActive,
@@ -3375,6 +3403,16 @@ router.post("/admin/inventory/cycle-counts/:id/approve", permit("inventory", "ed
 }));
 router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateInventoryProductBody, req.body, res); if (!body) return;
+  const gtinError = await barcodeError(body.barcode);
+  if (gtinError) { res.status(400).json({ error: gtinError }); return; }
+  if (body.openingQuantity > 0 && body.openingUnitCost === undefined) {
+    res.status(400).json({ error: "Opening unit cost is required for positive stock" }); return;
+  }
+  if (body.openingLocationId !== undefined) {
+    const [location] = await db.select({ id: inventoryLocationsTable.id }).from(inventoryLocationsTable)
+      .where(and(eq(inventoryLocationsTable.id, body.openingLocationId), eq(inventoryLocationsTable.active, true))).limit(1);
+    if (!location) { res.status(400).json({ error: "Active opening location not found" }); return; }
+  }
   if ([body.nameAr, body.nameEn, body.displayNameAr, body.displayNameEn, body.invoiceNameAr, body.invoiceNameEn].some((name) => !name.trim())) {
     res.status(400).json({ error: "All six product names are required" }); return;
   }
@@ -3403,13 +3441,16 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
       invoiceNameAr: body.invoiceNameAr.trim(), invoiceNameEn: body.invoiceNameEn.trim(),
       descriptionAr: (body.descriptionAr ?? "").trim(), descriptionEn: (body.descriptionEn ?? "").trim(),
       sku: body.sku.trim(),
-      barcode: body.barcode ?? null, operationalType: body.operationalType ?? "finished_good", unitOfMeasure: body.unitOfMeasure ?? "unit", preferredSupplier: body.preferredSupplier ?? null, sellable: body.sellable ?? true,
+      barcode: body.barcode?.trim() || null, inventoryNotes: body.inventoryNotes?.trim() ?? "", operationalType: body.operationalType ?? "finished_good", unitOfMeasure: body.unitOfMeasure ?? "unit", preferredSupplier: body.preferredSupplier ?? null, sellable: body.sellable ?? true, isActive: body.isActive ?? true,
       slug: `${slugBase}-${randomBytes(3).toString("hex")}`, categoryId: body.categoryId, price: body.price,
       stockQuantity: body.openingQuantity, averageCost: (body.openingUnitCost ?? 0).toFixed(4),
       reorderPoint: body.reorderPoint, targetStockQuantity: body.targetStockQuantity,
     }).returning();
     if (created.stockQuantity > 0) {
-      let [defaultLocation] = await tx.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.isDefault, true)).limit(1);
+      let [defaultLocation] = body.openingLocationId
+        ? await tx.select().from(inventoryLocationsTable).where(and(eq(inventoryLocationsTable.id, body.openingLocationId), eq(inventoryLocationsTable.active, true))).limit(1)
+        : await tx.select().from(inventoryLocationsTable).where(eq(inventoryLocationsTable.isDefault, true)).limit(1);
+      if (body.openingLocationId && !defaultLocation) throw new Error("Active opening location not found");
       if (!defaultLocation) {
         [defaultLocation] = await tx.insert(inventoryLocationsTable).values({ name: "Default warehouse", code: "DEFAULT", type: "warehouse", isDefault: true }).returning();
       }
@@ -3443,7 +3484,7 @@ router.post("/admin/inventory", permit("inventory", "edit"), route(async (req, r
       id: created.id, nameAr: created.nameAr, nameEn: created.nameEn,
       displayNameAr: created.displayNameAr, displayNameEn: created.displayNameEn,
       invoiceNameAr: created.invoiceNameAr, invoiceNameEn: created.invoiceNameEn, sku: created.sku,
-      barcode: created.barcode, operationalType: created.operationalType, unitOfMeasure: created.unitOfMeasure, preferredSupplier: created.preferredSupplier, sellable: created.sellable,
+      barcode: created.barcode, inventoryNotes: created.inventoryNotes, operationalType: created.operationalType, unitOfMeasure: created.unitOfMeasure, preferredSupplier: created.preferredSupplier, sellable: created.sellable,
       price: created.price, averageCost: Number(created.averageCost), categoryId: created.categoryId,
       categoryNameAr: category.nameAr, categoryNameEn: category.nameEn, stockQuantity: created.stockQuantity,
       reorderPoint: created.reorderPoint, targetStockQuantity: created.targetStockQuantity,
@@ -3573,6 +3614,8 @@ router.post("/admin/inventory/:id/adjust", permit("inventory", "edit"), route(as
 router.patch("/admin/inventory/:id", permit("inventory", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateInventoryProductParams, req.params, res);
   const body = parse(Api.AdminUpdateInventoryProductBody, req.body, res); if (!params || !body) return;
+  const gtinError = await barcodeError(body.barcode, params.id);
+  if (gtinError) { res.status(400).json({ error: gtinError }); return; }
   if ([body.nameAr, body.nameEn, body.displayNameAr, body.displayNameEn, body.invoiceNameAr, body.invoiceNameEn].some((name) => !name.trim())) {
     res.status(400).json({ error: "All six product names are required" }); return;
   }
@@ -3590,6 +3633,8 @@ router.patch("/admin/inventory/:id", permit("inventory", "edit"), route(async (r
     invoiceNameEn: body.invoiceNameEn.trim(),
     sku: body.sku.trim(),
     barcode: body.barcode?.trim() || null,
+    inventoryNotes: body.inventoryNotes?.trim() ?? "",
+    ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
     operationalType: body.operationalType,
     unitOfMeasure: body.unitOfMeasure.trim(),
     preferredSupplier: body.preferredSupplier?.trim() || null,
@@ -3598,7 +3643,7 @@ router.patch("/admin/inventory/:id", permit("inventory", "edit"), route(async (r
     price: body.price,
     reorderPoint: body.reorderPoint,
     targetStockQuantity: body.targetStockQuantity,
-  }).where(and(eq(productsTable.id, params.id), eq(productsTable.isActive, true))).returning();
+  }).where(eq(productsTable.id, params.id)).returning();
   if (!updated) { res.status(404).json({ error: "Inventory product not found" }); return; }
   res.json(Api.AdminUpdateInventoryProductResponse.parse({
     ...updated,

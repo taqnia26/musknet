@@ -24,6 +24,9 @@ export interface AdminInventoryProductUpdate {
   sku: string;
   /** @nullable */
   barcode?: string | null;
+  /** @maxLength 2000 */
+  inventoryNotes?: string;
+  isActive?: boolean;
   operationalType: AdminInventoryProductUpdateOperationalType;
   /** @minLength 1 */
   unitOfMeasure: string;

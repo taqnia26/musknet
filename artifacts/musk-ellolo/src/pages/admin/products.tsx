@@ -64,15 +64,15 @@ const stringToNull = (val: string | undefined | null) => (val === '' ? null : va
 const productSchema = z.object({
   nameAr: z.string().trim().min(1, 'Required / مطلوب'),
   nameEn: z.string().trim().min(1, 'Required / مطلوب'),
-  displayNameAr: z.string().trim().min(1, 'Required / مطلوب'),
-  displayNameEn: z.string().trim().min(1, 'Required / مطلوب'),
-  invoiceNameAr: z.string().trim().min(1, 'Required / مطلوب'),
-  invoiceNameEn: z.string().trim().min(1, 'Required / مطلوب'),
+  displayNameAr: z.string().trim(),
+  displayNameEn: z.string().trim(),
+  invoiceNameAr: z.string().trim(),
+  invoiceNameEn: z.string().trim(),
   descriptionAr: z.string().optional(),
   descriptionEn: z.string().optional(),
   descriptionRichAr: z.custom<RichDescription>().optional(),
   descriptionRichEn: z.custom<RichDescription>().optional(),
-  slug: z.string().min(1, 'Required / مطلوب'),
+  slug: z.string(),
   price: z.coerce.number().min(0),
   compareAtPrice: z.union([z.literal('').transform(() => null), z.coerce.number().min(0), z.null()]).optional(),
   discountPrice: z.union([z.literal('').transform(() => null), z.coerce.number().min(0), z.null()]).optional(),
@@ -81,6 +81,9 @@ const productSchema = z.object({
   costPrice: z.coerce.number().min(0).default(0),
   sku: z.string().nullable().optional(),
   barcode: z.string().nullable().optional(),
+  inventoryNotes: z.string().max(2000).default(''),
+  operationalType: z.enum(['finished_good', 'raw_material', 'packaging']).default('finished_good'),
+  unitOfMeasure: z.string().trim().min(1).default('unit'),
   mpn: z.string().nullable().optional(),
   brand: z.string().nullable().optional(),
   subtitleAr: z.string().max(35, 'Max 35 chars').nullable().optional(),
@@ -101,6 +104,11 @@ const productSchema = z.object({
   stockQuantity: z.coerce.number().int().min(0).default(0),
   reorderPoint: z.coerce.number().int().min(0).default(5),
   targetStockQuantity: z.coerce.number().int().min(0).default(20),
+}).superRefine((value, context) => {
+  if (!value.sellable) return;
+  for (const key of ['displayNameAr', 'displayNameEn', 'invoiceNameAr', 'invoiceNameEn', 'slug'] as const) {
+    if (!value[key].trim()) context.addIssue({ code: 'custom', path: [key], message: 'Required / مطلوب' });
+  }
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -125,6 +133,9 @@ const emptyProduct: ProductFormValues = {
   costPrice: 0,
   sku: '',
   barcode: '',
+  inventoryNotes: '',
+  operationalType: 'finished_good',
+  unitOfMeasure: 'unit',
   mpn: '',
   brand: '',
   subtitleAr: '',
@@ -409,6 +420,7 @@ export default function AdminProducts() {
     defaultValues: emptyProduct,
   });
   const [nameAr, nameEn] = useWatch({ control: form.control, name: ['nameAr', 'nameEn'] });
+  const sellable = useWatch({ control: form.control, name: 'sellable' });
   const editingName = lang === 'ar'
     ? nameAr?.trim() || originalNames?.ar
     : nameEn?.trim() || originalNames?.en;
@@ -435,11 +447,18 @@ export default function AdminProducts() {
     
     const processedData = {
       ...data,
+      displayNameAr: data.displayNameAr.trim() || data.nameAr.trim(),
+      displayNameEn: data.displayNameEn.trim() || data.nameEn.trim(),
+      invoiceNameAr: data.invoiceNameAr.trim() || data.nameAr.trim(),
+      invoiceNameEn: data.invoiceNameEn.trim() || data.nameEn.trim(),
+      slug: data.slug.trim() || `inventory-${crypto.randomUUID()}`,
+      price: data.sellable ? data.price : 0,
       compareAtPrice: data.compareAtPrice ?? null,
       discountPrice: data.discountPrice ?? null,
       discountEndsOn: stringToNull(data.discountEndsOn),
       sku: stringToNull(data.sku),
       barcode: stringToNull(data.barcode),
+      inventoryNotes: data.inventoryNotes.trim(),
       mpn: stringToNull(data.mpn),
       brand: stringToNull(data.brand),
       subtitleAr: stringToNull(data.subtitleAr),
@@ -506,6 +525,9 @@ export default function AdminProducts() {
       costPrice: product.costPrice || 0,
       sku: product.sku || '',
       barcode: product.barcode || '',
+      inventoryNotes: product.inventoryNotes || '',
+      operationalType: product.operationalType as ProductFormValues['operationalType'],
+      unitOfMeasure: product.unitOfMeasure,
       mpn: product.mpn || '',
       brand: product.brand || '',
       subtitleAr: product.subtitleAr || '',
@@ -699,6 +721,9 @@ export default function AdminProducts() {
                     <div className="mb-2 border-b pb-2"><h3 className="text-lg font-semibold">{t('بيانات المنتج الأساسية', 'Basic Information')}</h3></div>
                     
                     <div className="grid gap-5 sm:grid-cols-2">
+                      <FormField control={form.control} name="sellable" render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3"><FormLabel>{t('قابل للبيع في المتجر', 'Sellable in storefront')}</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
+                      )} />
                       <FormField control={form.control} name="nameAr" render={({ field }) => (
                         <FormItem><FormLabel>{t('الاسم الداخلي بالعربية', 'Internal name (AR)')} *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
@@ -706,16 +731,16 @@ export default function AdminProducts() {
                         <FormItem><FormLabel>{t('الاسم الداخلي بالإنجليزية', 'Internal name (EN)')} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="displayNameAr" render={({ field }) => (
-                        <FormItem><FormLabel>{t('اسم العرض بالعربية', 'Display name (AR)')} *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('اسم العرض بالعربية', 'Display name (AR)')}{sellable ? ' *' : ''}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="displayNameEn" render={({ field }) => (
-                        <FormItem><FormLabel>{t('اسم العرض بالإنجليزية', 'Display name (EN)')} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('اسم العرض بالإنجليزية', 'Display name (EN)')}{sellable ? ' *' : ''}</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="invoiceNameAr" render={({ field }) => (
-                        <FormItem><FormLabel>{t('اسم الفاتورة بالعربية', 'Invoice name (AR)')} *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('اسم الفاتورة بالعربية', 'Invoice name (AR)')}{sellable ? ' *' : ''}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
                       <FormField control={form.control} name="invoiceNameEn" render={({ field }) => (
-                        <FormItem><FormLabel>{t('اسم الفاتورة بالإنجليزية', 'Invoice name (EN)')} *</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('اسم الفاتورة بالإنجليزية', 'Invoice name (EN)')}{sellable ? ' *' : ''}</FormLabel><FormControl><Input {...field} dir="ltr" /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
 
@@ -741,7 +766,7 @@ export default function AdminProducts() {
                         </FormItem>
                       )} />
                       <FormField control={form.control} name="slug" render={({ field }) => (
-                        <FormItem><FormLabel>{t('رابط المنتج (Slug)', 'Product URL Slug')} *</FormLabel><FormControl><Input {...field} dir="ltr" placeholder="product-name" /></FormControl><FormMessage /></FormItem>
+                        <FormItem><FormLabel>{t('رابط المنتج (Slug)', 'Product URL Slug')}{sellable ? ' *' : ''}</FormLabel><FormControl><Input {...field} dir="ltr" placeholder="product-name" /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
 
@@ -817,6 +842,12 @@ export default function AdminProducts() {
                       <FormField control={form.control} name="barcode" render={({ field }) => (
                         <FormItem><FormLabel>{t('الباركود (GTIN)', 'Barcode (GTIN)')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
                       )} />
+                      <FormField control={form.control} name="operationalType" render={({ field }) => (
+                        <FormItem><FormLabel>{t('نوع الصنف', 'Item type')}</FormLabel><Select value={field.value} onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent><SelectItem value="finished_good">{t('منتج نهائي', 'Finished good')}</SelectItem><SelectItem value="raw_material">{t('مادة خام', 'Raw material')}</SelectItem><SelectItem value="packaging">{t('عبوة', 'Packaging')}</SelectItem></SelectContent></Select><FormMessage /></FormItem>
+                      )} />
+                      <FormField control={form.control} name="unitOfMeasure" render={({ field }) => (
+                        <FormItem><FormLabel>{t('وحدة القياس', 'Unit of measure')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                      )} />
                       <FormField control={form.control} name="mpn" render={({ field }) => (
                         <FormItem><FormLabel>{t('رمز المصنع (MPN)', 'MPN')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
                       )} />
@@ -836,6 +867,9 @@ export default function AdminProducts() {
                         <FormItem><FormLabel>{t('الكمية المستهدفة', 'Target stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" className={quantityInputClass} /></FormControl><FormMessage /></FormItem>
                       )} />
                     </div>
+                    <FormField control={form.control} name="inventoryNotes" render={({ field }) => (
+                      <FormItem><FormLabel>{t('ملاحظات الصنف', 'Item notes')}</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
+                    )} />
                   </section>
 
                   <section className="space-y-4">

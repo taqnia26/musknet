@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminProductImage } from './adminProductImage';
+import type { AdminProductOperationalType } from './adminProductOperationalType';
 import type { FragranceNote } from './fragranceNote';
 import type { RichDescription } from './richDescription';
 
@@ -102,6 +103,9 @@ export interface AdminProduct {
      * @nullable
      */
   barcode: string | null;
+  inventoryNotes: string;
+  operationalType: AdminProductOperationalType;
+  unitOfMeasure: string;
   averageCost: string;
   sellable: boolean;
   isActive: boolean;

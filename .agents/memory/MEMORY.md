@@ -1,4 +1,5 @@
 - [Drizzle migration output](drizzle-migration-output.md) — keep migration output relative to the database package so later generations can read snapshots.
+- [Parallel Drizzle migrations](parallel-drizzle-migrations.md) — merged snapshot history may omit previously registered SQL; inspect regenerated SQL for duplicate operations.
 - [PostgreSQL seed sequences](postgres-seed-sequences.md) — manually seeded IDs can leave serial sequences stale; synchronize them before relying on automatic IDs.
 - [Drizzle push and custom SQL](drizzle-push-custom-sql.md) — schema push does not install handwritten PostgreSQL functions or triggers; chain an idempotent installer into provisioning.
 - [Playwright on NixOS](playwright-nixos-runtime.md) — downloaded Chromium still needs its shared libraries declared in the workspace Nix configuration.

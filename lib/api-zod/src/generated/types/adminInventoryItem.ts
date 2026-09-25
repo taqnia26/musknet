@@ -20,6 +20,7 @@ export interface AdminInventoryItem {
   sku: string | null;
   /** @nullable */
   barcode: string | null;
+  inventoryNotes: string;
   operationalType: AdminInventoryItemOperationalType;
   unitOfMeasure: string;
   /** @nullable */

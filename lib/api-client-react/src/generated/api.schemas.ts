@@ -1324,6 +1324,15 @@ export interface DistributorCatalogUpdate {
   distributorImageOverride?: string | null;
 }
 
+export type AdminProductOperationalType = typeof AdminProductOperationalType[keyof typeof AdminProductOperationalType];
+
+
+export const AdminProductOperationalType = {
+  finished_good: 'finished_good',
+  raw_material: 'raw_material',
+  packaging: 'packaging',
+} as const;
+
 export interface AdminProductImage {
   url: string;
   alt: string;
@@ -1422,6 +1431,9 @@ export interface AdminProduct {
      * @nullable
      */
   barcode: string | null;
+  inventoryNotes: string;
+  operationalType: AdminProductOperationalType;
+  unitOfMeasure: string;
   averageCost: string;
   sellable: boolean;
   isActive: boolean;
@@ -1466,6 +1478,15 @@ export interface AdminProductImageUpload {
   objectPath: string;
   imageUrl: string;
 }
+
+export type AdminProductInputOperationalType = typeof AdminProductInputOperationalType[keyof typeof AdminProductInputOperationalType];
+
+
+export const AdminProductInputOperationalType = {
+  finished_good: 'finished_good',
+  raw_material: 'raw_material',
+  packaging: 'packaging',
+} as const;
 
 export interface AdminProductInput {
   /** @minLength 1 */
@@ -1570,6 +1591,11 @@ export interface AdminProductInput {
      * @nullable
      */
   barcode?: string | null;
+  /** @maxLength 2000 */
+  inventoryNotes?: string;
+  operationalType?: AdminProductInputOperationalType;
+  /** @minLength 1 */
+  unitOfMeasure?: string;
   isActive?: boolean;
   isFeatured?: boolean;
   isBestseller?: boolean;
@@ -3205,6 +3231,7 @@ export interface AdminInventoryItem {
   sku: string | null;
   /** @nullable */
   barcode: string | null;
+  inventoryNotes: string;
   operationalType: AdminInventoryItemOperationalType;
   unitOfMeasure: string;
   /** @nullable */
@@ -3263,6 +3290,11 @@ export interface AdminInventoryProductInput {
   sku: string;
   /** @nullable */
   barcode?: string | null;
+  /** @maxLength 2000 */
+  inventoryNotes?: string;
+  /** @minimum 1 */
+  openingLocationId?: number;
+  isActive?: boolean;
   operationalType?: AdminInventoryProductInputOperationalType;
   unitOfMeasure?: string;
   /** @nullable */
@@ -3308,6 +3340,9 @@ export interface AdminInventoryProductUpdate {
   sku: string;
   /** @nullable */
   barcode?: string | null;
+  /** @maxLength 2000 */
+  inventoryNotes?: string;
+  isActive?: boolean;
   operationalType: AdminInventoryProductUpdateOperationalType;
   /** @minLength 1 */
   unitOfMeasure: string;

@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminProductImage } from './adminProductImage';
+import type { AdminProductInputOperationalType } from './adminProductInputOperationalType';
 import type { FragranceNote } from './fragranceNote';
 import type { RichDescription } from './richDescription';
 
@@ -112,6 +113,11 @@ export interface AdminProductInput {
      * @nullable
      */
   barcode?: string | null;
+  /** @maxLength 2000 */
+  inventoryNotes?: string;
+  operationalType?: AdminProductInputOperationalType;
+  /** @minLength 1 */
+  unitOfMeasure?: string;
   isActive?: boolean;
   isFeatured?: boolean;
   isBestseller?: boolean;

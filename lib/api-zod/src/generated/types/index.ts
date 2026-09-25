@@ -126,6 +126,8 @@ export * from './adminProductImageUpload';
 export * from './adminProductImageUploadInput';
 export * from './adminProductImageUploadInputContentType';
 export * from './adminProductInput';
+export * from './adminProductInputOperationalType';
+export * from './adminProductOperationalType';
 export * from './adminProductUpdate';
 export * from './adminProfileAddress';
 export * from './adminProfileAddressInput';

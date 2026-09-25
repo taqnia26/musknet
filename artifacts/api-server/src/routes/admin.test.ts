@@ -16,6 +16,7 @@ import {
   addressesTable,
   db,
   inventoryBalancesTable,
+  inventoryLocationsTable,
   inventoryMovementsTable,
   invoiceEmailDeliveriesTable,
   invoiceItemsTable,
@@ -59,6 +60,7 @@ const intakeInternational = { country: "AE", city: "Dubai", additionalInfo: "Off
 let orderId: number;
 let createdAdminOrderId: number;
 let inventoryCreatedProductId: number;
+let inventoryTestLocationId: number;
 let shippingShipmentId: number;
 let previousSmsaIntegration: typeof adminIntegrationsTable.$inferSelect | undefined;
 
@@ -191,6 +193,7 @@ afterAll(async () => {
   }
   if (inventoryCreatedProductId) await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, inventoryCreatedProductId));
   if (inventoryCreatedProductId) await db.delete(productsTable).where(eq(productsTable.id, inventoryCreatedProductId));
+  if (inventoryTestLocationId) await db.delete(inventoryLocationsTable).where(eq(inventoryLocationsTable.id, inventoryTestLocationId));
   if (orderId) {
     const invoiceRows = await db.select({ id: invoicesTable.id }).from(invoicesTable).where(eq(invoicesTable.orderId, orderId));
     if (invoiceRows.length) await db.delete(invoiceEmailDeliveriesTable).where(eq(invoiceEmailDeliveriesTable.invoiceId, invoiceRows[0].id));
@@ -245,6 +248,8 @@ describe.sequential("admin route authorization", () => {
     viewerToken = await createAdminSession(viewer.id);
 
     await request(app).get("/api/admin/products").set("Authorization", `Bearer ${viewerToken}`).expect(200);
+    await request(app).post("/api/admin/inventory").set("Authorization", `Bearer ${viewerToken}`)
+      .send({ nameAr: "ممنوع" }).expect(403);
     const denied = await request(app)
       .patch(`/api/admin/products/${productId}`)
       .set("Authorization", `Bearer ${viewerToken}`)
@@ -1156,6 +1161,10 @@ describe.sequential("admin route authorization", () => {
   });
 
   it("creates a product with saved thresholds and an audited opening balance", async () => {
+    const [location] = await db.insert(inventoryLocationsTable).values({
+      name: "Test opening warehouse", code: `OPEN-${Date.now()}`, type: "warehouse", isDefault: false,
+    }).returning();
+    inventoryTestLocationId = location.id;
     const response = await request(app)
       .post("/api/admin/inventory")
       .set("Authorization", `Bearer ${superToken}`)
@@ -1163,16 +1172,33 @@ describe.sequential("admin route authorization", () => {
         nameAr: "منتج مخزون جديد", nameEn: "New inventory product", sku: `INV-${Date.now()}`,
         displayNameAr: "منتج مخزون جديد", displayNameEn: "New inventory product",
         invoiceNameAr: "منتج مخزون جديد", invoiceNameEn: "New inventory product",
-        categoryId, price: 75, openingQuantity: 9, openingUnitCost: 30, reorderPoint: 4, targetStockQuantity: 18,
+        categoryId, price: 75, openingQuantity: 9, openingUnitCost: 30, openingLocationId: location.id,
+        inventoryNotes: "Opening shipment", barcode: "96385074", reorderPoint: 4, targetStockQuantity: 18,
       })
       .expect(201);
     inventoryCreatedProductId = response.body.id;
     expect(response.body).toMatchObject({
-      stockQuantity: 9, averageCost: 30, inventoryValue: 270,
+      stockQuantity: 9, averageCost: 30, inventoryValue: 270, inventoryNotes: "Opening shipment",
       reorderPoint: 4, targetStockQuantity: 18, stockStatus: "in_stock",
     });
     const [movement] = await db.select().from(inventoryMovementsTable)
       .where(eq(inventoryMovementsTable.productId, inventoryCreatedProductId)).limit(1);
+    const balances = await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, inventoryCreatedProductId));
+    expect(balances).toEqual([expect.objectContaining({ locationId: location.id, available: 9, averageCost: "30.0000" })]);
+    const updated = await request(app).patch(`/api/admin/inventory/${inventoryCreatedProductId}`)
+      .set("Authorization", `Bearer ${superToken}`)
+      .send({
+        nameAr: "منتج مخزون جديد", nameEn: "New inventory product", displayNameAr: "منتج مخزون جديد",
+        displayNameEn: "New inventory product", invoiceNameAr: "منتج مخزون جديد", invoiceNameEn: "New inventory product",
+        sku: response.body.sku, categoryId, operationalType: "raw_material", unitOfMeasure: "kg",
+        barcode: "96385074", inventoryNotes: "Revised note", sellable: false, price: 75,
+        reorderPoint: 4, targetStockQuantity: 18,
+      }).expect(200);
+    expect(updated.body).toMatchObject({ operationalType: "raw_material", unitOfMeasure: "kg", inventoryNotes: "Revised note", sellable: false });
+    const listed = await request(app).get("/api/admin/inventory").set("Authorization", `Bearer ${superToken}`).expect(200);
+    expect(listed.body.items).toEqual(expect.arrayContaining([expect.objectContaining({ id: inventoryCreatedProductId, inventoryNotes: "Revised note" })]));
+    expect(await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, inventoryCreatedProductId)))
+      .toEqual(balances);
     expect(movement).toMatchObject({
       movementType: "increase", quantityBefore: 0, quantityAfter: 9,
       sourceType: "product_creation", performedBy: superId,
@@ -1195,12 +1221,32 @@ describe.sequential("admin route authorization", () => {
     const sku = `INV-ZERO-${Date.now()}`;
     const response = await request(app).post("/api/admin/inventory")
       .set("Authorization", `Bearer ${superToken}`)
-      .send({ nameAr: "صفر", nameEn: "Zero", displayNameAr: "صفر", displayNameEn: "Zero", invoiceNameAr: "صفر", invoiceNameEn: "Zero", sku, categoryId, price: 10, openingQuantity: 0, openingUnitCost: 30, reorderPoint: 0, targetStockQuantity: 0 })
+      .send({ nameAr: "صفر", nameEn: "Zero", displayNameAr: "صفر", displayNameEn: "Zero", invoiceNameAr: "صفر", invoiceNameEn: "Zero", sku, categoryId, price: 0, sellable: false, operationalType: "packaging", openingQuantity: 0, reorderPoint: 0, targetStockQuantity: 0 })
       .expect(201);
     const entries = await db.select().from(journalEntriesTable)
       .where(and(eq(journalEntriesTable.sourceType, "product_creation"), eq(journalEntriesTable.sourceId, String(response.body.id))));
     expect(entries).toHaveLength(0);
+    expect(await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, response.body.id))).toHaveLength(0);
+    expect(response.body).toMatchObject({ sellable: false, operationalType: "packaging" });
+    const storefront = await request(app).get("/api/products").expect(200);
+    expect(storefront.body).not.toEqual(expect.arrayContaining([expect.objectContaining({ id: response.body.id })]));
     await db.delete(productsTable).where(eq(productsTable.id, response.body.id));
+  });
+
+  it("rejects invalid, duplicate, and inactive-location GTIN inventory inputs", async () => {
+    const data = {
+      nameAr: "عبوة", nameEn: "Package", displayNameAr: "عبوة", displayNameEn: "Package",
+      invoiceNameAr: "عبوة", invoiceNameEn: "Package", sku: `BAD-${Date.now()}`,
+      categoryId, price: 0, openingQuantity: 0, reorderPoint: 0, targetStockQuantity: 0,
+      operationalType: "packaging", sellable: false,
+    };
+    await request(app).post("/api/admin/inventory").set("Authorization", `Bearer ${superToken}`)
+      .send({ ...data, barcode: "12345678" }).expect(400);
+    await request(app).post("/api/admin/inventory").set("Authorization", `Bearer ${superToken}`)
+      .send({ ...data, barcode: "96385074" }).expect(400);
+    await request(app).post("/api/admin/inventory").set("Authorization", `Bearer ${superToken}`)
+      .send({ ...data, openingLocationId: 999999999 }).expect(400);
+    await request(app).post("/api/admin/inventory").send(data).expect(401);
   });
 
   it("rolls back product creation when opening journal posting fails", async () => {

@@ -7,4 +7,4 @@ Treat a source-based Zod `ReferenceError` from a generated schema referencing it
 
 **Why:** The generated module can refer to block-scoped validation constants before initialization. A server bundle may start while source-based tests and library typechecking still fail.
 
-**How to apply:** Fix the generator or its schema configuration rather than hand-editing generated output; confirm both source-based tests and the bundled runtime afterwards.
+**How to apply:** Fix the generator or its schema configuration rather than hand-editing generated output; if its output ordering cannot be configured, add a repeatable post-generation repair to the codegen command. Confirm library typechecking, source-based tests, and the bundled runtime afterwards.

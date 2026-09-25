@@ -12243,9 +12243,9 @@ export const getListInventoryLocationsUrl = () => {
   return `/api/admin/inventory/locations`
 }
 
-export const listInventoryLocations = async ( options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+export const listInventoryLocations = async ( options?: Parameters<typeof customFetch>[1]): Promise<InventoryLocation[]> => {
 
-  return customFetch<void>(getListInventoryLocationsUrl(),
+  return customFetch<InventoryLocation[]>(getListInventoryLocationsUrl(),
   {
     ...options,
     method: 'GET'
@@ -13769,4 +13769,3 @@ export function useListInventoryAlerts<TData = Awaited<ReturnType<typeof listInv
 
   return withQueryKey(query, queryOptions.queryKey);
 }
-
