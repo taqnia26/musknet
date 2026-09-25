@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, Link } from 'wouter';
 import { useGetAdminMe, useAdminLogout, getGetAdminMeQueryKey } from '@workspace/api-client-react';
 import { getAdminToken, removeAdminToken } from '@/lib/auth-token';
@@ -282,6 +282,10 @@ function NavItem({ item, user, location, lang, setOpen }: { item: any, user: any
 
 export function AdminLayout({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [location]);
   const { lang, setLang, t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const numericMask = useAdminNumericMask();
@@ -544,7 +548,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Content Area */}
-        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background">
+        <main ref={mainRef} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background">
           <div className="mx-auto w-full min-w-0 max-w-[1600px] p-4 md:p-6 lg:p-8">
             {children}
           </div>

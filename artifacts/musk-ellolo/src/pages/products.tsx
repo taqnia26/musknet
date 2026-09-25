@@ -159,7 +159,7 @@ function ProductGridCard({ product }: { product: any }) {
           
           <div className="flex items-center justify-center gap-2">
             <Money value={product.price} lang={lang} className="font-bold text-black text-sm" />
-            {product.compareAtPrice && (
+            {Number(product.compareAtPrice) > Number(product.price) && (
               <Money value={product.compareAtPrice} lang={lang} className="text-gray-400 line-through text-xs" />
             )}
           </div>
