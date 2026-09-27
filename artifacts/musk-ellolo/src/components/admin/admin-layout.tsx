@@ -74,6 +74,7 @@ export const navStructure = [
       { href: '/admin/orders', labelEn: 'Company Orders', labelAr: 'طلبات الشركات', module: 'orders' },
     ]
   },
+  { href: '/admin/salla-import', icon: FileText, labelEn: 'Salla Import', labelAr: 'استيراد سلة', module: 'invoices', direct: true },
   {
     labelEn: 'Sales', labelAr: 'المبيعات', icon: Banknote,
     children: [

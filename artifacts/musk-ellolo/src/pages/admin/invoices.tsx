@@ -39,7 +39,6 @@ import { format } from 'date-fns';
 import { hasPermission } from '@/lib/permissions';
 import { CreateCompanyInvoiceDialog } from '@/components/admin/create-company-invoice-dialog';
 import { CreateExhibitionInvoiceDialog } from '@/components/admin/create-exhibition-invoice-dialog';
-import { SallaInvoiceArchive } from '@/components/admin/salla-invoice-archive';
 import { useToast } from '@/hooks/use-toast';
 import { formatRiyadhBusinessDate } from '@/lib/riyadh-business-date';
 
@@ -767,8 +766,6 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
           <p className="mt-2 text-2xl font-bold text-destructive"><Money value={totals.outstanding} lang={lang} fractionDigits={2} /></p>
         </div>
       </div>
-
-      {channel === 'online' && <SallaInvoiceArchive />}
 
       <div className="flex flex-col sm:flex-row items-center gap-4">
         <div className="relative flex-1 w-full max-w-md">
