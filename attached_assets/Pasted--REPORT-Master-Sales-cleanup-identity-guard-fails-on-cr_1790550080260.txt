@@ -1,0 +1,115 @@
+# REPORT — Master Sales cleanup identity guard fails on cross-database id mismatch (content confirmed identical)
+
+## What happened
+Running `master-sales-cleanup-2026-09-27.sql` against production stopped at the first guard block with:
+```
+ERROR: Master Sales identity or entry count changed; no records deleted
+```
+Execution never reached COMMIT. Nothing was deleted. The transaction rolled back cleanly (confirmed: all 82 entries and all app pages still load normally).
+
+## Investigation performed (read-only, on production)
+
+- Total rows in `journal_entries`: 202. Rows with `id` outside 1–82: 120 (these are our own real, unrelated business activity created since the Master Sales import on 2026-09-03 — not part of this cleanup).
+- The 82 `historical_import` rows with `source_id LIKE 'ff316fd33b56c91c4a383043:%'` occupy `id` 1 through 82 contiguously in our production database. This is because the import was the very first activity ever written to an otherwise-empty `journal_entries` table here — not because these are "the only rows in the table" going forward.
+- Full list of the 82 `source_id` values currently in production (row/barcode/month identifiers only, alphabetical):
+
+```
+row-10:barcode-6287020840067:month-2025-12
+row-12:barcode-6287020840098:month-2026-02
+row-13:barcode-6287020840012:month-2026-02
+row-14:barcode-6287020840050:month-2026-02
+row-15:barcode-6287020840104:month-2026-02
+row-16:barcode-6287020840029:month-2026-02
+row-17:barcode-6287020840067:month-2026-02
+row-18:barcode-6287020840012:month-2026-02
+row-19:barcode-6287020840098:month-2026-02
+row-20:barcode-6287020840012:month-2026-02
+row-21:barcode-6287020840029:month-2026-02
+row-22:barcode-6287020840067:month-2026-02
+row-23:barcode-6287020840104:month-2026-02
+row-24:barcode-6287020840029:month-2026-02
+row-25:barcode-6287020840012:month-2026-02
+row-26:barcode-6287020840074:month-2026-02
+row-27:barcode-6287020840104:month-2026-02
+row-28:barcode-6287020840098:month-2026-02
+row-29:barcode-6287020840098:month-2026-02
+row-2:barcode-6287020840074:month-2025-12
+row-30:barcode-6287020840012:month-2026-02
+row-31:barcode-6287020840098:month-2026-02
+row-32:barcode-6287020840012:month-2026-02
+row-33:barcode-6287020840012:month-2026-02
+row-34:barcode-6287020840098:month-2026-02
+row-35:barcode-6287020840029:month-2026-01
+row-36:barcode-6287020840012:month-2026-01
+row-37:barcode-6287020840036:month-2026-01
+row-38:barcode-6287020840050:month-2026-01
+row-39:barcode-6287020840074:month-2026-01
+row-3:barcode-6287020840098:month-2025-12
+row-40:barcode-6287020840067:month-2026-01
+row-41:barcode-6287020840081:month-2026-01
+row-42:barcode-6287020840104:month-2026-01
+row-43:barcode-6287020840098:month-2026-01
+row-44:barcode-6287020840012:month-2026-01
+row-45:barcode-6287020840029:month-2026-01
+row-46:barcode-6287020840036:month-2026-01
+row-47:barcode-6287020840050:month-2026-01
+row-48:barcode-6287020840067:month-2026-01
+row-49:barcode-6287020840074:month-2026-01
+row-4:barcode-6287020840081:month-2025-12
+row-51:barcode-6287020840104:month-2026-01
+row-52:barcode-6287020840098:month-2026-01
+row-53:barcode-6287020840012:month-2026-03
+row-54:barcode-6287020840081:month-2026-03
+row-55:barcode-6287020840029:month-2026-03
+row-56:barcode-6287020840036:month-2026-03
+row-57:barcode-6287020840104:month-2026-03
+row-58:barcode-6287020840098:month-2026-03
+row-59:barcode-6287020840050:month-2026-03
+row-5:barcode-6287020840104:month-2025-12
+row-60:barcode-6287020840074:month-2026-03
+row-61:barcode-6287020840012:month-2026-04
+row-62:barcode-6287020840081:month-2026-04
+row-63:barcode-6287020840029:month-2026-04
+row-64:barcode-6287020840036:month-2026-04
+row-65:barcode-6287020840104:month-2026-04
+row-66:barcode-6287020840098:month-2026-04
+row-67:barcode-6287020840012:month-2026-05
+row-68:barcode-6287020840081:month-2026-05
+row-69:barcode-6287020840012:month-2026-02
+row-6:barcode-6287020840050:month-2025-12
+row-70:barcode-6287020840036:month-2026-02
+row-71:barcode-6287020840029:month-2026-02
+row-72:barcode-6287020840050:month-2026-02
+row-73:barcode-6287020840074:month-2026-02
+row-74:barcode-6287020840067:month-2026-02
+row-75:barcode-6287020840104:month-2026-02
+row-76:barcode-6287020840067:month-2026-03
+row-77:barcode-6287020840036:month-2026-02
+row-78:barcode-6287020840012:month-2026-02
+row-79:barcode-6287020840098:month-2026-02
+row-7:barcode-6287020840036:month-2025-12
+row-80:barcode-6287020840029:month-2026-02
+row-81:barcode-6287020840050:month-2026-02
+row-82:barcode-6287020840074:month-2026-02
+row-83:barcode-6287020840067:month-2026-02
+row-84:barcode-6287020840104:month-2026-02
+row-85:barcode-6287020840081:month-2026-02
+row-8:barcode-6287020840012:month-2025-12
+row-9:barcode-6287020840029:month-2025-12
+```
+
+## Conclusion
+
+Comparing this against your review file (`master-sales-journals-review-2026-09-27.csv`) row by row: the set of row/barcode/month identifiers is identical — same 82 original spreadsheet rows, same three gaps (`row-1`, `row-11`, `row-50` absent from both). The imported content matches exactly.
+
+The only difference is the database-assigned `id` primary key: in our production database these 82 rows happen to occupy `id` 1–82 (first-ever writes to an empty table), while your reference environment shows them as `id` 79–160. `id` is a local auto-increment sequence — it is not portable identity between separate database instances, the same lesson as the earlier product slug/SKU mismatch.
+
+The cleanup script's first guard hashes `id::text || ':' || source_id` and compares it to a constant (`4c187b5979e2469f9682d060f5bdeab4`) computed in your environment. That comparison will fail against any database whose `id` numbering differs from yours, even when the content is byte-for-byte identical — which is exactly what happened here.
+
+## What we need
+
+A corrected identity guard (and the restore script's equivalent check, if it has the same pattern) that establishes identity from `source_id` alone — or its parsed `row`/`barcode`/`month` components — plus the row count, **without** including the database-local `id` column in the hash. Every other safeguard should stay exactly as strict: count = 82, the status/format/reversal checks, the FK and trigger checks, and the exact debit/credit total (141896.5843 SAR) — none of those depend on `id` and none of them have been shown to have any problem.
+
+Note: execution stopped at this first identity check, so the later checks (status/format, dependent row counts, FK/trigger safety, exact amount totals) have not yet been exercised against production. They'll still run as an independent second layer of verification once the identity check itself is corrected — nothing about them is in question yet, they just haven't had the chance to run.
+
+We are not modifying this script ourselves. No deletion will be attempted until a corrected version is provided.
