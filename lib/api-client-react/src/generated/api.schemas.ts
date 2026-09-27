@@ -2144,6 +2144,68 @@ export interface MoyasarCallbackResult {
   duplicate: boolean;
 }
 
+export interface SallaArchivedInvoiceLine {
+  name: string;
+  /** @nullable */
+  sku: string | null;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface SallaArchivedInvoice {
+  id: number;
+  sallaInvoiceId: string;
+  sallaOrderId: string;
+  /** @nullable */
+  invoiceNumber: string | null;
+  /** @nullable */
+  invoiceReferenceId?: string | null;
+  /** @nullable */
+  paymentMethod?: string | null;
+  invoiceType: string;
+  issuedOn: string;
+  currency: string;
+  subtotal: number;
+  shippingCost: number;
+  codCost: number;
+  discount: number;
+  vatAmount: number;
+  /** @nullable */
+  vatPercent?: number | null;
+  total: number;
+  items: SallaArchivedInvoiceLine[];
+  importedAt: string;
+}
+
+export interface SallaInvoiceArchivePage {
+  items: SallaArchivedInvoice[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface SallaInvoiceImportInput {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  fromDate: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  toDate: string;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  page: number;
+}
+
+export interface SallaInvoiceImportResult {
+  imported: number;
+  skipped: number;
+  page: number;
+  totalPages: number;
+  /** @nullable */
+  nextPage: number | null;
+}
+
 export type AdminInvoiceHistorical = typeof AdminInvoiceHistorical[keyof typeof AdminInvoiceHistorical];
 
 
@@ -5860,6 +5922,14 @@ export const AdminListOrdersStatus = {
   delivered: 'delivered',
   pending_payment: 'pending_payment',
 } as const;
+
+export type AdminListSallaInvoicesParams = {
+/**
+ * @minimum 1
+ */
+page?: number;
+search?: string;
+};
 
 export type AdminListInvoicesParams = {
 search?: AdminSearchParameter;

@@ -48,3 +48,4 @@
 - [Generated API freshness](generated-api-freshness.md) — stale generated clients can pass unnoticed until Vite fails on duplicate exports; regenerate from the spec before diagnosing UI edits.
 - [Monthly obligation occurrences](monthly-obligation-occurrences.md) — renewal is an explicit new period, never an automatic payment or journal.
 - [Production funding confirmation](production-funding-confirmation.md) — plan approval requests finance availability; confirmation gates scheduling, not cash movement or journals.
+- [pnpm workspace rewrites](pnpm-workspace-rewrites.md) — a package add can normalize workspace YAML and strip safety comments; inspect the config diff afterward.

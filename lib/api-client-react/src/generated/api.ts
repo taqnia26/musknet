@@ -74,6 +74,7 @@ import type {
   AdminListJournalEntriesParams,
   AdminListOrdersParams,
   AdminListProductsParams,
+  AdminListSallaInvoicesParams,
   AdminLoginInput,
   AdminOrder,
   AdminOrderDetail,
@@ -266,6 +267,9 @@ import type {
   RateLimitedResponse,
   ReceivablePayment,
   ReceivablePaymentInput,
+  SallaInvoiceArchivePage,
+  SallaInvoiceImportInput,
+  SallaInvoiceImportResult,
   ServiceUnavailableResponse,
   Shipment,
   ShipmentInput,
@@ -7491,6 +7495,161 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminSendOrderPaymentLinkMutationOptions(options));
+    }
+
+export const getAdminListSallaInvoicesUrl = (params?: AdminListSallaInvoicesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/salla-invoices?${stringifiedParams}` : `/api/admin/salla-invoices`
+}
+
+/**
+ * @summary List read-only historical Salla invoices
+ */
+export const adminListSallaInvoices = async (params?: AdminListSallaInvoicesParams, options?: Parameters<typeof customFetch>[1]): Promise<SallaInvoiceArchivePage> => {
+
+  return customFetch<SallaInvoiceArchivePage>(getAdminListSallaInvoicesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListSallaInvoicesQueryKey = (params?: AdminListSallaInvoicesParams,) => {
+    return [
+    `/api/admin/salla-invoices`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getAdminListSallaInvoicesQueryOptions = <TData = Awaited<ReturnType<typeof adminListSallaInvoices>>, TError = ErrorType<ForbiddenResponse>>(params?: AdminListSallaInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListSallaInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListSallaInvoicesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListSallaInvoices>>> = ({ signal }) => adminListSallaInvoices(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListSallaInvoices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListSallaInvoicesQueryResult = NonNullable<Awaited<ReturnType<typeof adminListSallaInvoices>>>
+export type AdminListSallaInvoicesQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary List read-only historical Salla invoices
+ */
+
+export function useAdminListSallaInvoices<TData = Awaited<ReturnType<typeof adminListSallaInvoices>>, TError = ErrorType<ForbiddenResponse>>(
+ params?: AdminListSallaInvoicesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListSallaInvoices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListSallaInvoicesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminImportSallaInvoicesUrl = () => {
+
+
+
+
+  return `/api/admin/salla-invoices/import`
+}
+
+/**
+ * @summary Import a single page of historical Salla invoices without accounting side effects
+ */
+export const adminImportSallaInvoices = async (sallaInvoiceImportInput: SallaInvoiceImportInput, options?: Parameters<typeof customFetch>[1]): Promise<SallaInvoiceImportResult> => {
+
+  return customFetch<SallaInvoiceImportResult>(getAdminImportSallaInvoicesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sallaInvoiceImportInput)
+  }
+);}
+
+
+
+
+
+export const getAdminImportSallaInvoicesMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminImportSallaInvoices>>, TError,{data: BodyType<SallaInvoiceImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminImportSallaInvoices>>, TError,{data: BodyType<SallaInvoiceImportInput>}, TContext> => {
+
+const mutationKey = ['adminImportSallaInvoices'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminImportSallaInvoices>>, {data: BodyType<SallaInvoiceImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminImportSallaInvoices(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminImportSallaInvoicesMutationResult = NonNullable<Awaited<ReturnType<typeof adminImportSallaInvoices>>>
+    export type AdminImportSallaInvoicesMutationBody = BodyType<SallaInvoiceImportInput>
+    export type AdminImportSallaInvoicesMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    /**
+ * @summary Import a single page of historical Salla invoices without accounting side effects
+ */
+export const useAdminImportSallaInvoices = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminImportSallaInvoices>>, TError,{data: BodyType<SallaInvoiceImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminImportSallaInvoices>>,
+        TError,
+        {data: BodyType<SallaInvoiceImportInput>},
+        TContext
+      > => {
+      return useMutation(getAdminImportSallaInvoicesMutationOptions(options));
     }
 
 export const getAdminListInvoicesUrl = (params?: AdminListInvoicesParams,) => {

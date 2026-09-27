@@ -47,6 +47,7 @@ export * from "./billing-settings";
 export * from "./manufacturing";
 export * from "./exhibitions";
 export * from "./invoices";
+export * from "./salla-invoices";
 export * from "./invoice-email-deliveries";
 export * from "./receivable-payments";
 export * from "./accounting";

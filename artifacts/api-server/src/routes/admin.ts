@@ -9,6 +9,7 @@ import { suggestContractSignedDate } from "../lib/contract-signed-date";
 import { createSocialMarketingRouter } from "./social-marketing";
 import { createProductionPlansRouter } from "./production-plans";
 import { createAnnualAgendaRouter } from "./annual-agenda";
+import { createSallaInvoiceRouter } from "./salla-invoices";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
 import {
@@ -175,6 +176,7 @@ export function permit(module: string, action: "view" | "edit" | "delete") {
 router.use(createSocialMarketingRouter(permit));
 router.use(createProductionPlansRouter(permit));
 router.use(createAnnualAgendaRouter(permit));
+router.use(createSallaInvoiceRouter(permit));
 
 function permitExhibitionInvoiceRead(_req: Request, res: Response, next: NextFunction) {
   (async () => {

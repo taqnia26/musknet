@@ -4258,6 +4258,76 @@ export const AdminSendOrderPaymentLinkResponse = zod.object({
 
 
 /**
+ * @summary List read-only historical Salla invoices
+ */
+export const adminListSallaInvoicesQueryPageMultipleOf = 1;
+
+
+
+export const AdminListSallaInvoicesQueryParams = zod.object({
+  "page": zod.coerce.number().min(1).multipleOf(adminListSallaInvoicesQueryPageMultipleOf).optional(),
+  "search": zod.coerce.string().optional()
+})
+
+export const AdminListSallaInvoicesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "sallaInvoiceId": zod.string(),
+  "sallaOrderId": zod.string(),
+  "invoiceNumber": zod.string().nullable(),
+  "invoiceReferenceId": zod.string().nullish(),
+  "paymentMethod": zod.string().nullish(),
+  "invoiceType": zod.string(),
+  "issuedOn": zod.string(),
+  "currency": zod.string(),
+  "subtotal": zod.number(),
+  "shippingCost": zod.number(),
+  "codCost": zod.number(),
+  "discount": zod.number(),
+  "vatAmount": zod.number(),
+  "vatPercent": zod.number().nullish(),
+  "total": zod.number(),
+  "items": zod.array(zod.object({
+  "name": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "total": zod.number()
+})),
+  "importedAt": zod.coerce.date()
+})),
+  "total": zod.number(),
+  "page": zod.number(),
+  "pageSize": zod.number()
+})
+
+
+/**
+ * @summary Import a single page of historical Salla invoices without accounting side effects
+ */
+export const adminImportSallaInvoicesBodyFromDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const adminImportSallaInvoicesBodyToDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const adminImportSallaInvoicesBodyPageMax = 10000;
+export const adminImportSallaInvoicesBodyPageMultipleOf = 1;
+
+
+
+export const AdminImportSallaInvoicesBody = zod.object({
+  "fromDate": zod.string().regex(adminImportSallaInvoicesBodyFromDateRegExp),
+  "toDate": zod.string().regex(adminImportSallaInvoicesBodyToDateRegExp),
+  "page": zod.number().min(1).max(adminImportSallaInvoicesBodyPageMax).multipleOf(adminImportSallaInvoicesBodyPageMultipleOf)
+})
+
+export const AdminImportSallaInvoicesResponse = zod.object({
+  "imported": zod.number(),
+  "skipped": zod.number(),
+  "page": zod.number(),
+  "totalPages": zod.number(),
+  "nextPage": zod.number().nullable()
+})
+
+
+/**
  * @summary List and search issued ZATCA invoices
  */
 export const adminListInvoicesQueryChannelDefault = `all`;
