@@ -37,6 +37,9 @@ export function validateAnnualAgendaEvent(fields: EventFields): string | null {
   if (fields.type === "exhibition" && fields.recurrence !== "none") {
     return "Exhibition dates are entered manually for each year and cannot recur";
   }
+  if (fields.type === "exhibition" && fields.startDate.slice(0, 4) !== fields.endDate.slice(0, 4)) {
+    return "Exhibition dates must be within a single Gregorian year";
+  }
   if (fields.recurrence === "annual_gregorian" && fields.startDate.slice(0, 4) !== fields.endDate.slice(0, 4)) {
     return "Annual recurring events must start and end in the same Gregorian year";
   }

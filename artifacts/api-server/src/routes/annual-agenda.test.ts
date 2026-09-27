@@ -78,6 +78,9 @@ describe("B2B annual agenda rules", () => {
       recurrence: "annual_gregorian" as const, note: null,
     };
     expect(validateAnnualAgendaEvent(exhibition)).toContain("manually for each year");
+    expect(validateAnnualAgendaEvent({
+      ...exhibition, recurrence: "none", startDate: "2025-12-30", endDate: "2026-01-02",
+    })).toContain("single Gregorian year");
   });
 
   it("maps recurring February 29 events to February 28 in non-leap years", () => {
@@ -99,6 +102,27 @@ describe("B2B annual agenda rules", () => {
 
 describe.sequential("B2B annual agenda admin integration", () => {
   const basePath = "/api/admin/b2b/agenda";
+  it("keeps a manually planned exhibition in its own year, including after an edit", async () => {
+    const created = await request(app).post(basePath).set(fixtureAuth("writer")).send({
+      title: "Seasonal trade fair", type: "exhibition",
+      startDate: "2027-12-30", endDate: "2027-12-31", recurrence: "none", note: "Hall A",
+    }).expect(201);
+    const id = created.body.id as number;
+    const inYear = await request(app).get(`${basePath}?year=2027`).set(fixtureAuth("reader")).expect(200);
+    expect(inYear.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id, title: "Seasonal trade fair", endDate: "2027-12-31" }),
+    ]));
+    const nextYear = await request(app).get(`${basePath}?year=2028`).set(fixtureAuth("reader")).expect(200);
+    expect(nextYear.body.some((event: { id: number }) => event.id === id)).toBe(false);
+    await request(app).patch(`${basePath}/${id}`).set(fixtureAuth("editor"))
+      .send({ startDate: "2028-05-02", endDate: "2028-05-04" }).expect(200);
+    const moved = await request(app).get(`${basePath}?year=2028`).set(fixtureAuth("reader")).expect(200);
+    expect(moved.body).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id, startDate: "2028-05-02", endDate: "2028-05-04" }),
+    ]));
+    const oldYear = await request(app).get(`${basePath}?year=2027`).set(fixtureAuth("reader")).expect(200);
+    expect(oldYear.body.some((event: { id: number }) => event.id === id)).toBe(false);
+  });
   it("supports custom event CRUD, annual occurrences, builtin read-only rules, and distributors permissions", async () => {
 
     await request(app).get(`${basePath}?year=2025`).expect(401);
