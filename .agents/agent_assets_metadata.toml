@@ -70,3 +70,31 @@ mtime_ms = 1790170186617
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/dd721a01-1064-4bd8-ab73-daeac67e6046/2a01d950-c1a1-4828-ab21-7f143a930bb8"
 storage_version_token = "1790170479727745"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "95Fz_GPE7VuVjjH5l2tQP"
+uri = "file://exports/master-sales-journals-backup-2026-09-27.json"
+type = "unspecified"
+title = "نسخة احتياطية لقيود Master Sales"
+description = "بيانات القيود الـ82 وسطورها الـ246 وسجلات تدقيقها الـ82 من قاعدة الإنتاج، قبل أي حذف."
+logical_id = "8a7947f6-a136-43af-bf2a-ce61f46ec030"
+content_hash = "sha256:33e05612f029045221c169bb0c2a006e9ab9a65ab76ffdf092b5562cfbafd5a0"
+size = 135212
+mtime_ms = 1790537196840
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/8a7947f6-a136-43af-bf2a-ce61f46ec030/a5c8b832-f54e-447a-a5d0-b572622d07e7"
+storage_version_token = "1790537209658385"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "WVpPa9c4rfRGu1ES3os8z"
+uri = "file://exports/master-sales-journals-review-2026-09-27.csv"
+type = "table"
+title = "قائمة قيود Master Sales المستهدفة"
+description = "قائمة مراجعة للقيود الـ82 وأرقامها ومبالغ كل قيد قبل إجراء أي حذف."
+logical_id = "ad7950cd-5bea-4b5a-875d-3b8a8eea4519"
+content_hash = "sha256:150a7efbda50d228e681799dd0ec06981cdbf75f962969cc6f4be2e97c08ba30"
+size = 19851
+mtime_ms = 1790537429896
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/ad7950cd-5bea-4b5a-875d-3b8a8eea4519/2155274e-9583-41a4-bb5c-4793da198226"
+storage_version_token = "1790537445642016"
+content_type = "text/csv"

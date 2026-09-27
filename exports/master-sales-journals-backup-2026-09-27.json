@@ -1,0 +1,4603 @@
+{
+  "exported_at": "2026-09-27T19:26:34.836588+00:00",
+  "source_sha256": "ff316fd33b56c91c4a383043b3b7013e17d5ea3bf6d49c2e6fab92b623b1a6d5",
+  "journal_entries": [
+    {
+      "id": 79,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.612+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-2:barcode-6287020840074:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.612+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - EVORA PARFUME 50ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000079",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 80,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.631+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-3:barcode-6287020840098:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.631+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - LUMISK HAIR MUST 35ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000080",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 81,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.637+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-4:barcode-6287020840081:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.637+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - LUNÉRA HAIR MUST 35ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000081",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 82,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.643+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-5:barcode-6287020840104:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.643+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - PEACH MOSS HAIR MUST 35ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000082",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 83,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.649+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-6:barcode-6287020840050:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.649+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - LADY LULU EXTRAIT DE PARFUM  50ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000083",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 84,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.656+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-7:barcode-6287020840036:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.656+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - ROYAL JASMINE EXTRAIT DE PARFUM  50ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000084",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 85,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.663+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-8:barcode-6287020840012:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.663+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000085",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 86,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.67+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-9:barcode-6287020840029:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.67+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - ROYAL OUD PARFUME 50ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000086",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 87,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.683+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-10:barcode-6287020840067:month-2025-12",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2025-12-01",
+      "updated_at": "2026-09-03T18:33:34.683+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - SOLENNE EXTRAIT DE PARFUM  50ML - 2025-12",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000087",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 88,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.691+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-12:barcode-6287020840098:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.691+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - LUMISK HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000088",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 89,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.697+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-13:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.697+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000089",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 90,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.702+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-14:barcode-6287020840050:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.702+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - LADY LULU EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000090",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 91,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.706+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-15:barcode-6287020840104:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.706+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - PEACH MOSS HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000091",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 92,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.712+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-16:barcode-6287020840029:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.712+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL OUD PARFUME 50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000092",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 93,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.718+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-17:barcode-6287020840067:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.718+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - SOLENNE EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000093",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 94,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.723+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-18:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.723+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000094",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 95,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.728+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-19:barcode-6287020840098:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.728+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - LUMISK HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000095",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 96,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.732+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-20:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.732+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000096",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 97,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.737+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-21:barcode-6287020840029:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.737+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL OUD PARFUME 50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000097",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 98,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.741+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-22:barcode-6287020840067:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.741+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - SOLENNE EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000098",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 99,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.745+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-23:barcode-6287020840104:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.745+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - PEACH MOSS HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000099",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 100,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.753+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-24:barcode-6287020840029:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.753+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL OUD PARFUME 50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000100",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 101,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.759+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-25:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.759+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000101",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 102,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.764+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-26:barcode-6287020840074:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.764+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - EVORA PARFUME 50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000102",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 103,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.78+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-27:barcode-6287020840104:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.78+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - PEACH MOSS HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000103",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 104,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.786+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-28:barcode-6287020840098:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.786+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - LUMISK HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000104",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 105,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.791+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-29:barcode-6287020840098:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.791+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - LUMISK HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000105",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 106,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.796+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-30:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.796+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000106",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 107,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.803+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-31:barcode-6287020840098:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.803+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - LUMISK HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000107",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 108,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.808+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-32:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.808+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000108",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 109,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.813+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-33:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.813+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000109",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 110,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.818+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-34:barcode-6287020840098:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:34.818+00:00",
+      "description": "مبيعات تاريخية مستوردة - Glow House - LUMISK HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000110",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 111,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.823+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-35:barcode-6287020840029:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.823+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL OUD PARFUME 50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000111",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 112,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.829+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-36:barcode-6287020840012:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.829+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000112",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 113,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.833+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-37:barcode-6287020840036:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.833+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL JASMINE EXTRAIT DE PARFUM  50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000113",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 114,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.839+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-38:barcode-6287020840050:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.839+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LADY LULU EXTRAIT DE PARFUM  50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000114",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 115,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.844+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-39:barcode-6287020840074:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.844+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - EVORA PARFUME 50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000115",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 116,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.849+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-40:barcode-6287020840067:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.849+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - SOLENNE EXTRAIT DE PARFUM  50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000116",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 117,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.855+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-41:barcode-6287020840081:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.855+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LUNÉRA HAIR MUST 35ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000117",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 118,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.861+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-42:barcode-6287020840104:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.861+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - PEACH MOSS HAIR MUST 35ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000118",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 119,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.868+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-43:barcode-6287020840098:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.868+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LUMISK HAIR MUST 35ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000119",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 120,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.876+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-44:barcode-6287020840012:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.876+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000120",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 121,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.881+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-45:barcode-6287020840029:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.881+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - ROYAL OUD PARFUME 50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000121",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 122,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.889+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-46:barcode-6287020840036:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.889+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - ROYAL JASMINE EXTRAIT DE PARFUM  50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000122",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 123,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.894+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-47:barcode-6287020840050:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.894+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - LADY LULU EXTRAIT DE PARFUM  50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000123",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 124,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.899+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-48:barcode-6287020840067:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.899+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - SOLENNE EXTRAIT DE PARFUM  50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000124",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 125,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.904+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-49:barcode-6287020840074:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.904+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - EVORA PARFUME 50ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000125",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 126,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.911+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-51:barcode-6287020840104:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.911+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - PEACH MOSS HAIR MUST 35ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000126",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 127,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.915+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-52:barcode-6287020840098:month-2026-01",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-01-01",
+      "updated_at": "2026-09-03T18:33:34.915+00:00",
+      "description": "مبيعات تاريخية مستوردة - Papillon - LUMISK HAIR MUST 35ML - 2026-01",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000127",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 128,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.92+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-53:barcode-6287020840012:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:34.92+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000128",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 129,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.925+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-54:barcode-6287020840081:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:34.925+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LUNÉRA HAIR MUST 35ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000129",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 130,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.932+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-55:barcode-6287020840029:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:34.932+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL OUD PARFUME 50ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000130",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 131,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.938+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-56:barcode-6287020840036:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:34.938+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL JASMINE EXTRAIT DE PARFUM  50ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000131",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 132,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.944+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-57:barcode-6287020840104:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:34.944+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - PEACH MOSS HAIR MUST 35ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000132",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 133,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.949+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-58:barcode-6287020840098:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:34.949+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LUMISK HAIR MUST 35ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000133",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 134,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.955+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-59:barcode-6287020840050:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:34.955+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LADY LULU EXTRAIT DE PARFUM  50ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000134",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 135,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.96+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-60:barcode-6287020840074:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:34.96+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - EVORA PARFUME 50ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000135",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 136,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.967+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-61:barcode-6287020840012:month-2026-04",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-04-01",
+      "updated_at": "2026-09-03T18:33:34.967+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-04",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000136",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 137,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.971+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-62:barcode-6287020840081:month-2026-04",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-04-01",
+      "updated_at": "2026-09-03T18:33:34.971+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LUNÉRA HAIR MUST 35ML - 2026-04",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000137",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 138,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.975+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-63:barcode-6287020840029:month-2026-04",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-04-01",
+      "updated_at": "2026-09-03T18:33:34.975+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL OUD PARFUME 50ML - 2026-04",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000138",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 139,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.98+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-64:barcode-6287020840036:month-2026-04",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-04-01",
+      "updated_at": "2026-09-03T18:33:34.98+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL JASMINE EXTRAIT DE PARFUM  50ML - 2026-04",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000139",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 140,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.985+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-65:barcode-6287020840104:month-2026-04",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-04-01",
+      "updated_at": "2026-09-03T18:33:34.985+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - PEACH MOSS HAIR MUST 35ML - 2026-04",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000140",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 141,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.99+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-66:barcode-6287020840098:month-2026-04",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-04-01",
+      "updated_at": "2026-09-03T18:33:34.99+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LUMISK HAIR MUST 35ML - 2026-04",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000141",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 142,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:34.995+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-67:barcode-6287020840012:month-2026-05",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-05-01",
+      "updated_at": "2026-09-03T18:33:34.995+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-05",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000142",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 143,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-68:barcode-6287020840081:month-2026-05",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-05-01",
+      "updated_at": "2026-09-03T18:33:35+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LUNÉRA HAIR MUST 35ML - 2026-05",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000143",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 144,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.006+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-69:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.006+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000144",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 145,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.012+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-70:barcode-6287020840036:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.012+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL JASMINE EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000145",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 146,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.017+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-71:barcode-6287020840029:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.017+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - ROYAL OUD PARFUME 50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000146",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 147,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.022+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-72:barcode-6287020840050:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.022+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - LADY LULU EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000147",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 148,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.027+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-73:barcode-6287020840074:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.027+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - EVORA PARFUME 50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000148",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 149,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.032+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-74:barcode-6287020840067:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.032+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - SOLENNE EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000149",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 150,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.042+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-75:barcode-6287020840104:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.042+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - PEACH MOSS HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000150",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 151,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.046+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-76:barcode-6287020840067:month-2026-03",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-03-01",
+      "updated_at": "2026-09-03T18:33:35.046+00:00",
+      "description": "مبيعات تاريخية مستوردة - Musk Ellolo - SOLENNE EXTRAIT DE PARFUM  50ML - 2026-03",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000151",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 152,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.054+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-77:barcode-6287020840036:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.054+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - ROYAL JASMINE EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000152",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 153,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.06+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-78:barcode-6287020840012:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.06+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - ROYAL MUSK EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000153",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 154,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.064+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-79:barcode-6287020840098:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.064+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - LUMISK HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000154",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 155,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.071+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-80:barcode-6287020840029:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.071+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - ROYAL OUD PARFUME 50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000155",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 156,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.077+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-81:barcode-6287020840050:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.077+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - LADY LULU EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000156",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 157,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.082+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-82:barcode-6287020840074:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.082+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - EVORA PARFUME 50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000157",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 158,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.089+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-83:barcode-6287020840067:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.089+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - SOLENNE EXTRAIT DE PARFUM  50ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000158",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 159,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.096+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-84:barcode-6287020840104:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.096+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - PEACH MOSS HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000159",
+      "reversal_of_entry_id": null
+    },
+    {
+      "id": 160,
+      "status": "posted",
+      "posted_at": "2026-09-03T18:33:35.101+00:00",
+      "posted_by": 1,
+      "source_id": "ff316fd33b56c91c4a383043:row-85:barcode-6287020840081:month-2026-02",
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "created_by": 1,
+      "entry_date": "2026-02-01",
+      "updated_at": "2026-09-03T18:33:35.101+00:00",
+      "description": "مبيعات تاريخية مستوردة - Exhibitions - LUNÉRA HAIR MUST 35ML - 2026-02",
+      "source_type": "historical_import",
+      "entry_number": "JE-00000160",
+      "reversal_of_entry_id": null
+    }
+  ],
+  "file_fingerprint": "ff316fd33b56c91c4a383043",
+  "journal_entry_audit": [
+    {
+      "id": 91,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-2:barcode-6287020840074:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 79
+    },
+    {
+      "id": 92,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-3:barcode-6287020840098:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 80
+    },
+    {
+      "id": 93,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-4:barcode-6287020840081:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 81
+    },
+    {
+      "id": 94,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-5:barcode-6287020840104:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 82
+    },
+    {
+      "id": 95,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-6:barcode-6287020840050:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 83
+    },
+    {
+      "id": 96,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-7:barcode-6287020840036:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 84
+    },
+    {
+      "id": 97,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-8:barcode-6287020840012:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 85
+    },
+    {
+      "id": 98,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-9:barcode-6287020840029:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 86
+    },
+    {
+      "id": 99,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-10:barcode-6287020840067:month-2025-12",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 87
+    },
+    {
+      "id": 100,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-12:barcode-6287020840098:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 88
+    },
+    {
+      "id": 101,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-13:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 89
+    },
+    {
+      "id": 102,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-14:barcode-6287020840050:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 90
+    },
+    {
+      "id": 103,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-15:barcode-6287020840104:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 91
+    },
+    {
+      "id": 104,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-16:barcode-6287020840029:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 92
+    },
+    {
+      "id": 105,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-17:barcode-6287020840067:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 93
+    },
+    {
+      "id": 106,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-18:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 94
+    },
+    {
+      "id": 107,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-19:barcode-6287020840098:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 95
+    },
+    {
+      "id": 108,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-20:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 96
+    },
+    {
+      "id": 109,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-21:barcode-6287020840029:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 97
+    },
+    {
+      "id": 110,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-22:barcode-6287020840067:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 98
+    },
+    {
+      "id": 111,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-23:barcode-6287020840104:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 99
+    },
+    {
+      "id": 112,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-24:barcode-6287020840029:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 100
+    },
+    {
+      "id": 113,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-25:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 101
+    },
+    {
+      "id": 114,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-26:barcode-6287020840074:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 102
+    },
+    {
+      "id": 115,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-27:barcode-6287020840104:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 103
+    },
+    {
+      "id": 116,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-28:barcode-6287020840098:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 104
+    },
+    {
+      "id": 117,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-29:barcode-6287020840098:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 105
+    },
+    {
+      "id": 118,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-30:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 106
+    },
+    {
+      "id": 119,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-31:barcode-6287020840098:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 107
+    },
+    {
+      "id": 120,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-32:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 108
+    },
+    {
+      "id": 121,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-33:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 109
+    },
+    {
+      "id": 122,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-34:barcode-6287020840098:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 110
+    },
+    {
+      "id": 123,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-35:barcode-6287020840029:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 111
+    },
+    {
+      "id": 124,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-36:barcode-6287020840012:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 112
+    },
+    {
+      "id": 125,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-37:barcode-6287020840036:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 113
+    },
+    {
+      "id": 126,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-38:barcode-6287020840050:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 114
+    },
+    {
+      "id": 127,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-39:barcode-6287020840074:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 115
+    },
+    {
+      "id": 128,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-40:barcode-6287020840067:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 116
+    },
+    {
+      "id": 129,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-41:barcode-6287020840081:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 117
+    },
+    {
+      "id": 130,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-42:barcode-6287020840104:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 118
+    },
+    {
+      "id": 131,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-43:barcode-6287020840098:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 119
+    },
+    {
+      "id": 132,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-44:barcode-6287020840012:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 120
+    },
+    {
+      "id": 133,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-45:barcode-6287020840029:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 121
+    },
+    {
+      "id": 134,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-46:barcode-6287020840036:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 122
+    },
+    {
+      "id": 135,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-47:barcode-6287020840050:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 123
+    },
+    {
+      "id": 136,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-48:barcode-6287020840067:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 124
+    },
+    {
+      "id": 137,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-49:barcode-6287020840074:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 125
+    },
+    {
+      "id": 138,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-51:barcode-6287020840104:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 126
+    },
+    {
+      "id": 139,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-52:barcode-6287020840098:month-2026-01",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 127
+    },
+    {
+      "id": 140,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-53:barcode-6287020840012:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 128
+    },
+    {
+      "id": 141,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-54:barcode-6287020840081:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 129
+    },
+    {
+      "id": 142,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-55:barcode-6287020840029:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 130
+    },
+    {
+      "id": 143,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-56:barcode-6287020840036:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 131
+    },
+    {
+      "id": 144,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-57:barcode-6287020840104:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 132
+    },
+    {
+      "id": 145,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-58:barcode-6287020840098:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 133
+    },
+    {
+      "id": 146,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-59:barcode-6287020840050:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 134
+    },
+    {
+      "id": 147,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-60:barcode-6287020840074:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 135
+    },
+    {
+      "id": 148,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-61:barcode-6287020840012:month-2026-04",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 136
+    },
+    {
+      "id": 149,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-62:barcode-6287020840081:month-2026-04",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 137
+    },
+    {
+      "id": 150,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-63:barcode-6287020840029:month-2026-04",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 138
+    },
+    {
+      "id": 151,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-64:barcode-6287020840036:month-2026-04",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 139
+    },
+    {
+      "id": 152,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-65:barcode-6287020840104:month-2026-04",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 140
+    },
+    {
+      "id": 153,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-66:barcode-6287020840098:month-2026-04",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 141
+    },
+    {
+      "id": 154,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-67:barcode-6287020840012:month-2026-05",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 142
+    },
+    {
+      "id": 155,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-68:barcode-6287020840081:month-2026-05",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 143
+    },
+    {
+      "id": 156,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-69:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 144
+    },
+    {
+      "id": 157,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-70:barcode-6287020840036:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 145
+    },
+    {
+      "id": 158,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-71:barcode-6287020840029:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 146
+    },
+    {
+      "id": 159,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-72:barcode-6287020840050:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 147
+    },
+    {
+      "id": 160,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-73:barcode-6287020840074:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 148
+    },
+    {
+      "id": 161,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-74:barcode-6287020840067:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 149
+    },
+    {
+      "id": 162,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-75:barcode-6287020840104:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 150
+    },
+    {
+      "id": 163,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-76:barcode-6287020840067:month-2026-03",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 151
+    },
+    {
+      "id": 164,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-77:barcode-6287020840036:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 152
+    },
+    {
+      "id": 165,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-78:barcode-6287020840012:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 153
+    },
+    {
+      "id": 166,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-79:barcode-6287020840098:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 154
+    },
+    {
+      "id": 167,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-80:barcode-6287020840029:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 155
+    },
+    {
+      "id": 168,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-81:barcode-6287020840050:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 156
+    },
+    {
+      "id": 169,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-82:barcode-6287020840074:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 157
+    },
+    {
+      "id": 170,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-83:barcode-6287020840067:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 158
+    },
+    {
+      "id": 171,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-84:barcode-6287020840104:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 159
+    },
+    {
+      "id": 172,
+      "action": "posted",
+      "changes": {
+        "sourceId": "ff316fd33b56c91c4a383043:row-85:barcode-6287020840081:month-2026-02",
+        "sourceType": "historical_import"
+      },
+      "actor_id": 1,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "journal_entry_id": 160
+    }
+  ],
+  "journal_entry_lines": [
+    {
+      "id": 187,
+      "debit": 2117.72,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 79
+    },
+    {
+      "id": 188,
+      "debit": 0,
+      "credit": 1841.4957,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 79
+    },
+    {
+      "id": 189,
+      "debit": 0,
+      "credit": 276.2243,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 79
+    },
+    {
+      "id": 190,
+      "debit": 934.47,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 80
+    },
+    {
+      "id": 191,
+      "debit": 0,
+      "credit": 812.5826,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 80
+    },
+    {
+      "id": 192,
+      "debit": 0,
+      "credit": 121.8874,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 80
+    },
+    {
+      "id": 193,
+      "debit": 493.05,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 81
+    },
+    {
+      "id": 194,
+      "debit": 0,
+      "credit": 428.7391,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 81
+    },
+    {
+      "id": 195,
+      "debit": 0,
+      "credit": 64.3109,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 81
+    },
+    {
+      "id": 196,
+      "debit": 690.27,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 82
+    },
+    {
+      "id": 197,
+      "debit": 0,
+      "credit": 600.2348,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 82
+    },
+    {
+      "id": 198,
+      "debit": 0,
+      "credit": 90.0352,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 82
+    },
+    {
+      "id": 199,
+      "debit": 1873,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 83
+    },
+    {
+      "id": 200,
+      "debit": 0,
+      "credit": 1628.6957,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 83
+    },
+    {
+      "id": 201,
+      "debit": 0,
+      "credit": 244.3043,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 83
+    },
+    {
+      "id": 202,
+      "debit": 1414.96,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 84
+    },
+    {
+      "id": 203,
+      "debit": 0,
+      "credit": 1230.4,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 84
+    },
+    {
+      "id": 204,
+      "debit": 0,
+      "credit": 184.56,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 84
+    },
+    {
+      "id": 205,
+      "debit": 3546.84,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 85
+    },
+    {
+      "id": 206,
+      "debit": 0,
+      "credit": 3084.2087,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 85
+    },
+    {
+      "id": 207,
+      "debit": 0,
+      "credit": 462.6313,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 85
+    },
+    {
+      "id": 208,
+      "debit": 1790.64,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 86
+    },
+    {
+      "id": 209,
+      "debit": 0,
+      "credit": 1557.0783,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 86
+    },
+    {
+      "id": 210,
+      "debit": 0,
+      "credit": 233.5617,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 86
+    },
+    {
+      "id": 211,
+      "debit": 2695.28,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 87
+    },
+    {
+      "id": 212,
+      "debit": 0,
+      "credit": 2343.7217,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 87
+    },
+    {
+      "id": 213,
+      "debit": 0,
+      "credit": 351.5583,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 87
+    },
+    {
+      "id": 214,
+      "debit": 173.04,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 88
+    },
+    {
+      "id": 215,
+      "debit": 0,
+      "credit": 150.4696,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 88
+    },
+    {
+      "id": 216,
+      "debit": 0,
+      "credit": 22.5704,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 88
+    },
+    {
+      "id": 217,
+      "debit": 268.7,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 89
+    },
+    {
+      "id": 218,
+      "debit": 0,
+      "credit": 233.6522,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 89
+    },
+    {
+      "id": 219,
+      "debit": 0,
+      "credit": 35.0478,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 89
+    },
+    {
+      "id": 220,
+      "debit": 312.17,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 90
+    },
+    {
+      "id": 221,
+      "debit": 0,
+      "credit": 271.4522,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 90
+    },
+    {
+      "id": 222,
+      "debit": 0,
+      "credit": 40.7178,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 90
+    },
+    {
+      "id": 223,
+      "debit": 164.35,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 91
+    },
+    {
+      "id": 224,
+      "debit": 0,
+      "credit": 142.913,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 91
+    },
+    {
+      "id": 225,
+      "debit": 0,
+      "credit": 21.437,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 91
+    },
+    {
+      "id": 226,
+      "debit": 373.04,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 92
+    },
+    {
+      "id": 227,
+      "debit": 0,
+      "credit": 324.3826,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 92
+    },
+    {
+      "id": 228,
+      "debit": 0,
+      "credit": 48.6574,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 92
+    },
+    {
+      "id": 229,
+      "debit": 320.87,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 93
+    },
+    {
+      "id": 230,
+      "debit": 0,
+      "credit": 279.0174,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 93
+    },
+    {
+      "id": 231,
+      "debit": 0,
+      "credit": 41.8526,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 93
+    },
+    {
+      "id": 232,
+      "debit": 268.7,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 94
+    },
+    {
+      "id": 233,
+      "debit": 0,
+      "credit": 233.6522,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 94
+    },
+    {
+      "id": 234,
+      "debit": 0,
+      "credit": 35.0478,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 94
+    },
+    {
+      "id": 235,
+      "debit": 173.04,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 95
+    },
+    {
+      "id": 236,
+      "debit": 0,
+      "credit": 150.4696,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 95
+    },
+    {
+      "id": 237,
+      "debit": 0,
+      "credit": 22.5704,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 95
+    },
+    {
+      "id": 238,
+      "debit": 268.7,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 96
+    },
+    {
+      "id": 239,
+      "debit": 0,
+      "credit": 233.6522,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 96
+    },
+    {
+      "id": 240,
+      "debit": 0,
+      "credit": 35.0478,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 96
+    },
+    {
+      "id": 241,
+      "debit": 373.04,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 97
+    },
+    {
+      "id": 242,
+      "debit": 0,
+      "credit": 324.3826,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 97
+    },
+    {
+      "id": 243,
+      "debit": 0,
+      "credit": 48.6574,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 97
+    },
+    {
+      "id": 244,
+      "debit": 320.87,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 98
+    },
+    {
+      "id": 245,
+      "debit": 0,
+      "credit": 279.0174,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 98
+    },
+    {
+      "id": 246,
+      "debit": 0,
+      "credit": 41.8526,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 98
+    },
+    {
+      "id": 247,
+      "debit": 164.35,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 99
+    },
+    {
+      "id": 248,
+      "debit": 0,
+      "credit": 142.913,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 99
+    },
+    {
+      "id": 249,
+      "debit": 0,
+      "credit": 21.437,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 99
+    },
+    {
+      "id": 250,
+      "debit": 373.04,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 100
+    },
+    {
+      "id": 251,
+      "debit": 0,
+      "credit": 324.3826,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 100
+    },
+    {
+      "id": 252,
+      "debit": 0,
+      "credit": 48.6574,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 100
+    },
+    {
+      "id": 253,
+      "debit": 537.4,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 101
+    },
+    {
+      "id": 254,
+      "debit": 0,
+      "credit": 467.3043,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 101
+    },
+    {
+      "id": 255,
+      "debit": 0,
+      "credit": 70.0957,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 101
+    },
+    {
+      "id": 256,
+      "debit": 320.87,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 102
+    },
+    {
+      "id": 257,
+      "debit": 0,
+      "credit": 279.0174,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 102
+    },
+    {
+      "id": 258,
+      "debit": 0,
+      "credit": 41.8526,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 102
+    },
+    {
+      "id": 259,
+      "debit": 164.35,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 103
+    },
+    {
+      "id": 260,
+      "debit": 0,
+      "credit": 142.913,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 103
+    },
+    {
+      "id": 261,
+      "debit": 0,
+      "credit": 21.437,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 103
+    },
+    {
+      "id": 262,
+      "debit": 346.08,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 104
+    },
+    {
+      "id": 263,
+      "debit": 0,
+      "credit": 300.9391,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 104
+    },
+    {
+      "id": 264,
+      "debit": 0,
+      "credit": 45.1409,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 104
+    },
+    {
+      "id": 265,
+      "debit": 173.04,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 105
+    },
+    {
+      "id": 266,
+      "debit": 0,
+      "credit": 150.4696,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 105
+    },
+    {
+      "id": 267,
+      "debit": 0,
+      "credit": 22.5704,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 105
+    },
+    {
+      "id": 268,
+      "debit": 268.7,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 106
+    },
+    {
+      "id": 269,
+      "debit": 0,
+      "credit": 233.6522,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 106
+    },
+    {
+      "id": 270,
+      "debit": 0,
+      "credit": 35.0478,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 106
+    },
+    {
+      "id": 271,
+      "debit": 519.12,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 107
+    },
+    {
+      "id": 272,
+      "debit": 0,
+      "credit": 451.4087,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 107
+    },
+    {
+      "id": 273,
+      "debit": 0,
+      "credit": 67.7113,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 107
+    },
+    {
+      "id": 274,
+      "debit": 537.4,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 108
+    },
+    {
+      "id": 275,
+      "debit": 0,
+      "credit": 467.3043,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 108
+    },
+    {
+      "id": 276,
+      "debit": 0,
+      "credit": 70.0957,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 108
+    },
+    {
+      "id": 277,
+      "debit": 806.1,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 109
+    },
+    {
+      "id": 278,
+      "debit": 0,
+      "credit": 700.9565,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 109
+    },
+    {
+      "id": 279,
+      "debit": 0,
+      "credit": 105.1435,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 109
+    },
+    {
+      "id": 280,
+      "debit": 346.08,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 110
+    },
+    {
+      "id": 281,
+      "debit": 0,
+      "credit": 300.9391,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 110
+    },
+    {
+      "id": 282,
+      "debit": 0,
+      "credit": 45.1409,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 110
+    },
+    {
+      "id": 283,
+      "debit": 4103.4783,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 111
+    },
+    {
+      "id": 284,
+      "debit": 0,
+      "credit": 3568.242,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 111
+    },
+    {
+      "id": 285,
+      "debit": 0,
+      "credit": 535.2363,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 111
+    },
+    {
+      "id": 286,
+      "debit": 26063.4783,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 112
+    },
+    {
+      "id": 287,
+      "debit": 0,
+      "credit": 22663.8942,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 112
+    },
+    {
+      "id": 288,
+      "debit": 0,
+      "credit": 3399.5841,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 112
+    },
+    {
+      "id": 289,
+      "debit": 4716.5217,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 113
+    },
+    {
+      "id": 290,
+      "debit": 0,
+      "credit": 4101.3232,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 113
+    },
+    {
+      "id": 291,
+      "debit": 0,
+      "credit": 615.1985,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 113
+    },
+    {
+      "id": 292,
+      "debit": 2497.3913,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 114
+    },
+    {
+      "id": 293,
+      "debit": 0,
+      "credit": 2171.6446,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 114
+    },
+    {
+      "id": 294,
+      "debit": 0,
+      "credit": 325.7467,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 114
+    },
+    {
+      "id": 295,
+      "debit": 1604.3478,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 115
+    },
+    {
+      "id": 296,
+      "debit": 0,
+      "credit": 1395.085,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 115
+    },
+    {
+      "id": 297,
+      "debit": 0,
+      "credit": 209.2628,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 115
+    },
+    {
+      "id": 298,
+      "debit": 2566.9565,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 116
+    },
+    {
+      "id": 299,
+      "debit": 0,
+      "credit": 2232.1361,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 116
+    },
+    {
+      "id": 300,
+      "debit": 0,
+      "credit": 334.8204,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 116
+    },
+    {
+      "id": 301,
+      "debit": 164.3478,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 117
+    },
+    {
+      "id": 302,
+      "debit": 0,
+      "credit": 142.9111,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 117
+    },
+    {
+      "id": 303,
+      "debit": 0,
+      "credit": 21.4367,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 117
+    },
+    {
+      "id": 304,
+      "debit": 657.3913,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 118
+    },
+    {
+      "id": 305,
+      "debit": 0,
+      "credit": 571.6446,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 118
+    },
+    {
+      "id": 306,
+      "debit": 0,
+      "credit": 85.7467,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 118
+    },
+    {
+      "id": 307,
+      "debit": 2595.6522,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 119
+    },
+    {
+      "id": 308,
+      "debit": 0,
+      "credit": 2257.0889,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 119
+    },
+    {
+      "id": 309,
+      "debit": 0,
+      "credit": 338.5633,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 119
+    },
+    {
+      "id": 310,
+      "debit": 6180,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 120
+    },
+    {
+      "id": 311,
+      "debit": 0,
+      "credit": 5373.913,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 120
+    },
+    {
+      "id": 312,
+      "debit": 0,
+      "credit": 806.087,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 120
+    },
+    {
+      "id": 313,
+      "debit": 2611.3043,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 121
+    },
+    {
+      "id": 314,
+      "debit": 0,
+      "credit": 2270.6994,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 121
+    },
+    {
+      "id": 315,
+      "debit": 0,
+      "credit": 340.6049,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 121
+    },
+    {
+      "id": 316,
+      "debit": 3832.1739,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 122
+    },
+    {
+      "id": 317,
+      "debit": 0,
+      "credit": 3332.3251,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 122
+    },
+    {
+      "id": 318,
+      "debit": 0,
+      "credit": 499.8488,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 122
+    },
+    {
+      "id": 319,
+      "debit": 1560.8696,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 123
+    },
+    {
+      "id": 320,
+      "debit": 0,
+      "credit": 1357.2779,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 123
+    },
+    {
+      "id": 321,
+      "debit": 0,
+      "credit": 203.5917,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 123
+    },
+    {
+      "id": 322,
+      "debit": 641.7391,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 124
+    },
+    {
+      "id": 323,
+      "debit": 0,
+      "credit": 558.034,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 124
+    },
+    {
+      "id": 324,
+      "debit": 0,
+      "credit": 83.7051,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 124
+    },
+    {
+      "id": 325,
+      "debit": 962.6087,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 125
+    },
+    {
+      "id": 326,
+      "debit": 0,
+      "credit": 837.051,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 125
+    },
+    {
+      "id": 327,
+      "debit": 0,
+      "credit": 125.5577,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 125
+    },
+    {
+      "id": 328,
+      "debit": 164.3478,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 126
+    },
+    {
+      "id": 329,
+      "debit": 0,
+      "credit": 142.9111,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 126
+    },
+    {
+      "id": 330,
+      "debit": 0,
+      "credit": 21.4367,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 126
+    },
+    {
+      "id": 331,
+      "debit": 173.0435,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 127
+    },
+    {
+      "id": 332,
+      "debit": 0,
+      "credit": 150.4726,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 127
+    },
+    {
+      "id": 333,
+      "debit": 0,
+      "credit": 22.5709,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 127
+    },
+    {
+      "id": 334,
+      "debit": 6180,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 128
+    },
+    {
+      "id": 335,
+      "debit": 0,
+      "credit": 5373.913,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 128
+    },
+    {
+      "id": 336,
+      "debit": 0,
+      "credit": 806.087,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 128
+    },
+    {
+      "id": 337,
+      "debit": 1479.1304,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 129
+    },
+    {
+      "id": 338,
+      "debit": 0,
+      "credit": 1286.2003,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 129
+    },
+    {
+      "id": 339,
+      "debit": 0,
+      "credit": 192.9301,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 129
+    },
+    {
+      "id": 340,
+      "debit": 1865.2174,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 130
+    },
+    {
+      "id": 341,
+      "debit": 0,
+      "credit": 1621.9282,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 130
+    },
+    {
+      "id": 342,
+      "debit": 0,
+      "credit": 243.2892,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 130
+    },
+    {
+      "id": 343,
+      "debit": 2358.2609,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 131
+    },
+    {
+      "id": 344,
+      "debit": 0,
+      "credit": 2050.6617,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 131
+    },
+    {
+      "id": 345,
+      "debit": 0,
+      "credit": 307.5992,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 131
+    },
+    {
+      "id": 346,
+      "debit": 493.0435,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 132
+    },
+    {
+      "id": 347,
+      "debit": 0,
+      "credit": 428.7335,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 132
+    },
+    {
+      "id": 348,
+      "debit": 0,
+      "credit": 64.31,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 132
+    },
+    {
+      "id": 349,
+      "debit": 2076.5217,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 133
+    },
+    {
+      "id": 350,
+      "debit": 0,
+      "credit": 1805.671,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 133
+    },
+    {
+      "id": 351,
+      "debit": 0,
+      "credit": 270.8507,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 133
+    },
+    {
+      "id": 352,
+      "debit": 1248.6957,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 134
+    },
+    {
+      "id": 353,
+      "debit": 0,
+      "credit": 1085.8223,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 134
+    },
+    {
+      "id": 354,
+      "debit": 0,
+      "credit": 162.8734,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 134
+    },
+    {
+      "id": 355,
+      "debit": 320.8696,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 135
+    },
+    {
+      "id": 356,
+      "debit": 0,
+      "credit": 279.017,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 135
+    },
+    {
+      "id": 357,
+      "debit": 0,
+      "credit": 41.8526,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 135
+    },
+    {
+      "id": 358,
+      "debit": 3224.3478,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 136
+    },
+    {
+      "id": 359,
+      "debit": 0,
+      "credit": 2803.7807,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 136
+    },
+    {
+      "id": 360,
+      "debit": 0,
+      "credit": 420.5671,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 136
+    },
+    {
+      "id": 361,
+      "debit": 164.3478,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 137
+    },
+    {
+      "id": 362,
+      "debit": 0,
+      "credit": 142.9111,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 137
+    },
+    {
+      "id": 363,
+      "debit": 0,
+      "credit": 21.4367,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 137
+    },
+    {
+      "id": 364,
+      "debit": 1119.1304,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 138
+    },
+    {
+      "id": 365,
+      "debit": 0,
+      "credit": 973.1569,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 138
+    },
+    {
+      "id": 366,
+      "debit": 0,
+      "credit": 145.9735,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 138
+    },
+    {
+      "id": 367,
+      "debit": 589.5652,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 139
+    },
+    {
+      "id": 368,
+      "debit": 0,
+      "credit": 512.6654,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 139
+    },
+    {
+      "id": 369,
+      "debit": 0,
+      "credit": 76.8998,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 139
+    },
+    {
+      "id": 370,
+      "debit": 164.3478,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 140
+    },
+    {
+      "id": 371,
+      "debit": 0,
+      "credit": 142.9111,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 140
+    },
+    {
+      "id": 372,
+      "debit": 0,
+      "credit": 21.4367,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 140
+    },
+    {
+      "id": 373,
+      "debit": 173.0435,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 141
+    },
+    {
+      "id": 374,
+      "debit": 0,
+      "credit": 150.4726,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 141
+    },
+    {
+      "id": 375,
+      "debit": 0,
+      "credit": 22.5709,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 141
+    },
+    {
+      "id": 376,
+      "debit": 2955.6522,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 142
+    },
+    {
+      "id": 377,
+      "debit": 0,
+      "credit": 2570.1323,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 142
+    },
+    {
+      "id": 378,
+      "debit": 0,
+      "credit": 385.5199,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 142
+    },
+    {
+      "id": 379,
+      "debit": 328.6957,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 143
+    },
+    {
+      "id": 380,
+      "debit": 0,
+      "credit": 285.8223,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 143
+    },
+    {
+      "id": 381,
+      "debit": 0,
+      "credit": 42.8734,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 143
+    },
+    {
+      "id": 382,
+      "debit": 4299.1304,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 144
+    },
+    {
+      "id": 383,
+      "debit": 0,
+      "credit": 3738.3743,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 144
+    },
+    {
+      "id": 384,
+      "debit": 0,
+      "credit": 560.7561,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 144
+    },
+    {
+      "id": 385,
+      "debit": 1179.1304,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 145
+    },
+    {
+      "id": 386,
+      "debit": 0,
+      "credit": 1025.3308,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 145
+    },
+    {
+      "id": 387,
+      "debit": 0,
+      "credit": 153.7996,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 145
+    },
+    {
+      "id": 388,
+      "debit": 746.087,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 146
+    },
+    {
+      "id": 389,
+      "debit": 0,
+      "credit": 648.7713,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 146
+    },
+    {
+      "id": 390,
+      "debit": 0,
+      "credit": 97.3157,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 146
+    },
+    {
+      "id": 391,
+      "debit": 312.1739,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 147
+    },
+    {
+      "id": 392,
+      "debit": 0,
+      "credit": 271.4556,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 147
+    },
+    {
+      "id": 393,
+      "debit": 0,
+      "credit": 40.7183,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 147
+    },
+    {
+      "id": 394,
+      "debit": 641.7391,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 148
+    },
+    {
+      "id": 395,
+      "debit": 0,
+      "credit": 558.034,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 148
+    },
+    {
+      "id": 396,
+      "debit": 0,
+      "credit": 83.7051,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 148
+    },
+    {
+      "id": 397,
+      "debit": 1283.4783,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 149
+    },
+    {
+      "id": 398,
+      "debit": 0,
+      "credit": 1116.0681,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 149
+    },
+    {
+      "id": 399,
+      "debit": 0,
+      "credit": 167.4102,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 149
+    },
+    {
+      "id": 400,
+      "debit": 328.6957,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 150
+    },
+    {
+      "id": 401,
+      "debit": 0,
+      "credit": 285.8223,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 150
+    },
+    {
+      "id": 402,
+      "debit": 0,
+      "credit": 42.8734,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 150
+    },
+    {
+      "id": 403,
+      "debit": 1925.2174,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 151
+    },
+    {
+      "id": 404,
+      "debit": 0,
+      "credit": 1674.1021,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 151
+    },
+    {
+      "id": 405,
+      "debit": 0,
+      "credit": 251.1153,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 151
+    },
+    {
+      "id": 406,
+      "debit": 3979.5652,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 152
+    },
+    {
+      "id": 407,
+      "debit": 0,
+      "credit": 3460.4915,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 152
+    },
+    {
+      "id": 408,
+      "debit": 0,
+      "credit": 519.0737,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 152
+    },
+    {
+      "id": 409,
+      "debit": 5320.1739,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 153
+    },
+    {
+      "id": 410,
+      "debit": 0,
+      "credit": 4626.2382,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 153
+    },
+    {
+      "id": 411,
+      "debit": 0,
+      "credit": 693.9357,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 153
+    },
+    {
+      "id": 412,
+      "debit": 1557.3913,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 154
+    },
+    {
+      "id": 413,
+      "debit": 0,
+      "credit": 1354.2533,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 154
+    },
+    {
+      "id": 414,
+      "debit": 0,
+      "credit": 203.138,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 154
+    },
+    {
+      "id": 415,
+      "debit": 2685.913,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 155
+    },
+    {
+      "id": 416,
+      "debit": 0,
+      "credit": 2335.5765,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 155
+    },
+    {
+      "id": 417,
+      "debit": 0,
+      "credit": 350.3365,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 155
+    },
+    {
+      "id": 418,
+      "debit": 1966.6957,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 156
+    },
+    {
+      "id": 419,
+      "debit": 0,
+      "credit": 1710.1702,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 156
+    },
+    {
+      "id": 420,
+      "debit": 0,
+      "credit": 256.5255,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 156
+    },
+    {
+      "id": 421,
+      "debit": 1155.1304,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 157
+    },
+    {
+      "id": 422,
+      "debit": 0,
+      "credit": 1004.4612,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 157
+    },
+    {
+      "id": 423,
+      "debit": 0,
+      "credit": 150.6692,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 157
+    },
+    {
+      "id": 424,
+      "debit": 2887.8261,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 158
+    },
+    {
+      "id": 425,
+      "debit": 0,
+      "credit": 2511.1531,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 158
+    },
+    {
+      "id": 426,
+      "debit": 0,
+      "credit": 376.673,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 158
+    },
+    {
+      "id": 427,
+      "debit": 739.5652,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 159
+    },
+    {
+      "id": 428,
+      "debit": 0,
+      "credit": 643.1002,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 159
+    },
+    {
+      "id": 429,
+      "debit": 0,
+      "credit": 96.465,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 159
+    },
+    {
+      "id": 430,
+      "debit": 1922.8696,
+      "credit": 0,
+      "account_id": 4,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 1,
+      "journal_entry_id": 160
+    },
+    {
+      "id": 431,
+      "debit": 0,
+      "credit": 1672.0605,
+      "account_id": 20,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 2,
+      "journal_entry_id": 160
+    },
+    {
+      "id": 432,
+      "debit": 0,
+      "credit": 250.8091,
+      "account_id": 14,
+      "created_at": "2026-09-03T18:33:34.606627+00:00",
+      "description": null,
+      "line_number": 3,
+      "journal_entry_id": 160
+    }
+  ]
+}
