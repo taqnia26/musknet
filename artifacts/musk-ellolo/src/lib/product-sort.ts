@@ -1,56 +1,40 @@
 type ProductForSelection = {
-  categoryId?: number;
-  categoryNameAr?: string;
-  categoryNameEn?: string;
+  id?: number;
+  sku?: string | null;
   nameAr: string;
   nameEn: string;
 };
 
-const preferredProductOrder = [
-  'رويال مسك',
-  'رويال عود',
-  'رويال جازمين',
-  'ليدي لولو',
-  'ايفورا',
-  'سولين',
-  'لومسك',
-  'لونيرا',
-  'بيتش موس',
+// These catalog identifiers keep the requested order even when names,
+// categories, or prices change. The ID also covers edits to a product's SKU.
+const preferredProducts = [
+  { id: 5, sku: '6287020840012' }, // Royal Musk
+  { id: 6, sku: '6287020840029' }, // Royal Oud
+  { id: 4, sku: '6287020840036' }, // Royal Jasmine
+  { id: 3, sku: '6287020840050' }, // Lady Lulu
+  { id: 2, sku: '6287020840074' }, // Evora
+  { id: 1, sku: '6287020840067' }, // Solenn
+  { id: 9, sku: '6287020840098' }, // Lumisk
+  { id: 8, sku: '6287020840081' }, // Lunera
+  { id: 7, sku: '6287020840104' }, // Beach Moss
 ];
 
-const normalizeProductName = (value: string) =>
-  value.trim().toLocaleLowerCase().replace(/[\u064b-\u065f\u0670\u0640]/g, '').replace(/[أإآٱ]/g, 'ا').replace(/\s+/g, ' ');
-const preferredProductRanks = new Map(
-  preferredProductOrder.map((name, index) => [normalizeProductName(name), index]),
-);
+const rankBySku = new Map(preferredProducts.map(({ sku }, index) => [sku, index]));
+const rankById = new Map(preferredProducts.map(({ id }, index) => [id, index]));
 
 export function sortProductsForSelection<T extends ProductForSelection>(
   products: readonly T[],
-  lang: 'ar' | 'en',
+  _lang: 'ar' | 'en',
 ): T[] {
-  const categoryPriority = (product: T) => {
-    const category = `${product.categoryNameAr ?? ''} ${product.categoryNameEn ?? ''}`.toLocaleLowerCase();
-    if (category.includes('عطور الشعر') || category.includes('عطور شعر') || category.includes('hair')) return 1;
-    if (category.includes('عطور') || category.includes('perfume')) return 0;
-    if (product.categoryId === 1) return 0;
-    if (product.categoryId === 2) return 1;
-    return 2;
-  };
-
   return [...products].sort((a, b) => {
-    const aPreferredRank = preferredProductRanks.get(normalizeProductName(a.nameAr));
-    const bPreferredRank = preferredProductRanks.get(normalizeProductName(b.nameAr));
-    if (aPreferredRank !== undefined || bPreferredRank !== undefined) {
-      if (aPreferredRank === undefined) return 1;
-      if (bPreferredRank === undefined) return -1;
-      return aPreferredRank - bPreferredRank;
+    const aRank = (a.id === undefined ? undefined : rankById.get(a.id)) ?? (a.sku ? rankBySku.get(a.sku.trim()) : undefined);
+    const bRank = (b.id === undefined ? undefined : rankById.get(b.id)) ?? (b.sku ? rankBySku.get(b.sku.trim()) : undefined);
+    if (aRank !== undefined || bRank !== undefined) {
+      return (aRank ?? Infinity) - (bRank ?? Infinity);
     }
-
-    const priorityDifference = categoryPriority(a) - categoryPriority(b);
-    if (priorityDifference !== 0) return priorityDifference;
-
-    const aName = lang === 'ar' ? a.nameAr : a.nameEn;
-    const bName = lang === 'ar' ? b.nameAr : b.nameEn;
-    return aName.localeCompare(bName, lang === 'ar' ? 'ar' : 'en');
+    // Newly created products follow their immutable ID, not mutable details.
+    // Without IDs, preserve the order supplied by the API (stable sort).
+    if (a.id !== undefined && b.id !== undefined) return a.id - b.id;
+    return 0;
   });
 }

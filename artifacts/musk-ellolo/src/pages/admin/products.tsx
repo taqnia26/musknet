@@ -243,6 +243,9 @@ function ProductRow({
   };
 
   const image = product.images?.[0];
+  const displayName = lang === 'ar'
+    ? product.displayNameAr?.trim() || product.nameAr
+    : product.displayNameEn?.trim() || product.nameEn;
 
   return (
     <div data-testid={`card-product-${product.id}`} className="group bg-card border rounded-lg hover:border-primary/30 transition-colors shadow-sm flex flex-col p-3 gap-3 relative">
@@ -254,7 +257,7 @@ function ProductRow({
       <div className="flex items-center gap-3">
         <div className="shrink-0 h-14 w-14 bg-muted overflow-hidden border rounded-md">
           {image ? (
-            <img src={image.url} alt={image.alt || product.nameAr} className="h-full w-full object-cover" />
+             <img src={image.url} alt={image.alt || displayName} className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-muted-foreground bg-muted/50">
               <ImageIcon className="h-5 w-5 opacity-50" />
@@ -264,12 +267,12 @@ function ProductRow({
 
         <div className="flex flex-col flex-1 min-w-0 justify-center">
           <div className="flex flex-col">
-            <h4 className="font-semibold text-sm text-foreground truncate">{lang === 'ar' ? product.nameAr : product.nameEn}</h4>
+             <h4 className="font-semibold text-sm text-foreground truncate">{displayName}</h4>
             <div className="flex items-center gap-2 mt-0.5">
               <Badge variant="outline" className={cn("font-normal text-[10px] h-4 px-1 rounded-sm border-transparent", product.isActive ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10" : "bg-muted text-muted-foreground")}>
                 {product.isActive ? t('نشط', 'Active') : t('غير نشط', 'Inactive')}
               </Badge>
-              <Badge variant="outline" className={cn("font-normal text-[10px] h-4 px-1 rounded-sm border-transparent", product.sellable ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10" : "bg-muted text-muted-foreground")}>
+               <Badge variant="outline" className={cn("font-normal text-[10px] h-4 px-1 rounded-sm border-transparent", isVisible ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10" : "bg-muted text-muted-foreground")}>
                 {isVisible ? t('معروض', 'Visible') : t('مخفي', 'Hidden')}
               </Badge>
             </div>
@@ -346,7 +349,7 @@ function ProductRow({
               {canEdit && (
                 <DropdownMenuItem onClick={handleToggleVisibility} className="gap-2 text-sm" data-testid={`menu-product-visibility-${product.id}`}>
                   {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  {isVisible ? t('إخفاء المنتج', 'Hide product') : t('عرض المنتج', 'Show product')}
+                   {isVisible ? t('إخفاء المنتج', 'Hide product') : t('إظهار المنتج', 'Show product')}
                 </DropdownMenuItem>
               )}
               {hasPermission(currentUser, 'products', 'delete') && product.isActive && (
@@ -419,11 +422,11 @@ export default function AdminProducts() {
     resolver: zodResolver(productSchema),
     defaultValues: emptyProduct,
   });
-  const [nameAr, nameEn] = useWatch({ control: form.control, name: ['nameAr', 'nameEn'] });
+   const [displayNameAr, displayNameEn] = useWatch({ control: form.control, name: ['displayNameAr', 'displayNameEn'] });
   const sellable = useWatch({ control: form.control, name: 'sellable' });
   const editingName = lang === 'ar'
-    ? nameAr?.trim() || originalNames?.ar
-    : nameEn?.trim() || originalNames?.en;
+     ? displayNameAr?.trim() || originalNames?.ar
+     : displayNameEn?.trim() || originalNames?.en;
 
   const resetDialog = () => {
     setEditingId(null);
@@ -452,7 +455,7 @@ export default function AdminProducts() {
       invoiceNameAr: data.invoiceNameAr.trim() || data.nameAr.trim(),
       invoiceNameEn: data.invoiceNameEn.trim() || data.nameEn.trim(),
       slug: data.slug.trim() || `inventory-${crypto.randomUUID()}`,
-      price: data.sellable ? data.price : 0,
+       price: data.price,
       compareAtPrice: data.compareAtPrice ?? null,
       discountPrice: data.discountPrice ?? null,
       discountEndsOn: stringToNull(data.discountEndsOn),
@@ -489,8 +492,10 @@ export default function AdminProducts() {
     };
 
     if (editingId) {
-      const { stockQuantity: openingStock, ...updates } = request;
+       const { stockQuantity: openingStock, sellable: storefrontVisibility, isActive: activeStatus, ...updates } = request;
       void openingStock;
+       void storefrontVisibility;
+       void activeStatus;
       updateMutation.mutate({ id: editingId, data: updates }, options);
     } else {
       createMutation.mutate({ data: request }, options);
@@ -500,7 +505,10 @@ export default function AdminProducts() {
   const handleEdit = (product: AdminProduct) => {
     setEditingId(product.id);
     setDescriptionEditorSession((session) => session + 1);
-    setOriginalNames({ ar: product.nameAr, en: product.nameEn });
+     setOriginalNames({
+       ar: product.displayNameAr?.trim() || product.nameAr,
+       en: product.displayNameEn?.trim() || product.nameEn,
+     });
     setProductImages(product.images || []);
     setUploadError(null);
     form.reset({
@@ -632,7 +640,7 @@ export default function AdminProducts() {
               <SelectItem value="all">{t('الكل', 'All')}</SelectItem>
               <SelectItem value="active">{t('نشط', 'Active')}</SelectItem>
               <SelectItem value="inactive">{t('غير نشط', 'Inactive')}</SelectItem>
-              <SelectItem value="sellable">{t('معروض للبيع', 'Sellable')}</SelectItem>
+               <SelectItem value="sellable">{t('معروض', 'Visible')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -721,9 +729,6 @@ export default function AdminProducts() {
                     <div className="mb-2 border-b pb-2"><h3 className="text-lg font-semibold">{t('بيانات المنتج الأساسية', 'Basic Information')}</h3></div>
                     
                     <div className="grid gap-5 sm:grid-cols-2">
-                      <FormField control={form.control} name="sellable" render={({ field }) => (
-                        <FormItem className="flex items-center justify-between rounded-lg border p-3"><FormLabel>{t('قابل للبيع في المتجر', 'Sellable in storefront')}</FormLabel><FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl></FormItem>
-                      )} />
                       <FormField control={form.control} name="nameAr" render={({ field }) => (
                         <FormItem><FormLabel>{t('الاسم الداخلي بالعربية', 'Internal name (AR)')} *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                       )} />
