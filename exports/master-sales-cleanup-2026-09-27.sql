@@ -1,3 +1,7 @@
+-- OBSOLETE: do not run. Use master-sales-cleanup-with-db-archive.sql
+-- only after checking master-sales-preflight-readonly.sql on the exact target.
+BEGIN;
+DO $obsolete$ BEGIN RAISE EXCEPTION 'Obsolete cleanup: use the same-transaction database archive version'; END $obsolete$;
 -- MANUAL PRODUCTION OPERATION ONLY. Do not run in development or automatically.
 -- Scope: the single Master Sales file with SHA-256
 -- ff316fd33b56c91c4a383043b3b7013e17d5ea3bf6d49c2e6fab92b623b1a6d5.

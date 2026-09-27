@@ -1,3 +1,6 @@
+-- OBSOLETE: embedded backup uses IDs from a DIFFERENT database. Never run.
+BEGIN;
+DO $obsolete$ BEGIN RAISE EXCEPTION 'Obsolete restore: use master-sales-restore-from-db-archive.sql'; END $obsolete$;
 -- MANUAL RECOVERY ONLY, if the matching Master Sales cleanup was committed.
 -- Run in PRODUCTION only, as a single script with stop-on-error enabled.
 -- If an error occurs before COMMIT, issue ROLLBACK. If COMMIT succeeds but
