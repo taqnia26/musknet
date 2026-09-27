@@ -26,6 +26,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   creationKey: text("creation_key"),
   historical: text("historical").notNull().default("no"),
   historicalCreationFingerprint: text("historical_creation_fingerprint"),
+  originalInvoiceNumber: text("original_invoice_number"),
   sequenceNumber: integer("sequence_number").notNull(),
   invoiceNumber: text("invoice_number").notNull(),
   sellerName: text("seller_name").notNull(),

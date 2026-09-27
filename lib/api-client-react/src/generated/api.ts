@@ -112,6 +112,9 @@ import type {
   Category,
   CheckoutQuote,
   CheckoutQuoteInput,
+  CompanyInvoiceCreated,
+  CompanyInvoiceInput,
+  CompanyInvoiceSellerConfiguration,
   ConflictResponse,
   ContractFileUploadRequest,
   ContractPreview,
@@ -7644,6 +7647,154 @@ export const useAdminCreateDistributorInvoice = <TError = ErrorType<BadRequestRe
       > => {
       return useMutation(getAdminCreateDistributorInvoiceMutationOptions(options));
     }
+
+export const getAdminCreateCompanyInvoiceUrl = () => {
+
+
+
+
+  return `/api/admin/invoices/company`
+}
+
+/**
+ * @summary Issue a current company invoice or record an externally issued historical invoice, selected solely by Riyadh issue date
+ */
+export const adminCreateCompanyInvoice = async (companyInvoiceInput: CompanyInvoiceInput, options?: Parameters<typeof customFetch>[1]): Promise<CompanyInvoiceCreated> => {
+
+  return customFetch<CompanyInvoiceCreated>(getAdminCreateCompanyInvoiceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(companyInvoiceInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateCompanyInvoiceMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCompanyInvoice>>, TError,{data: BodyType<CompanyInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateCompanyInvoice>>, TError,{data: BodyType<CompanyInvoiceInput>}, TContext> => {
+
+const mutationKey = ['adminCreateCompanyInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateCompanyInvoice>>, {data: BodyType<CompanyInvoiceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateCompanyInvoice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateCompanyInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateCompanyInvoice>>>
+    export type AdminCreateCompanyInvoiceMutationBody = BodyType<CompanyInvoiceInput>
+    export type AdminCreateCompanyInvoiceMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>
+
+    /**
+ * @summary Issue a current company invoice or record an externally issued historical invoice, selected solely by Riyadh issue date
+ */
+export const useAdminCreateCompanyInvoice = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCompanyInvoice>>, TError,{data: BodyType<CompanyInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateCompanyInvoice>>,
+        TError,
+        {data: BodyType<CompanyInvoiceInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateCompanyInvoiceMutationOptions(options));
+    }
+
+export const getAdminGetCompanyInvoiceSellerConfigurationUrl = () => {
+
+
+
+
+  return `/api/admin/invoices/company/seller-configuration`
+}
+
+/**
+ * @summary Read safe seller invoice configuration availability
+ */
+export const adminGetCompanyInvoiceSellerConfiguration = async ( options?: Parameters<typeof customFetch>[1]): Promise<CompanyInvoiceSellerConfiguration> => {
+
+  return customFetch<CompanyInvoiceSellerConfiguration>(getAdminGetCompanyInvoiceSellerConfigurationUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetCompanyInvoiceSellerConfigurationQueryKey = () => {
+    return [
+    `/api/admin/invoices/company/seller-configuration`
+    ] as const;
+    }
+
+
+export const getAdminGetCompanyInvoiceSellerConfigurationQueryOptions = <TData = Awaited<ReturnType<typeof adminGetCompanyInvoiceSellerConfiguration>>, TError = ErrorType<ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCompanyInvoiceSellerConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetCompanyInvoiceSellerConfigurationQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetCompanyInvoiceSellerConfiguration>>> = ({ signal }) => adminGetCompanyInvoiceSellerConfiguration({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetCompanyInvoiceSellerConfiguration>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetCompanyInvoiceSellerConfigurationQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetCompanyInvoiceSellerConfiguration>>>
+export type AdminGetCompanyInvoiceSellerConfigurationQueryError = ErrorType<ForbiddenResponse>
+
+
+/**
+ * @summary Read safe seller invoice configuration availability
+ */
+
+export function useAdminGetCompanyInvoiceSellerConfiguration<TData = Awaited<ReturnType<typeof adminGetCompanyInvoiceSellerConfiguration>>, TError = ErrorType<ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCompanyInvoiceSellerConfiguration>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetCompanyInvoiceSellerConfigurationQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getAdminReconcileHistoricalInvoiceUrl = () => {
 

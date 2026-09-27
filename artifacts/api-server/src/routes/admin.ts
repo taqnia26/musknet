@@ -81,6 +81,7 @@ import {
 import { hashOwnerPassword } from "../lib/owner-auth";
 import { createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
 import { createHistoricalInvoice, reconcileHistoricalInvoice } from "../lib/historical-company-invoices";
+import { createCompanyInvoice } from "../lib/company-invoices";
 import {
   AccountingConflictError,
   AccountingNotFoundError,
@@ -103,6 +104,7 @@ import { nextIndividualOrderNumber } from "../lib/order-numbers";
 import { createInvoicePdf, sendInvoiceEmail } from "../lib/invoice-email";
 import { assertShippingStatusTransition, canApplyCarrierShippingStatus, ShippingStatusTransitionError } from "../lib/shipping-status";
 import { extractVatFromGross } from "../lib/vat";
+import { zatcaSellerConfiguration } from "../lib/zatca";
 import { correctOwnerEvent, listObligations, ownerJournalReport, reviewEvent, reviewOwnerJournal } from "../lib/owner-obligations";
 import { normalizeIntakeAddress } from "../lib/intake-address";
 import { issueOrderPaymentLink, confirmMoyasarInvoice, cancelUnpaidMoyasarOrder, PaymentLinkError } from "../lib/moyasar-payment-links";
@@ -2095,6 +2097,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     exhibitionName: exhibitionsTable.name,
     sequenceNumber: invoicesTable.sequenceNumber,
     invoiceNumber: invoicesTable.invoiceNumber,
+    originalInvoiceNumber: invoicesTable.originalInvoiceNumber,
     sellerName: invoicesTable.sellerName,
     issueDatetime: invoicesTable.issueDatetime,
     dueDate: invoicesTable.dueDate,
@@ -2122,6 +2125,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
           : query.channel === "exhibitions" ? isNotNull(invoicesTable.exhibitionId) : undefined,
       search ? or(
         ilike(invoicesTable.invoiceNumber, `%${search}%`),
+        ilike(invoicesTable.originalInvoiceNumber, `%${search}%`),
         ilike(invoicesTable.sellerName, `%${search}%`),
         ilike(invoicesTable.sellerVatNumber, `%${search}%`),
         ilike(invoicesTable.buyerName, `%${search}%`),
@@ -2188,6 +2192,38 @@ router.post("/admin/invoices/historical", permit("invoices", "edit"), route(asyn
     throw error;
   }
 }));
+router.get("/admin/invoices/company/seller-configuration", permit("invoices", "edit"), route(async (_req, res) => {
+  try {
+    const configuration = zatcaSellerConfiguration();
+    res.json(Api.AdminGetCompanyInvoiceSellerConfigurationResponse.parse({
+      available: true,
+      sellerName: configuration.sellerName,
+      sellerVatNumber: configuration.vatRegistrationNumber,
+    }));
+  } catch {
+    res.json(Api.AdminGetCompanyInvoiceSellerConfigurationResponse.parse({
+      available: false,
+      sellerName: null,
+      sellerVatNumber: null,
+    }));
+  }
+}));
+router.post("/admin/invoices/company", permit("invoices", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateCompanyInvoiceBody, req.body, res); if (!body) return;
+  try {
+    const invoice = await createCompanyInvoice({
+      ...body,
+      issueDate: isoDate(body.issueDate),
+      dueDate: isoDate(body.dueDate),
+      paymentDate: body.paymentDate ? isoDate(body.paymentDate) : undefined,
+    }, res.locals.admin.id);
+    res.status(201).json(Api.AdminCreateCompanyInvoiceResponse.parse(invoice));
+  } catch (error) {
+    if (error instanceof DistributorInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
+    if (error instanceof DistributorInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
+    throw error;
+  }
+}));
 
 router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), route(async (req, res) => {
   const params = parse(Api.AdminDownloadInvoicePdfParams, req.params, res); if (!params) return;
@@ -2195,6 +2231,7 @@ router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), rout
     id: invoicesTable.id,
     historical: invoicesTable.historical,
     invoiceNumber: invoicesTable.invoiceNumber,
+    originalInvoiceNumber: invoicesTable.originalInvoiceNumber,
     orderNumber: ordersTable.orderNumber,
     sellerName: invoicesTable.sellerName,
     sellerVatNumber: invoicesTable.sellerVatNumber,
@@ -2339,7 +2376,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
   const params = parse(Api.AdminSendInvoiceEmailParams, req.params, res);
   const body = parse(Api.AdminSendInvoiceEmailBody, req.body, res); if (!params || !body) return;
   const [invoice] = await db.select({
-    id: invoicesTable.id, historical: invoicesTable.historical, invoiceNumber: invoicesTable.invoiceNumber, orderNumber: ordersTable.orderNumber,
+    id: invoicesTable.id, historical: invoicesTable.historical, invoiceNumber: invoicesTable.invoiceNumber, originalInvoiceNumber: invoicesTable.originalInvoiceNumber, orderNumber: ordersTable.orderNumber,
     sellerName: invoicesTable.sellerName, sellerVatNumber: invoicesTable.sellerVatNumber,
      taxTreatment: invoicesTable.taxTreatment, vatRate: invoicesTable.vatRate,
      contractDiscountPercent: invoicesTable.contractDiscountPercent,

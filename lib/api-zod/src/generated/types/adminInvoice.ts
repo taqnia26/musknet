@@ -47,6 +47,8 @@ export interface AdminInvoice {
   exhibitionName: string | null;
   sequenceNumber: number;
   invoiceNumber: string;
+  /** @nullable */
+  originalInvoiceNumber: string | null;
   sellerName: string;
   issueDatetime: Date;
   /** @nullable */

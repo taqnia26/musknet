@@ -8,6 +8,8 @@ import {
 } from "@workspace/db";
 import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, updateOrderAndIssueInvoice } from "./invoices";
 import { invoiceItemName } from "./invoice-email";
+import { invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
+import { createCompanyInvoice } from "./company-invoices";
 
 const base = 1_700_000_000 + (Date.now() % 100_000_000);
 const customerId = base;
@@ -16,6 +18,7 @@ let distributorId: number;
 let inactiveDistributorId: number;
 let internationalDistributorId: number;
 let concurrentDistributorId: number;
+let paidTestDistributorId: number | undefined;
 let productId: number;
 let actorId: number;
 let successfulInvoiceId: number;
@@ -78,8 +81,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  const testDistributorIds = [distributorId, inactiveDistributorId, internationalDistributorId, concurrentDistributorId, paidTestDistributorId]
+    .filter((id): id is number => Number.isSafeInteger(id));
   const distributorInvoices = await db.select({ id: invoicesTable.id }).from(invoicesTable)
-    .where(inArray(invoicesTable.distributorId, [distributorId, inactiveDistributorId, internationalDistributorId, concurrentDistributorId]));
+    .where(inArray(invoicesTable.distributorId, testDistributorIds));
   if (distributorInvoices.length) {
     const invoiceIds = distributorInvoices.map((row) => row.id);
     const payments = await db.select({ id: receivablePaymentsTable.id }).from(receivablePaymentsTable)
@@ -93,7 +98,7 @@ afterAll(async () => {
       const entries = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
         .where(and(
           or(
-            and(inArray(journalEntriesTable.sourceType, ["distributor_invoice", "distributor_invoice_cogs"]), inArray(journalEntriesTable.sourceId, invoiceIds.map(String))),
+            and(inArray(journalEntriesTable.sourceType, ["distributor_invoice", "distributor_invoice_cogs", "historical_company_invoice"]), inArray(journalEntriesTable.sourceId, invoiceIds.map(String))),
             and(eq(journalEntriesTable.sourceType, "receivable_payment"), inArray(journalEntriesTable.sourceId, payments.map((payment) => String(payment.id)))),
           ),
         ));
@@ -121,7 +126,7 @@ afterAll(async () => {
   if (uploadedContractFileIds.length) {
     await db.delete(uploadedContractFilesTable).where(inArray(uploadedContractFilesTable.id, uploadedContractFileIds));
   }
-  await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, [distributorId, inactiveDistributorId, internationalDistributorId, concurrentDistributorId]));
+  await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, testDistributorIds));
   await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
   await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
   const onlineInvoices = await db.select({ id: invoicesTable.id }).from(invoicesTable).where(inArray(invoicesTable.orderId, orderIds));
@@ -282,6 +287,7 @@ describe.sequential("atomic invoice issuance", () => {
       await db.update(inventoryBalancesTable).set({ available: 10, averageCost: "4.0000" }).where(eq(inventoryBalancesTable.productId, productId));
     }
   });
+
 });
 
 describe.sequential("distributor invoice issuance", () => {
@@ -439,30 +445,28 @@ describe.sequential("distributor invoice issuance", () => {
       taxTreatment: "domestic",
       items: [{ productId, quantity: 1, unitPrice: 20 }],
     }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
-    const invoice = await createDistributorInvoice({
+    const issueDate = saudiCalendarDate(new Date());
+    const dueDate = new Date(Date.parse(`${issueDate}T12:00:00.000Z`) + 17 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const invoice = await createCompanyInvoice({
       creationKey: `uploaded-${base}-invoice`,
       distributorId,
       uploadedContractFileId: files[0].id,
-      taxTreatment: "domestic",
+      issueDate,
+      dueDate,
       items: [{ productId, quantity: 1, unitPrice: 20 }],
     }, actorId, env);
-    expect(invoice).toMatchObject({
+    const [persisted] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+    expect(persisted).toMatchObject({
       uploadedContractFileId: files[0].id,
       contractNumber: files[0].fileName,
       contractType: "Saudi distributor agreement",
       contractDiscountPercent: "7.50",
       paymentTerm: "end_of_month",
       paymentDays: null,
+      dueDate,
+      taxTreatment: "domestic",
+      totalAmount: 18.5,
     });
-    expect(invoice.totalAmount).toBe(18.5);
-    const [persisted] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
-    const issueDateParts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Riyadh", year: "numeric", month: "2-digit",
-    }).formatToParts(invoice.issueDatetime);
-    const issueYear = Number(issueDateParts.find((part) => part.type === "year")?.value);
-    const issueMonth = Number(issueDateParts.find((part) => part.type === "month")?.value);
-    const lastDay = new Date(Date.UTC(issueYear, issueMonth, 0)).getUTCDate();
-    expect(persisted.dueDate).toBe(`${issueYear}-${String(issueMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`);
     await expect(createDistributorInvoice({
       creationKey: `uploaded-${base}-invoice`,
       distributorId,
@@ -606,5 +610,144 @@ describe.sequential("distributor invoice issuance", () => {
     const invoice = await createDistributorInvoice(request, actorId, env);
     expect(invoice).toMatchObject({ taxTreatment: "international", vatAmount: 0 });
     expect(Number(invoice.vatRate)).toBe(0);
+  });
+
+  it("posts an immediately collected current invoice once and reports it paid", async () => {
+    const creationKey = `company-paid-${base}-invoice`;
+    const [paidTestDistributor] = await db.insert(wholesaleDistributorsTable).values({
+      companyName: `Paid invoice test ${base}`, contactName: "Tester", phone: `054${String(base).slice(-7)}`,
+    }).returning({ id: wholesaleDistributorsTable.id });
+    paidTestDistributorId = paidTestDistributor.id;
+    const today = saudiCalendarDate(new Date());
+    const input = {
+      creationKey,
+      distributorId: paidTestDistributorId,
+      issueDate: today,
+      dueDate: today,
+      collected: true,
+      paymentDate: today,
+      paymentMethod: "bank_transfer" as const,
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    };
+    const [invoice, replay] = await Promise.all([
+      createCompanyInvoice(input, actorId, env),
+      createCompanyInvoice(input, actorId, env),
+    ]);
+    expect(replay.id).toBe(invoice.id);
+    expect(invoice).toMatchObject({ paidAmount: 20, outstandingAmount: 0, paymentStatus: "paid" });
+    const [storedInvoice] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+    expect(Math.abs(storedInvoice.issueDatetime.getTime() - Date.now())).toBeLessThan(60_000);
+    const payments = await db.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoice.id));
+    expect(payments).toHaveLength(1);
+    const receiptJournals = await db.select().from(journalEntriesTable).where(and(
+      eq(journalEntriesTable.sourceType, "receivable_payment"),
+      eq(journalEntriesTable.sourceId, String(payments[0].id)),
+    ));
+    expect(receiptJournals).toHaveLength(1);
+    await db.update(productsTable).set({ stockQuantity: 10 }).where(eq(productsTable.id, productId));
+    await db.update(inventoryBalancesTable).set({ available: 10 }).where(eq(inventoryBalancesTable.productId, productId));
+  });
+
+  it("uses the real instant for a morning Riyadh issuance instead of an afternoon placeholder", () => {
+    const morning = new Date("2026-09-27T06:15:00.000Z"); // 09:15 in Riyadh
+    expect(invoiceIssueTimestamp("2026-09-27", morning)).toEqual(morning);
+    expect(invoiceIssueTimestamp("2026-09-26", morning).toISOString()).toBe("2026-09-26T12:00:00.000Z");
+  });
+
+  it("classifies past issue dates as historical with mixed catalog and snapshot lines and no original number", async () => {
+    const issueDate = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const dueDate = new Date(Date.parse(`${issueDate}T12:00:00.000Z`) + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const paymentDate = new Date(Date.parse(`${issueDate}T12:00:00.000Z`) + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const [catalogProduct] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    const [beforeMovementCount] = await db.select({ count: sql<number>`count(*)` }).from(inventoryMovementsTable)
+      .where(eq(inventoryMovementsTable.productId, productId));
+    await db.update(productsTable).set({ isActive: false }).where(eq(productsTable.id, productId));
+    try {
+      const invoice = await createCompanyInvoice({
+        creationKey: `company-historical-${base}-invoice`,
+        distributorId: paidTestDistributorId!,
+        issueDate,
+        dueDate,
+        collected: true,
+        paymentDate,
+        paymentMethod: "cash",
+        items: [
+          { productId, quantity: 1, unitPrice: 20 },
+          { productName: `Historical snapshot ${base}`, sku: `HIST-${base}`, quantity: 1, unitPrice: 10 },
+        ],
+      }, actorId, env);
+      expect(invoice).toMatchObject({
+        historical: "yes",
+        originalInvoiceNumber: null,
+        paidAmount: 30,
+        outstandingAmount: 0,
+        paymentStatus: "paid",
+      });
+      expect(invoice.invoiceNumber).toMatch(/^LC-[0-9]+$/);
+      const [stored] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+      expect(stored.sequenceNumber).toBeLessThan(0);
+      expect(stored.dueDate).toBe(dueDate);
+      expect(invoice.items).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          productId,
+          productName: catalogProduct.invoiceNameAr,
+          productNameEn: catalogProduct.invoiceNameEn,
+          sku: catalogProduct.sku,
+        }),
+        expect.objectContaining({
+          productId: null,
+          productName: `Historical snapshot ${base}`,
+          sku: `HIST-${base}`,
+        }),
+      ]));
+      const [afterMovementCount] = await db.select({ count: sql<number>`count(*)` }).from(inventoryMovementsTable)
+        .where(eq(inventoryMovementsTable.productId, productId));
+      expect(afterMovementCount.count).toBe(beforeMovementCount.count);
+    } finally {
+      await db.update(productsTable).set({ isActive: catalogProduct.isActive }).where(eq(productsTable.id, productId));
+    }
+  });
+
+  it("rejects invalid company invoice dates and incomplete collection details", async () => {
+    const today = saudiCalendarDate(new Date());
+    const yesterday = new Date(Date.parse(`${today}T12:00:00.000Z`) - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    await expect(createCompanyInvoice({
+      creationKey: `bad-due-${base}-invoice`,
+      distributorId: paidTestDistributorId!,
+      issueDate: today,
+      dueDate: yesterday,
+      items: [{ productId, quantity: 1, unitPrice: 10 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceValidationError);
+    await expect(createCompanyInvoice({
+      creationKey: `bad-payment-${base}-invoice`,
+      distributorId: paidTestDistributorId!,
+      issueDate: today,
+      dueDate: today,
+      collected: true,
+      items: [{ productId, quantity: 1, unitPrice: 10 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceValidationError);
+    const tomorrow = new Date(Date.parse(`${today}T12:00:00.000Z`) + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const futurePaymentKey = `future-payment-${base}-invoice`;
+    await expect(createCompanyInvoice({
+      creationKey: futurePaymentKey,
+      distributorId: paidTestDistributorId!,
+      issueDate: today,
+      dueDate: today,
+      collected: true,
+      paymentDate: tomorrow,
+      paymentMethod: "cash",
+      items: [{ productId, quantity: 1, unitPrice: 10 }],
+    }, actorId, env)).rejects.toThrow("paymentDate cannot be in the future");
+    expect(await db.select().from(invoicesTable).where(eq(invoicesTable.creationKey, futurePaymentKey))).toHaveLength(0);
+    await expect(createCompanyInvoice({
+      creationKey: `duplicate-snapshot-${base}-invoice`,
+      distributorId: paidTestDistributorId!,
+      issueDate: yesterday,
+      dueDate: today,
+      items: [
+        { productName: "Repeated historical snapshot", sku: "DUP-1", quantity: 1, unitPrice: 10 },
+        { productName: "Repeated historical snapshot", sku: "DUP-1", quantity: 1, unitPrice: 10 },
+      ],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceValidationError);
   });
 });

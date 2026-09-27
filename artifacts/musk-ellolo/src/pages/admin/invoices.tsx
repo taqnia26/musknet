@@ -37,8 +37,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
 import { hasPermission } from '@/lib/permissions';
-import { CreateDistributorInvoiceDialog } from '@/components/admin/create-distributor-invoice-dialog';
-import { CreateHistoricalInvoiceDialog } from '@/components/admin/create-historical-invoice-dialog';
+import { CreateCompanyInvoiceDialog } from '@/components/admin/create-company-invoice-dialog';
 import { CreateExhibitionInvoiceDialog } from '@/components/admin/create-exhibition-invoice-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatRiyadhBusinessDate } from '@/lib/riyadh-business-date';
@@ -66,6 +65,7 @@ function InvoiceTemplate({
       : invoice.paymentDays !== null && invoice.paymentDays !== undefined
         ? t(`${invoice.paymentDays} يوم`, `${invoice.paymentDays} days`)
         : null;
+  const originalInvoiceNumber = invoice.originalInvoiceNumber;
   const inclusiveOrderSnapshot = Boolean(invoice.orderNumber) &&
     Math.round(invoice.subtotal * 100) + Math.round(invoice.vatAmount * 100) === Math.round(invoice.totalAmount * 100);
   const vatLabel = invoice.vatAmount > 0
@@ -116,8 +116,8 @@ function InvoiceTemplate({
             <img src={`${import.meta.env.BASE_URL}site-assets/invoice-logo-black.png`} alt="Musk Ellolo" data-testid="invoice-logo-black" className="invoice-logo-black h-auto w-48 sm:w-56 object-contain" />
             <img src={`${import.meta.env.BASE_URL}site-assets/invoice-logo-white.png`} alt="Musk Ellolo" data-testid="invoice-logo-white" className="invoice-logo-white h-auto w-48 sm:w-56 object-contain" />
           </div>
-          <h1 data-testid="invoice-title" className="mt-2 text-xl font-semibold tracking-wide text-[#292728]">{invoice.historical === 'yes' ? t('نسخة فاتورة سابقة', 'Prior Invoice Copy') : t('فاتورة ضريبية', 'Tax Invoice')}</h1>
-          {invoice.historical === 'yes' && <p className="text-xs text-stone-600">{t('أصل خارجي، ليس إصداراً ضريبياً جديداً أو اعتماد ZATCA', 'External original; not a new tax issuance or ZATCA certification')}</p>}
+          <h1 data-testid="invoice-title" className="mt-2 text-xl font-semibold tracking-wide text-[#292728]">{invoice.historical === 'yes' ? t('تسجيل فاتورة سابقة', 'Historical Invoice Record') : t('فاتورة ضريبية', 'Tax Invoice')}</h1>
+          {invoice.historical === 'yes' && <p className="text-xs text-stone-600">{t('سجل داخلي لفاتورة سابقة؛ ليس إصداراً ضريبياً جديداً أو اعتماد ZATCA', 'Internal prior record; not a new tax issuance or ZATCA certification')}</p>}
         </div>
         <div className="invoice-heading-seller min-w-0">
           <div data-testid="invoice-seller" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-w-0">
@@ -127,12 +127,14 @@ function InvoiceTemplate({
           </div>
           <div data-testid="invoice-info-card" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-info-card mt-5 rounded-md border border-stone-200 bg-stone-100 p-4">
             <dl className="space-y-3 text-sm">
-              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
+              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{invoice.historical === 'yes' ? t('المرجع الداخلي', 'Internal reference') : t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
+              {invoice.historical === 'yes' && originalInvoiceNumber && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة الأصلية', 'Original invoice number')}</dt><dd dir="ltr" className="font-mono">{originalInvoiceNumber}</dd></div>}
               {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
               {usesContractTerms && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{invoice.uploadedContractFileId ? t('ملف العقد', 'Contract file') : t('العقد', 'Contract')}</dt><dd className="text-end">{contractDisplayName}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
               {usesContractTerms && paymentTermsDescription && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('شروط السداد', 'Payment terms')}</dt><dd>{paymentTermsDescription}</dd></div>}
               <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{formatRiyadhBusinessDate(invoice.issueDatetime)}</dd></div>
-              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? format(new Date(invoice.dueDate), 'yyyy-MM-dd') : '-'}</dd></div>
+              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? invoice.dueDate.slice(0, 10) : '-'}</dd></div>
+              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('حالة التحصيل', 'Collection status')}</dt><dd className="font-medium">{invoice.paymentStatus === 'paid' ? t('تم التحصيل', 'Collected') : invoice.paymentStatus === 'partial' ? t('تحصيل جزئي', 'Partially collected') : t('غير محصلة', 'Not collected')}</dd></div>
             </dl>
           </div>
         </div>
@@ -248,6 +250,11 @@ function InvoiceTemplate({
                )}
             </div>
           )}
+          <div data-testid="invoice-collection-summary" className="space-y-2 rounded-md border border-stone-200 p-3 text-xs sm:text-sm">
+            <div className="flex justify-between font-medium"><span>{t('حالة التحصيل', 'Collection status')}</span><span>{invoice.paymentStatus === 'paid' ? t('تم التحصيل بالكامل', 'Collected in full') : invoice.paymentStatus === 'partial' ? t('تحصيل جزئي', 'Partially collected') : t('غير محصلة', 'Not collected')}</span></div>
+            <div className="flex justify-between text-stone-600"><span>{t('المحصل', 'Collected')}</span><span className="font-mono"><Money value={invoice.paidAmount} lang={lang} fractionDigits={2} /></span></div>
+            <div className="flex justify-between text-stone-600"><span>{t('المتبقي للتحصيل', 'Remaining to collect')}</span><span className="font-mono"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></span></div>
+          </div>
            <div data-testid="invoice-total-card" className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
               <span className="text-[#292728]">{internationalDistributor && (invoice.shippingAmount ?? 0) === 0 ? t('الإجمالي بعد الخصم', 'Total after discount') : t('الإجمالي', 'Total')}</span>
              <span className="font-mono text-[#292728]"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></span>
@@ -277,7 +284,7 @@ function InvoicePreviewDialog({
   const [downloading, setDownloading] = useState(false);
   
   const { data: qrBlob } = useAdminGetInvoiceQr(
-    invoice?.id as number,
+    invoice?.id ?? 0,
     { 
       query: { 
         enabled: !!invoice && invoice.historical !== 'yes',
@@ -468,7 +475,7 @@ function EmailInvoiceDialog({
   const [error, setError] = useState<string | null>(null);
   const mutation = useAdminSendInvoiceEmail();
   const { data: deliveries, isLoading: deliveriesLoading } = useAdminListInvoiceEmailDeliveries(
-    invoice?.id as number,
+    invoice?.id ?? 0,
     { query: {
       enabled: open && !!invoice,
       queryKey: invoice ? getAdminListInvoiceEmailDeliveriesQueryKey(invoice.id) : ['invoice-email-deliveries-null'],
@@ -742,7 +749,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
             ? t('عرض فواتير الطلبات المدفوعة عبر الموقع الإلكتروني فقط', 'Online order invoices only')
             : t('إدارة فواتير الشركات والموزعين فقط', 'Manage distributor invoices only')}</p>
         </div>
-        {channel === 'companies' && hasPermission(currentUser, 'invoices', 'edit') && <div className="flex flex-wrap gap-2"><CreateHistoricalInvoiceDialog /><CreateDistributorInvoiceDialog /></div>}
+        {channel === 'companies' && hasPermission(currentUser, 'invoices', 'edit') && <CreateCompanyInvoiceDialog />}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -806,7 +813,13 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
             ) : (
               invoices?.map((invoice) => (
                 <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`} className="group hover:bg-muted/10 transition-colors">
-                  <TableCell className="font-medium">{invoice.invoiceNumber}{invoice.historical === 'yes' && <Badge variant="outline" className="ms-2">{t('فاتورة سابقة', 'Prior invoice')}</Badge>}</TableCell>
+                  <TableCell className="font-medium">
+                    {invoice.invoiceNumber}
+                    {invoice.historical === 'yes' && <>
+                      <Badge variant="outline" className="ms-2">{t('تسجيل سابق', 'Prior record')}</Badge>
+                      {invoice.originalInvoiceNumber && <span className="mt-1 block text-xs font-normal text-muted-foreground">{t('رقم الفاتورة الأصلية', 'Original invoice')}: {invoice.originalInvoiceNumber}</span>}
+                    </>}
+                  </TableCell>
                   <TableCell>{invoice.orderNumber ?? <span className="text-muted-foreground">-</span>}</TableCell>
                   <TableCell>{channel === 'online' ? (invoice.buyerName ?? '-') : (
                     <div>

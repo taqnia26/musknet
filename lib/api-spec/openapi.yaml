@@ -1114,6 +1114,30 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Distributor or product is unavailable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/company:
+    post:
+      operationId: adminCreateCompanyInvoice
+      summary: Issue a current company invoice or record an externally issued historical invoice, selected solely by Riyadh issue date
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody:
+        required: true
+        description: "Classification depends only on issueDate in the Riyadh calendar: today issues a current invoice; a past date records a historical invoice without stock movement or ZATCA issuance. Current lines require productId. Historical lines may mix catalog productId and name/sku snapshots; originalInvoiceNumber is optional."
+        content: { application/json: { schema: { $ref: "#/components/schemas/CompanyInvoiceInput" } } }
+      responses:
+        "201": { description: Created or recorded company invoice, content: { application/json: { schema: { $ref: "#/components/schemas/CompanyInvoiceCreated" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: "Distributor, product, or historical reconciliation conflict", content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/company/seller-configuration:
+    get:
+      operationId: adminGetCompanyInvoiceSellerConfiguration
+      summary: Read safe seller invoice configuration availability
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses:
+        "200": { description: Public seller identity fields or unavailable status, content: { application/json: { schema: { $ref: "#/components/schemas/CompanyInvoiceSellerConfiguration" } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /admin/invoices/historical/reconcile:
     post:
       operationId: adminReconcileHistoricalInvoice
@@ -4287,7 +4311,7 @@ components:
         duplicate: { type: boolean }
     AdminInvoice:
       type: object
-      required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
+      required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, originalInvoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
       properties:
         id: { type: number }
         historical: { type: string, enum: [yes, no] }
@@ -4308,6 +4332,7 @@ components:
         exhibitionName: { type: [string, "null"] }
         sequenceNumber: { type: number }
         invoiceNumber: { type: string }
+        originalInvoiceNumber: { type: [string, "null"] }
         sellerName: { type: string }
         issueDatetime: { type: string, format: date-time }
         dueDate: { type: [string, "null"], format: date }
@@ -4403,6 +4428,54 @@ components:
         productId: { type: number, minimum: 1, multipleOf: 1 }
         quantity: { type: number, minimum: 1, multipleOf: 1 }
         unitPrice: { type: number, exclusiveMinimum: 0 }
+    CompanyInvoiceLineInput:
+      type: object
+      required: [quantity, unitPrice]
+      properties:
+        productId: { type: number, minimum: 1, multipleOf: 1, description: "Catalog product selection. Required for current invoices; historical catalog product snapshots are resolved server-side, including inactive products." }
+        productName: { type: string, maxLength: 200, description: "Historical fallback snapshot, required only when no catalog productId is selected; when both are supplied it is used only if the server has no invoice-name snapshot." }
+        sku: { type: [string, "null"], maxLength: 100, description: "Historical fallback SKU used only when no catalog SKU snapshot is available." }
+        quantity: { type: number, minimum: 1, multipleOf: 1 }
+        unitPrice: { type: number, exclusiveMinimum: 0 }
+    CompanyInvoiceInput:
+      type: object
+      required: [creationKey, issueDate, dueDate, distributorId, items]
+      properties:
+        creationKey: { type: string, minLength: 16, maxLength: 80 }
+        issueDate: { type: string, format: date, description: "Determines current vs historical mode solely by comparison with today's Riyadh calendar date." }
+        dueDate: { type: string, format: date }
+        distributorId: { type: number, minimum: 1, multipleOf: 1 }
+        contractId: { type: number, minimum: 1, multipleOf: 1 }
+        uploadedContractFileId: { type: number, minimum: 1, multipleOf: 1 }
+        originalInvoiceNumber: { type: string, maxLength: 100, description: "Optional original reference for past-dated historical invoices." }
+        collected: { type: boolean }
+        paymentDate: { type: string, format: date }
+        paymentMethod: { type: string, enum: [cash, bank_transfer] }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/CompanyInvoiceLineInput" }
+    CompanyInvoiceSellerConfiguration:
+      type: object
+      required: [available, sellerName, sellerVatNumber]
+      properties:
+        available: { type: boolean }
+        sellerName: { type: [string, "null"] }
+        sellerVatNumber: { type: [string, "null"] }
+    CompanyInvoiceCreated:
+      type: object
+      required: [id, invoiceNumber, originalInvoiceNumber, historical, paidAmount, outstandingAmount, paymentStatus, items, payments]
+      properties:
+        id: { type: number }
+        invoiceNumber: { type: string }
+        originalInvoiceNumber: { type: [string, "null"] }
+        historical: { type: string, enum: [yes, no] }
+        paidAmount: { type: number }
+        outstandingAmount: { type: number }
+        paymentStatus: { type: string, enum: [unpaid, partial, paid] }
+        items: { type: array, items: { $ref: "#/components/schemas/AdminInvoiceItem" } }
+        payments: { type: array, items: { $ref: "#/components/schemas/ReceivablePayment" } }
     DistributorInvoiceInput:
       type: object
       required: [creationKey, distributorId, items]

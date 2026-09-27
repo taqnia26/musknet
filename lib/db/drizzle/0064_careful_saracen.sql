@@ -1,0 +1,1 @@
+ALTER TABLE "tax_invoices" ADD COLUMN "original_invoice_number" text;

@@ -9,6 +9,12 @@ export function saudiCalendarDate(date: Date) {
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
+// Preserve the real issuance instant for today's invoices and their ZATCA QR.
+// Backdated dates keep a noon UTC placeholder rather than impersonating a new issuance.
+export function invoiceIssueTimestamp(issueDate: string, now: Date) {
+  return issueDate === saudiCalendarDate(now) ? now : new Date(`${issueDate}T12:00:00.000Z`);
+}
+
 export function addCalendarDays(dateString: string, days: number) {
   const [year, month, day] = dateString.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));

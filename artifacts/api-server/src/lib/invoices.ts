@@ -3,7 +3,7 @@ import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntr
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 import { adjustOperationalBalances } from "./operations";
 import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType, type TaxTreatment } from "./vat";
-import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, saudiCalendarDate } from "./invoice-dates";
+import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
 import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
 import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 
@@ -219,7 +219,7 @@ export async function createExhibitionInvoice(
 }
 
 export async function createDistributorInvoice(
-  input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; taxTreatment?: TaxTreatment; dueDate?: string | Date; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; taxTreatment?: TaxTreatment; issueDate?: string | Date; dueDate?: string | Date; collected?: { paymentDate: string | Date; paymentMethod: "cash" | "bank_transfer" }; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
   environment: NodeJS.ProcessEnv = process.env,
 ) {
@@ -239,6 +239,7 @@ export async function createDistributorInvoice(
   await ensureStandardAccountingChart();
   return db.transaction(async (tx) => {
     await lockDistributorContractSource(tx, input.distributorId);
+    await tx.execute(sql`select pg_advisory_xact_lock(7521, hashtext(${input.creationKey}))`);
     const [previous] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (previous) {
       await assertDistributorInvoiceReplay(tx, previous, input);
@@ -303,10 +304,8 @@ export async function createDistributorInvoice(
     }
     const selectedContractType = contract?.contractType ?? uploadedContract?.contractType ?? null;
     const contractTreatment = selectedContractType ? taxTreatmentForContractType(selectedContractType) : null;
-    if ((contract || uploadedContract) && input.taxTreatment === undefined) {
-      throw new DistributorInvoiceValidationError("taxTreatment is required for a contract-linked company invoice");
-    }
-    const taxTreatment: TaxTreatment = input.taxTreatment ?? "domestic";
+    const taxTreatment: TaxTreatment = input.taxTreatment ?? contractTreatment ??
+      (distributor.countryCode?.trim().toUpperCase() && distributor.countryCode.trim().toUpperCase() !== "SA" ? "international" : "domestic");
     if (contractTreatment && taxTreatment !== contractTreatment) {
       throw new DistributorInvoiceConflictError(`Contract tax treatment must be ${contractTreatment}`);
     }
@@ -382,7 +381,9 @@ export async function createDistributorInvoice(
       return { ...afterLock, orderNumber: null, distributorName: afterLock.buyerName, exhibitionName: null, paidAmount, outstandingAmount: fromCents(cents(afterLock.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: afterLockItems };
     }
     const configuration = zatcaSellerConfiguration(environment);
-    const issueDatetime = new Date();
+    const issuedAt = new Date();
+    const issueDate = input.issueDate ? dateOnly(input.issueDate) : saudiCalendarDate(issuedAt);
+    const issueDatetime = invoiceIssueTimestamp(issueDate, issuedAt);
     const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "LC");
     const qrCodeData = zatcaPhaseOneBase64({
       ...configuration,
@@ -397,11 +398,13 @@ export async function createDistributorInvoice(
       invoiceNumber,
       sellerName: configuration.sellerName,
       issueDatetime,
-      dueDate: uploadedContract
+      dueDate: input.dueDate
+        ? dateOnly(input.dueDate)
+        : uploadedContract
         ? uploadedContractDueDate(issueDatetime, uploadedContract.paymentTerm ?? "", uploadedContract.paymentDays)
         : contract
         ? dueDateFromContract(issueDatetime, contract.contractType, contract.paymentDays)
-        : input.dueDate ? dateOnly(input.dueDate) : defaultCompanyDueDate(),
+        : defaultCompanyDueDate(),
       sellerVatNumber: configuration.vatRegistrationNumber,
       buyerName: distributor.companyName,
       buyerTaxNumber: distributor.taxNumber,
@@ -462,7 +465,7 @@ export async function createDistributorInvoice(
       ...(vatAmount > 0 ? [{ accountCode: "2120", credit: vatAmount }] : []),
     ];
     if (saleLines.length) await postJournalEntry({
-      entryDate: issueDatetime.toISOString().slice(0, 10),
+      entryDate: issueDate,
       description: `Distributor sale ${invoiceNumber}`,
       createdBy: actorId,
       sourceType: "distributor_invoice",
@@ -471,7 +474,7 @@ export async function createDistributorInvoice(
     }, tx);
     if (totalCost > 0) {
       await postJournalEntry({
-        entryDate: issueDatetime.toISOString().slice(0, 10),
+        entryDate: issueDate,
         description: `Cost of distributor sale ${invoiceNumber}`,
         createdBy: actorId,
         sourceType: "distributor_invoice_cogs",
@@ -482,6 +485,43 @@ export async function createDistributorInvoice(
         ],
       }, tx);
     }
+    let payments: typeof receivablePaymentsTable.$inferSelect[] = [];
+    if (input.collected) {
+      const [payment] = await tx.insert(receivablePaymentsTable).values({
+        invoiceId: invoice.id,
+        paymentKey: `company-invoice:${input.creationKey}:collected`,
+        paymentDate: dateOnly(input.collected.paymentDate),
+        amount: totalAmount,
+        paymentMethod: input.collected.paymentMethod,
+        createdBy: actorId,
+      }).returning();
+      await postJournalEntry({
+        entryDate: dateOnly(input.collected.paymentDate),
+        description: `Collection for ${invoice.invoiceNumber}`,
+        createdBy: actorId,
+        sourceType: "receivable_payment",
+        sourceId: String(payment.id),
+        lines: [
+          { accountCode: payment.paymentMethod === "cash" ? "1110" : "1120", debit: payment.amount },
+          { accountCode: "1130", credit: payment.amount },
+        ],
+      }, tx);
+      const [paymentEvent] = await tx.insert(operationEventsTable).values({
+        eventKey: `receivable-payment:${payment.id}`,
+        kind: "payment",
+        status: "pending",
+        sourceType: "receivable_payment",
+        sourceId: String(payment.id),
+        occurredAt: new Date(`${dateOnly(input.collected.paymentDate)}T12:00:00.000Z`),
+        actorId,
+        payload: {
+          invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: payment.amount,
+          paymentMethod: payment.paymentMethod, reference: payment.reference,
+        },
+      }).returning();
+      await tx.update(operationEventsTable).set({ status: "posted" }).where(eq(operationEventsTable.id, paymentEvent.id));
+      payments = [payment];
+    }
     await tx.insert(operationEventsTable).values({
       eventKey: `distributor-invoice:${invoice.id}`,
       kind: "sale_fulfillment",
@@ -491,7 +531,9 @@ export async function createDistributorInvoice(
       actorId,
       payload: { request: input },
     });
-    return { ...invoice, orderNumber: null, distributorName: distributor.companyName, exhibitionName: null, paidAmount: 0, outstandingAmount: invoice.totalAmount, paymentStatus: "unpaid" as const, payments: [], items: createdItems };
+    return { ...invoice, orderNumber: null, distributorName: distributor.companyName, exhibitionName: null,
+      paidAmount: input.collected ? totalAmount : 0, outstandingAmount: input.collected ? 0 : invoice.totalAmount,
+      paymentStatus: input.collected ? "paid" as const : "unpaid" as const, payments, items: createdItems };
   });
 }
 

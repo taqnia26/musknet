@@ -9,6 +9,7 @@ import { saudiCalendarDate } from "./invoice-dates";
 type InvoiceForEmail = {
   historical?: string;
   invoiceNumber: string;
+  originalInvoiceNumber?: string | null;
   orderNumber: string | null;
   sellerName: string;
   sellerVatNumber: string;
@@ -139,20 +140,23 @@ export async function createInvoicePdf(invoice: InvoiceForEmail, language: Invoi
   const right = 553;
   document.image(invoiceLogo, 185, 28, { fit: [225, 58], align: "center", valign: "center" });
   document.fillColor("#292728").font("Helvetica-Bold").fontSize(17).text(invoice.historical === "yes" ? "PRIOR INVOICE COPY" : "TAX INVOICE", 160, 99, { width: 275, align: "center" });
-  if (invoice.historical === "yes") document.fontSize(8).text("External original - not newly issued or ZATCA certified", 130, 126, { width: 335, align: "center" });
+  if (invoice.historical === "yes") document.fontSize(8).text("Internal prior record - not newly issued or ZATCA certified", 130, 126, { width: 335, align: "center" });
   document.fillColor("#57534e").fontSize(9).text("FROM", 42, 152);
   document.fillColor("#292728").fontSize(12).text(invoice.sellerName, 42, 173, { width: 244, height: 35 });
   document.fillColor("#78716c").font("Helvetica").fontSize(9).text(`VAT Number: ${invoice.sellerVatNumber}`, 42, 213, { width: 244 });
 
   document.roundedRect(42, 239, 244, 100, 5).fill("#f5f5f4");
   document.fillColor("#57534e").font("Helvetica-Bold").fontSize(9);
-  document.text("Invoice No.", 56, 251);
+  document.text(invoice.historical === "yes" ? "Internal ref." : "Invoice No.", 56, 251);
   document.text("Issue Date", 56, 278);
   document.text("Due Date", 56, 305);
   document.fillColor("#292728").text(invoice.invoiceNumber, 152, 251, { width: 120, align: "right" });
   const issueDate = invoiceBusinessIssueDate(invoice.issueDatetime);
   document.text(issueDate, 152, 278, { width: 120, align: "right" });
   document.text(invoice.dueDate || "-", 152, 305, { width: 120, align: "right" });
+  if (invoice.historical === "yes" && invoice.originalInvoiceNumber) {
+    document.font("Helvetica").fontSize(8).text(`Original invoice: ${invoice.originalInvoiceNumber}`, 42, 342, { width: 244 });
+  }
 
   document.fillColor("#57534e").font("Helvetica-Bold").fontSize(9).text("BILL TO", 310, 152);
   document.fillColor("#292728").fontSize(14).text(invoice.buyerName || "-", 310, 173, { width: 243, height: 36 });
@@ -198,6 +202,10 @@ export async function createInvoicePdf(invoice: InvoiceForEmail, language: Invoi
   document.fillColor("#111827").font("Helvetica-Bold").fontSize(13).text("TOTAL", totalsX, totalY + 11);
   document.fillColor("#292728");
   drawInvoiceMoney(document, invoice.totalAmount, language, 432, totalY + 11, 108, 13);
+  document.font("Helvetica").fontSize(9).fillColor("#57534e").text(
+    invoice.outstandingAmount <= 0 ? "Collection: Paid" : invoice.paidAmount > 0 ? "Collection: Partially paid" : "Collection: Unpaid",
+    totalsX, totalY + 38, { width: 223 },
+  );
   const pages = document.bufferedPageRange();
   for (let index = pages.start; index < pages.start + pages.count; index++) {
     document.switchToPage(index);

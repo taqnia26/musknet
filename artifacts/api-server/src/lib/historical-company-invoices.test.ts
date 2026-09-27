@@ -58,7 +58,7 @@ describe.sequential("historical company invoices", () => {
   it("previews and blocks an already posted invoice or a possibly matching Master Sales month", async () => {
     expect((await reconcileHistoricalInvoice(input())).conflicts).toEqual([]);
     const [duplicate] = await db.insert(invoicesTable).values({
-      distributorId, sequenceNumber: -1_000_000_000 - distributorId, invoiceNumber: input().invoiceNumber,
+      distributorId, sequenceNumber: -1_000_000_000 - distributorId, invoiceNumber: input().invoiceNumber!,
       sellerName: "test", sellerVatNumber: "test", issueDatetime: new Date("2026-07-13T12:00:00Z"),
       subtotal: 1, vatAmount: 0, totalAmount: 1, qrCodeData: "",
     }).returning();
@@ -126,6 +126,25 @@ describe.sequential("historical company invoices", () => {
       expect(next.invoiceNumber).not.toBe(reservedNumber);
       expect(next.sequenceNumber).toBe(Number(row.next) + 1);
     });
+  });
+  it("stores an internal invoice reference separately from the original document number", async () => {
+    const issueDate = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const dueDate = new Date(Date.parse(`${issueDate}T12:00:00.000Z`) + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const submission = {
+      ...input(),
+      creationKey: `${key}-internal-reference`,
+      invoiceNumber: `${key}-original-number`,
+      issueDate,
+      dueDate,
+      payments: [],
+      internalReference: true,
+    };
+    const invoice = await createHistoricalInvoice(submission, actorId);
+    invoiceIds.push(invoice.id);
+    expect(invoice.invoiceNumber).toMatch(/^LC-[0-9]+$/);
+    expect(invoice.invoiceNumber).not.toBe(submission.invoiceNumber);
+    expect(invoice.originalInvoiceNumber).toBe(submission.invoiceNumber);
+    expect((await createHistoricalInvoice(submission, actorId)).id).toBe(invoice.id);
   });
   it("blocks later collections already represented by an import or receipt journal", async () => {
     const [imported] = await db.insert(journalEntriesTable).values({

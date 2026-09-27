@@ -2255,6 +2255,8 @@ export interface AdminInvoice {
   exhibitionName: string | null;
   sequenceNumber: number;
   invoiceNumber: string;
+  /** @nullable */
+  originalInvoiceNumber: string | null;
   sellerName: string;
   issueDatetime: string;
   /** @nullable */
@@ -2396,6 +2398,105 @@ export interface DistributorInvoiceLineInput {
   quantity: number;
   /** @exclusiveMinimum 0 */
   unitPrice: number;
+}
+
+export interface CompanyInvoiceLineInput {
+  /**
+     * Catalog product selection. Required for current invoices; historical catalog product snapshots are resolved server-side, including inactive products.
+     * @minimum 1
+     */
+  productId?: number;
+  /**
+     * Historical fallback snapshot, required only when no catalog productId is selected; when both are supplied it is used only if the server has no invoice-name snapshot.
+     * @maxLength 200
+     */
+  productName?: string;
+  /**
+     * Historical fallback SKU used only when no catalog SKU snapshot is available.
+     * @maxLength 100
+     * @nullable
+     */
+  sku?: string | null;
+  /** @minimum 1 */
+  quantity: number;
+  /** @exclusiveMinimum 0 */
+  unitPrice: number;
+}
+
+export type CompanyInvoiceInputPaymentMethod = typeof CompanyInvoiceInputPaymentMethod[keyof typeof CompanyInvoiceInputPaymentMethod];
+
+
+export const CompanyInvoiceInputPaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+} as const;
+
+export interface CompanyInvoiceInput {
+  /**
+     * @minLength 16
+     * @maxLength 80
+     */
+  creationKey: string;
+  /** Determines current vs historical mode solely by comparison with today's Riyadh calendar date. */
+  issueDate: string;
+  dueDate: string;
+  /** @minimum 1 */
+  distributorId: number;
+  /** @minimum 1 */
+  contractId?: number;
+  /** @minimum 1 */
+  uploadedContractFileId?: number;
+  /**
+     * Optional original reference for past-dated historical invoices.
+     * @maxLength 100
+     */
+  originalInvoiceNumber?: string;
+  collected?: boolean;
+  paymentDate?: string;
+  paymentMethod?: CompanyInvoiceInputPaymentMethod;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  items: CompanyInvoiceLineInput[];
+}
+
+export interface CompanyInvoiceSellerConfiguration {
+  available: boolean;
+  /** @nullable */
+  sellerName: string | null;
+  /** @nullable */
+  sellerVatNumber: string | null;
+}
+
+export type CompanyInvoiceCreatedHistorical = typeof CompanyInvoiceCreatedHistorical[keyof typeof CompanyInvoiceCreatedHistorical];
+
+
+export const CompanyInvoiceCreatedHistorical = {
+  yes: 'yes',
+  no: 'no',
+} as const;
+
+export type CompanyInvoiceCreatedPaymentStatus = typeof CompanyInvoiceCreatedPaymentStatus[keyof typeof CompanyInvoiceCreatedPaymentStatus];
+
+
+export const CompanyInvoiceCreatedPaymentStatus = {
+  unpaid: 'unpaid',
+  partial: 'partial',
+  paid: 'paid',
+} as const;
+
+export interface CompanyInvoiceCreated {
+  id: number;
+  invoiceNumber: string;
+  /** @nullable */
+  originalInvoiceNumber: string | null;
+  historical: CompanyInvoiceCreatedHistorical;
+  paidAmount: number;
+  outstandingAmount: number;
+  paymentStatus: CompanyInvoiceCreatedPaymentStatus;
+  items: AdminInvoiceItem[];
+  payments: ReceivablePayment[];
 }
 
 export type DistributorInvoiceInputTaxTreatment = typeof DistributorInvoiceInputTaxTreatment[keyof typeof DistributorInvoiceInputTaxTreatment];

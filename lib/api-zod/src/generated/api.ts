@@ -4289,6 +4289,7 @@ export const AdminListInvoicesResponseItem = zod.object({
   "exhibitionName": zod.string().nullable(),
   "sequenceNumber": zod.number(),
   "invoiceNumber": zod.string(),
+  "originalInvoiceNumber": zod.string().nullable(),
   "sellerName": zod.string(),
   "issueDatetime": zod.coerce.date(),
   "dueDate": zod.coerce.date().nullable(),
@@ -4389,6 +4390,7 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "exhibitionName": zod.string().nullable(),
   "sequenceNumber": zod.number(),
   "invoiceNumber": zod.string(),
+  "originalInvoiceNumber": zod.string().nullable(),
   "sellerName": zod.string(),
   "issueDatetime": zod.coerce.date(),
   "dueDate": zod.coerce.date().nullable(),
@@ -4429,6 +4431,97 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "totalAmount": zod.number()
 })),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Issue a current company invoice or record an externally issued historical invoice, selected solely by Riyadh issue date
+ */
+export const adminCreateCompanyInvoiceBodyCreationKeyMin = 16;
+export const adminCreateCompanyInvoiceBodyCreationKeyMax = 80;
+
+export const adminCreateCompanyInvoiceBodyDistributorIdMultipleOf = 1;
+
+export const adminCreateCompanyInvoiceBodyContractIdMultipleOf = 1;
+
+export const adminCreateCompanyInvoiceBodyUploadedContractFileIdMultipleOf = 1;
+
+export const adminCreateCompanyInvoiceBodyOriginalInvoiceNumberMax = 100;
+
+export const adminCreateCompanyInvoiceBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminCreateCompanyInvoiceBodyItemsItemProductNameMax = 200;
+
+export const adminCreateCompanyInvoiceBodyItemsItemSkuMax = 100;
+
+export const adminCreateCompanyInvoiceBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminCreateCompanyInvoiceBodyItemsItemUnitPriceExclusiveMin = 0;
+
+export const adminCreateCompanyInvoiceBodyItemsMax = 100;
+
+
+
+export const AdminCreateCompanyInvoiceBody = zod.object({
+  "creationKey": zod.string().min(adminCreateCompanyInvoiceBodyCreationKeyMin).max(adminCreateCompanyInvoiceBodyCreationKeyMax),
+  "issueDate": zod.coerce.date().describe('Determines current vs historical mode solely by comparison with today\'s Riyadh calendar date.'),
+  "dueDate": zod.coerce.date(),
+  "distributorId": zod.number().min(1).multipleOf(adminCreateCompanyInvoiceBodyDistributorIdMultipleOf),
+  "contractId": zod.number().min(1).multipleOf(adminCreateCompanyInvoiceBodyContractIdMultipleOf).optional(),
+  "uploadedContractFileId": zod.number().min(1).multipleOf(adminCreateCompanyInvoiceBodyUploadedContractFileIdMultipleOf).optional(),
+  "originalInvoiceNumber": zod.string().max(adminCreateCompanyInvoiceBodyOriginalInvoiceNumberMax).optional().describe('Optional original reference for past-dated historical invoices.'),
+  "collected": zod.boolean().optional(),
+  "paymentDate": zod.coerce.date().optional(),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']).optional(),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminCreateCompanyInvoiceBodyItemsItemProductIdMultipleOf).optional().describe('Catalog product selection. Required for current invoices; historical catalog product snapshots are resolved server-side, including inactive products.'),
+  "productName": zod.string().max(adminCreateCompanyInvoiceBodyItemsItemProductNameMax).optional().describe('Historical fallback snapshot, required only when no catalog productId is selected; when both are supplied it is used only if the server has no invoice-name snapshot.'),
+  "sku": zod.string().max(adminCreateCompanyInvoiceBodyItemsItemSkuMax).nullish().describe('Historical fallback SKU used only when no catalog SKU snapshot is available.'),
+  "quantity": zod.number().min(1).multipleOf(adminCreateCompanyInvoiceBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().gt(adminCreateCompanyInvoiceBodyItemsItemUnitPriceExclusiveMin)
+})).min(1).max(adminCreateCompanyInvoiceBodyItemsMax)
+})
+
+export const AdminCreateCompanyInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "invoiceNumber": zod.string(),
+  "originalInvoiceNumber": zod.string().nullable(),
+  "historical": zod.enum(['yes', 'no']),
+  "paidAmount": zod.number(),
+  "outstandingAmount": zod.number(),
+  "paymentStatus": zod.enum(['unpaid', 'partial', 'paid']),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "productId": zod.number().nullable(),
+  "productName": zod.string(),
+  "productNameEn": zod.string().nullable(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "subtotal": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number()
+})),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "invoiceId": zod.number(),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number(),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Read safe seller invoice configuration availability
+ */
+export const AdminGetCompanyInvoiceSellerConfigurationResponse = zod.object({
+  "available": zod.boolean(),
+  "sellerName": zod.string().nullable(),
+  "sellerVatNumber": zod.string().nullable()
 })
 
 
@@ -4664,6 +4757,7 @@ export const AdminCreateExhibitionInvoiceResponse = zod.object({
   "exhibitionName": zod.string().nullable(),
   "sequenceNumber": zod.number(),
   "invoiceNumber": zod.string(),
+  "originalInvoiceNumber": zod.string().nullable(),
   "sellerName": zod.string(),
   "issueDatetime": zod.coerce.date(),
   "dueDate": zod.coerce.date().nullable(),
