@@ -52,6 +52,14 @@ describe("invoice PDF formatting", () => {
     });
     expect(rows[1]).toEqual(["Invoice override (25%)", -5]);
   });
+  it("labels the discount on a prior record separately from current contract terms", () => {
+    const rows = getInvoiceTotalRows({
+      ...baseInvoice, historical: "yes", contractNumber: "REFERENCE-1",
+      contractDiscountPercent: 45, invoiceDiscountPercent: 40,
+      discountAmount: 40, subtotal: 52.17, vatAmount: 7.83, totalAmount: 60,
+    });
+    expect(rows[1]).toEqual(["Prior override (40%)", 40]);
+  });
 
   it("preserves shipping and discount rows for legacy order invoices", () => {
     const rows = getInvoiceTotalRows({

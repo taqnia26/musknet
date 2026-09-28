@@ -7,4 +7,4 @@ An exceptional company discount is approved only while creating a new invoice. R
 
 **Why:** The user explicitly distinguished a one-invoice exception from rewriting agreed contract terms or correcting a previously issued tax invoice.
 
-**How to apply:** When changing invoice creation, printing, or historical reconciliation, keep the original contract rate distinct from the invoice's applied rate. Do not infer special handling for old contract dates without the contract details and the stakeholder's exact instruction.
+**How to apply:** When changing invoice creation, printing, or historical reconciliation, keep the original contract rate distinct from the invoice's applied rate. A prior company-invoice record may reference a currently approved contract even if the entered invoice date predates that contract, but label it as a reference rather than asserting it was legally effective on that date. Never rewrite an existing record just to make it match later terms.

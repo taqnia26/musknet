@@ -1,0 +1,30 @@
+# TASK — Cancel a company invoice safely, and stop leftover shipments
+
+## Context
+
+The owner needs a test invoice, INV-000001 (customer: Bisnut), "zeroed". She also sees test shipments still listed in Shipping after their order was deleted.
+
+What production holds today: one issued company invoice (INV-000001, no contract, no discount), one storefront order, and two shipments: shipment 1 is a company shipment created in the same transaction as the invoice, shipment 2 is an online shipment with `order_id = 1`. Neither shipment has a carrier, tracking number or waybill, and there are no shipment events.
+
+The owner will keep entering old company invoices and mistakes will happen again. Build the mechanism, not a one-off script.
+
+## Required
+
+1. **Cancel invoice** action for company invoices. Permission-gated, mandatory reason, audit record with user and time.
+   - Refuse if any payment is recorded against the invoice, or if its shipment has a carrier waybill or tracking number, or is past `pending`.
+   - Post new reversing entries dated today for everything the invoice posted (receivable, revenue, VAT, and cost of sales where applicable). Never edit or delete posted entries.
+   - Restore stock through inventory movements the same way the existing individual-order cancellation does. For a historical invoice (no stock movement, no cost of sales) reverse only what it posted.
+   - Atomic and idempotent (event key), so a double click cannot reverse twice.
+   - The invoice stays in the register as cancelled and its number stays consumed. Cancel its pending shipment.
+2. **Shipments after order deletion or cancellation.** First report how a shipment can remain when its order is deleted (missing link, no cascade, or by design). Then fix it so deleting or cancelling an order can never leave a live shipment behind, and hide cancelled shipments from the default Shipping list (still reachable through the status filter).
+3. **Tests:** happy path, refusal when paid, refusal when dispatched, double click, historical invoice, and stock and journal balances after cancel.
+
+## Rules
+
+- Do not run anything against production and do not put production data or credentials in any file. We will apply the action ourselves on INV-000001, after review, from the admin screen.
+- Journal entries stay append-only: reversal, never deletion.
+- Reuse the existing reversal and stock helpers. Do not duplicate accounting logic.
+
+## Deliver
+
+A short explanation of the design and its effect on VAT, receivables, journals, stock and invoice numbering, the tests, and the list of files touched.

@@ -130,7 +130,7 @@ function InvoiceTemplate({
               <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{invoice.historical === 'yes' ? t('المرجع الداخلي', 'Internal reference') : t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
               {invoice.historical === 'yes' && originalInvoiceNumber && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة الأصلية', 'Original invoice number')}</dt><dd dir="ltr" className="font-mono">{originalInvoiceNumber}</dd></div>}
               {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
-              {usesContractTerms && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{invoice.uploadedContractFileId ? t('ملف العقد', 'Contract file') : t('العقد', 'Contract')}</dt><dd className="text-end">{contractDisplayName}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
+              {usesContractTerms && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{invoice.historical === 'yes' ? t('مرجع العقد (لا يثبت سريانه حينها)', 'Contract reference (not proof of past validity)') : invoice.uploadedContractFileId ? t('ملف العقد', 'Contract file') : t('العقد', 'Contract')}</dt><dd className="text-end">{contractDisplayName}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
               {usesContractTerms && paymentTermsDescription && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('شروط السداد', 'Payment terms')}</dt><dd>{paymentTermsDescription}</dd></div>}
               <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{formatRiyadhBusinessDate(invoice.issueDatetime)}</dd></div>
               <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? invoice.dueDate.slice(0, 10) : '-'}</dd></div>
@@ -181,7 +181,11 @@ function InvoiceTemplate({
           {invoice.historical === 'yes' ? (
             <>
               <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('صافي المبلغ الأصلي', 'Original net')}</span><span><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span></div>
-              <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('الخصم الأصلي (ضمن الصافي)', 'Original discount (already reflected)')}</span><span><Money value={invoice.discountAmount} lang={lang} fractionDigits={2} /></span></div>
+              <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm"><span>{invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined
+                ? t(`خصم استثنائي للتسجيل (${invoice.invoiceDiscountPercent}%)`, `Prior-record discount override (${invoice.invoiceDiscountPercent}%)`)
+                : invoice.contractDiscountPercent !== null && invoice.contractDiscountPercent !== undefined
+                  ? t(`الخصم المحتسب من مرجع العقد (${invoice.contractDiscountPercent}%)`, `Discount calculated from contract reference (${invoice.contractDiscountPercent}%)`)
+                  : t('الخصم الأصلي (ضمن الصافي)', 'Original discount (already reflected)')}</span><span><Money value={invoice.discountAmount} lang={lang} fractionDigits={2} /></span></div>
               <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('الضريبة الأصلية', 'Original VAT')}</span><span><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span></div>
             </>
           ) : usesContractTerms ? (

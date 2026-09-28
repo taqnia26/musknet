@@ -1,8 +1,8 @@
 import { eq, inArray } from "drizzle-orm";
-import { db, invoicesTable, invoiceItemsTable, receivablePaymentsTable, productsTable, wholesaleDistributorsTable } from "@workspace/db";
+import { db, invoicesTable, invoiceItemsTable, receivablePaymentsTable, productsTable, wholesaleDistributorsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 import { createDistributorInvoice, DistributorInvoiceConflictError, DistributorInvoiceValidationError } from "./invoices";
 import { createHistoricalInvoice, type HistoricalInvoiceInput } from "./historical-company-invoices";
-import { extractVatFromGross } from "./vat";
+import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType } from "./vat";
 import { saudiCalendarDate } from "./invoice-dates";
 import { zatcaSellerConfiguration } from "./zatca";
 
@@ -68,11 +68,11 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
     throw new DistributorInvoiceValidationError("paymentDate cannot be in the future in the Riyadh calendar");
   }
   const historical = input.issueDate < todayRiyadh;
-  if (input.discountOverride && (historical || !Number.isFinite(input.discountOverride.percent) ||
+  if (input.discountOverride && (!Number.isFinite(input.discountOverride.percent) ||
     input.discountOverride.percent < 0 || input.discountOverride.percent > 100 ||
     Math.round(input.discountOverride.percent * 100) !== input.discountOverride.percent * 100 ||
     input.discountOverride.reason.trim().length < 10 || input.discountOverride.reason.trim().length > 500)) {
-    throw new DistributorInvoiceValidationError("A current invoice discount override requires a valid percentage and a written reason (10–500 characters)");
+    throw new DistributorInvoiceValidationError("An invoice discount override requires a valid percentage and a written reason (10–500 characters)");
   }
   const allCurrentProductLines = input.items.every((item) => item.productId !== undefined);
   if (!historical && !allCurrentProductLines) {
@@ -93,8 +93,8 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
   if (!historical && originalInvoiceNumber) {
     throw new DistributorInvoiceValidationError("originalInvoiceNumber is only valid for historical invoices");
   }
-  if (historical && (input.contractId !== undefined || input.uploadedContractFileId !== undefined)) {
-    throw new DistributorInvoiceValidationError("Historical invoices cannot be linked to a current contract");
+  if (input.contractId !== undefined && input.uploadedContractFileId !== undefined) {
+    throw new DistributorInvoiceValidationError("Select only one contract source");
   }
 
   const [existingByKey] = await db.select()
@@ -132,7 +132,37 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
       throw new DistributorInvoiceConflictError("Distributor countryCode must be an ISO 3166-1 alpha-2 code");
     }
     const taxTreatment = countryCode && countryCode !== "SA" ? "international" : "domestic";
-    const vatRate = taxTreatment === "domestic" ? 15 : 0;
+    const currentDate = saudiCalendarDate(new Date());
+    const [contract] = input.contractId === undefined ? [] : await db.select().from(distributorContractsTable)
+      .where(eq(distributorContractsTable.id, input.contractId)).limit(1);
+    const [uploadedContract] = input.uploadedContractFileId === undefined ? [] : await db.select().from(uploadedContractFilesTable)
+      .where(eq(uploadedContractFilesTable.id, input.uploadedContractFileId)).limit(1);
+    if (input.contractId !== undefined && (!contract || contract.distributorId !== distributor.id || contract.status !== "final" ||
+      (contract.startDate && saudiCalendarDate(contract.startDate) > currentDate) ||
+      (contract.endDate && saudiCalendarDate(contract.endDate) < currentDate))) {
+      throw new DistributorInvoiceConflictError("Selected contract must be a current final contract linked to this company");
+    }
+    if (input.uploadedContractFileId !== undefined && (!uploadedContract || uploadedContract.ownerType !== "distributor" ||
+      uploadedContract.ownerId !== distributor.id || !uploadedContract.termsConfirmedAt ||
+      (uploadedContract.startDate && uploadedContract.startDate > currentDate) ||
+      (uploadedContract.endDate && uploadedContract.endDate < currentDate) ||
+      !uploadedContract.contractType?.trim() || uploadedContract.discountPercent === null ||
+      !Number.isFinite(Number(uploadedContract.discountPercent)) ||
+      Number(uploadedContract.discountPercent) < 0 || Number(uploadedContract.discountPercent) > 100)) {
+      throw new DistributorInvoiceConflictError("Selected uploaded contract must have confirmed current terms linked to this company");
+    }
+    const contractType = contract?.contractType ?? uploadedContract?.contractType ?? null;
+    const requiredTaxTreatment = contractType ? taxTreatmentForContractType(contractType) : null;
+    if (requiredTaxTreatment && requiredTaxTreatment !== taxTreatment) {
+      throw new DistributorInvoiceConflictError("Contract tax treatment does not match the company country");
+    }
+    const contractDiscountPercent = contract ? Number(contract.marginPercent) : uploadedContract ? Number(uploadedContract.discountPercent) : null;
+    if (contractDiscountPercent !== null && (!Number.isFinite(contractDiscountPercent) || contractDiscountPercent < 0 || contractDiscountPercent > 100)) {
+      throw new DistributorInvoiceConflictError("Contract discount must be between 0 and 100 percent");
+    }
+    const appliedDiscountPercent = input.discountOverride?.percent ?? contractDiscountPercent ?? 0;
+    const vatRate = taxTreatment === "domestic" ? (contract ? Number(contract.vatRate) : 15) : 0;
+    if (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100) throw new DistributorInvoiceConflictError("Invalid contract VAT rate");
     const productRows = productIds.length
       ? await db.select({
         id: productsTable.id,
@@ -149,7 +179,7 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
     }
     const lines = input.items.map((item) => {
       const grossCents = cents(item.unitPrice) * item.quantity;
-      const split = extractVatFromGross(grossCents, vatRate);
+      const split = extractVatFromGross(discountedGrossCents(grossCents, appliedDiscountPercent), vatRate);
       const product = item.productId === undefined ? undefined : productsById.get(item.productId);
       const productName = product
         ? item.productName?.trim() || product.invoiceNameAr?.trim() || product.nameAr
@@ -181,6 +211,7 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
     const subtotal = amount(lines.reduce((sum, line) => sum + cents(line.subtotal), 0));
     const vatAmount = amount(lines.reduce((sum, line) => sum + cents(line.vatAmount), 0));
     const totalAmount = amount(cents(subtotal) + cents(vatAmount));
+    const discountAmount = amount(input.items.reduce((sum, item) => sum + cents(item.unitPrice) * item.quantity, 0) - cents(totalAmount));
     const configuration = zatcaSellerConfiguration(environment);
     const payment = input.collected ? [{
       paymentKey: `company-invoice:${input.creationKey}:collected`,
@@ -202,8 +233,18 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
       sellerName: configuration.sellerName,
       sellerVatNumber: configuration.vatRegistrationNumber,
       taxTreatment,
+      contractId: contract?.id,
+      uploadedContractFileId: uploadedContract?.id,
+      contractNumber: contract?.contractNumber ?? uploadedContract?.fileName,
+      contractType: contractType ?? undefined,
+      contractDiscountPercent: contractDiscountPercent ?? undefined,
+      invoiceDiscountPercent: input.discountOverride?.percent,
+      discountOverrideReason: input.discountOverride?.reason.trim(),
+      vatRate,
+      paymentTerm: uploadedContract?.paymentTerm ?? (contract ? "net_days" : undefined),
+      paymentDays: uploadedContract?.paymentDays ?? contract?.paymentDays,
       subtotal,
-      discountAmount: 0,
+      discountAmount,
       vatAmount,
       totalAmount,
       items: lines,

@@ -432,6 +432,7 @@ describe.sequential("distributor invoice issuance", () => {
       sizeBytes: 100,
       contractType: "Saudi distributor agreement",
       discountPercent: "7.50",
+      startDate: saudiCalendarDate(new Date()),
       paymentTerm: "end_of_month",
       paymentDays: null,
       termsConfirmedAt: new Date(),
@@ -489,6 +490,46 @@ describe.sequential("distributor invoice issuance", () => {
     expect(savedOverride.discountOverrideAt).toBeInstanceOf(Date);
     const [unchangedContract] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, files[0].id));
     expect(unchangedContract.discountPercent).toBe("7.50");
+    const priorInvoice = await createCompanyInvoice({
+      creationKey: `prior-contract-${base}-invoice`,
+      distributorId,
+      uploadedContractFileId: files[0].id,
+      issueDate: "2000-04-17",
+      dueDate: "2000-05-17",
+      discountOverride: { percent: 25, reason: "Historical invoice-specific approved discount" },
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env);
+    const [savedPrior] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, priorInvoice.id));
+    expect(savedPrior).toMatchObject({
+      historical: "yes",
+      uploadedContractFileId: files[0].id,
+      contractDiscountPercent: "7.50",
+      invoiceDiscountPercent: "25.00",
+      discountOverrideByAdminId: actorId,
+      discountAmount: 5,
+      totalAmount: 15,
+    });
+    expect(savedPrior.discountOverrideAt).toBeInstanceOf(Date);
+    expect(savedPrior.qrCodeData).toBe("");
+    const contractRatePrior = await createCompanyInvoice({
+      creationKey: `prior-contract-rate-${base}-invoice`,
+      distributorId,
+      uploadedContractFileId: files[0].id,
+      issueDate: "2000-04-17",
+      dueDate: "2000-05-17",
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env);
+    const [savedContractRatePrior] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, contractRatePrior.id));
+    expect(savedContractRatePrior).toMatchObject({
+      historical: "yes",
+      uploadedContractFileId: files[0].id,
+      contractDiscountPercent: "7.50",
+      invoiceDiscountPercent: null,
+      discountAmount: 1.5,
+      totalAmount: 18.5,
+    });
+    const [stillUnchanged] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, files[0].id));
+    expect(stillUnchanged.discountPercent).toBe("7.50");
     expect((await createCompanyInvoice(overrideRequest, actorId, env)).id).toBe(overridden.id);
     await expect(createCompanyInvoice({
       ...overrideRequest, discountOverride: { percent: 30, reason: overrideRequest.discountOverride.reason },

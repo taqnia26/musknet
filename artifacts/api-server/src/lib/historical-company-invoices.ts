@@ -1,6 +1,6 @@
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
-import { db, invoicesTable, invoiceItemsTable, journalEntriesTable, receivablePaymentsTable, wholesaleDistributorsTable } from "@workspace/db";
+import { db, invoicesTable, invoiceItemsTable, journalEntriesTable, receivablePaymentsTable, wholesaleDistributorsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 import { ensureStandardAccountingChart, postJournalEntry } from "./accounting";
 import { DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, nextLiveInvoiceNumber } from "./invoices";
 import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
@@ -12,6 +12,9 @@ export type HistoricalInvoiceInput = {
   buyerName: string; buyerTaxNumber?: string | null; buyerAddress?: string | null;
   buyerCommercialRegistrationNumber?: string | null;
   sellerName: string; sellerVatNumber: string; taxTreatment: "domestic" | "international";
+  contractId?: number; uploadedContractFileId?: number; contractNumber?: string;
+  contractType?: string; contractDiscountPercent?: number; invoiceDiscountPercent?: number;
+  discountOverrideReason?: string; vatRate?: number; paymentTerm?: string | null; paymentDays?: number | null;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number;
   items: { productId?: number | null; productName: string; productNameEn?: string | null; sku?: string | null; quantity: number; unitPrice: number; subtotal: number; vatAmount: number; totalAmount: number }[];
   payments: { paymentKey: string; paymentDate: string; amount: number; paymentMethod: "cash" | "bank_transfer"; reference?: string | null }[];
@@ -21,6 +24,15 @@ const creationFingerprint = (input: HistoricalInvoiceInput) => createHash("sha25
 const validDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T12:00:00Z`)) && new Date(`${s}T12:00:00Z`).toISOString().slice(0, 10) === s;
 const currency = (n: number) => Number.isFinite(n) && n >= 0 && Math.abs(n * 100 - Math.round(n * 100)) < 0.00001;
 function validate(input: HistoricalInvoiceInput) {
+  if ((input.contractId !== undefined && input.uploadedContractFileId !== undefined) ||
+      (input.contractDiscountPercent !== undefined && input.contractId === undefined && input.uploadedContractFileId === undefined) ||
+      (input.invoiceDiscountPercent !== undefined && (!Number.isFinite(input.invoiceDiscountPercent) ||
+        input.invoiceDiscountPercent < 0 || input.invoiceDiscountPercent > 100)) ||
+      (input.invoiceDiscountPercent === undefined && input.discountOverrideReason !== undefined) ||
+      (input.invoiceDiscountPercent !== undefined && (!input.discountOverrideReason ||
+        input.discountOverrideReason.trim().length < 10 || input.discountOverrideReason.trim().length > 500))) {
+    throw new DistributorInvoiceValidationError("Invalid historical contract or discount override");
+  }
   if (!input.creationKey || input.creationKey.length < 16 ||
       (!input.internalReference && !input.invoiceNumber?.trim()) || (input.invoiceNumber && input.invoiceNumber.length > 100) ||
       !input.buyerName?.trim() || !input.sellerName?.trim() || !input.sellerVatNumber?.trim() ||
@@ -126,6 +138,9 @@ export async function createHistoricalInvoice(input: HistoricalInvoiceInput, act
           replayed.buyerAddress !== (input.buyerAddress?.trim() || null) ||
           replayed.buyerCommercialRegistrationNumber !== (input.buyerCommercialRegistrationNumber?.trim() || null) ||
           replayed.taxTreatment !== input.taxTreatment || cent(replayed.subtotal) !== cent(input.subtotal) ||
+          replayed.contractId !== (input.contractId ?? null) ||
+          replayed.uploadedContractFileId !== (input.uploadedContractFileId ?? null) ||
+          replayed.invoiceDiscountPercent !== (input.invoiceDiscountPercent === undefined ? null : input.invoiceDiscountPercent.toFixed(2)) ||
           cent(replayed.discountAmount) !== cent(input.discountAmount) || cent(replayed.vatAmount) !== cent(input.vatAmount) ||
           cent(replayed.totalAmount) !== cent(input.totalAmount) || replayed.buyerName !== input.buyerName.trim() ||
            JSON.stringify(existingItems.map(i => ({ productId: i.productId, productName: i.productName, productNameEn: i.productNameEn, sku: i.sku, quantity: i.quantity, unitPrice: i.unitPrice, subtotal: i.subtotal, vatAmount: i.vatAmount, totalAmount: i.totalAmount }))) !==
@@ -135,6 +150,28 @@ export async function createHistoricalInvoice(input: HistoricalInvoiceInput, act
         throw new DistributorInvoiceConflictError("Creation key belongs to a different invoice or collection");
       }
       return replayed;
+    }
+    if (input.contractId !== undefined || input.uploadedContractFileId !== undefined) {
+      const today = saudiCalendarDate(new Date());
+      const [contract] = input.contractId === undefined ? [] : await tx.select().from(distributorContractsTable)
+        .where(eq(distributorContractsTable.id, input.contractId)).limit(1);
+      const [file] = input.uploadedContractFileId === undefined ? [] : await tx.select().from(uploadedContractFilesTable)
+        .where(eq(uploadedContractFilesTable.id, input.uploadedContractFileId)).limit(1);
+      const currentContract = contract && contract.status === "final" && contract.distributorId === input.distributorId &&
+        (!contract.startDate || saudiCalendarDate(contract.startDate) <= today) &&
+        (!contract.endDate || saudiCalendarDate(contract.endDate) >= today);
+      const currentFile = file && file.ownerType === "distributor" && file.ownerId === input.distributorId &&
+        Boolean(file.termsConfirmedAt) && (!file.startDate || file.startDate <= today) &&
+        (!file.endDate || file.endDate >= today);
+      if ((!currentContract && !currentFile) ||
+        input.contractNumber !== (contract?.contractNumber ?? file?.fileName) ||
+        input.contractType !== (contract?.contractType ?? file?.contractType) ||
+        input.contractDiscountPercent !== Number(contract?.marginPercent ?? file?.discountPercent) ||
+        (contract && input.vatRate !== (input.taxTreatment === "international" ? 0 : Number(contract.vatRate))) ||
+        input.paymentTerm !== (file?.paymentTerm ?? (contract ? "net_days" : undefined)) ||
+        input.paymentDays !== (file?.paymentDays ?? contract?.paymentDays)) {
+        throw new DistributorInvoiceConflictError("Contract terms changed while recording the prior invoice; review and try again");
+      }
     }
     const review = await reconcileHistoricalInvoice(input, tx);
     if (review.conflicts.length) throw new DistributorInvoiceConflictError(`Reconciliation required: ${review.conflicts.join("; ")}`);
@@ -148,6 +185,15 @@ export async function createHistoricalInvoice(input: HistoricalInvoiceInput, act
       issueDatetime: new Date(`${input.issueDate}T12:00:00.000Z`), dueDate: input.dueDate,
       buyerName: input.buyerName.trim(), buyerTaxNumber: input.buyerTaxNumber?.trim() || null,
       buyerAddress: input.buyerAddress?.trim() || null, buyerCommercialRegistrationNumber: input.buyerCommercialRegistrationNumber?.trim() || null,
+      contractId: input.contractId ?? null, uploadedContractFileId: input.uploadedContractFileId ?? null,
+      contractNumber: input.contractNumber ?? null, contractType: input.contractType ?? null,
+      contractDiscountPercent: input.contractDiscountPercent === undefined ? null : input.contractDiscountPercent.toFixed(2),
+      invoiceDiscountPercent: input.invoiceDiscountPercent === undefined ? null : input.invoiceDiscountPercent.toFixed(2),
+      discountOverrideReason: input.discountOverrideReason?.trim() ?? null,
+      discountOverrideByAdminId: input.invoiceDiscountPercent === undefined ? null : actorId,
+      discountOverrideAt: input.invoiceDiscountPercent === undefined ? null : new Date(),
+      vatRate: input.vatRate === undefined ? null : input.vatRate.toFixed(2),
+      paymentTerm: input.paymentTerm ?? null, paymentDays: input.paymentDays ?? null,
       taxTreatment: input.taxTreatment, subtotal: input.subtotal, discountAmount: input.discountAmount,
       vatAmount: input.vatAmount, totalAmount: input.totalAmount, qrCodeData: "",
     }).returning();

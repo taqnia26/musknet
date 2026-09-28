@@ -51,3 +51,4 @@
 - [pnpm workspace rewrites](pnpm-workspace-rewrites.md) — a package add can normalize workspace YAML and strip safety comments; inspect the config diff afterward.
 - [Accounting cleanup database identity](accounting-cleanup-database-identity.md) — verify the operator's actual database and matching recovery backup before deleting imported journals; local IDs are not portable.
 - [Invoice-only discount exceptions](invoice-only-discount-exceptions.md) — manual discounts belong to new invoice issuance, never to contract edits or issued invoices.
+- [Invoice suite database races](invoice-suite-database-races.md) — run invoice integration files serially when they share number allocation and financial reconciliation.

@@ -11,6 +11,7 @@ type InvoiceForEmail = {
   invoiceNumber: string;
   originalInvoiceNumber?: string | null;
   orderNumber: string | null;
+  contractNumber?: string | null;
   sellerName: string;
   sellerVatNumber: string;
   buyerName: string | null;
@@ -102,7 +103,11 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
   const totalRows: Array<[string, number]> = [];
   if (invoice.historical === "yes") {
     totalRows.push(["Original net (after discount)", invoice.subtotal],
-      ["Original discount (already included)", invoice.discountAmount ?? 0],
+      [invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined
+        ? `Prior override (${invoice.invoiceDiscountPercent}%)`
+        : invoice.contractDiscountPercent !== null && invoice.contractDiscountPercent !== undefined
+          ? `Contract ref. discount (${invoice.contractDiscountPercent}%)`
+          : "Original discount (already included)", invoice.discountAmount ?? 0],
       ["Original VAT", invoice.vatAmount]);
   } else if (companyContractInvoice) {
     const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
@@ -170,6 +175,10 @@ export async function createInvoicePdf(invoice: InvoiceForEmail, language: Invoi
   const buyerMeta = [invoice.buyerTaxNumber && `VAT: ${invoice.buyerTaxNumber}`, invoice.buyerCommercialRegistrationNumber && `CR: ${invoice.buyerCommercialRegistrationNumber}`].filter(Boolean).join("  |  ");
   if (buyerMeta) document.text(buyerMeta, 310, 265, { width: 243, height: 30 });
   if (invoice.orderNumber) document.text(`Order No.: ${invoice.orderNumber}`, 310, 310, { width: 243 });
+  if (invoice.contractNumber) document.text(
+    `${invoice.historical === "yes" ? "Contract reference (not proof of past validity)" : "Contract reference"}: ${invoice.contractNumber}`,
+    310, 323, { width: 243, height: 25 },
+  );
   document.moveTo(42, 353).lineTo(right, 353).strokeColor("#e7e5e4").stroke();
 
   let y = 365;

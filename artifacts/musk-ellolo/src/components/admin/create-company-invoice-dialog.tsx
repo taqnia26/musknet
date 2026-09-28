@@ -71,7 +71,7 @@ export function CreateCompanyInvoiceDialog() {
   const availableProducts = useMemo(() => productOptions.filter(product => isHistorical || product.isActive), [isHistorical, productOptions]);
 
   const contractOptions = useMemo<ContractOption[]>(() => {
-    if (!distributorId || isHistorical) return [];
+    if (!distributorId) return [];
     const generated = (contracts ?? [])
       .filter(contract => contract.status === 'final' && contract.distributorId === Number(distributorId)
         && (!contract.startDate || contract.startDate.slice(0, 10) <= today)
@@ -98,7 +98,7 @@ export function CreateCompanyInvoiceDialog() {
         vatRate: null,
       }));
     return [...generated, ...uploaded];
-  }, [contracts, contractFiles, distributorId, isHistorical, t, today]);
+  }, [contracts, contractFiles, distributorId, t, today]);
   const selectedContract = contractOptions.find(option => option.key === contractKey);
   const pendingUploadedFiles = useMemo(() => (contractFiles ?? []).filter(file =>
     !isHistorical && file.ownerType === 'distributor' && file.ownerId === Number(distributorId) && !file.termsConfirmedAt,
@@ -110,13 +110,13 @@ export function CreateCompanyInvoiceDialog() {
   const contractType = selectedContract?.contractType ?? '';
   const isGulfContract = contractType.includes('دول الخليج');
   const isSaudiContract = contractType.includes('السعودية');
-  const discountPercent = isHistorical ? 0 : overrideDiscount ? Number(overridePercent || 0) : Number(selectedContract?.discountPercent ?? 0);
+  const discountPercent = overrideDiscount ? Number(overridePercent || 0) : Number(selectedContract?.discountPercent ?? 0);
   const vatRate = taxTreatment === 'international' ? 0 : Math.max(0, Number(selectedContract?.vatRate ?? 15) || 0);
   const totals = useMemo(() => {
     const amounts = lines.map(line => {
       const unitCents = Math.round((Number(line.unitPrice) + Number.EPSILON) * 100);
       const grossCents = unitCents * Number(line.quantity || 0);
-      const discountedGrossCents = isHistorical ? grossCents : Math.round(grossCents * (100 - discountPercent) / 100);
+      const discountedGrossCents = Math.round(grossCents * (100 - discountPercent) / 100);
       const discountCents = grossCents - discountedGrossCents;
       const netCents = vatRate > 0 ? Math.round(discountedGrossCents * 100 / (100 + vatRate)) : discountedGrossCents;
       return { grossCents, discountCents, netCents, vatCents: discountedGrossCents - netCents, totalCents: discountedGrossCents };
@@ -129,7 +129,7 @@ export function CreateCompanyInvoiceDialog() {
       vat: sum('vatCents') / 100,
       total: sum('totalCents') / 100,
     };
-  }, [discountPercent, isHistorical, lines, vatRate]);
+  }, [discountPercent, lines, vatRate]);
 
   const reset = () => {
     const today = dateInRiyadh();
@@ -171,7 +171,7 @@ export function CreateCompanyInvoiceDialog() {
       setError(t('لا يمكن الحفظ دون بيانات بائع موثوقة. تحقق من إعدادات البائع ثم أعد المحاولة.', 'Saving is disabled because verified seller details are unavailable. Check seller configuration and retry.'));
       return;
     }
-    if (!isHistorical && (contractsLoading || filesLoading || contractsError || filesError)) {
+    if (contractsLoading || filesLoading || contractsError || filesError) {
       setError(t('تعذر التحقق من العقود المرتبطة. حاول مجدداً قبل إصدار الفاتورة.', 'Could not verify linked contracts. Retry before issuing the invoice.'));
       return;
     }
@@ -179,15 +179,15 @@ export function CreateCompanyInvoiceDialog() {
       setError(t('يوجد ملف عقد لهذه الشركة بانتظار اعتماد الشروط. اعتمد الشروط قبل الإصدار أو اختر مصدراً معتمداً.', 'An uploaded contract for this company is awaiting approved terms. Approve the terms or select an approved source before issuing.'));
       return;
     }
-    if (!isHistorical && isGulfContract && (!validCountryCode || countryCode === 'SA')) {
+    if (isGulfContract && (!validCountryCode || countryCode === 'SA')) {
       setError(t('عقد الخليج يتطلب رمز دولة صالحاً غير سعودي للشركة.', 'A Gulf contract requires a valid non-Saudi company country code.'));
       return;
     }
-    if (!isHistorical && isSaudiContract && validCountryCode && countryCode !== 'SA') {
+    if (isSaudiContract && validCountryCode && countryCode !== 'SA') {
       setError(t('عقد المملكة العربية السعودية يتطلب أن تكون دولة الشركة SA.', 'A Saudi contract requires the company country to be SA.'));
       return;
     }
-    if (overrideDiscount && (isHistorical || overridePercent.trim() === '' ||
+    if (overrideDiscount && (overridePercent.trim() === '' ||
       !Number.isFinite(Number(overridePercent)) || Number(overridePercent) < 0 ||
       Number(overridePercent) > 100 || Math.round(Number(overridePercent) * 100) !== Number(overridePercent) * 100 ||
       overrideReason.trim().length < 10 || overrideReason.trim().length > 500)) {
@@ -203,7 +203,7 @@ export function CreateCompanyInvoiceDialog() {
         distributorId: Number(distributorId),
         ...(selectedContract?.contractId ? { contractId: selectedContract.contractId } : {}),
         ...(selectedContract?.uploadedContractFileId ? { uploadedContractFileId: selectedContract.uploadedContractFileId } : {}),
-        ...(!isHistorical && overrideDiscount ? { discountOverride: { percent: Number(overridePercent), reason: overrideReason.trim() } } : {}),
+        ...(overrideDiscount ? { discountOverride: { percent: Number(overridePercent), reason: overrideReason.trim() } } : {}),
         ...(isHistorical && originalInvoiceNumber.trim() ? { originalInvoiceNumber: originalInvoiceNumber.trim() } : {}),
         collected,
         ...(collected ? { paymentDate, paymentMethod } : {}),
@@ -271,8 +271,9 @@ export function CreateCompanyInvoiceDialog() {
               <Input id="company-invoice-original-number" data-testid="input-company-invoice-original-number" value={originalInvoiceNumber} maxLength={100} onChange={event => { rotateCreationKey(); setOriginalInvoiceNumber(event.target.value); }} />
               <p className="text-xs text-muted-foreground">{t('سيُعرض كمرجع داخلي منفصل عن رقم الفاتورة المسجل في النظام.', 'Shown as an internal reference, separate from the invoice number recorded in this system.')}</p>
             </div>}
-            {!isHistorical && <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>{t('العقد أو الملف المعتمد (اختياري)', 'Contract or approved file (optional)')}</Label>
+              {isHistorical && <p className="text-xs text-muted-foreground">{t('يظهر العقد المعتمد كمرجع لهذا التسجيل حتى لو سبق تاريخ الفاتورة تاريخ العقد؛ لا يعني ذلك أنه كان سارياً حينها ولا يغير شروطه.', 'The approved contract is a reference for this prior record even when the invoice predates it; it is not a claim that it was effective then and its terms are unchanged.')}</p>}
               {contractsLoading || filesLoading ? <p className="text-sm text-muted-foreground">{t('جاري تحميل العقود...', 'Loading contracts...')}</p> : contractsError || filesError
                 ? <p role="alert" className="text-sm text-destructive">{t('تعذر تحميل العقود والملفات المرفوعة.', 'Could not load contracts and uploaded files.')}</p>
                 : <Select value={contractKey || 'none'} onValueChange={value => { rotateCreationKey(); setContractKey(value === 'none' ? '' : value); }} disabled={!distributorId}>
@@ -283,9 +284,8 @@ export function CreateCompanyInvoiceDialog() {
                 `يوجد ${pendingUploadedFiles.length} ملف عقد بانتظار اعتماد الشروط (${pendingUploadedFiles.map(file => file.fileName).join('، ')}).`,
                 `${pendingUploadedFiles.length} uploaded contract file(s) await terms approval (${pendingUploadedFiles.map(file => file.fileName).join(', ')}).`,
               )}</p>}
-            </div>}
-            {(!isHistorical || overrideDiscount) && <div className="space-y-3 sm:col-span-2 rounded-md border p-3">
-              {isHistorical && <p role="alert" className="text-sm text-red-700">{t('الفواتير التاريخية لا تقبل خصماً استثنائياً. ألغِ تحديد الاستثناء للمتابعة.', 'Historical invoices cannot have a discount override. Uncheck the override to continue.')}</p>}
+            </div>
+            <div className="space-y-3 sm:col-span-2 rounded-md border p-3">
               <p className="text-sm">{t(`خصم العقد: ${selectedContract?.discountPercent ?? 0}% (لا يُعدل العقد)`, `Contract discount: ${selectedContract?.discountPercent ?? 0}% (contract remains unchanged)`)}</p>
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" checked={overrideDiscount} onChange={event => { rotateCreationKey(); setOverrideDiscount(event.target.checked); setOverridePercent(String(selectedContract?.discountPercent ?? 0)); setOverrideReason(''); }} />
@@ -299,7 +299,7 @@ export function CreateCompanyInvoiceDialog() {
                   <Input id="company-invoice-override-reason" data-testid="input-company-invoice-override-reason" maxLength={500} value={overrideReason} onChange={event => { rotateCreationKey(); setOverrideReason(event.target.value); }} />
                 </div>
               </div>}
-            </div>}
+            </div>
           </div>
 
           <div className={`rounded-md border p-3 text-sm ${sellerConfiguration ? 'bg-muted/20' : 'border-destructive/50 bg-destructive/5'}`} data-testid="company-invoice-seller-summary">
