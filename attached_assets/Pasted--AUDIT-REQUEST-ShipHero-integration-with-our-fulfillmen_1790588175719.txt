@@ -1,0 +1,60 @@
+# AUDIT REQUEST — ShipHero integration with our fulfillment partner (investigation only, do not modify anything)
+
+## Context
+
+Our shipping/fulfillment partner sent us their ShipHero integration references. What they provided:
+
+- GraphQL endpoint: `https://public-api.shiphero.com/graphql`
+- Access token generation: `POST https://public-api.shiphero.com/auth/refresh` with header `Content-Type: application/json` and body `{"refresh_token": "<refresh_token>"}`
+- Reference for the available GraphQL mutations and the integration flow: https://developer.shiphero.com/examples/#mutations
+
+Not provided yet: the actual refresh token, any account/customer/warehouse identifiers, how our products are registered on their side, shipping-method codes, webhook details, and which flows they expect from us. We do not yet know whether they only ship our orders or also hold our stock in their warehouse.
+
+## Hard rules for this task
+
+1. Investigation only. No code changes, no schema changes, no data changes.
+2. Do not call the ShipHero API. We have no credentials yet.
+3. Never ask for, print, log or store a real refresh or access token in chat, repository files, database rows or logs. When the token arrives it will live only in environment configuration.
+4. If the project already contains notes or a queued task about this integration, reference and reconcile with them instead of duplicating.
+
+## Report back (answer every item)
+
+### 1. Where this fits today
+
+With file paths: the shipments table and its statuses; how carrier updates and webhooks are handled today; how an order becomes a shipment; how shipment milestones move an order through `pending_review` → `preparing` → `out_for_delivery` → `delivered` (and `returned`); the individual checkout shipping methods (chilled 33 SAR, regular 28 SAR); the company shipment form.
+
+### 2. Stock and accounting boundary (highest risk)
+
+State exactly where inventory is decremented and where cost-of-sales journals are posted for (a) online orders and (b) B2B invoices, and how cancellations reverse them. If the partner holds our stock in their warehouse, explain whether an integration could decrement stock twice or post cost of sales twice, and how the partner's warehouse would be modelled as an inventory location. Recommend which system must be the source of truth for stock. Do not implement anything.
+
+### 3. Product identity
+
+Which identifier would we send as the line-item SKU? Report what the catalog stores per product today: production `sku` values are internal codes such as `MSK-OUD new-50ML`, while the 13-digit barcodes (for example `6287020840029`) appear in the Master Sales import identifiers and in your perfume-description manifest. State whether and where the catalog stores a barcode/GTIN. Propose an explicit product-mapping mechanism with a preflight that refuses to push any order containing an unmapped item. Do not assume the two conventions match.
+
+### 4. ShipHero API — from the official documentation only
+
+Read the documentation starting from the link above. For each point cite the doc section, and write "not stated" where the docs do not say:
+
+- authentication, access-token lifetime and refresh behaviour;
+- the mutation(s) to create an order, and how to make creation duplicate-safe;
+- cancelling an order;
+- how shipment and tracking updates reach us (webhooks vs polling) and how webhooks are registered;
+- how inventory levels are read;
+- rate limits or cost model, and the error format.
+
+### 5. Proposed design (no code)
+
+- Credentials: propose environment variable names; load at call time; keep the access token only in memory and refresh on expiry or a 401; if not configured, return a clear 503 and do nothing (same pattern as the Salla import). Never persist tokens in the database or logs; redact them in errors.
+- Safe by default: disabled until configured, no automatic push in the first release (manual per-order action), and idempotent by construction (a unique key so an order can be pushed at most once).
+- Data model: what we must store per order/shipment (ShipHero order id, push status, last error, unique key).
+- Status mapping from ShipHero milestones to our order and shipment statuses: forward transitions only, never overwrite manual states.
+- Failure modes: timeouts, partial failure, duplicate pushes, cancellation after push, unmapped items, invalid Saudi national address, international orders and their VAT/customs paperwork.
+- A test approach that cannot create real fulfillment orders unless we explicitly confirm.
+
+### 6. Questions for the partner
+
+List everything you need from them before building anything. Do not assume answers.
+
+## Deliver
+
+A written report covering items 1–6 only. End with the list of files you would create or change, any schema changes you would propose, and your clarifying questions — all before any implementation.
