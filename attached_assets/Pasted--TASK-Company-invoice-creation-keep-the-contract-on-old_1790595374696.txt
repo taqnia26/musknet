@@ -1,0 +1,34 @@
+# TASK — Company invoice creation: keep the contract on old dates, editable discount (creation time only)
+
+Urgent: the owner needs this fixed today.
+
+## Source (owner's words, translated)
+
+- "The invoice has a mistake. When I enter an old date, month 4, it removes the contract! And the discount field is locked. For example Papillon: before, their discount was 40, now it is 45."
+- "Make the discount field editable so I can change it — this is the solution. And the contract stays fixed, it does not go away if the date is old."
+
+## Required behaviour (company-invoice creation dialog only)
+
+1. Contract retention: choosing an invoice date earlier than the contract's date must not detach the selected contract. Show a visible warning (not a block) when the invoice date is outside the contract period.
+2. Editable discount: the discount percentage is editable before the invoice is issued and defaults to the contract's discount (validate 0–100).
+3. Override control: when the applied discount differs from the contract's discount, require a short written reason and store an audit record: user, time, contract id, contract discount, applied discount, reason, and whether the date was outside the contract period.
+4. Totals, VAT, receivable and journal entries are computed from the applied discount through the same code path as today.
+
+## Must not change
+
+- An issued invoice is never edited. This is creation time only.
+- The contract itself: no change to its terms, files or confirmation state.
+- What an old date does today to stock, shipments and cost of sales (normal vs historical path). Tell us which path an old date takes and why the contract is dropped there. Do not change that behaviour.
+- Existing checks: idempotency key, invoice numbering, the single contract-source lock, permissions.
+
+## Data cleanup — NOT part of this task
+
+The owner also wants (a) the test invoice for customer "Bisnut" (بيسنوت) zeroed, and (b) leftover test orders and shipments (individual and company) removed. Those records live in our production database, not yours. Do not modify or delete anything.
+
+We will send exact invoice and shipment numbers from production. You will then prepare a reviewed script like the Master Sales one: pre-checks, an archive of the affected rows, and a rollback. For an issued invoice, propose the mechanism (reversal, credit note or archive) and its effect on VAT, receivables, journals and numbering. Do not delete an issued invoice.
+
+Read-only question for now: why does a shipment remain in the Shipping screen after its order was deleted (missing link, or should deleting the order cancel the shipment)? Report only.
+
+## Deliver
+
+A short explanation of the current behaviour, the change, the tests you added, and the list of files touched. Do not include production data or credentials in any file.
