@@ -34,6 +34,14 @@ export interface AdminInvoice {
   /** @nullable */
   contractDiscountPercent: number | null;
   /** @nullable */
+  invoiceDiscountPercent?: number | null;
+  /** @nullable */
+  discountOverrideReason?: string | null;
+  /** @nullable */
+  discountOverrideByAdminId?: number | null;
+  /** @nullable */
+  discountOverrideAt?: Date | null;
+  /** @nullable */
   paymentDays: number | null;
   /** @nullable */
   paymentTerm: AdminInvoicePaymentTerm;

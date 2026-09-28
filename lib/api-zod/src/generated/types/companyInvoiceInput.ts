@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { CompanyInvoiceInputDiscountOverride } from './companyInvoiceInputDiscountOverride';
 import type { CompanyInvoiceInputPaymentMethod } from './companyInvoiceInputPaymentMethod';
 import type { CompanyInvoiceLineInput } from './companyInvoiceLineInput';
 
@@ -23,6 +24,7 @@ export interface CompanyInvoiceInput {
   contractId?: number;
   /** @minimum 1 */
   uploadedContractFileId?: number;
+  discountOverride?: CompanyInvoiceInputDiscountOverride;
   /**
      * Optional original reference for past-dated historical invoices.
      * @maxLength 100

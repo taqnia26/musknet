@@ -467,6 +467,35 @@ describe.sequential("distributor invoice issuance", () => {
       taxTreatment: "domestic",
       totalAmount: 18.5,
     });
+    const overrideRequest = {
+      creationKey: `discount-override-${base}-invoice`,
+      distributorId,
+      uploadedContractFileId: files[0].id,
+      issueDate,
+      dueDate,
+      discountOverride: { percent: 25, reason: "خصم استثنائي معتمد لهذه الفاتورة فقط" },
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    };
+    const overridden = await createCompanyInvoice(overrideRequest, actorId, env);
+    const [savedOverride] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, overridden.id));
+    expect(savedOverride).toMatchObject({
+      contractDiscountPercent: "7.50",
+      invoiceDiscountPercent: "25.00",
+      discountOverrideReason: overrideRequest.discountOverride.reason,
+      discountOverrideByAdminId: actorId,
+      totalAmount: 15,
+      discountAmount: 5,
+    });
+    expect(savedOverride.discountOverrideAt).toBeInstanceOf(Date);
+    const [unchangedContract] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, files[0].id));
+    expect(unchangedContract.discountPercent).toBe("7.50");
+    expect((await createCompanyInvoice(overrideRequest, actorId, env)).id).toBe(overridden.id);
+    await expect(createCompanyInvoice({
+      ...overrideRequest, discountOverride: { percent: 30, reason: overrideRequest.discountOverride.reason },
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await expect(createCompanyInvoice({
+      ...overrideRequest, creationKey: `invalid-override-${base}`, discountOverride: { percent: 30, reason: "short" },
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceValidationError);
     await expect(createDistributorInvoice({
       creationKey: `uploaded-${base}-invoice`,
       distributorId,

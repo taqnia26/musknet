@@ -2304,6 +2304,14 @@ export interface AdminInvoice {
   /** @nullable */
   contractDiscountPercent: number | null;
   /** @nullable */
+  invoiceDiscountPercent?: number | null;
+  /** @nullable */
+  discountOverrideReason?: string | null;
+  /** @nullable */
+  discountOverrideByAdminId?: number | null;
+  /** @nullable */
+  discountOverrideAt?: string | null;
+  /** @nullable */
   paymentDays: number | null;
   /** @nullable */
   paymentTerm: AdminInvoicePaymentTerm;
@@ -2485,6 +2493,19 @@ export interface CompanyInvoiceLineInput {
   unitPrice: number;
 }
 
+export type CompanyInvoiceInputDiscountOverride = {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  percent: number;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+};
+
 export type CompanyInvoiceInputPaymentMethod = typeof CompanyInvoiceInputPaymentMethod[keyof typeof CompanyInvoiceInputPaymentMethod];
 
 
@@ -2508,6 +2529,7 @@ export interface CompanyInvoiceInput {
   contractId?: number;
   /** @minimum 1 */
   uploadedContractFileId?: number;
+  discountOverride?: CompanyInvoiceInputDiscountOverride;
   /**
      * Optional original reference for past-dated historical invoices.
      * @maxLength 100

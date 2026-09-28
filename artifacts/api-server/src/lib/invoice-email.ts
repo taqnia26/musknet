@@ -26,6 +26,8 @@ type InvoiceForEmail = {
   taxTreatment?: string | null;
   vatRate?: number | null;
   contractDiscountPercent?: number | null;
+  invoiceDiscountPercent?: number | null;
+  discountOverrideReason?: string | null;
   totalAmount: number;
   paidAmount: number;
   outstandingAmount: number;
@@ -93,7 +95,8 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
     ? vatRate > 0 ? `VAT (${vatRate}%)` : "VAT (historical amount)"
     : vatRate === 0 ? "VAT (0%)" : `VAT (${vatRate}%)`;
   const companyContractInvoice = !invoice.orderNumber &&
-    invoice.contractDiscountPercent !== null && invoice.contractDiscountPercent !== undefined;
+    (invoice.contractDiscountPercent !== null && invoice.contractDiscountPercent !== undefined ||
+      invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined);
   const inclusiveOrderSnapshot = Boolean(invoice.orderNumber) &&
     Math.round(invoice.subtotal * 100) + Math.round(invoice.vatAmount * 100) === Math.round(invoice.totalAmount * 100);
   const totalRows: Array<[string, number]> = [];
@@ -105,7 +108,9 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
     const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
     totalRows.push(
       ["Gross before discount (VAT included)", grossBeforeDiscount],
-      [`Contract discount (${invoice.contractDiscountPercent}%)`, -(invoice.discountAmount ?? 0)],
+      [invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined
+        ? `Invoice override (${invoice.invoiceDiscountPercent}%)`
+        : `Contract discount (${invoice.contractDiscountPercent}%)`, -(invoice.discountAmount ?? 0)],
       ["Net subtotal after discount", invoice.subtotal],
       [vatLabel, invoice.vatAmount],
     );

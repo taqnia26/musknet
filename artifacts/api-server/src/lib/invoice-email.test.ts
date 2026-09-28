@@ -44,6 +44,14 @@ describe("invoice PDF formatting", () => {
     ]);
     expect(rows[0][1] + rows[1][1]).toBe(rows[2][1] + rows[3][1]);
   });
+  it("labels an invoice-only override without claiming the contract was changed", () => {
+    const rows = getInvoiceTotalRows({
+      ...baseInvoice, contractDiscountPercent: 7.5, invoiceDiscountPercent: 25,
+      discountAmount: 5, subtotal: 13.04, vatAmount: 1.96, totalAmount: 15,
+      items: [{ productName: "Product", quantity: 1, unitPrice: 20, totalAmount: 15 }],
+    });
+    expect(rows[1]).toEqual(["Invoice override (25%)", -5]);
+  });
 
   it("preserves shipping and discount rows for legacy order invoices", () => {
     const rows = getInvoiceTotalRows({

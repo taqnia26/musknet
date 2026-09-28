@@ -8,6 +8,7 @@ import { productsTable } from "./products";
 import { exhibitionsTable } from "./exhibitions";
 import { distributorContractsTable } from "./distributor-contracts";
 import { uploadedContractFilesTable } from "./uploaded-contract-files";
+import { adminUsersTable } from "./admin-users";
 
 export const taxInvoicesTable = pgTable("tax_invoices", {
   id: serial("id").primaryKey(),
@@ -18,6 +19,10 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   contractNumber: text("contract_number"),
   contractType: text("contract_type"),
   contractDiscountPercent: numeric("contract_discount_percent", { precision: 5, scale: 2 }),
+  invoiceDiscountPercent: numeric("invoice_discount_percent", { precision: 5, scale: 2 }),
+  discountOverrideReason: text("discount_override_reason"),
+  discountOverrideByAdminId: integer("discount_override_by_admin_id").references(() => adminUsersTable.id, { onDelete: "restrict" }),
+  discountOverrideAt: timestamp("discount_override_at", { withTimezone: true }),
   paymentDays: integer("payment_days"),
   paymentTerm: text("payment_term"),
   taxTreatment: text("tax_treatment"),

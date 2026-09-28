@@ -185,6 +185,7 @@ export * from './companyInvoiceCreated';
 export * from './companyInvoiceCreatedHistorical';
 export * from './companyInvoiceCreatedPaymentStatus';
 export * from './companyInvoiceInput';
+export * from './companyInvoiceInputDiscountOverride';
 export * from './companyInvoiceInputPaymentMethod';
 export * from './companyInvoiceLineInput';
 export * from './companyInvoiceSellerConfiguration';

@@ -95,6 +95,7 @@ async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoices
   distributorId: number;
   contractId?: number;
   uploadedContractFileId?: number;
+  discountOverride?: { percent: number; reason: string };
   taxTreatment?: TaxTreatment;
   dueDate?: string | Date;
   items: Array<{ productId: number; quantity: number; unitPrice: number }>;
@@ -119,6 +120,11 @@ async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoices
   })).sort((a: { productId: number }, b: { productId: number }) => a.productId - b.productId);
   const mismatch = (input.contractId !== undefined && input.contractId !== previous.contractId) ||
     (input.uploadedContractFileId !== undefined && input.uploadedContractFileId !== previous.uploadedContractFileId) ||
+    (input.discountOverride !== undefined && (
+      previous.invoiceDiscountPercent !== String(input.discountOverride.percent.toFixed(2)) ||
+      previous.discountOverrideReason !== input.discountOverride.reason.trim()
+    )) ||
+    (input.discountOverride === undefined && previous.invoiceDiscountPercent !== null) ||
     (input.taxTreatment !== undefined && input.taxTreatment !== previous.taxTreatment) ||
     (input.dueDate !== undefined && previous.dueDate !== dateOnly(input.dueDate)) ||
     stableJson(requestedItems) !== stableJson(recordedItems);
@@ -219,7 +225,7 @@ export async function createExhibitionInvoice(
 }
 
 export async function createDistributorInvoice(
-  input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; taxTreatment?: TaxTreatment; issueDate?: string | Date; dueDate?: string | Date; collected?: { paymentDate: string | Date; paymentMethod: "cash" | "bank_transfer" }; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; discountOverride?: { percent: number; reason: string }; taxTreatment?: TaxTreatment; issueDate?: string | Date; dueDate?: string | Date; collected?: { paymentDate: string | Date; paymentMethod: "cash" | "bank_transfer" }; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
   environment: NodeJS.ProcessEnv = process.env,
 ) {
@@ -228,6 +234,11 @@ export async function createDistributorInvoice(
   if (input.contractId !== undefined && input.uploadedContractFileId !== undefined) {
     throw new DistributorInvoiceValidationError("Select either a generated contract or an uploaded contract file, not both");
   }
+  if (input.discountOverride && (
+    !Number.isFinite(input.discountOverride.percent) || input.discountOverride.percent < 0 ||
+    input.discountOverride.percent > 100 || Math.round(input.discountOverride.percent * 100) !== input.discountOverride.percent * 100 ||
+    input.discountOverride.reason.trim().length < 10 || input.discountOverride.reason.trim().length > 500
+  )) throw new DistributorInvoiceValidationError("Discount override requires a valid percentage and a written reason (10–500 characters)");
   const productIds = input.items.map((item) => item.productId);
   if (new Set(productIds).size !== productIds.length) {
     throw new DistributorInvoiceValidationError("Each product may only appear once");
@@ -329,6 +340,7 @@ export async function createDistributorInvoice(
       throw new DistributorInvoiceConflictError("Contract discount must be between 0 and 100 percent");
     }
     const contractDiscountPercent = contract || uploadedContract ? rawDiscount : 0;
+    const appliedDiscountPercent = input.discountOverride?.percent ?? contractDiscountPercent;
 
     const sortedProductIds = [...productIds].sort((a, b) => a - b);
     for (const productId of sortedProductIds) {
@@ -351,7 +363,7 @@ export async function createDistributorInvoice(
 
     const lines = input.items.map((item, index) => {
       const listGrossCents = cents(item.unitPrice) * item.quantity;
-      const grossCents = discountedGrossCents(listGrossCents, contractDiscountPercent);
+      const grossCents = discountedGrossCents(listGrossCents, appliedDiscountPercent);
       const amounts = extractVatFromGross(grossCents, vatRate);
       return {
         productId: item.productId,
@@ -415,6 +427,10 @@ export async function createDistributorInvoice(
       contractNumber: contract?.contractNumber ?? uploadedContract?.fileName ?? null,
       contractType: selectedContractType,
       contractDiscountPercent: contract || uploadedContract ? String(contractDiscountPercent) : null,
+      invoiceDiscountPercent: input.discountOverride ? appliedDiscountPercent.toFixed(2) : null,
+      discountOverrideReason: input.discountOverride?.reason.trim() ?? null,
+      discountOverrideByAdminId: input.discountOverride ? actorId : null,
+      discountOverrideAt: input.discountOverride ? new Date() : null,
       paymentDays: contract?.paymentDays ?? (uploadedContract?.paymentTerm === "net_days" ? uploadedContract.paymentDays : null),
       paymentTerm: uploadedContract?.paymentTerm ?? (contract ? (/نقد|cash/i.test(contract.contractType) ? "due_on_issue" : "net_days") : null),
       taxTreatment,

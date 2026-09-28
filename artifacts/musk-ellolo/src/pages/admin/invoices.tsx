@@ -191,7 +191,9 @@ function InvoiceTemplate({
                 <span className="font-mono"><Money value={grossBeforeDiscount} lang={lang} fractionDigits={2} /></span>
               </div>
               <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t(`خصم العقد (${invoice.contractDiscountPercent ?? 0}%)`, `Contract discount (${invoice.contractDiscountPercent ?? 0}%)`)}</span>
+                <span>{invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined
+                  ? t(`خصم استثنائي لهذه الفاتورة (${invoice.invoiceDiscountPercent}%)`, `Invoice-only discount override (${invoice.invoiceDiscountPercent}%)`)
+                  : t(`خصم العقد (${invoice.contractDiscountPercent ?? 0}%)`, `Contract discount (${invoice.contractDiscountPercent ?? 0}%)`)}</span>
                 <span className="font-mono"><Money value={-(invoice.discountAmount ?? 0)} lang={lang} fractionDigits={2} /></span>
               </div>
               {!internationalDistributor && <>
@@ -236,6 +238,11 @@ function InvoiceTemplate({
               </div>}
             </>
           )}
+          {invoice.discountOverrideReason && <div data-testid="invoice-discount-override" className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-stone-800 break-words">
+            <strong>{t('استثناء خصم لهذه الفاتورة فقط؛ العقد لم يتغير.', 'Discount override for this invoice only; contract unchanged.')}</strong>
+            <p>{t('السبب', 'Reason')}: {invoice.discountOverrideReason}</p>
+            <p>{t('سُجل بواسطة المستخدم', 'Recorded by user')} #{invoice.discountOverrideByAdminId} · {invoice.discountOverrideAt ? new Date(invoice.discountOverrideAt).toLocaleString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Riyadh' }) : '-'}</p>
+          </div>}
            {invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount && (
             <div className="pt-2 space-y-2 px-2 text-xs sm:text-sm">
               <div className="flex justify-between text-stone-600 font-medium">

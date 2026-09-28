@@ -21,6 +21,7 @@ export type CompanyInvoiceInput = {
   distributorId: number;
   contractId?: number;
   uploadedContractFileId?: number;
+  discountOverride?: { percent: number; reason: string };
   originalInvoiceNumber?: string;
   collected?: boolean;
   paymentDate?: string;
@@ -67,6 +68,12 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
     throw new DistributorInvoiceValidationError("paymentDate cannot be in the future in the Riyadh calendar");
   }
   const historical = input.issueDate < todayRiyadh;
+  if (input.discountOverride && (historical || !Number.isFinite(input.discountOverride.percent) ||
+    input.discountOverride.percent < 0 || input.discountOverride.percent > 100 ||
+    Math.round(input.discountOverride.percent * 100) !== input.discountOverride.percent * 100 ||
+    input.discountOverride.reason.trim().length < 10 || input.discountOverride.reason.trim().length > 500)) {
+    throw new DistributorInvoiceValidationError("A current invoice discount override requires a valid percentage and a written reason (10–500 characters)");
+  }
   const allCurrentProductLines = input.items.every((item) => item.productId !== undefined);
   if (!historical && !allCurrentProductLines) {
     throw new DistributorInvoiceValidationError("Current company invoices require a catalog productId on every line");
@@ -105,6 +112,7 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
     distributorId: input.distributorId,
     contractId: input.contractId,
     uploadedContractFileId: input.uploadedContractFileId,
+    discountOverride: input.discountOverride,
     issueDate: input.issueDate,
     dueDate: input.dueDate,
     taxTreatment: distributor.countryCode?.trim().toUpperCase() && distributor.countryCode.trim().toUpperCase() !== "SA"

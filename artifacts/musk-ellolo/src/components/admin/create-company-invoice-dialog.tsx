@@ -46,6 +46,9 @@ export function CreateCompanyInvoiceDialog() {
   const [dueDate, setDueDate] = useState(() => dateAfter(dateInRiyadh(), 30));
   const [originalInvoiceNumber, setOriginalInvoiceNumber] = useState('');
   const [contractKey, setContractKey] = useState('');
+  const [overrideDiscount, setOverrideDiscount] = useState(false);
+  const [overridePercent, setOverridePercent] = useState('');
+  const [overrideReason, setOverrideReason] = useState('');
   const [collected, setCollected] = useState(false);
   const [paymentDate, setPaymentDate] = useState(dateInRiyadh);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank_transfer'>('bank_transfer');
@@ -107,7 +110,7 @@ export function CreateCompanyInvoiceDialog() {
   const contractType = selectedContract?.contractType ?? '';
   const isGulfContract = contractType.includes('دول الخليج');
   const isSaudiContract = contractType.includes('السعودية');
-  const discountPercent = isHistorical ? 0 : Math.min(100, Math.max(0, Number(selectedContract?.discountPercent ?? 0) || 0));
+  const discountPercent = isHistorical ? 0 : overrideDiscount ? Number(overridePercent || 0) : Number(selectedContract?.discountPercent ?? 0);
   const vatRate = taxTreatment === 'international' ? 0 : Math.max(0, Number(selectedContract?.vatRate ?? 15) || 0);
   const totals = useMemo(() => {
     const amounts = lines.map(line => {
@@ -135,6 +138,9 @@ export function CreateCompanyInvoiceDialog() {
     setDueDate(dateAfter(today, 30));
     setOriginalInvoiceNumber('');
     setContractKey('');
+    setOverrideDiscount(false);
+    setOverridePercent('');
+    setOverrideReason('');
     setCollected(false);
     setPaymentDate(today);
     setPaymentMethod('bank_transfer');
@@ -181,6 +187,13 @@ export function CreateCompanyInvoiceDialog() {
       setError(t('عقد المملكة العربية السعودية يتطلب أن تكون دولة الشركة SA.', 'A Saudi contract requires the company country to be SA.'));
       return;
     }
+    if (overrideDiscount && (isHistorical || overridePercent.trim() === '' ||
+      !Number.isFinite(Number(overridePercent)) || Number(overridePercent) < 0 ||
+      Number(overridePercent) > 100 || Math.round(Number(overridePercent) * 100) !== Number(overridePercent) * 100 ||
+      overrideReason.trim().length < 10 || overrideReason.trim().length > 500)) {
+      setError(t('الخصم الاستثنائي يحتاج نسبة بين 0 و100 وسبباً مكتوباً من 10 إلى 500 حرف.', 'A discount override requires a percentage from 0 to 100 and a written reason of 10–500 characters.'));
+      return;
+    }
     setPending(true);
     try {
       const data = {
@@ -190,6 +203,7 @@ export function CreateCompanyInvoiceDialog() {
         distributorId: Number(distributorId),
         ...(selectedContract?.contractId ? { contractId: selectedContract.contractId } : {}),
         ...(selectedContract?.uploadedContractFileId ? { uploadedContractFileId: selectedContract.uploadedContractFileId } : {}),
+        ...(!isHistorical && overrideDiscount ? { discountOverride: { percent: Number(overridePercent), reason: overrideReason.trim() } } : {}),
         ...(isHistorical && originalInvoiceNumber.trim() ? { originalInvoiceNumber: originalInvoiceNumber.trim() } : {}),
         collected,
         ...(collected ? { paymentDate, paymentMethod } : {}),
@@ -269,6 +283,22 @@ export function CreateCompanyInvoiceDialog() {
                 `يوجد ${pendingUploadedFiles.length} ملف عقد بانتظار اعتماد الشروط (${pendingUploadedFiles.map(file => file.fileName).join('، ')}).`,
                 `${pendingUploadedFiles.length} uploaded contract file(s) await terms approval (${pendingUploadedFiles.map(file => file.fileName).join(', ')}).`,
               )}</p>}
+            </div>}
+            {(!isHistorical || overrideDiscount) && <div className="space-y-3 sm:col-span-2 rounded-md border p-3">
+              {isHistorical && <p role="alert" className="text-sm text-red-700">{t('الفواتير التاريخية لا تقبل خصماً استثنائياً. ألغِ تحديد الاستثناء للمتابعة.', 'Historical invoices cannot have a discount override. Uncheck the override to continue.')}</p>}
+              <p className="text-sm">{t(`خصم العقد: ${selectedContract?.discountPercent ?? 0}% (لا يُعدل العقد)`, `Contract discount: ${selectedContract?.discountPercent ?? 0}% (contract remains unchanged)`)}</p>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={overrideDiscount} onChange={event => { rotateCreationKey(); setOverrideDiscount(event.target.checked); setOverridePercent(String(selectedContract?.discountPercent ?? 0)); setOverrideReason(''); }} />
+                {t('تغيير خصم هذه الفاتورة فقط', 'Override this invoice discount only')}
+              </label>
+              {overrideDiscount && <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5"><Label htmlFor="company-invoice-override-percent">{t('خصم الفاتورة (%)', 'Invoice discount (%)')}</Label>
+                  <Input id="company-invoice-override-percent" data-testid="input-company-invoice-override-percent" type="number" min="0" max="100" step="0.01" value={overridePercent} onChange={event => { rotateCreationKey(); setOverridePercent(event.target.value); }} />
+                </div>
+                <div className="space-y-1.5"><Label htmlFor="company-invoice-override-reason">{t('سبب الاستثناء (إلزامي)', 'Override reason (required)')}</Label>
+                  <Input id="company-invoice-override-reason" data-testid="input-company-invoice-override-reason" maxLength={500} value={overrideReason} onChange={event => { rotateCreationKey(); setOverrideReason(event.target.value); }} />
+                </div>
+              </div>}
             </div>}
           </div>
 

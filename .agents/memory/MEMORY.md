@@ -50,3 +50,4 @@
 - [Production funding confirmation](production-funding-confirmation.md) — plan approval requests finance availability; confirmation gates scheduling, not cash movement or journals.
 - [pnpm workspace rewrites](pnpm-workspace-rewrites.md) — a package add can normalize workspace YAML and strip safety comments; inspect the config diff afterward.
 - [Accounting cleanup database identity](accounting-cleanup-database-identity.md) — verify the operator's actual database and matching recovery backup before deleting imported journals; local IDs are not portable.
+- [Invoice-only discount exceptions](invoice-only-discount-exceptions.md) — manual discounts belong to new invoice issuance, never to contract edits or issued invoices.

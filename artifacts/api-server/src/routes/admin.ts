@@ -2091,6 +2091,10 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     contractNumber: invoicesTable.contractNumber,
     contractType: invoicesTable.contractType,
     contractDiscountPercent: invoicesTable.contractDiscountPercent,
+    invoiceDiscountPercent: invoicesTable.invoiceDiscountPercent,
+    discountOverrideReason: invoicesTable.discountOverrideReason,
+    discountOverrideByAdminId: invoicesTable.discountOverrideByAdminId,
+    discountOverrideAt: invoicesTable.discountOverrideAt,
     paymentDays: invoicesTable.paymentDays,
     paymentTerm: invoicesTable.paymentTerm,
     taxTreatment: invoicesTable.taxTreatment,
@@ -2155,6 +2159,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     return {
       ...row,
       contractDiscountPercent: row.contractDiscountPercent === null ? null : Number(row.contractDiscountPercent),
+      invoiceDiscountPercent: row.invoiceDiscountPercent === null ? null : Number(row.invoiceDiscountPercent),
       vatRate: row.vatRate === null ? null : Number(row.vatRate),
       paidAmount, outstandingAmount, paymentStatus, payments, items: itemRows.filter((item) => item.invoiceId === row.id),
     };
@@ -2240,6 +2245,8 @@ router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), rout
     taxTreatment: invoicesTable.taxTreatment,
     vatRate: invoicesTable.vatRate,
     contractDiscountPercent: invoicesTable.contractDiscountPercent,
+    invoiceDiscountPercent: invoicesTable.invoiceDiscountPercent,
+    discountOverrideReason: invoicesTable.discountOverrideReason,
     buyerName: invoicesTable.buyerName,
     buyerAddress: invoicesTable.buyerAddress,
     buyerTaxNumber: invoicesTable.buyerTaxNumber,
@@ -2266,6 +2273,7 @@ router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), rout
     ...invoice,
     vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
     contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+    invoiceDiscountPercent: invoice.invoiceDiscountPercent === null ? null : Number(invoice.invoiceDiscountPercent),
     items,
     paidAmount,
     outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100),
@@ -2382,6 +2390,8 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
     sellerName: invoicesTable.sellerName, sellerVatNumber: invoicesTable.sellerVatNumber,
      taxTreatment: invoicesTable.taxTreatment, vatRate: invoicesTable.vatRate,
      contractDiscountPercent: invoicesTable.contractDiscountPercent,
+     invoiceDiscountPercent: invoicesTable.invoiceDiscountPercent,
+     discountOverrideReason: invoicesTable.discountOverrideReason,
     buyerName: invoicesTable.buyerName, buyerAddress: invoicesTable.buyerAddress,
     buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
@@ -2398,6 +2408,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
      ...invoice,
      vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
      contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+     invoiceDiscountPercent: invoice.invoiceDiscountPercent === null ? null : Number(invoice.invoiceDiscountPercent),
      items, paidAmount, outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100),
    };
   try {

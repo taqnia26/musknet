@@ -4351,6 +4351,10 @@ export const AdminListInvoicesResponseItem = zod.object({
   "contractNumber": zod.string().nullable(),
   "contractType": zod.string().nullable(),
   "contractDiscountPercent": zod.number().nullable(),
+  "invoiceDiscountPercent": zod.number().nullish(),
+  "discountOverrideReason": zod.string().nullish(),
+  "discountOverrideByAdminId": zod.number().nullish(),
+  "discountOverrideAt": zod.coerce.date().nullish(),
   "paymentDays": zod.number().nullable(),
   "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
   "taxTreatment": zod.union([zod.literal('domestic'),zod.literal('international'),zod.literal(null)]).nullable(),
@@ -4452,6 +4456,10 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "contractNumber": zod.string().nullable(),
   "contractType": zod.string().nullable(),
   "contractDiscountPercent": zod.number().nullable(),
+  "invoiceDiscountPercent": zod.number().nullish(),
+  "discountOverrideReason": zod.string().nullish(),
+  "discountOverrideByAdminId": zod.number().nullish(),
+  "discountOverrideAt": zod.coerce.date().nullish(),
   "paymentDays": zod.number().nullable(),
   "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
   "taxTreatment": zod.union([zod.literal('domestic'),zod.literal('international'),zod.literal(null)]).nullable(),
@@ -4516,6 +4524,13 @@ export const adminCreateCompanyInvoiceBodyContractIdMultipleOf = 1;
 
 export const adminCreateCompanyInvoiceBodyUploadedContractFileIdMultipleOf = 1;
 
+export const adminCreateCompanyInvoiceBodyDiscountOverridePercentMin = 0;
+export const adminCreateCompanyInvoiceBodyDiscountOverridePercentMax = 100;
+export const adminCreateCompanyInvoiceBodyDiscountOverridePercentMultipleOf = 0.01;
+
+export const adminCreateCompanyInvoiceBodyDiscountOverrideReasonMin = 10;
+export const adminCreateCompanyInvoiceBodyDiscountOverrideReasonMax = 500;
+
 export const adminCreateCompanyInvoiceBodyOriginalInvoiceNumberMax = 100;
 
 export const adminCreateCompanyInvoiceBodyItemsItemProductIdMultipleOf = 1;
@@ -4539,6 +4554,10 @@ export const AdminCreateCompanyInvoiceBody = zod.object({
   "distributorId": zod.number().min(1).multipleOf(adminCreateCompanyInvoiceBodyDistributorIdMultipleOf),
   "contractId": zod.number().min(1).multipleOf(adminCreateCompanyInvoiceBodyContractIdMultipleOf).optional(),
   "uploadedContractFileId": zod.number().min(1).multipleOf(adminCreateCompanyInvoiceBodyUploadedContractFileIdMultipleOf).optional(),
+  "discountOverride": zod.object({
+  "percent": zod.number().min(adminCreateCompanyInvoiceBodyDiscountOverridePercentMin).max(adminCreateCompanyInvoiceBodyDiscountOverridePercentMax).multipleOf(adminCreateCompanyInvoiceBodyDiscountOverridePercentMultipleOf),
+  "reason": zod.string().min(adminCreateCompanyInvoiceBodyDiscountOverrideReasonMin).max(adminCreateCompanyInvoiceBodyDiscountOverrideReasonMax)
+}).optional(),
   "originalInvoiceNumber": zod.string().max(adminCreateCompanyInvoiceBodyOriginalInvoiceNumberMax).optional().describe('Optional original reference for past-dated historical invoices.'),
   "collected": zod.boolean().optional(),
   "paymentDate": zod.coerce.date().optional(),
@@ -4819,6 +4838,10 @@ export const AdminCreateExhibitionInvoiceResponse = zod.object({
   "contractNumber": zod.string().nullable(),
   "contractType": zod.string().nullable(),
   "contractDiscountPercent": zod.number().nullable(),
+  "invoiceDiscountPercent": zod.number().nullish(),
+  "discountOverrideReason": zod.string().nullish(),
+  "discountOverrideByAdminId": zod.number().nullish(),
+  "discountOverrideAt": zod.coerce.date().nullish(),
   "paymentDays": zod.number().nullable(),
   "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
   "taxTreatment": zod.union([zod.literal('domestic'),zod.literal('international'),zod.literal(null)]).nullable(),

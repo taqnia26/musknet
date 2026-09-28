@@ -4402,6 +4402,10 @@ components:
         contractNumber: { type: [string, "null"] }
         contractType: { type: [string, "null"] }
         contractDiscountPercent: { type: [number, "null"] }
+        invoiceDiscountPercent: { type: [number, "null"] }
+        discountOverrideReason: { type: [string, "null"] }
+        discountOverrideByAdminId: { type: [number, "null"] }
+        discountOverrideAt: { type: [string, "null"], format: date-time }
         paymentDays: { type: [number, "null"] }
         paymentTerm: { type: [string, "null"], enum: [net_days, end_of_month, due_on_issue, null] }
         taxTreatment: { type: [string, "null"], enum: [domestic, international, null] }
@@ -4525,6 +4529,12 @@ components:
         distributorId: { type: number, minimum: 1, multipleOf: 1 }
         contractId: { type: number, minimum: 1, multipleOf: 1 }
         uploadedContractFileId: { type: number, minimum: 1, multipleOf: 1 }
+        discountOverride:
+          type: object
+          required: [percent, reason]
+          properties:
+            percent: { type: number, minimum: 0, maximum: 100, multipleOf: 0.01 }
+            reason: { type: string, minLength: 10, maxLength: 500 }
         originalInvoiceNumber: { type: string, maxLength: 100, description: "Optional original reference for past-dated historical invoices." }
         collected: { type: boolean }
         paymentDate: { type: string, format: date }
