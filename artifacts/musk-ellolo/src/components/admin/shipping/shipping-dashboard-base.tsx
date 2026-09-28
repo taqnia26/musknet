@@ -624,7 +624,8 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [cityFilter, setCityFilter] = useState<string>('all');
-  const [dateRange, setDateRange] = useState<string>('30d');
+  // Do not hide older shipments when the dashboard first opens.
+  const [dateRange, setDateRange] = useState<string>('all');
   const pageSize = 20;
 
   // Derive dates
@@ -1134,12 +1135,12 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                 <Input 
                   placeholder={t('بحث (رقم تتبع، اسم)...', 'Search (Tracking, Name)...')} 
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => { setPage(1); setSearch(e.target.value); }}
                   className="rtl:pr-9 ltr:pl-9"
                 />
               </div>
 
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={value => { setPage(1); setStatusFilter(value); }}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder={t('الحالة', 'Status')} />
                 </SelectTrigger>
@@ -1154,7 +1155,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                 </SelectContent>
               </Select>
 
-              <Select value={cityFilter} onValueChange={setCityFilter}>
+              <Select value={cityFilter} onValueChange={value => { setPage(1); setCityFilter(value); }}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder={t('المدينة', 'City')} />
                 </SelectTrigger>
@@ -1166,7 +1167,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                 </SelectContent>
               </Select>
               
-              <Select value={dateRange} onValueChange={setDateRange}>
+              <Select value={dateRange} onValueChange={value => { setPage(1); setDateRange(value); }}>
                 <SelectTrigger className="w-[140px]">
                   <SelectValue placeholder={t('الفترة', 'Period')} />
                 </SelectTrigger>
