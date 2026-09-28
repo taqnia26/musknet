@@ -1,0 +1,23 @@
+AUDIT — inventory of every change after commit 0c3a0e9 (read-only, do not change anything)
+
+Baseline: the last commit our production server has fetched from GitHub is 0c3a0e9 ("Update database export scripts and configuration"). I need to see everything after it.
+
+Rules: read-only. Do not merge, apply, push, cancel, delete, revert or start any task. Do not run anything against production.
+
+Report one table with every change set after 0c3a0e9, in the main workspace and in every task (in progress, ready for review, cancelled). For each row:
+
+1. Where it lives: already on origin/main / committed in main but not pushed / uncommitted in main / in a task that is not applied / stash. Use `git status -sb`, `git log --oneline 0c3a0e9..HEAD`, `git log --oneline origin/main..HEAD`, `git branch -a -vv`, `git stash list`.
+2. Task name or id, branch, latest commit hash.
+3. What it changes, in one line, and the files touched grouped by area.
+4. Whether it touches: database schema or migrations (`lib/db/drizzle`, `lib/db/src/schema`), OpenAPI or generated clients, package.json / lockfile / workspace yaml, environment variables, accounting or inventory logic, production scripts (`exports/`). For every new migration file give its name, what it does, and whether it alters or drops an existing constraint or column.
+5. Tests run and their result.
+6. Safe to push now: yes/no, and why.
+
+Then answer these specifically:
+- Company invoice fix (contract kept on old dates + editable discount, the owner's urgent request): is it finished, is it merged, which commits are the minimum needed to deploy it on its own, and does it depend on anything from another task?
+- Cancel company invoice: confirm it is NOT merged into main. List its commits and migration files.
+- Master Sales cleanup (#121): status, and the exact files of the corrected cleanup script and preflight.
+- ShipHero: confirm it produced a report only, with no code.
+- Anything else after 0c3a0e9 that I did not ask for.
+
+End with the exact commands I should run to push only what is safe, and the commits to exclude.
