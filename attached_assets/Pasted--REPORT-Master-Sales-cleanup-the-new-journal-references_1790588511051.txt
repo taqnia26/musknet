@@ -1,0 +1,39 @@
+# REPORT — Master Sales cleanup: the "new journal references" guard does not match our production schema
+
+## What we did
+
+Read-only checks only, on the production database on our VPS. Nothing from `master-sales-cleanup-with-db-archive.sql` was executed, and nothing changed.
+
+## Findings
+
+1. Foreign keys that reference `public.journal_entries` in production: **7**, not 3.
+
+| referencing table | constraint |
+|---|---|
+| journal_entries | journal_entries_reversal_of_entry_id_journal_entries_id_fk |
+| journal_entry_audit | journal_entry_audit_journal_entry_id_journal_entries_id_fk |
+| journal_entry_lines | journal_entry_lines_journal_entry_id_journal_entries_id_fk |
+| owner_journal_reviews | owner_journal_reviews_journal_entry_id_journal_entries_id_fk |
+| owner_journal_reviews | owner_journal_reviews_reversal_entry_id_journal_entries_id_fk |
+| owner_obligation_events | owner_obligation_events_journal_entry_id_journal_entries_id_fk |
+| owner_obligation_events | owner_obligation_events_reversal_entry_id_journal_entries_id_fk |
+
+2. Columns named `journal_entry_id` or `reversal_of_entry_id` outside the three journal tables: `owner_journal_reviews.journal_entry_id` and `owner_obligation_events.journal_entry_id`. The two `reversal_entry_id` columns on those same tables are not matched by any name-based check.
+
+3. Rows in `owner_journal_reviews` and `owner_obligation_events` that reference any of the 82 target entries (by `journal_entry_id` or `reversal_entry_id`): **0** and **0**.
+
+## Conclusion
+
+As written, the guard that raises `New journal references found; no deletion` fires on our database (7 ≠ 3, and the other two conditions are also true), so the script would abort before any deletion. That is a safe failure, but the check is stale for our schema: nothing actually references the 82 entries.
+
+## What we need
+
+A corrected version of that guard, with everything else unchanged:
+
+- Base it on the referencing foreign keys discovered from `pg_constraint`, not on a fixed count or on column names (the `reversal_entry_id` columns show why names are not enough).
+- An unknown referencing constraint (anything outside an explicit expected list) must still abort.
+- For every referencing table, verify that no row references any target entry id, and abort otherwise.
+- Extend `master-sales-preflight-readonly.sql` to output the number of referencing constraints and the number of rows pointing at the targets, so the next read-only run covers this too.
+- Tell us whether both scripts (cleanup, then restore) were executed end to end on a disposable database with the same schema as production. We plan a dress rehearsal on a scratch copy of our production dump before any real run.
+
+No deletion will be attempted until the corrected script is delivered and rehearsed.
