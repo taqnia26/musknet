@@ -52,5 +52,6 @@
 - [Accounting cleanup database identity](accounting-cleanup-database-identity.md) — verify the operator's actual database and matching recovery backup before deleting imported journals; local IDs are not portable.
 - [Invoice-only discount exceptions](invoice-only-discount-exceptions.md) — manual discounts belong to new invoice issuance, never to contract edits or issued invoices.
 - [Invoice suite database races](invoice-suite-database-races.md) — run invoice integration files serially when they share number allocation and financial reconciliation.
+- [Vite cold-start health checks](vite-cold-start-health-checks.md) — a dev server can announce ready before dependency processing lets its first HTTP request complete.
 - [Shared invoice response contracts](shared-invoice-response-contracts.md) — new required display fields in list schemas also affect creation responses; validate both before committing a response.
 - [Admin tour in browser tests](admin-tour-browser-tests.md) — wait for the guided tour to appear and close before navigating to a tested admin flow.

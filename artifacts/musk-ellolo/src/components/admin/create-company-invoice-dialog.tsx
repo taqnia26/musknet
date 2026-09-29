@@ -363,14 +363,33 @@ export function CreateCompanyInvoiceDialog() {
             </div>)}
           </section>
 
-          <section className="grid gap-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-3" data-testid="company-invoice-totals-preview">
-            <div><p className="text-xs text-muted-foreground">{t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</p><p className="font-semibold"><Money value={totals.gross} lang={lang} fractionDigits={2} /></p></div>
-            <div><p className="text-xs text-muted-foreground">{t('الخصم', 'Discount')}{discountPercent ? ` (${discountPercent}%)` : ''}</p><p className="font-semibold"><Money value={-totals.discount} lang={lang} fractionDigits={2} /></p></div>
-            <div><p className="text-xs text-muted-foreground">{t('صافي المجموع الفرعي', 'Net subtotal')}</p><p className="font-semibold"><Money value={totals.subtotal} lang={lang} fractionDigits={2} /></p></div>
-            <div><p className="text-xs text-muted-foreground">{vatRate ? t(`ضريبة القيمة المضافة المستخرجة (${vatRate}%)`, `VAT included (${vatRate}%)`) : t('ضريبة القيمة المضافة (0%)', 'VAT (0%)')}</p><p className="font-semibold"><Money value={totals.vat} lang={lang} fractionDigits={2} /></p></div>
-            <div><p className="text-xs text-muted-foreground">{t('المعاملة الضريبية', 'Tax treatment')}</p><p className="font-medium">{taxTreatment === 'international' ? t('دولي · 0%', 'International · 0%') : t('محلي', 'Domestic')}{selectedContract ? ` · ${selectedContract.label}` : ''}</p></div>
-            <div><p className="text-xs text-muted-foreground">{t('الإجمالي', 'Total')}</p><p className="font-bold text-primary"><Money value={totals.total} lang={lang} fractionDigits={2} /></p></div>
-            <p className="text-xs text-muted-foreground sm:col-span-3">{t('تقديري حسب دولة الشركة وشروط العقد المختارة؛ المبلغ النهائي والضريبة يحسبهما النظام عند الحفظ.', 'Estimate based on company country and selected contract; the system calculates final totals and tax on save.')}</p>
+          <section className="rounded-lg border bg-muted/20 p-4" data-testid="company-invoice-totals-preview">
+            <dl className="divide-y divide-border/70 text-sm">
+              <div className="flex items-center justify-between gap-4 py-2 first:pt-0">
+                <dt>{t('الإجمالي قبل الخصم:', 'Total before discount:')}</dt>
+                <dd className="shrink-0 font-semibold tabular-nums"><Money value={totals.gross} lang={lang} fractionDigits={2} /></dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt>{t('الخصم', 'Discount')} ({Number.isFinite(discountPercent) ? discountPercent : 0}%):</dt>
+                <dd className="shrink-0 font-semibold tabular-nums"><Money value={-totals.discount} lang={lang} fractionDigits={2} /></dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt>{t('الإجمالي بعد الخصم:', 'Total after discount:')}</dt>
+                <dd className="shrink-0 font-semibold tabular-nums"><Money value={totals.total} lang={lang} fractionDigits={2} /></dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 py-2">
+                <dt>{t(`ضريبة القيمة المضافة (${vatRate}%):`, `VAT (${vatRate}%):`)}</dt>
+                <dd className="shrink-0 font-semibold tabular-nums"><Money value={totals.vat} lang={lang} fractionDigits={2} /></dd>
+              </div>
+              <div className="flex items-center justify-between gap-4 pt-3 text-base font-bold text-primary">
+                <dt>{t('الإجمالي المستحق:', 'Amount due:')}</dt>
+                <dd className="shrink-0 tabular-nums"><Money value={totals.total} lang={lang} fractionDigits={2} /></dd>
+              </div>
+            </dl>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t(
+              'الأسعار شاملة الضريبة؛ مبلغ الضريبة موضح ضمن الإجمالي بعد الخصم ولا يُضاف إليه مرة أخرى. المبالغ تقديرية ويعيد النظام حسابها عند الحفظ.',
+              'Prices include VAT; the tax shown is already part of the total after discount, not added again. The system recalculates the final amounts on save.',
+            )}</p>
           </section>
 
           <section className="space-y-3 rounded-md border p-4">
