@@ -41,6 +41,11 @@ export interface AdminInvoice {
   contractType: string | null;
   /** @nullable */
   contractDiscountPercent: number | null;
+  /**
+     * Rate actually applied to a company invoice; null for legacy and non-company invoices.
+     * @nullable
+     */
+  appliedDiscountPercent?: number | null;
   /** @nullable */
   invoiceDiscountPercent?: number | null;
   /** @nullable */
@@ -49,6 +54,11 @@ export interface AdminInvoice {
   discountOverrideByAdminId?: number | null;
   /** @nullable */
   discountOverrideAt?: Date | null;
+  /**
+     * Server-derived on an exceptional company invoice: true when the selected source was outside its period on the issue date; null when there is no exception.
+     * @nullable
+     */
+  discountOverrideOutsideContractPeriod?: boolean | null;
   /** @nullable */
   paymentDays: number | null;
   /** @nullable */

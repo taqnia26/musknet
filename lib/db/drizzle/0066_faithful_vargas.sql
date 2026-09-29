@@ -1,0 +1,2 @@
+ALTER TABLE "tax_invoices" ADD COLUMN IF NOT EXISTS "applied_discount_percent" numeric(5, 2);--> statement-breakpoint
+ALTER TABLE "tax_invoices" ADD COLUMN IF NOT EXISTS "discount_override_outside_contract_period" boolean;

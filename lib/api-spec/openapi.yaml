@@ -4437,10 +4437,12 @@ components:
         contractNumber: { type: [string, "null"] }
         contractType: { type: [string, "null"] }
         contractDiscountPercent: { type: [number, "null"] }
+        appliedDiscountPercent: { type: [number, "null"], description: "Rate actually applied to a company invoice; null for legacy and non-company invoices." }
         invoiceDiscountPercent: { type: [number, "null"] }
         discountOverrideReason: { type: [string, "null"] }
         discountOverrideByAdminId: { type: [number, "null"] }
         discountOverrideAt: { type: [string, "null"], format: date-time }
+        discountOverrideOutsideContractPeriod: { type: [boolean, "null"], description: "Server-derived on an exceptional company invoice: true when the selected source was outside its period on the issue date; null when there is no exception." }
         paymentDays: { type: [number, "null"] }
         paymentTerm: { type: [string, "null"], enum: [net_days, end_of_month, due_on_issue, null] }
         taxTreatment: { type: [string, "null"], enum: [domestic, international, null] }
@@ -4562,11 +4564,12 @@ components:
         issueDate: { type: string, format: date, description: "Determines current vs historical mode solely by comparison with today's Riyadh calendar date." }
         dueDate: { type: string, format: date }
         distributorId: { type: number, minimum: 1, multipleOf: 1 }
-        contractId: { type: number, minimum: 1, multipleOf: 1 }
-        uploadedContractFileId: { type: number, minimum: 1, multipleOf: 1 }
+        contractId: { type: number, minimum: 1, multipleOf: 1, description: "One approved company-owned source. Historical invoices may reference it outside its effective period; current invoices require it to be current." }
+        uploadedContractFileId: { type: number, minimum: 1, multipleOf: 1, description: "Alternative confirmed company-owned source; never supply both sources." }
         discountOverride:
           type: object
-          required: [percent, reason]
+          required: [percent]
+          description: "Invoice-only rate. If it differs from the selected contract rate (or zero without a contract), reason is required; an unchanged rate is treated as no exception."
           properties:
             percent: { type: number, minimum: 0, maximum: 100, multipleOf: 0.01 }
             reason: { type: string, minLength: 10, maxLength: 500 }

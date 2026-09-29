@@ -21,7 +21,7 @@ export type CompanyInvoiceInput = {
   distributorId: number;
   contractId?: number;
   uploadedContractFileId?: number;
-  discountOverride?: { percent: number; reason: string };
+  discountOverride?: { percent: number; reason?: string };
   originalInvoiceNumber?: string;
   collected?: boolean;
   paymentDate?: string;
@@ -70,9 +70,8 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
   const historical = input.issueDate < todayRiyadh;
   if (input.discountOverride && (!Number.isFinite(input.discountOverride.percent) ||
     input.discountOverride.percent < 0 || input.discountOverride.percent > 100 ||
-    Math.round(input.discountOverride.percent * 100) !== input.discountOverride.percent * 100 ||
-    input.discountOverride.reason.trim().length < 10 || input.discountOverride.reason.trim().length > 500)) {
-    throw new DistributorInvoiceValidationError("An invoice discount override requires a valid percentage and a written reason (10–500 characters)");
+    Math.round(input.discountOverride.percent * 100) !== input.discountOverride.percent * 100)) {
+    throw new DistributorInvoiceValidationError("Invoice discount must be between 0 and 100 percent with at most two decimals");
   }
   const allCurrentProductLines = input.items.every((item) => item.productId !== undefined);
   if (!historical && !allCurrentProductLines) {
@@ -132,24 +131,19 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
       throw new DistributorInvoiceConflictError("Distributor countryCode must be an ISO 3166-1 alpha-2 code");
     }
     const taxTreatment = countryCode && countryCode !== "SA" ? "international" : "domestic";
-    const currentDate = saudiCalendarDate(new Date());
     const [contract] = input.contractId === undefined ? [] : await db.select().from(distributorContractsTable)
       .where(eq(distributorContractsTable.id, input.contractId)).limit(1);
     const [uploadedContract] = input.uploadedContractFileId === undefined ? [] : await db.select().from(uploadedContractFilesTable)
       .where(eq(uploadedContractFilesTable.id, input.uploadedContractFileId)).limit(1);
-    if (input.contractId !== undefined && (!contract || contract.distributorId !== distributor.id || contract.status !== "final" ||
-      (contract.startDate && saudiCalendarDate(contract.startDate) > currentDate) ||
-      (contract.endDate && saudiCalendarDate(contract.endDate) < currentDate))) {
-      throw new DistributorInvoiceConflictError("Selected contract must be a current final contract linked to this company");
+    if (input.contractId !== undefined && (!contract || contract.distributorId !== distributor.id || contract.status !== "final")) {
+      throw new DistributorInvoiceConflictError("Selected contract must be a final contract linked to this company");
     }
     if (input.uploadedContractFileId !== undefined && (!uploadedContract || uploadedContract.ownerType !== "distributor" ||
       uploadedContract.ownerId !== distributor.id || !uploadedContract.termsConfirmedAt ||
-      (uploadedContract.startDate && uploadedContract.startDate > currentDate) ||
-      (uploadedContract.endDate && uploadedContract.endDate < currentDate) ||
       !uploadedContract.contractType?.trim() || uploadedContract.discountPercent === null ||
       !Number.isFinite(Number(uploadedContract.discountPercent)) ||
       Number(uploadedContract.discountPercent) < 0 || Number(uploadedContract.discountPercent) > 100)) {
-      throw new DistributorInvoiceConflictError("Selected uploaded contract must have confirmed current terms linked to this company");
+      throw new DistributorInvoiceConflictError("Selected uploaded contract must have confirmed terms linked to this company");
     }
     const contractType = contract?.contractType ?? uploadedContract?.contractType ?? null;
     const requiredTaxTreatment = contractType ? taxTreatmentForContractType(contractType) : null;
@@ -160,7 +154,11 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
     if (contractDiscountPercent !== null && (!Number.isFinite(contractDiscountPercent) || contractDiscountPercent < 0 || contractDiscountPercent > 100)) {
       throw new DistributorInvoiceConflictError("Contract discount must be between 0 and 100 percent");
     }
-    const appliedDiscountPercent = input.discountOverride?.percent ?? contractDiscountPercent ?? 0;
+    const effectiveOverride = input.discountOverride?.percent === (contractDiscountPercent ?? 0) ? undefined : input.discountOverride;
+    if (effectiveOverride && ((effectiveOverride.reason?.trim().length ?? 0) < 10 || (effectiveOverride.reason?.trim().length ?? 0) > 500)) {
+      throw new DistributorInvoiceValidationError("An invoice discount override requires a written reason (10–500 characters)");
+    }
+    const appliedDiscountPercent = effectiveOverride?.percent ?? contractDiscountPercent ?? 0;
     const vatRate = taxTreatment === "domestic" ? (contract ? Number(contract.vatRate) : 15) : 0;
     if (!Number.isFinite(vatRate) || vatRate < 0 || vatRate > 100) throw new DistributorInvoiceConflictError("Invalid contract VAT rate");
     const productRows = productIds.length
@@ -238,8 +236,8 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
       contractNumber: contract?.contractNumber ?? uploadedContract?.fileName,
       contractType: contractType ?? undefined,
       contractDiscountPercent: contractDiscountPercent ?? undefined,
-      invoiceDiscountPercent: input.discountOverride?.percent,
-      discountOverrideReason: input.discountOverride?.reason.trim(),
+      invoiceDiscountPercent: effectiveOverride?.percent,
+      discountOverrideReason: effectiveOverride?.reason?.trim(),
       vatRate,
       paymentTerm: uploadedContract?.paymentTerm ?? (contract ? "net_days" : undefined),
       paymentDays: uploadedContract?.paymentDays ?? contract?.paymentDays,

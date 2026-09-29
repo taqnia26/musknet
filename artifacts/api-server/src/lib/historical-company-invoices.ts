@@ -15,19 +15,21 @@ export type HistoricalInvoiceInput = {
   contractId?: number; uploadedContractFileId?: number; contractNumber?: string;
   contractType?: string; contractDiscountPercent?: number; invoiceDiscountPercent?: number;
   discountOverrideReason?: string; vatRate?: number; paymentTerm?: string | null; paymentDays?: number | null;
+  discountOverrideOutsideContractPeriod?: boolean;
   subtotal: number; discountAmount: number; vatAmount: number; totalAmount: number;
   items: { productId?: number | null; productName: string; productNameEn?: string | null; sku?: string | null; quantity: number; unitPrice: number; subtotal: number; vatAmount: number; totalAmount: number }[];
   payments: { paymentKey: string; paymentDate: string; amount: number; paymentMethod: "cash" | "bank_transfer"; reference?: string | null }[];
 };
 const cent = (n: number) => Math.round(n * 100);
-const creationFingerprint = (input: HistoricalInvoiceInput) => createHash("sha256").update(JSON.stringify(input)).digest("hex");
+const creationFingerprint = ({ discountOverrideOutsideContractPeriod: _derived, ...input }: HistoricalInvoiceInput) => createHash("sha256").update(JSON.stringify(input)).digest("hex");
 const validDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T12:00:00Z`)) && new Date(`${s}T12:00:00Z`).toISOString().slice(0, 10) === s;
 const currency = (n: number) => Number.isFinite(n) && n >= 0 && Math.abs(n * 100 - Math.round(n * 100)) < 0.00001;
 function validate(input: HistoricalInvoiceInput) {
   if ((input.contractId !== undefined && input.uploadedContractFileId !== undefined) ||
       (input.contractDiscountPercent !== undefined && input.contractId === undefined && input.uploadedContractFileId === undefined) ||
-      (input.invoiceDiscountPercent !== undefined && (!Number.isFinite(input.invoiceDiscountPercent) ||
+       (input.invoiceDiscountPercent !== undefined && (!Number.isFinite(input.invoiceDiscountPercent) ||
         input.invoiceDiscountPercent < 0 || input.invoiceDiscountPercent > 100)) ||
+       (input.discountOverrideOutsideContractPeriod !== undefined && input.invoiceDiscountPercent === undefined) ||
       (input.invoiceDiscountPercent === undefined && input.discountOverrideReason !== undefined) ||
       (input.invoiceDiscountPercent !== undefined && (!input.discountOverrideReason ||
         input.discountOverrideReason.trim().length < 10 || input.discountOverrideReason.trim().length > 500))) {
@@ -153,26 +155,29 @@ export async function createHistoricalInvoice(input: HistoricalInvoiceInput, act
       return replayed;
     }
     if (input.contractId !== undefined || input.uploadedContractFileId !== undefined) {
-      const today = saudiCalendarDate(new Date());
       const [contract] = input.contractId === undefined ? [] : await tx.select().from(distributorContractsTable)
         .where(eq(distributorContractsTable.id, input.contractId)).limit(1);
       const [file] = input.uploadedContractFileId === undefined ? [] : await tx.select().from(uploadedContractFilesTable)
         .where(eq(uploadedContractFilesTable.id, input.uploadedContractFileId)).limit(1);
-      const currentContract = contract && contract.status === "final" && contract.distributorId === input.distributorId &&
-        (!contract.startDate || saudiCalendarDate(contract.startDate) <= today) &&
-        (!contract.endDate || saudiCalendarDate(contract.endDate) >= today);
-      const currentFile = file && file.ownerType === "distributor" && file.ownerId === input.distributorId &&
-        Boolean(file.termsConfirmedAt) && (!file.startDate || file.startDate <= today) &&
-        (!file.endDate || file.endDate >= today);
-      if ((!currentContract && !currentFile) ||
+       const approvedContract = contract && contract.status === "final" && contract.distributorId === input.distributorId;
+       const approvedFile = file && file.ownerType === "distributor" && file.ownerId === input.distributorId &&
+         Boolean(file.termsConfirmedAt) && Boolean(file.contractType?.trim()) && file.discountPercent !== null &&
+         Number.isFinite(Number(file.discountPercent)) && Number(file.discountPercent) >= 0 && Number(file.discountPercent) <= 100;
+       const outsidePeriod = Boolean(
+         (contract?.startDate && input.issueDate < saudiCalendarDate(contract.startDate)) ||
+         (contract?.endDate && input.issueDate > saudiCalendarDate(contract.endDate)) ||
+         (file?.startDate && input.issueDate < file.startDate) ||
+         (file?.endDate && input.issueDate > file.endDate));
+       if ((!approvedContract && !approvedFile) ||
         input.contractNumber !== (contract?.contractNumber ?? file?.fileName) ||
         input.contractType !== (contract?.contractType ?? file?.contractType) ||
         input.contractDiscountPercent !== Number(contract?.marginPercent ?? file?.discountPercent) ||
         (contract && input.vatRate !== (input.taxTreatment === "international" ? 0 : Number(contract.vatRate))) ||
         input.paymentTerm !== (file?.paymentTerm ?? (contract ? "net_days" : undefined)) ||
-        input.paymentDays !== (file?.paymentDays ?? contract?.paymentDays)) {
+         input.paymentDays !== (file?.paymentDays ?? contract?.paymentDays)) {
         throw new DistributorInvoiceConflictError("Contract terms changed while recording the prior invoice; review and try again");
       }
+       input.discountOverrideOutsideContractPeriod = input.invoiceDiscountPercent === undefined ? undefined : outsidePeriod;
     }
     const review = await reconcileHistoricalInvoice(input, tx);
     if (review.conflicts.length) throw new DistributorInvoiceConflictError(`Reconciliation required: ${review.conflicts.join("; ")}`);
@@ -189,10 +194,12 @@ export async function createHistoricalInvoice(input: HistoricalInvoiceInput, act
       contractId: input.contractId ?? null, uploadedContractFileId: input.uploadedContractFileId ?? null,
       contractNumber: input.contractNumber ?? null, contractType: input.contractType ?? null,
       contractDiscountPercent: input.contractDiscountPercent === undefined ? null : input.contractDiscountPercent.toFixed(2),
+       appliedDiscountPercent: (input.invoiceDiscountPercent ?? input.contractDiscountPercent ?? 0).toFixed(2),
       invoiceDiscountPercent: input.invoiceDiscountPercent === undefined ? null : input.invoiceDiscountPercent.toFixed(2),
       discountOverrideReason: input.discountOverrideReason?.trim() ?? null,
       discountOverrideByAdminId: input.invoiceDiscountPercent === undefined ? null : actorId,
       discountOverrideAt: input.invoiceDiscountPercent === undefined ? null : new Date(),
+       discountOverrideOutsideContractPeriod: input.invoiceDiscountPercent === undefined ? null : input.discountOverrideOutsideContractPeriod ?? false,
       vatRate: input.vatRate === undefined ? null : input.vatRate.toFixed(2),
       paymentTerm: input.paymentTerm ?? null, paymentDays: input.paymentDays ?? null,
       taxTreatment: input.taxTreatment, subtotal: input.subtotal, discountAmount: input.discountAmount,

@@ -1,4 +1,4 @@
-import { check, date, doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex, numeric } from "drizzle-orm/pg-core";
+import { boolean, check, date, doublePrecision, integer, pgTable, serial, text, timestamp, uniqueIndex, numeric } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -19,10 +19,12 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   contractNumber: text("contract_number"),
   contractType: text("contract_type"),
   contractDiscountPercent: numeric("contract_discount_percent", { precision: 5, scale: 2 }),
+  appliedDiscountPercent: numeric("applied_discount_percent", { precision: 5, scale: 2 }),
   invoiceDiscountPercent: numeric("invoice_discount_percent", { precision: 5, scale: 2 }),
   discountOverrideReason: text("discount_override_reason"),
   discountOverrideByAdminId: integer("discount_override_by_admin_id").references(() => adminUsersTable.id, { onDelete: "restrict" }),
   discountOverrideAt: timestamp("discount_override_at", { withTimezone: true }),
+  discountOverrideOutsideContractPeriod: boolean("discount_override_outside_contract_period"),
   paymentDays: integer("payment_days"),
   paymentTerm: text("payment_term"),
   taxTreatment: text("tax_treatment"),

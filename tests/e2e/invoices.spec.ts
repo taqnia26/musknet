@@ -12,6 +12,7 @@ import {
   journalEntryAuditTable,
   journalEntryLinesTable,
   productsTable,
+  uploadedContractFilesTable,
   wholesaleDistributorsTable,
 } from "@workspace/db";
 import { ensureStandardAccountingChart } from "../../artifacts/api-server/src/lib/accounting";
@@ -32,6 +33,7 @@ let productId: number;
 let distributorId: number;
 let invoiceId: number;
 let journalId: number;
+let contractFileId: number;
 
 test.beforeAll(async () => {
   await ensureStandardAccountingChart();
@@ -67,6 +69,16 @@ test.beforeAll(async () => {
     commercialRegistrationNumber: `CR-${runId}`,
   }).returning();
   distributorId = distributor.id;
+  const [contractFile] = await db.insert(uploadedContractFilesTable).values({
+    ownerType: "distributor", ownerId: distributorId, ownerName: distributor.companyName,
+    fileName: `company-reference-${runId}.pdf`, objectPath: `/objects/uploads/contracts/files/company-reference-${runId}`,
+    mimeType: "application/pdf", sizeBytes: 100, uploadedBy: adminId,
+    termsConfirmedAt: new Date(), termsConfirmedBy: adminId,
+    contractType: "Saudi distributor agreement", discountPercent: "7.50",
+    paymentTerm: "net_days", paymentDays: 30,
+    startDate: "2025-01-01", endDate: "2025-12-31",
+  }).returning();
+  contractFileId = contractFile.id;
   const [invoice] = await db.insert(invoicesTable).values({
     distributorId,
     creationKey: `invoice-display-${runId}`,
@@ -99,7 +111,7 @@ test.beforeAll(async () => {
   const accounts = await db.select({ id: accountingAccountsTable.id }).from(accountingAccountsTable).limit(2);
   if (accounts.length < 2) throw new Error("Invoice E2E requires at least two accounting accounts");
   const [journal] = await db.insert(journalEntriesTable).values({
-    entryNumber: `E2E-JE-${runId}`,
+    entryNumber: `JE-${1_000_000_000 + (Date.now() % 1_000_000_000)}`,
     entryDate: "2026-09-22",
     description: `Accounting record for ${invoiceNumber}`,
     sourceType: "distributor_invoice",
@@ -134,6 +146,26 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
+  if (distributorId) {
+    const created = await db.select({ id: invoicesTable.id }).from(invoicesTable).where(eq(invoicesTable.distributorId, distributorId));
+    for (const { id } of created.filter(row => row.id !== invoiceId)) {
+      const journals = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable).where(and(
+        eq(journalEntriesTable.sourceType, "historical_company_invoice"),
+        eq(journalEntriesTable.sourceId, String(id)),
+      ));
+      for (const journal of journals) {
+        await db.execute(sql`alter table journal_entry_lines disable trigger user`);
+        await db.execute(sql`alter table journal_entries disable trigger user`);
+        await db.delete(journalEntryAuditTable).where(eq(journalEntryAuditTable.journalEntryId, journal.id));
+        await db.delete(journalEntryLinesTable).where(eq(journalEntryLinesTable.journalEntryId, journal.id));
+        await db.delete(journalEntriesTable).where(eq(journalEntriesTable.id, journal.id));
+        await db.execute(sql`alter table journal_entry_lines enable trigger user`);
+        await db.execute(sql`alter table journal_entries enable trigger user`);
+      }
+      await db.delete(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, id));
+      await db.delete(invoicesTable).where(eq(invoicesTable.id, id));
+    }
+  }
   if (journalId) {
     await db.execute(sql`alter table journal_entry_lines disable trigger user`);
     await db.execute(sql`alter table journal_entries disable trigger user`);
@@ -147,6 +179,7 @@ test.afterAll(async () => {
     await db.delete(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoiceId));
     await db.delete(invoicesTable).where(eq(invoicesTable.id, invoiceId));
   }
+  if (contractFileId) await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, contractFileId));
   if (distributorId) await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, distributorId));
   if (productId) await db.delete(productsTable).where(eq(productsTable.id, productId));
   if (categoryId) await db.delete(categoriesTable).where(eq(categoriesTable.id, categoryId));
@@ -472,4 +505,72 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
     eq(journalEntriesTable.sourceId, String(invoiceId)),
   ));
   expect(journals.map((entry) => entry.id)).toContain(journalId);
+});
+
+test("prior date retains the approved file, warns about its period, and previews an invoice-only discount", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/admin/login");
+  await page.getByLabel(/البريد الإلكتروني|Email/).fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.getByTestId("button-login-submit").click();
+  await expect(page).toHaveURL(/\/admin(?:\/)?$/);
+  const skipTour = page.getByRole("button", { name: /تخطي|Skip/ });
+  await expect(skipTour).toBeVisible();
+  await skipTour.click();
+  await expect(skipTour).toBeHidden();
+  await page.goto("/admin/sales/companies");
+  await expect(page.getByRole("heading", { name: /فواتير الشركات|Company Invoices/ })).toBeVisible();
+  await page.getByTestId("button-create-company-invoice").click();
+  await page.getByTestId("select-company-invoice-distributor").click();
+  await page.getByRole("option", { name: `Test buyer ${runId}` }).click();
+  await page.getByTestId("input-company-invoice-issue-date").fill("2000-04-17");
+  await page.getByTestId("select-company-invoice-contract").click();
+  await page.getByRole("option", { name: new RegExp(`company-reference-${runId}`) }).click();
+  await expect(page.getByTestId("input-company-invoice-override-percent")).toHaveValue("7.5");
+  await expect(page.getByTestId("warning-company-invoice-contract-period")).toContainText(/2025-01-01/);
+  await page.getByTestId("input-company-invoice-issue-date").fill("2026-02-01");
+  await expect(page.getByTestId("select-company-invoice-contract")).toContainText(`company-reference-${runId}`);
+  await expect(page.getByTestId("warning-company-invoice-contract-period")).toContainText(/2025-12-31/);
+  await page.getByTestId("input-company-invoice-override-percent").fill("20");
+  await expect(page.getByTestId("company-invoice-totals-preview")).toContainText("20%");
+  await page.getByTestId("select-company-invoice-product-0").click();
+  await page.getByRole("option", { name: /منتج غير موجود|Product missing/ }).click();
+  await page.getByTestId("input-historical-product-name-0").fill("Historical perfume");
+  await page.getByTestId("input-company-invoice-unit-price-0").fill("115");
+  await expect(page.getByTestId("company-invoice-totals-preview")).toContainText("92.00");
+  await page.getByTestId("button-submit-company-invoice").click();
+  await expect(page.getByTestId("company-invoice-error")).toContainText(/10|١٠/);
+});
+
+test("saves a prior invoice with its displayed contract rate without editing the discount", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto("/admin/login");
+  await page.getByLabel(/البريد الإلكتروني|Email/).fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.getByTestId("button-login-submit").click();
+  await expect(page).toHaveURL(/\/admin(?:\/)?$/);
+  const skipTour = page.getByRole("button", { name: /تخطي|Skip/ });
+  await expect(skipTour).toBeVisible();
+  await skipTour.click();
+  await expect(skipTour).toBeHidden();
+  await page.goto("/admin/sales/companies");
+  await page.getByTestId("button-create-company-invoice").click();
+  await page.getByTestId("select-company-invoice-distributor").click();
+  await page.getByRole("option", { name: `Test buyer ${runId}` }).click();
+  await page.getByTestId("input-company-invoice-issue-date").fill("2000-05-21");
+  await page.getByTestId("select-company-invoice-contract").click();
+  await page.getByRole("option", { name: new RegExp(`company-reference-${runId}`) }).click();
+  await expect(page.getByTestId("input-company-invoice-override-percent")).toHaveValue("7.5");
+  await page.getByTestId("select-company-invoice-product-0").click();
+  await page.getByRole("option", { name: /منتج غير موجود|Product missing/ }).click();
+  await page.getByTestId("input-historical-product-name-0").fill("Historical perfume");
+  await page.getByTestId("input-company-invoice-unit-price-0").fill("115");
+  await page.getByTestId("button-submit-company-invoice").click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const created = await db.select().from(invoicesTable).where(eq(invoicesTable.distributorId, distributorId));
+  expect(created.find(row => row.issueDatetime.toISOString().slice(0, 10) === "2000-05-21")).toMatchObject({
+    uploadedContractFileId: contractFileId, contractDiscountPercent: "7.50",
+    appliedDiscountPercent: "7.50", invoiceDiscountPercent: null,
+    totalAmount: 106.38,
+  });
 });

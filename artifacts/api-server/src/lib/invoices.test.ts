@@ -4,7 +4,7 @@ import {
   accountingAccountsTable, adminUsersTable, categoriesTable, customersTable, db, inventoryBalancesTable, inventoryMovementsTable,
   invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryAuditTable,
   journalEntryLinesTable, operationEventsTable, orderItemsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
-  uploadedContractFilesTable, shipmentsTable, shipmentEventsTable,
+  uploadedContractFilesTable, distributorContractsTable, shipmentsTable, shipmentEventsTable,
 } from "@workspace/db";
 import { cancelCompanyInvoice, createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, updateOrderAndIssueInvoice } from "./invoices";
 import { invoiceItemName } from "./invoice-email";
@@ -24,6 +24,7 @@ let actorId: number;
 let successfulInvoiceId: number;
 const uploadedContractFileIds: number[] = [];
 
+const generatedContractIds: number[] = [];
 const order = (id: number) => ({
   id,
   userId: customerId,
@@ -96,14 +97,17 @@ afterAll(async () => {
     ));
     await db.transaction(async (tx) => {
       await tx.execute(sql`set local session_replication_role = 'replica'`);
-      const entries = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
-        .where(and(
-          or(
-             and(inArray(journalEntriesTable.sourceType, ["distributor_invoice", "distributor_invoice_cogs", "historical_company_invoice"]), inArray(journalEntriesTable.sourceId, invoiceIds.map(String))),
-             and(eq(journalEntriesTable.sourceType, "reversal"), sql`${journalEntriesTable.reversalOfEntryId} in (select id from journal_entries where source_type in ('distributor_invoice', 'distributor_invoice_cogs', 'historical_company_invoice') and source_id in (${sql.join(invoiceIds.map(id => sql`${String(id)}`), sql`, `)}))`),
-            and(eq(journalEntriesTable.sourceType, "receivable_payment"), inArray(journalEntriesTable.sourceId, payments.map((payment) => String(payment.id)))),
-          ),
-        ));
+      const entries = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable).where(and(
+        or(
+          and(inArray(journalEntriesTable.sourceType, ["distributor_invoice", "distributor_invoice_cogs", "historical_company_invoice"]),
+            inArray(journalEntriesTable.sourceId, invoiceIds.map(String))),
+          and(eq(journalEntriesTable.sourceType, "reversal"), sql`${journalEntriesTable.reversalOfEntryId} in (
+            select id from journal_entries where source_type in ('distributor_invoice', 'distributor_invoice_cogs', 'historical_company_invoice')
+              and source_id in (${sql.join(invoiceIds.map(id => sql`${String(id)}`), sql`, `)})
+          )`),
+          and(eq(journalEntriesTable.sourceType, "receivable_payment"), inArray(journalEntriesTable.sourceId, payments.map(payment => String(payment.id)))),
+        ),
+      ));
       if (entries.length) {
         const entryIds = entries.map((entry) => entry.id);
         await tx.delete(journalEntryAuditTable).where(inArray(journalEntryAuditTable.journalEntryId, entryIds));
@@ -132,6 +136,7 @@ afterAll(async () => {
   if (uploadedContractFileIds.length) {
     await db.delete(uploadedContractFilesTable).where(inArray(uploadedContractFilesTable.id, uploadedContractFileIds));
   }
+  if (generatedContractIds.length) await db.delete(distributorContractsTable).where(inArray(distributorContractsTable.id, generatedContractIds));
   await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, testDistributorIds));
   await db.delete(inventoryMovementsTable).where(eq(inventoryMovementsTable.productId, productId));
   await db.delete(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
@@ -194,13 +199,12 @@ describe.sequential("atomic invoice issuance", () => {
       updateOrderAndIssueInvoice(orderIds[1], { paymentStatus: "paid" }, env),
       updateOrderAndIssueInvoice(orderIds[2], { paymentStatus: "paid" }, env),
     ]);
-    const rows = await db.select().from(invoicesTable)
-      .where(inArray(invoicesTable.orderId, orderIds));
+    const rows = await db.select().from(invoicesTable).where(inArray(invoicesTable.orderId, orderIds.slice(0, 3)));
     expect(rows).toHaveLength(3);
     const sequences = rows.map((row) => row.sequenceNumber).sort((a, b) => a - b);
     expect(sequences).toEqual([sequences[0], sequences[0] + 1, sequences[0] + 2]);
     expect(new Set(rows.map((row) => row.invoiceNumber)).size).toBe(3);
-    const invoice = rows.find((row) => row.orderId === orderIds[1])!;
+    const [invoice] = rows.filter((row) => row.orderId === orderIds[1]);
     const [line] = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id));
     expect(line.productName).toBe("اسم الفاتورة عند الإصدار");
     expect(line.productNameEn).toBe("English invoice name at issue");
@@ -306,10 +310,48 @@ describe.sequential("distributor invoice issuance", () => {
     VAT_REGISTRATION_NUMBER: "300000000000003",
   };
 
+  it("retains a final generated contract before its start and records its invoice-only discount", async () => {
+    const [contract] = await db.insert(distributorContractsTable).values({
+      contractNumber: `BACKDATED-${base}`, distributorId, contractType: "Saudi distributor agreement",
+      status: "final", sellerName: "Test seller", sellerCrNumber: "123", sellerCrDate: "01/01/2027",
+      sellerCrIssuer: "Test", sellerAddress: "Test address", sellerRepName: "Test representative",
+      sellerRepTitle: "Manager", buyerCompanyName: "موزع اختبار", createdBy: actorId,
+      marginPercent: "7.50", startDate: new Date("2025-01-01T12:00:00Z"),
+      endDate: new Date("2025-12-31T12:00:00Z"),
+    }).returning();
+    generatedContractIds.push(contract.id);
+    const today = saudiCalendarDate(new Date());
+    await expect(createCompanyInvoice({
+      creationKey: `generated-expired-current-${base}`, distributorId, contractId: contract.id,
+      issueDate: today, dueDate: today, items: [{ productId, quantity: 1, unitPrice: 115 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    const request = {
+      creationKey: `generated-prior-${base}`, distributorId, contractId: contract.id,
+      issueDate: "2001-02-01", dueDate: "2001-03-01",
+      discountOverride: { percent: 20, reason: "Approved single-invoice historical discount" },
+      items: [{ productId, quantity: 1, unitPrice: 115 }],
+    };
+    const beforeStock = (await db.select({ stock: productsTable.stockQuantity }).from(productsTable).where(eq(productsTable.id, productId)))[0].stock;
+    const created = await createCompanyInvoice(request, actorId, env);
+    const [stored] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, created.id));
+    expect(stored).toMatchObject({
+      historical: "yes", contractId: contract.id, contractNumber: contract.contractNumber,
+      contractDiscountPercent: "7.50", invoiceDiscountPercent: "20.00",
+      appliedDiscountPercent: "20.00",
+      discountOverrideOutsideContractPeriod: true, discountOverrideByAdminId: actorId,
+      subtotal: 80, vatAmount: 12, totalAmount: 92, discountAmount: 23, qrCodeData: "",
+    });
+    expect(stored.discountOverrideAt).toBeInstanceOf(Date);
+    expect((await db.select().from(productsTable).where(eq(productsTable.id, productId)))[0].stockQuantity).toBe(beforeStock);
+    expect(await db.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, created.id))).toHaveLength(0);
+    expect((await createCompanyInvoice(request, actorId, env)).id).toBe(created.id);
+    await expect(createCompanyInvoice({ ...request, discountOverride: { percent: 21, reason: request.discountOverride.reason } }, actorId, env))
+      .rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+  });
+
   it("rejects an inactive distributor without saving anything", async () => {
     await expect(createDistributorInvoice({
-      creationKey: `inactive-${base}-invoice`,
-      distributorId: inactiveDistributorId,
+      creationKey: `inactive-${base}-invoice`, distributorId: inactiveDistributorId,
       items: [{ productId, quantity: 1, unitPrice: 20 }],
     }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
     const rows = await db.select().from(invoicesTable).where(eq(invoicesTable.distributorId, inactiveDistributorId));
@@ -472,6 +514,7 @@ describe.sequential("distributor invoice issuance", () => {
       contractNumber: files[0].fileName,
       contractType: "Saudi distributor agreement",
       contractDiscountPercent: "7.50",
+      appliedDiscountPercent: "7.50",
       paymentTerm: "end_of_month",
       paymentDays: null,
       dueDate,
@@ -491,6 +534,7 @@ describe.sequential("distributor invoice issuance", () => {
     const [savedOverride] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, overridden.id));
     expect(savedOverride).toMatchObject({
       contractDiscountPercent: "7.50",
+      appliedDiscountPercent: "25.00",
       invoiceDiscountPercent: "25.00",
       discountOverrideReason: overrideRequest.discountOverride.reason,
       discountOverrideByAdminId: actorId,
@@ -498,6 +542,7 @@ describe.sequential("distributor invoice issuance", () => {
       discountAmount: 5,
     });
     expect(savedOverride.discountOverrideAt).toBeInstanceOf(Date);
+    expect(savedOverride.discountOverrideOutsideContractPeriod).toBe(false);
     const [unchangedContract] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, files[0].id));
     expect(unchangedContract.discountPercent).toBe("7.50");
     const priorInvoice = await createCompanyInvoice({
@@ -514,8 +559,10 @@ describe.sequential("distributor invoice issuance", () => {
       historical: "yes",
       uploadedContractFileId: files[0].id,
       contractDiscountPercent: "7.50",
+      appliedDiscountPercent: "25.00",
       invoiceDiscountPercent: "25.00",
       discountOverrideByAdminId: actorId,
+      discountOverrideOutsideContractPeriod: true,
       discountAmount: 5,
       totalAmount: 15,
     });
@@ -534,12 +581,66 @@ describe.sequential("distributor invoice issuance", () => {
       historical: "yes",
       uploadedContractFileId: files[0].id,
       contractDiscountPercent: "7.50",
+      appliedDiscountPercent: "7.50",
       invoiceDiscountPercent: null,
+      discountOverrideOutsideContractPeriod: null,
       discountAmount: 1.5,
       totalAmount: 18.5,
     });
     const [stillUnchanged] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, files[0].id));
     expect(stillUnchanged.discountPercent).toBe("7.50");
+    const unchangedRate = await createCompanyInvoice({
+      creationKey: `unchanged-${base}-invoice`, distributorId, uploadedContractFileId: files[0].id,
+      issueDate: "2000-04-18", dueDate: "2000-05-18",
+      discountOverride: { percent: 7.5 }, items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env);
+    const [unchangedSaved] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, unchangedRate.id));
+    expect(unchangedSaved).toMatchObject({ appliedDiscountPercent: "7.50", invoiceDiscountPercent: null, discountOverrideReason: null, discountOverrideOutsideContractPeriod: null });
+    expect((await createCompanyInvoice({
+      creationKey: `unchanged-${base}-invoice`, distributorId, uploadedContractFileId: files[0].id,
+      issueDate: "2000-04-18", dueDate: "2000-05-18",
+      discountOverride: { percent: 7.5 }, items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env)).id).toBe(unchangedRate.id);
+    await db.update(uploadedContractFilesTable).set({ startDate: "1999-01-01", endDate: "1999-12-31" }).where(eq(uploadedContractFilesTable.id, files[0].id));
+    const afterEnd = await createCompanyInvoice({
+      creationKey: `expired-${base}-invoice`, distributorId, uploadedContractFileId: files[0].id,
+      issueDate: "2000-04-19", dueDate: "2000-05-19",
+      discountOverride: { percent: 10, reason: "Approved historical exception after contract end" },
+      items: [{ productId, quantity: 2, unitPrice: 19.99 }],
+    }, actorId, env);
+    const [expiredSaved] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, afterEnd.id));
+    expect(expiredSaved).toMatchObject({
+      uploadedContractFileId: files[0].id, contractDiscountPercent: "7.50", appliedDiscountPercent: "10.00", invoiceDiscountPercent: "10.00",
+      discountOverrideOutsideContractPeriod: true, totalAmount: 35.98, discountAmount: 4,
+      subtotal: 31.29, vatAmount: 4.69,
+    });
+    const historicalJournal = await db.select().from(journalEntriesTable).where(and(
+      eq(journalEntriesTable.sourceType, "historical_company_invoice"), eq(journalEntriesTable.sourceId, String(afterEnd.id)),
+    ));
+    expect(historicalJournal).toHaveLength(1);
+    const journalLines = await db.select({ code: accountingAccountsTable.code, debit: journalEntryLinesTable.debit, credit: journalEntryLinesTable.credit })
+      .from(journalEntryLinesTable).innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
+      .where(eq(journalEntryLinesTable.journalEntryId, historicalJournal[0].id));
+    expect(journalLines).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "1130", debit: "35.9800" }),
+      expect.objectContaining({ code: "4100", credit: "31.2900" }),
+      expect.objectContaining({ code: "2120", credit: "4.6900" }),
+    ]));
+    expect(await db.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, afterEnd.id))).toHaveLength(0);
+    expect(await db.select().from(inventoryMovementsTable).where(and(eq(inventoryMovementsTable.sourceType, "distributor_invoice"), eq(inventoryMovementsTable.sourceId, String(afterEnd.id))))).toHaveLength(0);
+    expect((await createCompanyInvoice({
+      creationKey: `expired-${base}-invoice`, distributorId, uploadedContractFileId: files[0].id,
+      issueDate: "2000-04-19", dueDate: "2000-05-19",
+      discountOverride: { percent: 10, reason: "Approved historical exception after contract end" },
+      items: [{ productId, quantity: 2, unitPrice: 19.99 }],
+    }, actorId, env)).id).toBe(afterEnd.id);
+    await expect(createCompanyInvoice({
+      creationKey: `expired-${base}-invoice`, distributorId, uploadedContractFileId: files[0].id,
+      issueDate: "2000-04-19", dueDate: "2000-05-19",
+      discountOverride: { percent: 11, reason: "Approved historical exception after contract end" },
+      items: [{ productId, quantity: 2, unitPrice: 19.99 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await db.update(uploadedContractFilesTable).set({ startDate: issueDate, endDate: null }).where(eq(uploadedContractFilesTable.id, files[0].id));
     expect((await createCompanyInvoice(overrideRequest, actorId, env)).id).toBe(overridden.id);
     await expect(createCompanyInvoice({
       ...overrideRequest, discountOverride: { percent: 30, reason: overrideRequest.discountOverride.reason },
@@ -548,11 +649,8 @@ describe.sequential("distributor invoice issuance", () => {
       ...overrideRequest, creationKey: `invalid-override-${base}`, discountOverride: { percent: 30, reason: "short" },
     }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceValidationError);
     await expect(createDistributorInvoice({
-      creationKey: `uploaded-${base}-invoice`,
-      distributorId,
-      uploadedContractFileId: files[1].id,
-      taxTreatment: "domestic",
-      items: [{ productId, quantity: 1, unitPrice: 20 }],
+      creationKey: `uploaded-${base}-invoice`, distributorId, uploadedContractFileId: files[1].id,
+      taxTreatment: "domestic", items: [{ productId, quantity: 1, unitPrice: 20 }],
     }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
   });
 
@@ -833,6 +931,7 @@ describe.sequential("distributor invoice issuance", () => {
 
   it("voids an uncollected live invoice once and balances receivable, VAT, revenue, COGS and stock", async () => {
     const request = { creationKey: `void-${base}-invoice`, distributorId: paidTestDistributorId!, items: [{ productId, quantity: 1, unitPrice: 23 }] };
+
     const before = (await db.select().from(productsTable).where(eq(productsTable.id, productId)))[0];
     const invoice = await createDistributorInvoice(request, actorId, env);
     const [shipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, invoice.id));

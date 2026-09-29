@@ -160,7 +160,7 @@ async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoices
   distributorId: number;
   contractId?: number;
   uploadedContractFileId?: number;
-  discountOverride?: { percent: number; reason: string };
+  discountOverride?: { percent: number; reason?: string };
   taxTreatment?: TaxTreatment;
   dueDate?: string | Date;
   items: Array<{ productId: number; quantity: number; unitPrice: number }>;
@@ -188,7 +188,7 @@ async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoices
     (input.uploadedContractFileId !== undefined && input.uploadedContractFileId !== previous.uploadedContractFileId) ||
     (input.discountOverride !== undefined && (
       previous.invoiceDiscountPercent !== String(input.discountOverride.percent.toFixed(2)) ||
-      previous.discountOverrideReason !== input.discountOverride.reason.trim()
+       previous.discountOverrideReason !== input.discountOverride.reason?.trim()
     )) ||
     (input.discountOverride === undefined && previous.invoiceDiscountPercent !== null) ||
     (input.taxTreatment !== undefined && input.taxTreatment !== previous.taxTreatment) ||
@@ -291,7 +291,7 @@ export async function createExhibitionInvoice(
 }
 
 export async function createDistributorInvoice(
-  input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; discountOverride?: { percent: number; reason: string }; taxTreatment?: TaxTreatment; issueDate?: string | Date; dueDate?: string | Date; collected?: { paymentDate: string | Date; paymentMethod: "cash" | "bank_transfer" }; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; discountOverride?: { percent: number; reason?: string }; taxTreatment?: TaxTreatment; issueDate?: string | Date; dueDate?: string | Date; collected?: { paymentDate: string | Date; paymentMethod: "cash" | "bank_transfer" }; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
   environment: NodeJS.ProcessEnv = process.env,
 ) {
@@ -302,9 +302,8 @@ export async function createDistributorInvoice(
   }
   if (input.discountOverride && (
     !Number.isFinite(input.discountOverride.percent) || input.discountOverride.percent < 0 ||
-    input.discountOverride.percent > 100 || Math.round(input.discountOverride.percent * 100) !== input.discountOverride.percent * 100 ||
-    input.discountOverride.reason.trim().length < 10 || input.discountOverride.reason.trim().length > 500
-  )) throw new DistributorInvoiceValidationError("Discount override requires a valid percentage and a written reason (10–500 characters)");
+     input.discountOverride.percent > 100 || Math.round(input.discountOverride.percent * 100) !== input.discountOverride.percent * 100
+   )) throw new DistributorInvoiceValidationError("Discount override requires a percentage between 0 and 100 with at most two decimals");
   const productIds = input.items.map((item) => item.productId);
   if (new Set(productIds).size !== productIds.length) {
     throw new DistributorInvoiceValidationError("Each product may only appear once");
@@ -319,7 +318,7 @@ export async function createDistributorInvoice(
     await tx.execute(sql`select pg_advisory_xact_lock(7521, hashtext(${input.creationKey}))`);
     const [previous] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (previous) {
-      await assertDistributorInvoiceReplay(tx, previous, input);
+      await assertDistributorInvoiceReplay(tx, previous, { ...input, discountOverride: input.discountOverride?.percent === Number(previous.contractDiscountPercent ?? 0) ? undefined : input.discountOverride });
       const previousItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, previous.id)).orderBy(invoiceItemsTable.id);
       const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, previous.id)).orderBy(receivablePaymentsTable.paymentDate);
       const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
@@ -406,7 +405,12 @@ export async function createDistributorInvoice(
       throw new DistributorInvoiceConflictError("Contract discount must be between 0 and 100 percent");
     }
     const contractDiscountPercent = contract || uploadedContract ? rawDiscount : 0;
-    const appliedDiscountPercent = input.discountOverride?.percent ?? contractDiscountPercent;
+    const effectiveOverride = input.discountOverride?.percent === contractDiscountPercent ? undefined : input.discountOverride;
+    if (effectiveOverride && ((effectiveOverride.reason?.trim().length ?? 0) < 10 || (effectiveOverride.reason?.trim().length ?? 0) > 500)) {
+      throw new DistributorInvoiceValidationError("Discount override requires a written reason (10–500 characters)");
+    }
+    const appliedDiscountPercent = effectiveOverride?.percent ?? contractDiscountPercent;
+    const normalizedInput = { ...input, discountOverride: effectiveOverride };
 
     const sortedProductIds = [...productIds].sort((a, b) => a - b);
     for (const productId of sortedProductIds) {
@@ -452,7 +456,7 @@ export async function createDistributorInvoice(
     await tx.execute(sql`select pg_advisory_xact_lock(${INVOICE_NUMBER_LOCK})`);
     const [afterLock] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (afterLock) {
-      await assertDistributorInvoiceReplay(tx, afterLock, input);
+      await assertDistributorInvoiceReplay(tx, afterLock, normalizedInput);
       const afterLockItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, afterLock.id)).orderBy(invoiceItemsTable.id);
       const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, afterLock.id)).orderBy(receivablePaymentsTable.paymentDate);
       const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
@@ -493,10 +497,12 @@ export async function createDistributorInvoice(
       contractNumber: contract?.contractNumber ?? uploadedContract?.fileName ?? null,
       contractType: selectedContractType,
       contractDiscountPercent: contract || uploadedContract ? String(contractDiscountPercent) : null,
-      invoiceDiscountPercent: input.discountOverride ? appliedDiscountPercent.toFixed(2) : null,
-      discountOverrideReason: input.discountOverride?.reason.trim() ?? null,
-      discountOverrideByAdminId: input.discountOverride ? actorId : null,
-      discountOverrideAt: input.discountOverride ? new Date() : null,
+      appliedDiscountPercent: appliedDiscountPercent.toFixed(2),
+      invoiceDiscountPercent: effectiveOverride ? appliedDiscountPercent.toFixed(2) : null,
+      discountOverrideReason: effectiveOverride?.reason?.trim() ?? null,
+      discountOverrideByAdminId: effectiveOverride ? actorId : null,
+      discountOverrideAt: effectiveOverride ? new Date() : null,
+      discountOverrideOutsideContractPeriod: effectiveOverride ? false : null,
       paymentDays: contract?.paymentDays ?? (uploadedContract?.paymentTerm === "net_days" ? uploadedContract.paymentDays : null),
       paymentTerm: uploadedContract?.paymentTerm ?? (contract ? (/نقد|cash/i.test(contract.contractType) ? "due_on_issue" : "net_days") : null),
       taxTreatment,
@@ -611,7 +617,7 @@ export async function createDistributorInvoice(
       sourceType: "distributor_invoice",
       sourceId: String(invoice.id),
       actorId,
-      payload: { request: input },
+      payload: { request: normalizedInput },
     });
     return { ...invoice, orderNumber: null, distributorName: distributor.companyName, exhibitionName: null,
       paidAmount: input.collected ? totalAmount : 0, outstandingAmount: input.collected ? 0 : invoice.totalAmount,

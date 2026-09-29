@@ -2326,6 +2326,11 @@ export interface AdminInvoice {
   contractType: string | null;
   /** @nullable */
   contractDiscountPercent: number | null;
+  /**
+     * Rate actually applied to a company invoice; null for legacy and non-company invoices.
+     * @nullable
+     */
+  appliedDiscountPercent?: number | null;
   /** @nullable */
   invoiceDiscountPercent?: number | null;
   /** @nullable */
@@ -2334,6 +2339,11 @@ export interface AdminInvoice {
   discountOverrideByAdminId?: number | null;
   /** @nullable */
   discountOverrideAt?: string | null;
+  /**
+     * Server-derived on an exceptional company invoice: true when the selected source was outside its period on the issue date; null when there is no exception.
+     * @nullable
+     */
+  discountOverrideOutsideContractPeriod?: boolean | null;
   /** @nullable */
   paymentDays: number | null;
   /** @nullable */
@@ -2516,6 +2526,9 @@ export interface CompanyInvoiceLineInput {
   unitPrice: number;
 }
 
+/**
+ * Invoice-only rate. If it differs from the selected contract rate (or zero without a contract), reason is required; an unchanged rate is treated as no exception.
+ */
 export type CompanyInvoiceInputDiscountOverride = {
   /**
      * @minimum 0
@@ -2526,7 +2539,7 @@ export type CompanyInvoiceInputDiscountOverride = {
      * @minLength 10
      * @maxLength 500
      */
-  reason: string;
+  reason?: string;
 };
 
 export type CompanyInvoiceInputPaymentMethod = typeof CompanyInvoiceInputPaymentMethod[keyof typeof CompanyInvoiceInputPaymentMethod];
@@ -2548,10 +2561,17 @@ export interface CompanyInvoiceInput {
   dueDate: string;
   /** @minimum 1 */
   distributorId: number;
-  /** @minimum 1 */
+  /**
+     * One approved company-owned source. Historical invoices may reference it outside its effective period; current invoices require it to be current.
+     * @minimum 1
+     */
   contractId?: number;
-  /** @minimum 1 */
+  /**
+     * Alternative confirmed company-owned source; never supply both sources.
+     * @minimum 1
+     */
   uploadedContractFileId?: number;
+  /** Invoice-only rate. If it differs from the selected contract rate (or zero without a contract), reason is required; an unchanged rate is treated as no exception. */
   discountOverride?: CompanyInvoiceInputDiscountOverride;
   /**
      * Optional original reference for past-dated historical invoices.
@@ -6253,4 +6273,3 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
-

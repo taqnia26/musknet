@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Invoice-only rate. If it differs from the selected contract rate (or zero without a contract), reason is required; an unchanged rate is treated as no exception.
+ */
 export type CompanyInvoiceInputDiscountOverride = {
   /**
      * @minimum 0
@@ -16,5 +19,5 @@ export type CompanyInvoiceInputDiscountOverride = {
      * @minLength 10
      * @maxLength 500
      */
-  reason: string;
+  reason?: string;
 };

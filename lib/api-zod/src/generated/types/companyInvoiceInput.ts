@@ -20,10 +20,17 @@ export interface CompanyInvoiceInput {
   dueDate: Date;
   /** @minimum 1 */
   distributorId: number;
-  /** @minimum 1 */
+  /**
+     * One approved company-owned source. Historical invoices may reference it outside its effective period; current invoices require it to be current.
+     * @minimum 1
+     */
   contractId?: number;
-  /** @minimum 1 */
+  /**
+     * Alternative confirmed company-owned source; never supply both sources.
+     * @minimum 1
+     */
   uploadedContractFileId?: number;
+  /** Invoice-only rate. If it differs from the selected contract rate (or zero without a contract), reason is required; an unchanged rate is treated as no exception. */
   discountOverride?: CompanyInvoiceInputDiscountOverride;
   /**
      * Optional original reference for past-dated historical invoices.

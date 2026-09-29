@@ -24,7 +24,7 @@ import { sortProductsForSelection } from '@/lib/product-sort';
 import { formatRiyadhBusinessDate } from '@/lib/riyadh-business-date';
 
 type Line = { id: string; productId: string; productName: string; sku: string; manualSnapshot: boolean; quantity: string; unitPrice: string };
-type ContractOption = { key: string; label: string; contractId?: number; uploadedContractFileId?: number; contractType: string; discountPercent: number; vatRate: number | null };
+type ContractOption = { key: string; label: string; contractId?: number; uploadedContractFileId?: number; contractType: string; discountPercent: number; vatRate: number | null; startDate?: string | null; endDate?: string | null };
 const dateInRiyadh = () => formatRiyadhBusinessDate(new Date());
 const dateAfter = (date: string, days: number) => {
   const [year, month, day] = date.split('-').map(Number);
@@ -46,7 +46,6 @@ export function CreateCompanyInvoiceDialog() {
   const [dueDate, setDueDate] = useState(() => dateAfter(dateInRiyadh(), 30));
   const [originalInvoiceNumber, setOriginalInvoiceNumber] = useState('');
   const [contractKey, setContractKey] = useState('');
-  const [overrideDiscount, setOverrideDiscount] = useState(false);
   const [overridePercent, setOverridePercent] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
   const [collected, setCollected] = useState(false);
@@ -74,8 +73,8 @@ export function CreateCompanyInvoiceDialog() {
     if (!distributorId) return [];
     const generated = (contracts ?? [])
       .filter(contract => contract.status === 'final' && contract.distributorId === Number(distributorId)
-        && (!contract.startDate || contract.startDate.slice(0, 10) <= today)
-        && (!contract.endDate || contract.endDate.slice(0, 10) >= today))
+         && (isHistorical || ((!contract.startDate || contract.startDate.slice(0, 10) <= today)
+         && (!contract.endDate || contract.endDate.slice(0, 10) >= today))))
       .map(contract => ({
         key: `contract-${contract.id}`,
         contractId: contract.id,
@@ -83,12 +82,14 @@ export function CreateCompanyInvoiceDialog() {
         contractType: contract.contractType,
         discountPercent: Number(contract.marginPercent ?? 0),
         vatRate: contract.vatRate == null ? null : Number(contract.vatRate),
+        startDate: contract.startDate?.slice(0, 10),
+        endDate: contract.endDate?.slice(0, 10),
       }));
     const uploaded = (contractFiles ?? [])
       .filter(file => file.ownerType === 'distributor' && file.ownerId === Number(distributorId)
         && Boolean(file.termsConfirmedAt)
-        && (!file.startDate || file.startDate.slice(0, 10) <= today)
-        && (!file.endDate || file.endDate.slice(0, 10) >= today))
+         && (isHistorical || ((!file.startDate || file.startDate.slice(0, 10) <= today)
+         && (!file.endDate || file.endDate.slice(0, 10) >= today))))
       .map(file => ({
         key: `file-${file.id}`,
         uploadedContractFileId: file.id,
@@ -96,10 +97,17 @@ export function CreateCompanyInvoiceDialog() {
         contractType: file.contractType ?? '',
         discountPercent: Number(file.discountPercent ?? 0),
         vatRate: null,
+        startDate: file.startDate,
+        endDate: file.endDate,
       }));
     return [...generated, ...uploaded];
-  }, [contracts, contractFiles, distributorId, t, today]);
+  }, [contracts, contractFiles, distributorId, t, today, isHistorical]);
   const selectedContract = contractOptions.find(option => option.key === contractKey);
+  const missingSelectedSource = Boolean(contractKey && !selectedContract);
+  const periodWarning = selectedContract && validDate(issueDate)
+    ? selectedContract.startDate && issueDate < selectedContract.startDate ? 'before'
+      : selectedContract.endDate && issueDate > selectedContract.endDate ? 'after' : null
+    : null;
   const pendingUploadedFiles = useMemo(() => (contractFiles ?? []).filter(file =>
     !isHistorical && file.ownerType === 'distributor' && file.ownerId === Number(distributorId) && !file.termsConfirmedAt,
   ), [contractFiles, distributorId, isHistorical]);
@@ -110,7 +118,9 @@ export function CreateCompanyInvoiceDialog() {
   const contractType = selectedContract?.contractType ?? '';
   const isGulfContract = contractType.includes('دول الخليج');
   const isSaudiContract = contractType.includes('السعودية');
-  const discountPercent = overrideDiscount ? Number(overridePercent || 0) : Number(selectedContract?.discountPercent ?? 0);
+  const contractDiscount = Number(selectedContract?.discountPercent ?? 0);
+  const discountPercent = overridePercent === '' ? contractDiscount : Number(overridePercent);
+  const discountChanged = discountPercent !== contractDiscount;
   const vatRate = taxTreatment === 'international' ? 0 : Math.max(0, Number(selectedContract?.vatRate ?? 15) || 0);
   const totals = useMemo(() => {
     const amounts = lines.map(line => {
@@ -138,7 +148,6 @@ export function CreateCompanyInvoiceDialog() {
     setDueDate(dateAfter(today, 30));
     setOriginalInvoiceNumber('');
     setContractKey('');
-    setOverrideDiscount(false);
     setOverridePercent('');
     setOverrideReason('');
     setCollected(false);
@@ -175,6 +184,10 @@ export function CreateCompanyInvoiceDialog() {
       setError(t('تعذر التحقق من العقود المرتبطة. حاول مجدداً قبل إصدار الفاتورة.', 'Could not verify linked contracts. Retry before issuing the invoice.'));
       return;
     }
+    if (missingSelectedSource) {
+      setError(t('المصدر المحدد لم يعد متاحاً. اختر عقداً معتمداً أو أزل الاختيار صراحةً.', 'The selected source is no longer available. Select an approved source or explicitly choose no contract.'));
+      return;
+    }
     if (pendingUploadedFiles.length && !selectedContract) {
       setError(t('يوجد ملف عقد لهذه الشركة بانتظار اعتماد الشروط. اعتمد الشروط قبل الإصدار أو اختر مصدراً معتمداً.', 'An uploaded contract for this company is awaiting approved terms. Approve the terms or select an approved source before issuing.'));
       return;
@@ -187,10 +200,9 @@ export function CreateCompanyInvoiceDialog() {
       setError(t('عقد المملكة العربية السعودية يتطلب أن تكون دولة الشركة SA.', 'A Saudi contract requires the company country to be SA.'));
       return;
     }
-    if (overrideDiscount && (overridePercent.trim() === '' ||
-      !Number.isFinite(Number(overridePercent)) || Number(overridePercent) < 0 ||
-      Number(overridePercent) > 100 || Math.round(Number(overridePercent) * 100) !== Number(overridePercent) * 100 ||
-      overrideReason.trim().length < 10 || overrideReason.trim().length > 500)) {
+    if (!Number.isFinite(discountPercent) || discountPercent < 0 ||
+       discountPercent > 100 || Math.round(discountPercent * 100) !== discountPercent * 100 ||
+       (discountChanged && (overrideReason.trim().length < 10 || overrideReason.trim().length > 500))) {
       setError(t('الخصم الاستثنائي يحتاج نسبة بين 0 و100 وسبباً مكتوباً من 10 إلى 500 حرف.', 'A discount override requires a percentage from 0 to 100 and a written reason of 10–500 characters.'));
       return;
     }
@@ -203,7 +215,7 @@ export function CreateCompanyInvoiceDialog() {
         distributorId: Number(distributorId),
         ...(selectedContract?.contractId ? { contractId: selectedContract.contractId } : {}),
         ...(selectedContract?.uploadedContractFileId ? { uploadedContractFileId: selectedContract.uploadedContractFileId } : {}),
-        ...(overrideDiscount ? { discountOverride: { percent: Number(overridePercent), reason: overrideReason.trim() } } : {}),
+         ...(discountChanged ? { discountOverride: { percent: discountPercent, reason: overrideReason.trim() } } : {}),
         ...(isHistorical && originalInvoiceNumber.trim() ? { originalInvoiceNumber: originalInvoiceNumber.trim() } : {}),
         collected,
         ...(collected ? { paymentDate, paymentMethod } : {}),
@@ -260,7 +272,7 @@ export function CreateCompanyInvoiceDialog() {
             </div>
             <div className="space-y-2">
               <Label>{t('الشركة', 'Company')}</Label>
-              <Select value={distributorId} onValueChange={value => { rotateCreationKey(); setDistributorId(value); setContractKey(''); }}>
+              <Select value={distributorId} onValueChange={value => { rotateCreationKey(); setDistributorId(value); setContractKey(''); setOverridePercent(''); setOverrideReason(''); }}>
                 <SelectTrigger data-testid="select-company-invoice-distributor"><SelectValue placeholder={t('اختر الشركة', 'Select company')} /></SelectTrigger>
                 <SelectContent>{(distributors ?? []).map(item => <SelectItem key={item.id} value={String(item.id)}>{item.companyName}</SelectItem>)}</SelectContent>
               </Select>
@@ -276,10 +288,14 @@ export function CreateCompanyInvoiceDialog() {
               {isHistorical && <p className="text-xs text-muted-foreground">{t('يظهر العقد المعتمد كمرجع لهذا التسجيل حتى لو سبق تاريخ الفاتورة تاريخ العقد؛ لا يعني ذلك أنه كان سارياً حينها ولا يغير شروطه.', 'The approved contract is a reference for this prior record even when the invoice predates it; it is not a claim that it was effective then and its terms are unchanged.')}</p>}
               {contractsLoading || filesLoading ? <p className="text-sm text-muted-foreground">{t('جاري تحميل العقود...', 'Loading contracts...')}</p> : contractsError || filesError
                 ? <p role="alert" className="text-sm text-destructive">{t('تعذر تحميل العقود والملفات المرفوعة.', 'Could not load contracts and uploaded files.')}</p>
-                : <Select value={contractKey || 'none'} onValueChange={value => { rotateCreationKey(); setContractKey(value === 'none' ? '' : value); }} disabled={!distributorId}>
+                : <Select value={contractKey || 'none'} onValueChange={value => { rotateCreationKey(); setContractKey(value === 'none' ? '' : value); setOverridePercent(''); setOverrideReason(''); }} disabled={!distributorId}>
                   <SelectTrigger data-testid="select-company-invoice-contract"><SelectValue placeholder={t('بدون عقد', 'No contract')} /></SelectTrigger>
                   <SelectContent><SelectItem value="none">{t('بدون عقد', 'No contract')}</SelectItem>{contractOptions.map(option => <SelectItem key={option.key} value={option.key}>{option.label}</SelectItem>)}</SelectContent>
                 </Select>}
+              {missingSelectedSource && <p role="alert" className="text-sm text-destructive">{t('المصدر المحدد لم يعد متاحاً؛ أعد اختياره أو اختر بدون عقد.', 'Selected source is unavailable; select another or explicitly choose no contract.')}</p>}
+              {periodWarning && <p role="alert" data-testid="warning-company-invoice-contract-period" className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-900">{periodWarning === 'before'
+                ? t(`تاريخ الفاتورة يسبق بدء العقد (${selectedContract?.startDate}). هذا مرجع فقط ولا يثبت سريان العقد حينها.`, `Invoice date is before the contract starts (${selectedContract?.startDate}). This is a reference only, not proof it was effective then.`)
+                : t(`تاريخ الفاتورة بعد انتهاء العقد (${selectedContract?.endDate}). هذا مرجع فقط ولا يثبت سريان العقد حينها.`, `Invoice date is after the contract ends (${selectedContract?.endDate}). This is a reference only, not proof it was effective then.`)}</p>}
               {pendingUploadedFiles.length > 0 && <p role="alert" className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-sm text-amber-800">{t(
                 `يوجد ${pendingUploadedFiles.length} ملف عقد بانتظار اعتماد الشروط (${pendingUploadedFiles.map(file => file.fileName).join('، ')}).`,
                 `${pendingUploadedFiles.length} uploaded contract file(s) await terms approval (${pendingUploadedFiles.map(file => file.fileName).join(', ')}).`,
@@ -287,18 +303,14 @@ export function CreateCompanyInvoiceDialog() {
             </div>
             <div className="space-y-3 sm:col-span-2 rounded-md border p-3">
               <p className="text-sm">{t(`خصم العقد: ${selectedContract?.discountPercent ?? 0}% (لا يُعدل العقد)`, `Contract discount: ${selectedContract?.discountPercent ?? 0}% (contract remains unchanged)`)}</p>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={overrideDiscount} onChange={event => { rotateCreationKey(); setOverrideDiscount(event.target.checked); setOverridePercent(String(selectedContract?.discountPercent ?? 0)); setOverrideReason(''); }} />
-                {t('تغيير خصم هذه الفاتورة فقط', 'Override this invoice discount only')}
-              </label>
-              {overrideDiscount && <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5"><Label htmlFor="company-invoice-override-percent">{t('خصم الفاتورة (%)', 'Invoice discount (%)')}</Label>
-                  <Input id="company-invoice-override-percent" data-testid="input-company-invoice-override-percent" type="number" min="0" max="100" step="0.01" value={overridePercent} onChange={event => { rotateCreationKey(); setOverridePercent(event.target.value); }} />
+                  <Input id="company-invoice-override-percent" data-testid="input-company-invoice-override-percent" type="number" min="0" max="100" step="0.01" value={overridePercent === '' ? String(contractDiscount) : overridePercent} onChange={event => { rotateCreationKey(); setOverridePercent(event.target.value); }} />
                 </div>
-                <div className="space-y-1.5"><Label htmlFor="company-invoice-override-reason">{t('سبب الاستثناء (إلزامي)', 'Override reason (required)')}</Label>
-                  <Input id="company-invoice-override-reason" data-testid="input-company-invoice-override-reason" maxLength={500} value={overrideReason} onChange={event => { rotateCreationKey(); setOverrideReason(event.target.value); }} />
+                <div className="space-y-1.5"><Label htmlFor="company-invoice-override-reason">{discountChanged ? t('سبب الاستثناء (إلزامي)', 'Override reason (required)') : t('سبب الاستثناء (عند تغيير النسبة فقط)', 'Override reason (only if rate changes)')}</Label>
+                  <Input id="company-invoice-override-reason" data-testid="input-company-invoice-override-reason" maxLength={500} required={discountChanged} value={overrideReason} onChange={event => { rotateCreationKey(); setOverrideReason(event.target.value); }} />
                 </div>
-              </div>}
+              </div>
             </div>
           </div>
 
