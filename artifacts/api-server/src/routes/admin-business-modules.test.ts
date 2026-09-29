@@ -7,7 +7,7 @@ import {
   exhibitionProductsTable, exhibitionsTable, expensesTable, manufacturingBatchesTable,
   invoicesTable, invoiceItemsTable, inventoryBalancesTable, inventoryMovementsTable,
   journalEntriesTable, journalEntryLinesTable, journalEntryAuditTable, operationEventsTable, receivablePaymentsTable,
-  ordersTable, payrollRecordsTable, productsTable,
+  ordersTable, payrollRecordsTable, productsTable, shipmentsTable, wholesaleDistributorsTable,
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
@@ -25,6 +25,8 @@ let productId: number;
 let exhibitionId: number;
 let exhibitionInvoiceId: number;
 const exhibitionInvoiceIds: number[] = [];
+const companyInvoiceIds: number[] = [];
+let companyDistributorId: number;
 let expenseId: number;
 
 const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
@@ -70,13 +72,19 @@ beforeAll(async () => {
     price: 250, categoryId: base + 2,
   }).returning();
   productId = product.id;
+  const [distributor] = await db.insert(wholesaleDistributorsTable).values({
+    companyName: `Business route company ${suffix}`, contactName: "Tester", phone: `055${String(suffix).slice(-7)}`,
+    countryCode: "SA",
+  }).returning({ id: wholesaleDistributorsTable.id });
+  companyDistributorId = distributor.id;
 });
 
 afterAll(async () => {
-  if (exhibitionInvoiceIds.length) {
+  const invoiceIds = [...exhibitionInvoiceIds, ...companyInvoiceIds];
+  if (invoiceIds.length) {
     const entries = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
-      .where(and(inArray(journalEntriesTable.sourceType, ["exhibition_invoice", "exhibition_invoice_cogs"]),
-        inArray(journalEntriesTable.sourceId, exhibitionInvoiceIds.map(String))));
+      .where(and(inArray(journalEntriesTable.sourceType, ["exhibition_invoice", "exhibition_invoice_cogs", "distributor_invoice", "distributor_invoice_cogs"]),
+        inArray(journalEntriesTable.sourceId, invoiceIds.map(String))));
     if (entries.length) {
       const ids = entries.map(entry => entry.id);
       await db.execute(sql`alter table journal_entry_lines disable trigger journal_entry_lines_immutable`);
@@ -93,13 +101,15 @@ afterAll(async () => {
       }
     }
   }
-  for (const id of exhibitionInvoiceIds) {
+  for (const id of invoiceIds) {
+    await db.delete(shipmentsTable).where(eq(shipmentsTable.invoiceId, id));
     await db.delete(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, id));
-    await db.delete(operationEventsTable).where(and(eq(operationEventsTable.sourceType, "exhibition_invoice"), eq(operationEventsTable.sourceId, String(id))));
-    await db.delete(inventoryMovementsTable).where(and(eq(inventoryMovementsTable.sourceType, "exhibition_invoice"), eq(inventoryMovementsTable.sourceId, String(id))));
+    await db.delete(operationEventsTable).where(and(inArray(operationEventsTable.sourceType, ["exhibition_invoice", "distributor_invoice"]), eq(operationEventsTable.sourceId, String(id))));
+    await db.delete(inventoryMovementsTable).where(and(inArray(inventoryMovementsTable.sourceType, ["exhibition_invoice", "distributor_invoice"]), eq(inventoryMovementsTable.sourceId, String(id))));
     await db.delete(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, id));
     await db.delete(invoicesTable).where(eq(invoicesTable.id, id));
   }
+  if (companyDistributorId) await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, companyDistributorId));
   if (exhibitionId) await db.delete(exhibitionProductsTable).where(eq(exhibitionProductsTable.exhibitionId, exhibitionId));
   if (exhibitionId) await db.delete(exhibitionsTable).where(eq(exhibitionsTable.id, exhibitionId));
   await db.delete(manufacturingBatchesTable).where(eq(manufacturingBatchesTable.productId, productId));
@@ -233,11 +243,13 @@ describe.sequential("admin business modules", () => {
     exhibitionInvoiceId = created.body.id;
     exhibitionInvoiceIds.push(exhibitionInvoiceId);
     expect(created.body).toMatchObject({ exhibitionId, exhibitionName: "Test Exhibition", distributorId: null, orderId: null,
-      subtotal: 200, vatAmount: 30, totalAmount: 230, paidAmount: 230, outstandingAmount: 0, paymentStatus: "paid" });
+      subtotal: 173.91, vatAmount: 26.09, totalAmount: 200, paidAmount: 200, outstandingAmount: 0, paymentStatus: "paid",
+      cancelledAt: null, cancellationReason: null, cancelledByAdminId: null, cancelledByName: null });
     expect(created.body.qrCodeData).toBeTruthy();
     expect(created.body.items).toHaveLength(1);
     const again = await request(app).post(endpoint).set(auth(superToken)).send(payload).expect(201);
     expect(again.body.id).toBe(exhibitionInvoiceId);
+    expect(again.body.invoiceNumber).toBe(created.body.invoiceNumber);
     await request(app).post(endpoint).set(auth(superToken)).send({ ...payload, buyerName: "Another buyer" }).expect(409);
     await request(app).post(endpoint).set(auth(superToken)).send({ ...payload, creationKey: `${payload.creationKey}-excess`, items: [{ productId, quantity: 2, unitPrice: 100 }] }).expect(409);
     await request(app).post(endpoint).set(auth(superToken)).send({ ...payload, creationKey: `${payload.creationKey}-stock`, items: [{ productId, quantity: 1, unitPrice: 0 }] }).expect(400);
@@ -263,7 +275,7 @@ describe.sequential("admin business modules", () => {
     expect(ownEntries).toHaveLength(2);
     const journalLines = await db.select().from(journalEntryLinesTable).where(inArray(journalEntryLinesTable.journalEntryId, ownEntries.map(e => e.id)));
     expect(journalLines.reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0)).toBeCloseTo(0);
-    expect(journalLines.reduce((sum, row) => sum + Number(row.debit), 0)).toBeCloseTo(270);
+    expect(journalLines.reduce((sum, row) => sum + Number(row.debit), 0)).toBeCloseTo(240);
     await db.update(productsTable).set({ stockQuantity: 0 }).where(eq(productsTable.id, productId));
     await request(app).post(endpoint).set(auth(superToken))
       .send({ ...payload, creationKey: `${payload.creationKey}-no-stock`, items: [{ productId, quantity: 1, unitPrice: 100 }] }).expect(409);
@@ -277,6 +289,23 @@ describe.sequential("admin business modules", () => {
       .where(and(eq(journalEntriesTable.sourceType, "exhibition_invoice"), eq(journalEntriesTable.sourceId, String(bankInvoice.body.id))));
     const bankLines = await db.select().from(journalEntryLinesTable).where(eq(journalEntryLinesTable.journalEntryId, bankJournal.id));
     expect(bankLines.reduce((sum, row) => sum + Number(row.debit) - Number(row.credit), 0)).toBeCloseTo(0);
-    expect(bankLines.find(row => Number(row.debit) === 115)).toBeTruthy();
+    expect(bankLines.find(row => Number(row.debit) === 100)).toBeTruthy();
+  });
+
+  it("returns valid company invoice creation and replay responses after commit", async () => {
+    const payload = {
+      creationKey: `company-route-${suffix}-once`, distributorId: companyDistributorId,
+      items: [{ productId, quantity: 1, unitPrice: 100 }],
+    };
+    const first = await request(app).post("/api/admin/invoices").set(auth(invoiceEditorToken)).send(payload).expect(201);
+    companyInvoiceIds.push(first.body.id);
+    expect(first.body).toMatchObject({
+      distributorId: companyDistributorId, cancelledAt: null, cancellationReason: null,
+      cancelledByAdminId: null, cancelledByName: null,
+    });
+    const replay = await request(app).post("/api/admin/invoices").set(auth(invoiceEditorToken)).send(payload).expect(201);
+    expect(replay.body.id).toBe(first.body.id);
+    expect(replay.body.invoiceNumber).toBe(first.body.invoiceNumber);
+    expect((await db.select().from(invoicesTable).where(eq(invoicesTable.creationKey, payload.creationKey)))).toHaveLength(1);
   });
 });

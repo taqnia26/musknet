@@ -14,6 +14,14 @@ import type { ReceivablePayment } from './receivablePayment';
 
 export interface AdminInvoice {
   id: number;
+  /** @nullable */
+  cancelledAt: Date | null;
+  /** @nullable */
+  cancellationReason: string | null;
+  /** @nullable */
+  cancelledByAdminId: number | null;
+  /** @nullable */
+  cancelledByName: string | null;
   historical: AdminInvoiceHistorical;
   /** @nullable */
   orderId: number | null;

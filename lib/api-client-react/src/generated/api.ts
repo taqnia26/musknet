@@ -61,6 +61,7 @@ import type {
   AdminInventoryProductInput,
   AdminInventoryProductUpdate,
   AdminInvoice,
+  AdminInvoiceCancellation,
   AdminInvoiceUpdate,
   AdminJournalEntry,
   AdminListCategoriesParams,
@@ -113,6 +114,7 @@ import type {
   Category,
   CheckoutQuote,
   CheckoutQuoteInput,
+  CompanyInvoiceCancellationInput,
   CompanyInvoiceCreated,
   CompanyInvoiceInput,
   CompanyInvoiceSellerConfiguration,
@@ -8391,6 +8393,78 @@ export const useAdminArchiveInvoice = <TError = ErrorType<ForbiddenResponse | No
         TContext
       > => {
       return useMutation(getAdminArchiveInvoiceMutationOptions(options));
+    }
+
+export const getAdminCancelCompanyInvoiceUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/invoices/${id}/cancel`
+}
+
+/**
+ * @summary Permanently cancel an uncollected, unshipped company invoice
+ */
+export const adminCancelCompanyInvoice = async (id: number,
+    companyInvoiceCancellationInput: CompanyInvoiceCancellationInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoiceCancellation> => {
+
+  return customFetch<AdminInvoiceCancellation>(getAdminCancelCompanyInvoiceUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(companyInvoiceCancellationInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCancelCompanyInvoiceMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCancelCompanyInvoice>>, TError,{id: number;data: BodyType<CompanyInvoiceCancellationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCancelCompanyInvoice>>, TError,{id: number;data: BodyType<CompanyInvoiceCancellationInput>}, TContext> => {
+
+const mutationKey = ['adminCancelCompanyInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCancelCompanyInvoice>>, {id: number;data: BodyType<CompanyInvoiceCancellationInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminCancelCompanyInvoice(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCancelCompanyInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adminCancelCompanyInvoice>>>
+    export type AdminCancelCompanyInvoiceMutationBody = BodyType<CompanyInvoiceCancellationInput>
+    export type AdminCancelCompanyInvoiceMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>
+
+    /**
+ * @summary Permanently cancel an uncollected, unshipped company invoice
+ */
+export const useAdminCancelCompanyInvoice = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCancelCompanyInvoice>>, TError,{id: number;data: BodyType<CompanyInvoiceCancellationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCancelCompanyInvoice>>,
+        TError,
+        {id: number;data: BodyType<CompanyInvoiceCancellationInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCancelCompanyInvoiceMutationOptions(options));
     }
 
 export const getAdminCreateReceivablePaymentUrl = (id: number,) => {

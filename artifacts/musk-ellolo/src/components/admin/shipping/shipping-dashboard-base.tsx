@@ -1145,7 +1145,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                   <SelectValue placeholder={t('الحالة', 'Status')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('جميع الحالات', 'All Statuses')}</SelectItem>
+                  <SelectItem value="all">{t('النشطة (دون الملغاة)', 'Active (excluding cancelled)')}</SelectItem>
                   <SelectItem value="pending">{t('قيد الانتظار', 'Pending')}</SelectItem>
                   <SelectItem value="ready">{t('جاهز للشحن', 'Ready')}</SelectItem>
                   <SelectItem value="in_transit">{t('في الطريق', 'In Transit')}</SelectItem>

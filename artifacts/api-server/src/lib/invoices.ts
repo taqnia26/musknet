@@ -1,11 +1,11 @@
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
-import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal } from "./accounting";
+import { AccountingConflictError, ensureStandardAccountingChart, postJournalEntry, postSalesJournal, reverseJournalEntry } from "./accounting";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
 import { adjustOperationalBalances } from "./operations";
 import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType, type TaxTreatment } from "./vat";
 import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
 import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
-import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
+import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, shipmentEventsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
 
@@ -83,6 +83,71 @@ export class DistributorInvoiceConflictError extends Error {}
 
 export class ReceivablePaymentNotFoundError extends Error {}
 
+/** Void the issued document while retaining its number and original ledger entries. */
+export async function cancelCompanyInvoice(invoiceId: number, reason: string, actorId: number) {
+  const explanation = reason.trim();
+  if (explanation.length < 10 || explanation.length > 500) throw new DistributorInvoiceValidationError("A cancellation reason of 10–500 characters is required");
+  await ensureStandardAccountingChart();
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${invoiceId} for update`);
+    const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
+    if (!invoice || invoice.distributorId === null) throw new ReceivablePaymentNotFoundError("Company invoice not found");
+    if (invoice.cancelledAt) throw new DistributorInvoiceConflictError("Invoice is already cancelled");
+    const payments = await tx.select({ id: receivablePaymentsTable.id }).from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoiceId));
+    if (payments.length) throw new DistributorInvoiceConflictError("Invoice with collections cannot be cancelled");
+    const [shipment] = await tx.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, invoiceId)).for("update");
+    const events = shipment ? await tx.select({ id: shipmentEventsTable.id }).from(shipmentEventsTable).where(eq(shipmentEventsTable.shipmentId, shipment.id)).limit(1) : [];
+    if (shipment && (shipment.status !== "pending" || shipment.trackingNumber || shipment.carrierShipmentId || shipment.labelUrl ||
+      shipment.integrationStatus !== "not_requested" || shipment.integrationAttempts || shipment.shippedAt || events.length))
+      throw new DistributorInvoiceConflictError("Shipment has advanced or been sent to a carrier");
+    const sourceTypes = invoice.historical === "yes" ? ["historical_company_invoice"] : ["distributor_invoice", "distributor_invoice_cogs"];
+    const journals = await tx.select().from(journalEntriesTable).where(and(
+      sql`${journalEntriesTable.sourceType} in (${sql.join(sourceTypes.map(type => sql`${type}`), sql`, `)})`,
+      eq(journalEntriesTable.sourceId, String(invoiceId)),
+    )).orderBy(journalEntriesTable.id);
+    if (!journals.some(entry => entry.sourceType === sourceTypes[0]) || journals.some(entry => entry.status !== "posted"))
+      throw new DistributorInvoiceConflictError("Invoice journals require accounting review before cancellation");
+    const movements = await tx.select().from(inventoryMovementsTable).where(and(
+      eq(inventoryMovementsTable.sourceType, "distributor_invoice"), eq(inventoryMovementsTable.sourceId, String(invoiceId)),
+    )).orderBy(inventoryMovementsTable.productId);
+    const items = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoiceId));
+    if (invoice.historical === "yes" ? movements.length > 0 : (items.some(item =>
+      !movements.some(m => m.productId === item.productId && m.quantityChange === -item.quantity)) || movements.length !== items.length))
+      throw new DistributorInvoiceConflictError("Invoice stock movements require reconciliation before cancellation");
+    if (movements.some(movement => Number(movement.totalCost) > 0) && !journals.some(entry => entry.sourceType === "distributor_invoice_cogs"))
+      throw new DistributorInvoiceConflictError("Invoice COGS journal requires accounting review before cancellation");
+    for (const id of [...new Set(movements.map(m => m.productId))].sort((a, b) => a - b))
+      await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${id} for update`);
+    const today = saudiCalendarDate(new Date());
+    for (const movement of movements) {
+      const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, movement.productId));
+      if (!product) throw new DistributorInvoiceConflictError("Invoice product no longer exists");
+      const quantity = -movement.quantityChange;
+      const after = product.stockQuantity + quantity;
+      const averageCost = ((product.stockQuantity * Number(product.averageCost)) + Number(movement.totalCost)) / after;
+      await adjustOperationalBalances(tx, product.id, quantity, averageCost, product.stockQuantity);
+      await tx.update(productsTable).set({ stockQuantity: after, averageCost: averageCost.toFixed(4) }).where(eq(productsTable.id, product.id));
+      await tx.insert(inventoryMovementsTable).values({
+        productId: product.id, movementType: "increase", quantityChange: quantity, quantityBefore: product.stockQuantity,
+        quantityAfter: after, unitCost: movement.unitCost, totalCost: movement.totalCost,
+        reason: `Cancellation ${invoice.invoiceNumber}: ${explanation}`, sourceType: "distributor_invoice_cancellation",
+        sourceId: String(invoiceId), eventKey: `distributor-invoice-cancellation:${invoiceId}:${product.id}`, performedBy: actorId,
+      });
+    }
+    for (const entry of journals) await reverseJournalEntry(entry.id, actorId, `Cancel ${invoice.invoiceNumber}: ${explanation}`, today, tx);
+    await tx.insert(operationEventsTable).values({
+      eventKey: `distributor-invoice-cancellation:${invoiceId}`, kind: "sale_fulfillment", status: "posted",
+      sourceType: "distributor_invoice_cancellation", sourceId: String(invoiceId), actorId,
+      payload: { reason: explanation, journalIds: journals.map(entry => entry.id) },
+    });
+    if (shipment) await tx.update(shipmentsTable).set({ status: "cancelled" }).where(eq(shipmentsTable.id, shipment.id));
+    const [cancelled] = await tx.update(invoicesTable).set({
+      cancelledAt: new Date(), cancelledByAdminId: actorId, cancellationReason: explanation,
+    }).where(eq(invoicesTable.id, invoiceId)).returning();
+    return cancelled;
+  });
+}
+
 // Every path that reads or writes distributor contract-source state must take
 // this lock first. Invoice paths take product/sequence locks only afterward;
 // term confirmation never takes those locks, preserving a single safe order.
@@ -100,6 +165,7 @@ async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoices
   dueDate?: string | Date;
   items: Array<{ productId: number; quantity: number; unitPrice: number }>;
 }) {
+  if (previous.cancelledAt) throw new DistributorInvoiceConflictError("Cancelled invoice cannot be reissued");
   if (previous.distributorId !== input.distributorId) throw new DistributorInvoiceConflictError("Creation key already used for a different distributor invoice");
   const [event] = await tx.select().from(operationEventsTable)
     .where(eq(operationEventsTable.eventKey, `distributor-invoice:${previous.id}`)).limit(1);
@@ -560,16 +626,10 @@ export async function createReceivablePayment(
 ) {
   await ensureStandardAccountingChart();
   return db.transaction(async (tx) => {
-    const [previous] = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.paymentKey, input.paymentKey)).limit(1);
-    if (previous) {
-      if (previous.invoiceId !== invoiceId || previous.paymentDate !== dateOnly(input.paymentDate) ||
-        cents(previous.amount) !== cents(input.amount) || previous.paymentMethod !== input.paymentMethod ||
-        previous.reference !== (input.reference?.trim() || null)) throw new DistributorInvoiceConflictError("Payment key is already used with different details");
-      return previous;
-    }
     await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${invoiceId} for update`);
     const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
     if (!invoice || invoice.distributorId === null) throw new ReceivablePaymentNotFoundError("Company invoice not found");
+    if (invoice.cancelledAt) throw new DistributorInvoiceConflictError("Cancelled invoices cannot receive collections");
     const [afterLock] = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.paymentKey, input.paymentKey)).limit(1);
     if (afterLock) {
       if (afterLock.invoiceId !== invoiceId || afterLock.paymentDate !== dateOnly(input.paymentDate) ||
@@ -688,6 +748,15 @@ export async function updateOrderAndIssueInvoice(
     if (values.status === "returned" && order.status !== "returned")
       throw new AccountingConflictError("Use the refund workflow before marking an order returned");
     const cancelling = values.status === "cancelled" && order.status !== "cancelled";
+    if (cancelling) {
+      const [shipment] = await tx.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, order.id)).for("update");
+      if (shipment) {
+        if (shipment.status !== "pending" || shipment.trackingNumber || shipment.carrierShipmentId || shipment.labelUrl || shipment.shippedAt ||
+          shipment.integrationStatus !== "not_requested" || shipment.integrationAttempts)
+          throw new AccountingConflictError("Shipment has advanced; use the shipping return workflow");
+        await tx.update(shipmentsTable).set({ status: "cancelled" }).where(eq(shipmentsTable.id, shipment.id));
+      }
+    }
     if (order.paymentStatus === "paid") {
       if (values.paymentStatus !== undefined && values.paymentStatus !== "paid") {
         throw new AccountingConflictError("A paid order cannot be changed back to unpaid");
@@ -774,8 +843,8 @@ export async function updateOrderAndIssueInvoice(
         .from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
       const fulfillmentMovements = await tx.select({ productId: inventoryMovementsTable.productId })
         .from(inventoryMovementsTable).where(and(eq(inventoryMovementsTable.sourceType, "order"), eq(inventoryMovementsTable.sourceId, String(order.id))));
-      if (!fulfillmentMovements.length) return updated;
-      const productIds = [...new Set(items.map((item) => item.productId))].sort((a, b) => a - b);
+      const returnedItems = fulfillmentMovements.length ? items : [];
+      const productIds = [...new Set(returnedItems.map((item) => item.productId))].sort((a, b) => a - b);
       for (const productId of productIds) await tx.execute(sql`select id from ${productsTable} where id = ${productId} for update`);
       const eventKey = `sale-cancellation:${order.id}`;
       const [event] = await tx.insert(operationEventsTable).values({
@@ -784,7 +853,7 @@ export async function updateOrderAndIssueInvoice(
       }).onConflictDoNothing({ target: operationEventsTable.eventKey }).returning();
       if (event) {
         let reversalCost = 0;
-        for (const item of items) {
+        for (const item of returnedItems) {
           const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, item.productId)).limit(1);
           if (!product) throw new Error(`Product ${item.productId} not found`);
           const quantityAfter = product.stockQuantity + item.quantity;

@@ -80,7 +80,7 @@ import {
   verifyAdminPassword,
 } from "../lib/admin-auth";
 import { hashOwnerPassword } from "../lib/owner-auth";
-import { createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
+import { cancelCompanyInvoice, createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
 import { createHistoricalInvoice, reconcileHistoricalInvoice } from "../lib/historical-company-invoices";
 import { createCompanyInvoice } from "../lib/company-invoices";
 import {
@@ -373,6 +373,19 @@ function validCompanyShipmentContact(input: { companyName?: string | null; recip
   return Boolean(input.companyName?.trim() && input.recipientName?.trim()
     && input.recipientPhone?.trim() && /^\+?[0-9]{8,15}$/.test(input.recipientPhone.trim()));
 }
+
+async function lockActiveShippingSource(tx: any, channel: "online" | "b2b", sourceId: number) {
+  if (channel === "online") {
+    await tx.execute(sql`select id from ${ordersTable} where ${ordersTable.id} = ${sourceId} for update`);
+    const [source] = await tx.select({ status: ordersTable.status }).from(ordersTable).where(eq(ordersTable.id, sourceId));
+    if (!source || source.status === "cancelled") throw new ShippingSourceConflict("Cancelled order cannot be shipped");
+  } else {
+    await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${sourceId} for update`);
+    const [source] = await tx.select({ cancelledAt: invoicesTable.cancelledAt }).from(invoicesTable).where(eq(invoicesTable.id, sourceId));
+    if (!source || source.cancelledAt) throw new ShippingSourceConflict("Cancelled invoice cannot be shipped");
+  }
+}
+class ShippingSourceConflict extends Error {}
 
 const carrierStatusToShipmentStatus = {
   created: "ready",
@@ -2081,6 +2094,10 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
   const search = query.search?.trim();
   const rows = await db.select({
     id: invoicesTable.id,
+    cancelledAt: invoicesTable.cancelledAt,
+    cancellationReason: invoicesTable.cancellationReason,
+    cancelledByAdminId: invoicesTable.cancelledByAdminId,
+    cancelledByName: sql<string | null>`(select name from admin_users where id = ${invoicesTable.cancelledByAdminId})`,
     historical: invoicesTable.historical,
     orderId: invoicesTable.orderId,
     orderNumber: ordersTable.orderNumber,
@@ -2154,7 +2171,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
   const enriched = rows.map((row) => {
     const payments = paymentRows.filter((payment) => payment.invoiceId === row.id);
     const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
-    const outstandingAmount = Math.max(0, Math.round((row.totalAmount - paidAmount) * 100) / 100);
+    const outstandingAmount = row.cancelledAt ? 0 : Math.max(0, Math.round((row.totalAmount - paidAmount) * 100) / 100);
     const paymentStatus = outstandingAmount === 0 ? "paid" as const : paidAmount > 0 ? "partial" as const : "unpaid" as const;
     return {
       ...row,
@@ -2165,6 +2182,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     };
   }).filter((invoice) => {
     if (!query.receivableStatus || query.receivableStatus === "all") return true;
+    if (invoice.cancelledAt) return false;
     if (query.receivableStatus === "paid") return invoice.paymentStatus === "paid";
     if (query.receivableStatus === "open") return invoice.outstandingAmount > 0;
     return invoice.outstandingAmount > 0 && invoice.dueDate !== null && invoice.dueDate < today;
@@ -2262,7 +2280,7 @@ router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), rout
     qrCodeData: invoicesTable.qrCodeData,
   }).from(invoicesTable)
     .leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
-    .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt)))
+    .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt), isNull(invoicesTable.cancelledAt)))
     .limit(1);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
   const items = await db.select().from(invoiceItemsTable)
@@ -2292,6 +2310,7 @@ router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res
     const invoice = await createDistributorInvoice(body, res.locals.admin.id);
     res.status(201).json(Api.AdminCreateDistributorInvoiceResponse.parse({
       ...invoice,
+      cancelledByName: null,
       contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
       vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
     }));
@@ -2310,7 +2329,10 @@ router.post("/admin/invoices/exhibitions", permit("invoices", "edit"), route(asy
   const body = parse(Api.AdminCreateExhibitionInvoiceBody, req.body, res); if (!body) return;
   try {
     const invoice = await createExhibitionInvoice({ ...body, saleDate: isoDate(body.saleDate) }, res.locals.admin.id);
-    res.status(201).json(Api.AdminCreateExhibitionInvoiceResponse.parse(invoice));
+    res.status(201).json(Api.AdminCreateExhibitionInvoiceResponse.parse({
+      ...invoice, cancelledByName: null, vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
+      contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+    }));
   } catch (error) {
     if (error instanceof DistributorInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
     if (error instanceof DistributorInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
@@ -2330,7 +2352,7 @@ router.patch("/admin/invoices/:id", permit("invoices", "edit"), route(async (req
     ...(body.buyerTaxNumber !== undefined ? { buyerTaxNumber: clean(body.buyerTaxNumber) } : {}),
     ...(body.buyerCommercialRegistrationNumber !== undefined ? { buyerCommercialRegistrationNumber: clean(body.buyerCommercialRegistrationNumber) } : {}),
     ...(body.buyerAddress !== undefined ? { buyerAddress: clean(body.buyerAddress) } : {}),
-  }).where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).returning({ id: invoicesTable.id });
+  }).where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt), isNull(invoicesTable.cancelledAt))).returning({ id: invoicesTable.id });
   if (!updated) { res.status(404).json({ error: "Invoice not found" }); return; }
   res.sendStatus(204);
 }));
@@ -2343,6 +2365,25 @@ router.delete("/admin/invoices/:id", permit("invoices", "delete"), route(async (
   }).where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).returning({ id: invoicesTable.id });
   if (!archived) { res.status(404).json({ error: "Invoice not found" }); return; }
   res.sendStatus(204);
+}));
+
+router.post("/admin/invoices/:id/cancel", permit("invoices", "delete"), route(async (req, res) => {
+  const id = Number(req.params.id);
+  const reason = req.body?.reason;
+  if (!Number.isSafeInteger(id) || id < 1 || typeof reason !== "string" || reason.trim().length < 10 || reason.trim().length > 500) {
+    res.status(400).json({ error: "A valid invoice and cancellation reason (10–500 characters) are required" }); return;
+  }
+  try {
+    const cancelled = await cancelCompanyInvoice(id, reason, res.locals.admin.id);
+    res.json(Api.AdminCancelCompanyInvoiceResponse.parse({
+      id: cancelled.id, cancelledAt: cancelled.cancelledAt, cancellationReason: cancelled.cancellationReason,
+      cancelledByAdminId: cancelled.cancelledByAdminId,
+    }));
+  } catch (error) {
+    if (error instanceof ReceivablePaymentNotFoundError) { res.status(404).json({ error: error.message }); return; }
+    if (error instanceof DistributorInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
+    throw error;
+  }
 }));
 
 router.post("/admin/invoices/:id/payments", permit("invoices", "edit"), route(async (req, res) => {
@@ -2401,7 +2442,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
     shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount, totalAmount: invoicesTable.totalAmount, qrCodeData: invoicesTable.qrCodeData,
   }).from(invoicesTable).leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
-    .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).limit(1);
+    .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt), isNull(invoicesTable.cancelledAt))).limit(1);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
   const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id)).orderBy(invoiceItemsTable.id);
   const payments = await db.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoice.id));
@@ -2434,7 +2475,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
 router.get("/admin/invoices/:id/qr", permit("invoices", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetInvoiceQrParams, req.params, res); if (!params) return;
   const [invoice] = await db.select({ qrCodeBase64: invoicesTable.qrCodeData, historical: invoicesTable.historical })
-    .from(invoicesTable).where(eq(invoicesTable.id, params.id)).limit(1);
+    .from(invoicesTable).where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.cancelledAt))).limit(1);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
   if (invoice.historical === "yes") { res.status(404).json({ error: "External original has no ZATCA QR" }); return; }
   const png = await QRCode.toBuffer(invoice.qrCodeBase64, {
@@ -2469,7 +2510,7 @@ router.get("/admin/shipping", permit("shipping", "view"), route(async (req, res)
   let rows = (await shippingRows(query.channel)).filter(({ shipment, referenceNumber, partyName }) => {
     if (from && shipment.createdAt < from) return false;
     if (to && shipment.createdAt > to) return false;
-    if (query.status !== "all" && shipment.status !== query.status) return false;
+    if (query.status === "all" ? shipment.status === "cancelled" : shipment.status !== query.status) return false;
     if (query.city && shipment.destinationCity !== query.city) return false;
     if (needle && ![referenceNumber, partyName, shipment.trackingNumber, shipment.carrier, shipment.destinationCity]
       .some((value) => value?.toLocaleLowerCase().includes(needle))) return false;
@@ -2530,9 +2571,9 @@ router.post("/admin/shipping", permit("shipping", "edit"), route(async (req, res
     res.status(403).json({ error: "Insufficient permission" }); return;
   }
   const source = body.channel === "online"
-    ? (await db.select({ id: ordersTable.id }).from(ordersTable).where(eq(ordersTable.id, body.sourceId)).limit(1))[0]
+    ? (await db.select({ id: ordersTable.id }).from(ordersTable).where(and(eq(ordersTable.id, body.sourceId), sql`${ordersTable.status} <> 'cancelled'`)).limit(1))[0]
     : (await db.select({ id: invoicesTable.id }).from(invoicesTable)
-      .where(and(eq(invoicesTable.id, body.sourceId), sql`${invoicesTable.distributorId} is not null`)).limit(1))[0];
+      .where(and(eq(invoicesTable.id, body.sourceId), isNotNull(invoicesTable.distributorId), isNull(invoicesTable.cancelledAt))).limit(1))[0];
   if (!source) { res.status(400).json({ error: "Shipping source not found for this channel" }); return; }
   const existing = body.channel === "online"
     ? (await db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.orderId, body.sourceId)).limit(1))[0]
@@ -2554,7 +2595,10 @@ router.post("/admin/shipping", permit("shipping", "edit"), route(async (req, res
     res.status(400).json({ error: "Complete international destination address is required" }); return;
   }
   const { sourceId, ...values } = body;
-  const [created] = await db.insert(shipmentsTable).values({
+  let created;
+  try { [created] = await db.transaction(async tx => {
+    await lockActiveShippingSource(tx, body.channel, sourceId);
+    return tx.insert(shipmentsTable).values({
     ...values,
     companyName: body.channel === "b2b" ? body.companyName?.trim() : null,
     recipientName: body.channel === "b2b" ? body.recipientName?.trim() : null,
@@ -2570,7 +2614,11 @@ router.post("/admin/shipping", permit("shipping", "edit"), route(async (req, res
     } : { nationalAddressShortCode: null }),
     orderId: body.channel === "online" ? sourceId : null,
     invoiceId: body.channel === "b2b" ? sourceId : null,
-  }).returning();
+    }).returning();
+  }); } catch (error) {
+    if (error instanceof ShippingSourceConflict) { res.status(409).json({ error: error.message }); return; }
+    throw error;
+  }
   const row = (await shippingRows(body.channel)).find((item) => item.shipment.id === created.id)!;
   res.status(201).json(Api.AdminCreateShipmentResponse.parse(publicShipment(row)));
 }));
@@ -2584,6 +2632,14 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
   }
   const [existing] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Shipment not found" }); return; }
+  if (existing.orderId) {
+    const [source] = await db.select({ status: ordersTable.status }).from(ordersTable).where(eq(ordersTable.id, existing.orderId));
+    if (!source || source.status === "cancelled") { res.status(409).json({ error: "Cancelled order cannot be shipped" }); return; }
+  }
+  if (existing.invoiceId) {
+    const [source] = await db.select({ cancelledAt: invoicesTable.cancelledAt }).from(invoicesTable).where(eq(invoicesTable.id, existing.invoiceId));
+    if (!source || source.cancelledAt) { res.status(409).json({ error: "Cancelled invoice cannot be shipped" }); return; }
+  }
   if (existing.orderId && (body.status !== undefined && body.status !== existing.status)) {
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, existing.orderId));
     if (order?.status === "pending_payment") { res.status(409).json({ error: "Cannot advance shipping before payment confirmation" }); return; }
@@ -2623,7 +2679,11 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
       throw error;
     }
   }
-  await db.transaction(async (tx) => {
+  try { await db.transaction(async (tx) => {
+    await lockActiveShippingSource(tx, channel, (existing.orderId ?? existing.invoiceId)!);
+    await tx.execute(sql`select id from ${shipmentsTable} where ${shipmentsTable.id} = ${params.id} for update`);
+    const [current] = await tx.select().from(shipmentsTable).where(eq(shipmentsTable.id, params.id));
+    if (!current || current.status !== existing.status) throw new ShippingSourceConflict("Shipment changed; reload before editing");
     await tx.update(shipmentsTable).set({
       ...body,
       ...(channel === "b2b" ? {
@@ -2646,7 +2706,10 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
         .set({ trackingNumber: body.trackingNumber })
         .where(eq(ordersTable.id, existing.orderId));
     }
-  });
+  }); } catch (error) {
+    if (error instanceof ShippingSourceConflict) { res.status(409).json({ error: error.message }); return; }
+    throw error;
+  }
   const row = (await shippingRows(channel)).find((item) => item.shipment.id === params.id)!;
   res.json(Api.AdminUpdateShipmentResponse.parse(publicShipment(row)));
 }));
@@ -2658,6 +2721,14 @@ router.post("/admin/shipping/:id/label", permit("shipping", "edit"), route(async
   const row = (await shippingRows("online")).find((item) => item.shipment.id === params.id)
     ?? (await shippingRows("b2b")).find((item) => item.shipment.id === params.id);
   if (!row) { res.status(404).json({ error: "Shipment not found" }); return; }
+  if (row.shipment.orderId) {
+    const [source] = await db.select({ status: ordersTable.status }).from(ordersTable).where(eq(ordersTable.id, row.shipment.orderId));
+    if (!source || source.status === "cancelled") { res.status(409).json({ error: "Cancelled order cannot be shipped" }); return; }
+  }
+  if (row.shipment.invoiceId) {
+    const [source] = await db.select({ cancelledAt: invoicesTable.cancelledAt }).from(invoicesTable).where(eq(invoicesTable.id, row.shipment.invoiceId));
+    if (!source || source.cancelledAt) { res.status(409).json({ error: "Cancelled invoice cannot be shipped" }); return; }
+  }
   if (row.shipment.orderId) {
     const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, row.shipment.orderId));
     if (order?.status === "pending_payment") { res.status(409).json({ error: "Cannot create a shipping label before payment" }); return; }
@@ -2684,14 +2755,24 @@ router.post("/admin/shipping/:id/label", permit("shipping", "edit"), route(async
   const [integration] = await db.select().from(adminIntegrationsTable)
     .where(eq(adminIntegrationsTable.providerId, body.carrier)).limit(1);
   const attemptAt = new Date();
-  await db.update(shipmentsTable).set({
+  try { await db.transaction(async tx => {
+    await lockActiveShippingSource(tx, channel, (row.shipment.orderId ?? row.shipment.invoiceId)!);
+    await tx.execute(sql`select id from ${shipmentsTable} where ${shipmentsTable.id} = ${params.id} for update`);
+    const [current] = await tx.select().from(shipmentsTable).where(eq(shipmentsTable.id, params.id));
+    if (!current || current.status !== row.shipment.status || current.integrationStatus === "processing")
+      throw new ShippingSourceConflict("Shipment changed; reload before creating a label");
+    await tx.update(shipmentsTable).set({
     carrier: body.carrier,
     serviceMethod: body.serviceMethod,
     integrationStatus: "processing",
     integrationError: null,
     integrationAttempts: row.shipment.integrationAttempts + 1,
     lastIntegrationAttemptAt: attemptAt,
-  }).where(eq(shipmentsTable.id, params.id));
+    }).where(eq(shipmentsTable.id, params.id));
+  }); } catch (error) {
+    if (error instanceof ShippingSourceConflict) { res.status(409).json({ error: error.message }); return; }
+    throw error;
+  }
 
   try {
     const label = await createSmsaShippingLabel(integration?.apiBaseUrl ?? null, {

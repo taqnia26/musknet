@@ -1240,6 +1240,24 @@ paths:
         "204": { description: Invoice archived }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /admin/invoices/{id}/cancel:
+    post:
+      operationId: adminCancelCompanyInvoice
+      summary: Permanently cancel an uncollected, unshipped company invoice
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CompanyInvoiceCancellationInput" }
+      responses:
+        "200": { description: Invoice cancelled, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInvoiceCancellation" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /admin/invoices/{id}/payments:
     post:
       operationId: adminCreateReceivablePayment
@@ -4387,11 +4405,28 @@ components:
         page: { type: number }
         totalPages: { type: number }
         nextPage: { type: ["number", "null"] }
+    CompanyInvoiceCancellationInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 10, maxLength: 500 }
+    AdminInvoiceCancellation:
+      type: object
+      required: [id, cancelledAt, cancellationReason, cancelledByAdminId]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        cancelledAt: { type: string, format: date-time }
+        cancellationReason: { type: string }
+        cancelledByAdminId: { type: number, multipleOf: 1 }
     AdminInvoice:
       type: object
-      required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, originalInvoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt]
+      required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, originalInvoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt, cancelledAt, cancellationReason, cancelledByAdminId, cancelledByName]
       properties:
         id: { type: number }
+        cancelledAt: { type: [string, "null"], format: date-time }
+        cancellationReason: { type: [string, "null"] }
+        cancelledByAdminId: { type: [number, "null"], multipleOf: 1 }
+        cancelledByName: { type: [string, "null"] }
         historical: { type: string, enum: [yes, no] }
         orderId: { type: [number, "null"] }
         orderNumber: { type: [string, "null"] }

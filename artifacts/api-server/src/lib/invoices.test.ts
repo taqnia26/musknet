@@ -4,9 +4,9 @@ import {
   accountingAccountsTable, adminUsersTable, categoriesTable, customersTable, db, inventoryBalancesTable, inventoryMovementsTable,
   invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryAuditTable,
   journalEntryLinesTable, operationEventsTable, orderItemsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
-  uploadedContractFilesTable,
+  uploadedContractFilesTable, shipmentsTable, shipmentEventsTable,
 } from "@workspace/db";
-import { createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, updateOrderAndIssueInvoice } from "./invoices";
+import { cancelCompanyInvoice, createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, updateOrderAndIssueInvoice } from "./invoices";
 import { invoiceItemName } from "./invoice-email";
 import { invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
 import { createCompanyInvoice } from "./company-invoices";
@@ -87,10 +87,11 @@ afterAll(async () => {
     .where(inArray(invoicesTable.distributorId, testDistributorIds));
   if (distributorInvoices.length) {
     const invoiceIds = distributorInvoices.map((row) => row.id);
+    await db.delete(shipmentsTable).where(inArray(shipmentsTable.invoiceId, invoiceIds));
     const payments = await db.select({ id: receivablePaymentsTable.id }).from(receivablePaymentsTable)
       .where(inArray(receivablePaymentsTable.invoiceId, invoiceIds));
     await db.delete(inventoryMovementsTable).where(and(
-      eq(inventoryMovementsTable.sourceType, "distributor_invoice"),
+      inArray(inventoryMovementsTable.sourceType, ["distributor_invoice", "distributor_invoice_cancellation"]),
       inArray(inventoryMovementsTable.sourceId, invoiceIds.map(String)),
     ));
     await db.transaction(async (tx) => {
@@ -98,7 +99,8 @@ afterAll(async () => {
       const entries = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
         .where(and(
           or(
-            and(inArray(journalEntriesTable.sourceType, ["distributor_invoice", "distributor_invoice_cogs", "historical_company_invoice"]), inArray(journalEntriesTable.sourceId, invoiceIds.map(String))),
+             and(inArray(journalEntriesTable.sourceType, ["distributor_invoice", "distributor_invoice_cogs", "historical_company_invoice"]), inArray(journalEntriesTable.sourceId, invoiceIds.map(String))),
+             and(eq(journalEntriesTable.sourceType, "reversal"), sql`${journalEntriesTable.reversalOfEntryId} in (select id from journal_entries where source_type in ('distributor_invoice', 'distributor_invoice_cogs', 'historical_company_invoice') and source_id in (${sql.join(invoiceIds.map(id => sql`${String(id)}`), sql`, `)}))`),
             and(eq(journalEntriesTable.sourceType, "receivable_payment"), inArray(journalEntriesTable.sourceId, payments.map((payment) => String(payment.id)))),
           ),
         ));
@@ -119,6 +121,10 @@ afterAll(async () => {
     await db.delete(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, invoiceIds));
     await db.delete(operationEventsTable).where(and(
       eq(operationEventsTable.sourceType, "distributor_invoice"),
+      inArray(operationEventsTable.sourceId, invoiceIds.map(String)),
+    ));
+    await db.delete(operationEventsTable).where(and(
+      eq(operationEventsTable.sourceType, "distributor_invoice_cancellation"),
       inArray(operationEventsTable.sourceId, invoiceIds.map(String)),
     ));
     await db.delete(invoicesTable).where(inArray(invoicesTable.id, invoiceIds));
@@ -243,6 +249,9 @@ describe.sequential("atomic invoice issuance", () => {
 
   it("cancels legacy and inclusive orders by reversing the posted journal lines", async () => {
     for (const orderId of [orderIds[0], orderIds[3]]) {
+      if (orderId === orderIds[0]) await db.insert(shipmentsTable).values({
+        channel: "online", orderId, destinationCity: "Riyadh", status: "pending",
+      });
       await updateOrderAndIssueInvoice(orderId, { paymentStatus: "paid" }, {
         VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
         VAT_REGISTRATION_NUMBER: "300000000000003",
@@ -269,6 +278,7 @@ describe.sequential("atomic invoice issuance", () => {
         .orderBy(journalEntryLinesTable.lineNumber);
 
       await updateOrderAndIssueInvoice(orderId, { status: "cancelled" }, process.env, actorId);
+      if (orderId === orderIds[0]) expect((await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, orderId)))[0].status).toBe("cancelled");
       const [reversal] = await db.select().from(journalEntriesTable).where(and(
         eq(journalEntriesTable.sourceType, "sale_revenue_reversal"), eq(journalEntriesTable.sourceId, String(orderId)),
       ));
@@ -819,5 +829,88 @@ describe.sequential("distributor invoice issuance", () => {
         { productName: "Repeated historical snapshot", sku: "DUP-1", quantity: 1, unitPrice: 10 },
       ],
     }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceValidationError);
+  });
+
+  it("voids an uncollected live invoice once and balances receivable, VAT, revenue, COGS and stock", async () => {
+    const request = { creationKey: `void-${base}-invoice`, distributorId: paidTestDistributorId!, items: [{ productId, quantity: 1, unitPrice: 23 }] };
+    const before = (await db.select().from(productsTable).where(eq(productsTable.id, productId)))[0];
+    const invoice = await createDistributorInvoice(request, actorId, env);
+    const [shipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, invoice.id));
+    expect(shipment.status).toBe("pending");
+    const [sale] = await db.select().from(journalEntriesTable).where(and(eq(journalEntriesTable.sourceType, "distributor_invoice"), eq(journalEntriesTable.sourceId, String(invoice.id))));
+    const [cogs] = await db.select().from(journalEntriesTable).where(and(eq(journalEntriesTable.sourceType, "distributor_invoice_cogs"), eq(journalEntriesTable.sourceId, String(invoice.id))));
+    const [outgoing] = await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.eventKey, `distributor-invoice:${invoice.id}:${productId}`));
+    const [cancelled, other] = await Promise.allSettled([
+      cancelCompanyInvoice(invoice.id, "Incorrect company purchase order", actorId),
+      cancelCompanyInvoice(invoice.id, "Incorrect company purchase order", actorId),
+    ]);
+    expect([cancelled, other].filter(result => result.status === "fulfilled")).toHaveLength(1);
+    expect([cancelled, other].filter(result => result.status === "rejected")).toHaveLength(1);
+    const [stored] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+    expect(stored).toMatchObject({ cancellationReason: "Incorrect company purchase order", cancelledByAdminId: actorId, invoiceNumber: invoice.invoiceNumber });
+    expect(stored.cancelledAt).toBeInstanceOf(Date);
+    expect((await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, shipment.id)))[0].status).toBe("cancelled");
+    const reversals = await db.select().from(journalEntriesTable).where(inArray(journalEntriesTable.reversalOfEntryId, [sale.id, cogs.id]));
+    expect(reversals).toHaveLength(2);
+    for (const original of [sale, cogs]) {
+      const reversal = reversals.find(row => row.reversalOfEntryId === original.id)!;
+      expect(reversal.entryDate).toBe(saudiCalendarDate(new Date()));
+      const ledger = async (id: number) => db.select({ code: accountingAccountsTable.code, debit: journalEntryLinesTable.debit, credit: journalEntryLinesTable.credit })
+        .from(journalEntryLinesTable).innerJoin(accountingAccountsTable, eq(accountingAccountsTable.id, journalEntryLinesTable.accountId))
+        .where(eq(journalEntryLinesTable.journalEntryId, id)).orderBy(journalEntryLinesTable.lineNumber);
+      expect(await ledger(reversal.id)).toEqual((await ledger(original.id)).map(line => ({ ...line, debit: line.credit, credit: line.debit })));
+    }
+    const [returned] = await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.eventKey, `distributor-invoice-cancellation:${invoice.id}:${productId}`));
+    expect(returned).toMatchObject({ quantityChange: 1, unitCost: outgoing.unitCost, totalCost: outgoing.totalCost });
+    const [after] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    expect(after.stockQuantity).toBe(before.stockQuantity);
+    await expect(createReceivablePayment(invoice.id, { paymentKey: `void-payment-${base}`, amount: 1, paymentDate: saudiCalendarDate(new Date()), paymentMethod: "cash" }, actorId))
+      .rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await expect(createDistributorInvoice(request, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    expect((await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id)))[0].sequenceNumber).toBe(invoice.sequenceNumber);
+  });
+
+  it("rejects collections and carrier activity without partially changing an invoice", async () => {
+    await expect(cancelCompanyInvoice(successfulInvoiceId, "Collected invoice cannot be voided", actorId)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    const invoice = await createDistributorInvoice({ creationKey: `shipped-${base}-invoice`, distributorId: paidTestDistributorId!, items: [{ productId, quantity: 1, unitPrice: 20 }] }, actorId, env);
+    const [shipment] = await db.update(shipmentsTable).set({ integrationAttempts: 1 }).where(eq(shipmentsTable.invoiceId, invoice.id)).returning();
+    await db.insert(shipmentEventsTable).values({ shipmentId: shipment.id, carrier: "test", eventType: "label_request", outcome: "failed" });
+    await expect(cancelCompanyInvoice(invoice.id, "Already attempted carrier shipment", actorId)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await db.update(shipmentsTable).set({ integrationAttempts: 0, trackingNumber: "TRACKED-TEST", status: "pending" }).where(eq(shipmentsTable.id, shipment.id));
+    await expect(cancelCompanyInvoice(invoice.id, "Already assigned tracking number", actorId)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    await db.update(shipmentsTable).set({ trackingNumber: null, status: "ready" }).where(eq(shipmentsTable.id, shipment.id));
+    await expect(cancelCompanyInvoice(invoice.id, "Shipment already marked ready", actorId)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    expect((await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id)))[0].cancelledAt).toBeNull();
+    expect(await db.select().from(inventoryMovementsTable).where(eq(inventoryMovementsTable.sourceType, "distributor_invoice_cancellation"))).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ sourceId: String(invoice.id) })]));
+  });
+
+  it("serializes cancellation against a collection and leaves only one outcome", async () => {
+    const invoice = await createDistributorInvoice({
+      creationKey: `payment-race-${base}-invoice`, distributorId: paidTestDistributorId!,
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env);
+    const [voidResult, paymentResult] = await Promise.allSettled([
+      cancelCompanyInvoice(invoice.id, "Incorrect payment race invoice", actorId),
+      createReceivablePayment(invoice.id, {
+        paymentKey: `payment-race-${base}`, paymentDate: saudiCalendarDate(new Date()),
+        amount: 5, paymentMethod: "bank_transfer",
+      }, actorId),
+    ]);
+    expect([voidResult.status, paymentResult.status].sort()).toEqual(["fulfilled", "rejected"]);
+    const [record] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+    const payments = await db.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoice.id));
+    expect(Boolean(record.cancelledAt)).toBe(payments.length === 0);
+  });
+
+  it("cancels a pending order shipment even without fulfilled stock", async () => {
+    const id = orderIds[2];
+    await db.update(ordersTable).set({ paymentMethod: "cod" }).where(eq(ordersTable.id, id));
+    await db.insert(shipmentsTable).values({ channel: "online", orderId: id, destinationCity: "Riyadh", status: "pending" });
+    const result = await updateOrderAndIssueInvoice(id, { status: "cancelled" }, process.env, actorId);
+    expect(result?.status).toBe("cancelled");
+    expect((await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, id)))[0].status).toBe("cancelled");
+    await expect(updateOrderAndIssueInvoice(id, { status: "cancelled" }, process.env, actorId)).resolves.toMatchObject({ status: "cancelled" });
+    await db.delete(shipmentsTable).where(eq(shipmentsTable.orderId, id));
   });
 });

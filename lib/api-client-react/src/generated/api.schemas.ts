@@ -2206,6 +2206,21 @@ export interface SallaInvoiceImportResult {
   nextPage: number | null;
 }
 
+export interface CompanyInvoiceCancellationInput {
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
+}
+
+export interface AdminInvoiceCancellation {
+  id: number;
+  cancelledAt: string;
+  cancellationReason: string;
+  cancelledByAdminId: number;
+}
+
 export type AdminInvoiceHistorical = typeof AdminInvoiceHistorical[keyof typeof AdminInvoiceHistorical];
 
 
@@ -2284,6 +2299,14 @@ export interface AdminInvoiceItem {
 
 export interface AdminInvoice {
   id: number;
+  /** @nullable */
+  cancelledAt: string | null;
+  /** @nullable */
+  cancellationReason: string | null;
+  /** @nullable */
+  cancelledByAdminId: number | null;
+  /** @nullable */
+  cancelledByName: string | null;
   historical: AdminInvoiceHistorical;
   /** @nullable */
   orderId: number | null;

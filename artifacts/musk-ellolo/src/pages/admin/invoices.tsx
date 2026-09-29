@@ -5,6 +5,7 @@ import {
   useAdminCreateReceivablePayment,
   useAdminUpdateInvoice,
   useAdminArchiveInvoice,
+  useAdminCancelCompanyInvoice,
   useAdminListInvoiceEmailDeliveries,
   useAdminSendInvoiceEmail,
   adminDownloadInvoicePdf,
@@ -79,6 +80,10 @@ function InvoiceTemplate({
         : t('ضريبة القيمة المضافة (15%)', 'VAT (15%)');
   return (
     <div id="invoice-print-area" data-testid="invoice-template" className="invoice-sheet bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      {invoice.cancelledAt && <div className="border border-red-500 text-red-700 p-3 mb-4 font-bold" role="status">
+        {t('فاتورة ملغاة', 'Cancelled invoice')} · {invoice.cancellationReason}
+        <span className="block text-sm font-normal">{invoice.cancelledByName ?? `#${invoice.cancelledByAdminId}`} · {format(new Date(invoice.cancelledAt), 'yyyy-MM-dd HH:mm')}</span>
+      </div>}
       <style>{`
         @media print {
           body, html { height: auto !important; overflow: visible !important; background: #fff !important; }
@@ -170,7 +175,7 @@ function InvoiceTemplate({
 
       {/* Totals & QR */}
       <div data-testid="invoice-summary" className="invoice-summary flex flex-col sm:flex-row justify-between sm:items-end gap-6">
-         {invoice.historical !== 'yes' && <div data-testid="invoice-qr-surface" className="invoice-qr-surface w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
+         {invoice.historical !== 'yes' && !invoice.cancelledAt && <div data-testid="invoice-qr-surface" className="invoice-qr-surface w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
           {qrUrl ? (
             <img src={qrUrl} alt="ZATCA QR" data-testid="invoice-qr" onLoad={onQrLoad} className="w-full h-full object-contain" />
           ) : (
@@ -298,7 +303,7 @@ function InvoicePreviewDialog({
     invoice?.id ?? 0,
     { 
       query: { 
-        enabled: !!invoice && invoice.historical !== 'yes',
+        enabled: !!invoice && invoice.historical !== 'yes' && !invoice.cancelledAt,
         queryKey: invoice ? getAdminGetInvoiceQrQueryKey(invoice.id) : ['invoice-qr-null']
       }
     }
@@ -323,14 +328,14 @@ function InvoicePreviewDialog({
   }, [qrBlob]);
 
   useEffect(() => {
-    if (!open || !printOnReady || (invoice?.historical !== 'yes' && !qrReady) || hasPrinted.current) return;
+    if (!open || !printOnReady || (invoice?.historical !== 'yes' && !invoice?.cancelledAt && !qrReady) || hasPrinted.current) return;
     hasPrinted.current = true;
     const timer = window.setTimeout(() => window.print(), 0);
     return () => window.clearTimeout(timer);
-  }, [open, printOnReady, qrReady, invoice?.historical]);
+  }, [open, printOnReady, qrReady, invoice?.historical, invoice?.cancelledAt]);
 
   const downloadPdf = async () => {
-    if (!invoice || downloading) return;
+    if (!invoice || invoice.cancelledAt || downloading) return;
     setDownloading(true);
     try {
       const pdf = await adminDownloadInvoicePdf(invoice.id, lang);
@@ -355,7 +360,7 @@ function InvoicePreviewDialog({
          <div className="print-hide flex justify-between items-center p-4 pe-14 bg-background border-b shrink-0">
           <DialogTitle className="text-lg font-bold">{t('معاينة الفاتورة', 'Invoice Preview')} - {invoice?.invoiceNumber}</DialogTitle>
           <div className="flex gap-2">
-             <Button onClick={downloadPdf} variant="outline" size="sm" disabled={downloading || !invoice}>
+             <Button onClick={downloadPdf} variant="outline" size="sm" disabled={downloading || !invoice || !!invoice.cancelledAt}>
                {downloading ? t('جارٍ التنزيل...', 'Downloading...') : t('تنزيل PDF', 'Download PDF')}
              </Button>
             <Button onClick={() => window.print()} variant="outline" size="sm" className="gap-2">
@@ -629,6 +634,35 @@ function ArchiveInvoiceDialog({
   );
 }
 
+function CancelCompanyInvoiceDialog({ invoice, onClose }: { invoice: AdminInvoice | null; onClose: () => void }) {
+  const { t, lang } = useLanguage();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const mutation = useAdminCancelCompanyInvoice();
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => { setReason(''); setError(''); }, [invoice?.id]);
+  return <Dialog open={!!invoice} onOpenChange={open => { if (!open) onClose(); }}>
+    <DialogContent dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+      <DialogHeader><DialogTitle>{t('إلغاء الفاتورة', 'Cancel invoice')} · {invoice?.invoiceNumber}</DialogTitle></DialogHeader>
+      <p className="text-sm text-muted-foreground">{t('إلغاء نهائي يعكس الذمم والإيراد والضريبة والمخزون إن خرج، ويوقف الشحنة المنتظرة. لا يمكن التراجع عنه.', 'Permanent cancellation reverses receivables, revenue, VAT and any issued stock, and stops the pending shipment. This cannot be undone.')}</p>
+      <Label htmlFor="invoice-cancellation-reason">{t('سبب الإلغاء (إلزامي)', 'Cancellation reason (required)')}</Label>
+      <textarea id="invoice-cancellation-reason" className="w-full rounded-md border p-2 bg-background" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} />
+      {error && <p role="alert" className="text-destructive text-sm">{error}</p>}
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>{t('تراجع', 'Back')}</Button>
+        <Button variant="destructive" disabled={reason.trim().length < 10 || mutation.isPending} onClick={() => {
+          if (!invoice) return;
+          mutation.mutate({ id: invoice.id, data: { reason: reason.trim() } }, {
+            onSuccess: () => { queryClient.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() }); toast({ title: t('أُلغيت الفاتورة', 'Invoice cancelled') }); onClose(); },
+            onError: e => setError(e instanceof Error ? e.message : t('تعذر الإلغاء', 'Cancellation failed')),
+          });
+        }}>{t('تأكيد إلغاء الفاتورة', 'Confirm cancellation')}</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>;
+}
+
 function RecordPaymentDialog({
   invoice,
   open,
@@ -736,6 +770,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
   const [paymentInvoice, setPaymentInvoice] = useState<AdminInvoice | null>(null);
   const [emailInvoice, setEmailInvoice] = useState<AdminInvoice | null>(null);
   const [archiveInvoice, setArchiveInvoice] = useState<AdminInvoice | null>(null);
+  const [cancelInvoice, setCancelInvoice] = useState<AdminInvoice | null>(null);
   
   const { data: currentUser } = useGetAdminMe();
 
@@ -746,7 +781,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
   });
   
   const totals = (invoices ?? []).reduce((summary, invoice) => ({
-    billed: summary.billed + invoice.totalAmount,
+    billed: summary.billed + (invoice.cancelledAt ? 0 : invoice.totalAmount),
     paid: summary.paid + invoice.paidAmount,
     outstanding: summary.outstanding + invoice.outstandingAmount,
   }), { billed: 0, paid: 0, outstanding: 0 });
@@ -826,6 +861,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
                 <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">
                     {invoice.invoiceNumber}
+                    {invoice.cancelledAt && <span className="block text-xs text-destructive">{t('ملغاة', 'Cancelled')} · {invoice.cancellationReason} · {invoice.cancelledByName ?? `#${invoice.cancelledByAdminId}`} · {format(new Date(invoice.cancelledAt), 'yyyy-MM-dd HH:mm')}</span>}
                     {invoice.historical === 'yes' && <>
                       <Badge variant="outline" className="ms-2">{t('تسجيل سابق', 'Prior record')}</Badge>
                       {invoice.originalInvoiceNumber && <span className="mt-1 block text-xs font-normal text-muted-foreground">{t('رقم الفاتورة الأصلية', 'Original invoice')}: {invoice.originalInvoiceNumber}</span>}
@@ -842,7 +878,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
                   <TableCell className="text-end font-semibold text-primary"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></TableCell>
                   <TableCell className="text-end text-emerald-600"><Money value={invoice.paidAmount} lang={lang} fractionDigits={2} /></TableCell>
                   <TableCell className="text-end font-semibold"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></TableCell>
-                  <TableCell><Badge variant={invoice.paymentStatus === 'paid' ? 'secondary' : invoice.paymentStatus === 'partial' ? 'default' : 'outline'}>{invoice.paymentStatus === 'paid' ? t('مسددة', 'Paid') : invoice.paymentStatus === 'partial' ? t('جزئية', 'Partial') : t('غير مسددة', 'Unpaid')}</Badge></TableCell>
+                  <TableCell><Badge variant={invoice.cancelledAt ? 'destructive' : invoice.paymentStatus === 'paid' ? 'secondary' : invoice.paymentStatus === 'partial' ? 'default' : 'outline'}>{invoice.cancelledAt ? t('ملغاة', 'Cancelled') : invoice.paymentStatus === 'paid' ? t('مسددة', 'Paid') : invoice.paymentStatus === 'partial' ? t('جزئية', 'Partial') : t('غير مسددة', 'Unpaid')}</Badge></TableCell>
                   <TableCell className="text-center whitespace-nowrap">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -865,12 +901,12 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
                           <Printer className="h-4 w-4 mr-2 rtl:ml-2 rtl:mr-0" />
                           {t('طباعة', 'Print')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setEmailInvoice(invoice)}>
+                        {!invoice.cancelledAt && <DropdownMenuItem onClick={() => setEmailInvoice(invoice)}>
                           <Mail className="h-4 w-4 mr-2 rtl:ml-2 rtl:mr-0" />
                           {t('إرسال بالبريد', 'Email Invoice')}
-                        </DropdownMenuItem>
+                        </DropdownMenuItem>}
                         
-                        {hasPermission(currentUser, 'invoices', 'edit') && (
+                        {!invoice.cancelledAt && hasPermission(currentUser, 'invoices', 'edit') && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => setEditInvoice(invoice)}>
@@ -885,6 +921,8 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
                             )}
                           </>
                         )}
+                        {channel === 'companies' && !invoice.cancelledAt && invoice.paidAmount === 0 && hasPermission(currentUser, 'invoices', 'delete') &&
+                          <DropdownMenuItem className="text-destructive" onClick={() => setCancelInvoice(invoice)}>{t('إلغاء الفاتورة', 'Cancel invoice')}</DropdownMenuItem>}
 
                         {hasPermission(currentUser, 'invoices', 'delete') && (
                           <>
@@ -920,6 +958,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
       <EmailInvoiceDialog invoice={emailInvoice} open={!!emailInvoice} onOpenChange={(open) => !open && setEmailInvoice(null)} />
       <RecordPaymentDialog invoice={paymentInvoice} open={!!paymentInvoice} onOpenChange={(open) => !open && setPaymentInvoice(null)} />
       <ArchiveInvoiceDialog invoice={archiveInvoice} open={!!archiveInvoice} onOpenChange={(open) => !open && setArchiveInvoice(null)} />
+      <CancelCompanyInvoiceDialog invoice={cancelInvoice} onClose={() => setCancelInvoice(null)} />
     </div>
   );
 }

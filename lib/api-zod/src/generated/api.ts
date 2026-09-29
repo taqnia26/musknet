@@ -4339,8 +4339,16 @@ export const AdminListInvoicesQueryParams = zod.object({
   "receivableStatus": zod.enum(['all', 'open', 'overdue', 'paid']).default(adminListInvoicesQueryReceivableStatusDefault)
 })
 
+export const adminListInvoicesResponseCancelledByAdminIdMultipleOf = 1;
+
+
+
 export const AdminListInvoicesResponseItem = zod.object({
   "id": zod.number(),
+  "cancelledAt": zod.coerce.date().nullable(),
+  "cancellationReason": zod.string().nullable(),
+  "cancelledByAdminId": zod.number().multipleOf(adminListInvoicesResponseCancelledByAdminIdMultipleOf).nullable(),
+  "cancelledByName": zod.string().nullable(),
   "historical": zod.enum(['yes', 'no']),
   "orderId": zod.number().nullable(),
   "orderNumber": zod.string().nullable(),
@@ -4444,8 +4452,16 @@ export const AdminCreateDistributorInvoiceBody = zod.object({
 })).min(1).max(adminCreateDistributorInvoiceBodyItemsMax)
 })
 
+export const adminCreateDistributorInvoiceResponseCancelledByAdminIdMultipleOf = 1;
+
+
+
 export const AdminCreateDistributorInvoiceResponse = zod.object({
   "id": zod.number(),
+  "cancelledAt": zod.coerce.date().nullable(),
+  "cancellationReason": zod.string().nullable(),
+  "cancelledByAdminId": zod.number().multipleOf(adminCreateDistributorInvoiceResponseCancelledByAdminIdMultipleOf).nullable(),
+  "cancelledByName": zod.string().nullable(),
   "historical": zod.enum(['yes', 'no']),
   "orderId": zod.number().nullable(),
   "orderNumber": zod.string().nullable(),
@@ -4826,8 +4842,16 @@ export const AdminCreateExhibitionInvoiceBody = zod.object({
 })).min(1).max(adminCreateExhibitionInvoiceBodyItemsMax)
 })
 
+export const adminCreateExhibitionInvoiceResponseCancelledByAdminIdMultipleOf = 1;
+
+
+
 export const AdminCreateExhibitionInvoiceResponse = zod.object({
   "id": zod.number(),
+  "cancelledAt": zod.coerce.date().nullable(),
+  "cancellationReason": zod.string().nullable(),
+  "cancelledByAdminId": zod.number().multipleOf(adminCreateExhibitionInvoiceResponseCancelledByAdminIdMultipleOf).nullable(),
+  "cancelledByName": zod.string().nullable(),
   "historical": zod.enum(['yes', 'no']),
   "orderId": zod.number().nullable(),
   "orderNumber": zod.string().nullable(),
@@ -4941,6 +4965,36 @@ export const AdminArchiveInvoiceParams = zod.object({
 })
 
 export const AdminArchiveInvoiceResponse = zod.void()
+
+
+/**
+ * @summary Permanently cancel an uncollected, unshipped company invoice
+ */
+export const AdminCancelCompanyInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminCancelCompanyInvoiceBodyReasonMin = 10;
+export const adminCancelCompanyInvoiceBodyReasonMax = 500;
+
+
+
+export const AdminCancelCompanyInvoiceBody = zod.object({
+  "reason": zod.string().min(adminCancelCompanyInvoiceBodyReasonMin).max(adminCancelCompanyInvoiceBodyReasonMax)
+})
+
+export const adminCancelCompanyInvoiceResponseIdMultipleOf = 1;
+
+export const adminCancelCompanyInvoiceResponseCancelledByAdminIdMultipleOf = 1;
+
+
+
+export const AdminCancelCompanyInvoiceResponse = zod.object({
+  "id": zod.number().multipleOf(adminCancelCompanyInvoiceResponseIdMultipleOf),
+  "cancelledAt": zod.coerce.date(),
+  "cancellationReason": zod.string(),
+  "cancelledByAdminId": zod.number().multipleOf(adminCancelCompanyInvoiceResponseCancelledByAdminIdMultipleOf)
+})
 
 
 /**

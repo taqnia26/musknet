@@ -122,6 +122,7 @@ export async function createHistoricalInvoice(input: HistoricalInvoiceInput, act
     await tx.execute(sql`select pg_advisory_xact_lock(${7_521_010_001})`);
     const [replayed] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (replayed) {
+      if (replayed.cancelledAt) throw new DistributorInvoiceConflictError("Cancelled invoice cannot be reissued");
       if (replayed.historicalCreationFingerprint) {
         if (replayed.historical !== "yes" || replayed.historicalCreationFingerprint !== creationFingerprint(input))
           throw new DistributorInvoiceConflictError("Creation key belongs to a different invoice or collection");

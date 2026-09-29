@@ -33,18 +33,20 @@ const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 beforeAll(async () => {
   await db.insert(adminPermissionsTable).values(
-    ["view", "edit"].map((action) => ({ module: "shipping", action })),
+    [...["view", "edit"].map((action) => ({ module: "shipping", action })),
+      { module: "invoices", action: "delete" }],
   ).onConflictDoNothing();
   await db.insert(adminUsersTable).values([
     { id: ids.admin, email: `shipping-admin-${suffix}@example.com`, name: "Shipping Admin", passwordHash: await hashAdminPassword("shipping-password") },
     { id: ids.viewer, email: `shipping-viewer-${suffix}@example.com`, name: "Shipping Viewer", passwordHash: await hashAdminPassword("shipping-password") },
   ]);
-  const permissions = await db.select().from(adminPermissionsTable).where(eq(adminPermissionsTable.module, "shipping"));
+  const permissions = await db.select().from(adminPermissionsTable)
+    .where(inArray(adminPermissionsTable.module, ["shipping", "invoices"]));
   await db.insert(adminUserPermissionsTable).values(
     permissions.map((permission) => ({ adminUserId: ids.admin, permissionId: permission.id })),
   );
   await db.insert(adminUserPermissionsTable).values(
-    permissions.filter((permission) => permission.action === "view")
+    permissions.filter((permission) => permission.module === "shipping" && permission.action === "view")
       .map((permission) => ({ adminUserId: ids.viewer, permissionId: permission.id })),
   );
   adminToken = await createAdminSession(ids.admin);
@@ -234,5 +236,24 @@ describe.sequential("admin shipping dashboards", () => {
     const response = await request(app).get("/api/admin/shipping?channel=online&city=NoSuchCity")
       .set(auth(adminToken)).expect(200);
     expect(response.body).toMatchObject({ total: 0, items: [], summary: { shipmentCount: 0, uniqueParties: 0, totalActualCost: 0 } });
+  });
+
+  it("hides cancelled shipments and prevents reopening a cancelled source", async () => {
+    const [shipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, ids.missingShipmentOrder));
+    await db.update(ordersTable).set({ status: "cancelled" }).where(eq(ordersTable.id, ids.missingShipmentOrder));
+    await db.update(shipmentsTable).set({ status: "cancelled" }).where(eq(shipmentsTable.id, shipment.id));
+    const active = await request(app).get(`/api/admin/shipping?channel=online&search=${encodeURIComponent(`SHIP-MISSING-${suffix}`)}`).set(auth(adminToken)).expect(200);
+    expect(active.body.summary.shipmentCount).toBe(0);
+    const cancelled = await request(app).get(`/api/admin/shipping?channel=online&status=cancelled&search=${encodeURIComponent(`SHIP-MISSING-${suffix}`)}`).set(auth(adminToken)).expect(200);
+    expect(cancelled.body.items).toEqual([expect.objectContaining({ id: shipment.id, status: "cancelled" })]);
+    await request(app).patch(`/api/admin/shipping/${shipment.id}`).set(auth(adminToken)).send({ status: "ready" }).expect(409);
+    await request(app).post(`/api/admin/shipping/${shipment.id}/label`).set(auth(adminToken)).send({ carrier: "smsa", serviceMethod: "standard" }).expect(409);
+    await request(app).post("/api/admin/shipping").set(auth(adminToken)).send({
+      channel: "online", sourceId: ids.missingShipmentOrder, destinationCity: "Riyadh",
+      carrier: "Carrier", status: "pending", shippingScope: "domestic", nationalAddressShortCode: "RIYD1234",
+    }).expect(400);
+    await request(app).post(`/api/admin/invoices/${ids.newInvoice}/cancel`).set(auth(shippingViewerToken)).send({ reason: "Incorrect company invoice" }).expect(403);
+    await request(app).post(`/api/admin/invoices/${ids.newInvoice}/cancel`).set(auth(adminToken)).send({ reason: "short" }).expect(400);
+    await request(app).post(`/api/admin/invoices/${ids.newInvoice}/cancel`).set(auth(adminToken)).send({ reason: "Invoice requires review before cancellation" }).expect(409);
   });
 });

@@ -6,7 +6,7 @@ import {
   receivablePaymentsTable, shipmentsTable, wholesaleDistributorsTable,
 } from "@workspace/db";
 import { createHistoricalInvoice, reconcileHistoricalInvoice, type HistoricalInvoiceInput } from "./historical-company-invoices";
-import { createReceivablePayment, DistributorInvoiceConflictError, nextLiveInvoiceNumber } from "./invoices";
+import { cancelCompanyInvoice, createReceivablePayment, DistributorInvoiceConflictError, nextLiveInvoiceNumber } from "./invoices";
 
 const key = `historical-test-${Date.now()}`;
 let distributorId: number;
@@ -39,13 +39,15 @@ afterAll(async () => {
       await tx.execute(sql`set local session_replication_role = 'replica'`);
       const entries = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable).where(
         sql`(${journalEntriesTable.sourceType} = 'historical_company_invoice' and ${journalEntriesTable.sourceId} in (${sql.join(invoiceIds.map(id => sql`${String(id)}`), sql`, `)}))
-          or (${journalEntriesTable.sourceType} = 'receivable_payment' and ${journalEntriesTable.sourceId} in (${sql.join(payments.map(p => sql`${String(p.id)}`), sql`, `)}))`);
+          or (${journalEntriesTable.sourceType} = 'receivable_payment' and ${journalEntriesTable.sourceId} in (${sql.join(payments.map(p => sql`${String(p.id)}`), sql`, `)}))
+          or (${journalEntriesTable.sourceType} = 'reversal' and ${journalEntriesTable.reversalOfEntryId} in (select id from journal_entries where source_type = 'historical_company_invoice' and source_id in (${sql.join(invoiceIds.map(id => sql`${String(id)}`), sql`, `)})))`);
       if (entries.length) {
         await tx.delete(journalEntryAuditTable).where(inArray(journalEntryAuditTable.journalEntryId, entries.map(e => e.id)));
         await tx.delete(journalEntryLinesTable).where(inArray(journalEntryLinesTable.journalEntryId, entries.map(e => e.id)));
         await tx.delete(journalEntriesTable).where(inArray(journalEntriesTable.id, entries.map(e => e.id)));
       }
       await tx.delete(operationEventsTable).where(and(eq(operationEventsTable.sourceType, "receivable_payment"), inArray(operationEventsTable.sourceId, payments.map(p => String(p.id)))));
+      await tx.delete(operationEventsTable).where(and(eq(operationEventsTable.sourceType, "distributor_invoice_cancellation"), inArray(operationEventsTable.sourceId, invoiceIds.map(String))));
       await tx.delete(receivablePaymentsTable).where(inArray(receivablePaymentsTable.invoiceId, invoiceIds));
       await tx.delete(invoiceItemsTable).where(inArray(invoiceItemsTable.invoiceId, invoiceIds));
       await tx.delete(invoicesTable).where(inArray(invoicesTable.id, invoiceIds));
@@ -145,6 +147,13 @@ describe.sequential("historical company invoices", () => {
     expect(invoice.invoiceNumber).not.toBe(submission.invoiceNumber);
     expect(invoice.originalInvoiceNumber).toBe(submission.invoiceNumber);
     expect((await createHistoricalInvoice(submission, actorId)).id).toBe(invoice.id);
+    const before = await db.select({ count: sql<number>`count(*)` }).from(inventoryMovementsTable);
+    await cancelCompanyInvoice(invoice.id, "Historical document entered incorrectly", actorId);
+    expect(await db.select({ count: sql<number>`count(*)` }).from(inventoryMovementsTable)).toEqual(before);
+    const [sale] = await db.select().from(journalEntriesTable).where(and(eq(journalEntriesTable.sourceType, "historical_company_invoice"), eq(journalEntriesTable.sourceId, String(invoice.id))));
+    const [reversal] = await db.select().from(journalEntriesTable).where(eq(journalEntriesTable.reversalOfEntryId, sale.id));
+    expect(reversal).toMatchObject({ status: "posted", entryDate: new Date().toISOString().slice(0, 10) });
+    await expect(createHistoricalInvoice(submission, actorId)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
   });
   it("blocks later collections already represented by an import or receipt journal", async () => {
     const [imported] = await db.insert(journalEntriesTable).values({
