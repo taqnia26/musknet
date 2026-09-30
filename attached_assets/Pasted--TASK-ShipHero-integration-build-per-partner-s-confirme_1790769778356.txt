@@ -1,0 +1,58 @@
+# TASK — ShipHero integration build (per partner's confirmed requirements)
+
+## Confirmed by the partner (implement exactly this, nothing assumed beyond it)
+
+- Orders are created under a Merchant ID + Warehouse ID they will provide (env vars: `SHIPHERO_MERCHANT_ID`, `SHIPHERO_WAREHOUSE_ID`).
+- Product matching key is Product Name + SKU.
+- They will share dry/cold shipping codes and cold-chain coverage separately — store these as configuration, not hardcoded, since we don't have the actual values yet.
+- We push to them: Create Order, Create Product only.
+- They push to us: order status updates and other events, via webhooks they register and manage — we only need to receive and verify them.
+- Order numbers must be unique; a duplicate is rejected by their system.
+- National Address goes in the order's Address 2 field, prefixed by three hyphens before the short code (exact format pending our confirmation email — see the placeholder note below).
+- No additional integration fees.
+
+## 1. Product mapping (build the mechanism now, data comes later)
+
+A mapping table: our `productId` ↔ their `productName` + `sku` used for orders shipped through them. Do not guess values — leave it empty until we provide the confirmed list from the partner. Any order containing an item with no mapping entry must be blocked from being sent, with a clear error naming the unmapped item(s).
+
+## 2. Outbound: Create Order
+
+- Triggered when an order reaches the "ready to prepare" status (our `preparing` status) — not at creation, since unpaid or under-review orders should never reach the partner. Flag this trigger point clearly in code/config so it can be changed later if the partner says otherwise.
+- Build the order payload from our order + address data, using the mapping table for line items.
+- National Address: format as three literal hyphens followed by the short code, placed in Address 2 — implement it exactly as the partner's confirmed example shows once we have it; until then, implement with a clearly marked placeholder/test fixture and a TODO referencing this task, not a guess treated as final.
+- Idempotent by our own order id/number: retrying a timed-out send must not create a duplicate order on their side or ours.
+- Persist their response: their order id, our send status, timestamp, and the exact payload sent (for support/debugging).
+- Shipping method (chilled/regular) maps to the dry/cold code they will share — build this as a lookup, not hardcoded, since we don't have the real codes yet.
+
+## 3. Outbound: Create Product
+
+- Confirm with a code comment that this is only needed for products not already registered on their side (per their statement that our 9 current products are already physically stored and recorded in their system) — this call is for future new products, not to re-register the existing 9. Do not call it for the existing 9 products.
+
+## 4. Inbound webhook receiver
+
+- New endpoint to receive their events (order status updates, and other event types — design it to accept an event `type` field and route generically, not a fixed list only).
+- Verify the `x-shiphero-hmac-sha256` signature on every request; reject anything that fails verification.
+- Deduplicate using `X-Shiphero-Message-ID` — processing the same message id twice must be a no-op.
+- Map their order-status events to our existing shipment/order status transitions, forward-only (never move a status backward, never overwrite a status a staff member set manually more recently than the event's timestamp).
+- Log and store unrecognized event types rather than silently dropping them, so we can see what else they send once it's live.
+
+## 5. Do NOT implement yet — inventory zero-sync
+
+Do not build the "warehouse hits zero → set our available quantity to zero" behavior described in the partner's reply. We are clarifying with them first whether this conflicts with our own stock/COGS accounting (our system decrements stock and posts cost of sales at order-creation time, independent of their warehouse). Leave a clearly marked placeholder or skip this event type entirely in the webhook router for now — log it if received, act on nothing.
+
+## 6. Config and secrets
+
+All of `SHIPHERO_ACCESS_TOKEN` (or however the shared refresh token is exchanged), `SHIPHERO_MERCHANT_ID`, `SHIPHERO_WAREHOUSE_ID`, `SHIPHERO_WEBHOOK_SECRET` come from environment variables only, read at call time, never logged, never stored in the database. Disabled with a clear 503 if not configured, same pattern as the Salla import.
+
+## Tests
+
+- Mapping table blocks an order with an unmapped item.
+- Create Order is idempotent on retry.
+- Webhook signature verification rejects a bad signature.
+- Webhook message-id dedup is a no-op on replay.
+- Order sent only at "preparing," never at earlier statuses.
+- Inventory-zero event type is received and logged, but changes nothing (per item 5).
+
+## Deliver
+
+Files changed, the exact env var names used, and confirm the inventory zero-sync path was left inert as instructed.
