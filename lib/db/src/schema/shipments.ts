@@ -28,6 +28,7 @@ export const shipmentsTable = pgTable("shipments", {
   carrierShipmentId: text("carrier_shipment_id"),
   labelUrl: text("label_url"),
   status: text("status").notNull().default("pending"),
+  statusManuallyUpdatedAt: timestamp("status_manually_updated_at", { withTimezone: true }),
   integrationStatus: text("integration_status").notNull().default("not_requested"),
   integrationError: text("integration_error"),
   integrationAttempts: integer("integration_attempts").notNull().default(0),

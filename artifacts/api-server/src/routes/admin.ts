@@ -10,6 +10,7 @@ import { createSocialMarketingRouter } from "./social-marketing";
 import { createProductionPlansRouter } from "./production-plans";
 import { createAnnualAgendaRouter } from "./annual-agenda";
 import { createSallaInvoiceRouter } from "./salla-invoices";
+import { createShipHeroAdminRouter } from "./shiphero-admin";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
 import {
@@ -177,6 +178,7 @@ router.use(createSocialMarketingRouter(permit));
 router.use(createProductionPlansRouter(permit));
 router.use(createAnnualAgendaRouter(permit));
 router.use(createSallaInvoiceRouter(permit));
+router.use(createShipHeroAdminRouter(permit));
 
 function permitExhibitionInvoiceRead(_req: Request, res: Response, next: NextFunction) {
   (async () => {
@@ -2689,6 +2691,7 @@ router.patch("/admin/shipping/:id", permit("shipping", "edit"), route(async (req
     if (!current || current.status !== existing.status) throw new ShippingSourceConflict("Shipment changed; reload before editing");
     await tx.update(shipmentsTable).set({
       ...body,
+      ...(body.status !== undefined ? { statusManuallyUpdatedAt: new Date() } : {}),
       ...(channel === "b2b" ? {
         companyName: body.companyName?.trim() ?? existing.companyName,
         recipientName: body.recipientName?.trim() ?? existing.recipientName,
@@ -2795,6 +2798,7 @@ router.post("/admin/shipping/:id/label", permit("shipping", "edit"), route(async
         labelUrl: label.labelUrl,
         actualCost: label.actualCost,
         status: "ready",
+        statusManuallyUpdatedAt: new Date(),
         integrationStatus: "active",
         integrationError: null,
       }).where(eq(shipmentsTable.id, params.id));

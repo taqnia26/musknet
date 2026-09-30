@@ -65,3 +65,4 @@ export * from "./inventory-operations";
 export * from "./whatsapp";
 export * from "./annual-agenda";
 export * from "./production-plans";
+export * from "./shiphero";

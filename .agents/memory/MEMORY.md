@@ -55,3 +55,4 @@
 - [Vite cold-start health checks](vite-cold-start-health-checks.md) — a dev server can announce ready before dependency processing lets its first HTTP request complete.
 - [Shared invoice response contracts](shared-invoice-response-contracts.md) — new required display fields in list schemas also affect creation responses; validate both before committing a response.
 - [Admin tour in browser tests](admin-tour-browser-tests.md) — wait for the guided tour to appear and close before navigating to a tested admin flow.
+- [ShipHero confirmation boundaries](shiphero-confirmation-boundaries.md) — duplicate rejection is not replay safety; preserve partner reconciliation and environment-redaction limits.

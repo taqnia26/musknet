@@ -16,6 +16,7 @@ tags:
   - name: account
   - name: admin
   - name: owner
+  - name: webhooks
 paths:
   /owner/obligations:
     get:
@@ -968,6 +969,148 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminIntegrationProviderId" }]
       responses: { "204": { description: Integration settings removed }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { $ref: "#/components/responses/Forbidden" } }
+  /admin/shiphero:
+    get:
+      operationId: adminGetShipHero
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses:
+        "200":
+          description: ShipHero readiness, mappings, recent dispatches and webhook outcomes. No credentials or secrets are returned.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipHeroAdminSnapshot" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/shiphero/settings:
+    put:
+      operationId: adminUpdateShipHeroSettings
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShipHeroSettingsInput" }
+      responses:
+        "200":
+          description: Settings saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipHeroActionResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/shiphero/mappings/{productId}:
+    put:
+      operationId: adminUpsertShipHeroMapping
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: number, multipleOf: 1, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShipHeroMappingInput" }
+      responses:
+        "200":
+          description: Mapping saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipHeroActionResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      operationId: adminDeleteShipHeroMapping
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: number, multipleOf: 1, minimum: 1 }
+      responses:
+        "200":
+          description: Mapping deleted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipHeroActionResult" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/shiphero/orders/{orderId}/send:
+    post:
+      operationId: adminSendShipHeroOrder
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: number, multipleOf: 1, minimum: 1 }
+      responses:
+        "200":
+          description: Order send result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipHeroActionResult" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /admin/shiphero/products/{productId}/create:
+    post:
+      operationId: adminCreateShipHeroProduct
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema: { type: number, multipleOf: 1, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShipHeroProductRegistrationInput" }
+      responses:
+        "200":
+          description: Product registration result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipHeroActionResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+  /webhooks/shiphero:
+    post:
+      operationId: receiveShipHeroWebhook
+      tags: [webhooks]
+      parameters:
+        - name: x-shiphero-hmac-sha256
+          in: header
+          required: true
+          description: Base64 HMAC signature, verified against the raw request body.
+          schema: { type: string, minLength: 1 }
+        - name: x-shiphero-message-id
+          in: header
+          required: true
+          description: Unique delivery identifier used for webhook deduplication.
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShipHeroWebhookInput" }
+      responses:
+        "200":
+          description: Webhook accepted or safely ignored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipHeroWebhookResult" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
   /admin/products:
     get:
       operationId: adminListProducts
@@ -3821,6 +3964,134 @@ components:
         sessionId: { type: string, minLength: 8, maxLength: 80 }
         path: { type: string, minLength: 1, maxLength: 500 }
         referrer: { type: ["string", "null"], maxLength: 500 }
+    ShipHeroAdminSnapshot:
+      type: object
+      required: [settings, readiness, mappings, dispatches, events]
+      properties:
+        settings: { $ref: "#/components/schemas/ShipHeroSettings" }
+        readiness: { $ref: "#/components/schemas/ShipHeroReadiness" }
+        mappings:
+          type: array
+          items: { $ref: "#/components/schemas/ShipHeroProductMapping" }
+        dispatches:
+          type: array
+          items: { $ref: "#/components/schemas/ShipHeroDispatch" }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/ShipHeroWebhookEvent" }
+      additionalProperties: false
+    ShipHeroSettings:
+      type: object
+      required: [dryShippingCode, coldShippingCode, coldCoverageCities, statusMappings]
+      properties:
+        dryShippingCode: { type: ["string", "null"] }
+        coldShippingCode: { type: ["string", "null"] }
+        coldCoverageCities:
+          type: array
+          items: { type: string }
+        statusMappings:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [ready, in_transit, delivered]
+      additionalProperties: false
+    ShipHeroReadiness:
+      type: object
+      required: [configured, partnerContractConfirmed, webhookConfigured, triggerStatus, missing, blockingReason]
+      properties:
+        configured: { type: boolean }
+        partnerContractConfirmed: { type: boolean }
+        webhookConfigured: { type: boolean }
+        triggerStatus: { type: string }
+        missing:
+          type: array
+          items: { type: string }
+        blockingReason: { type: string }
+      additionalProperties: false
+    ShipHeroProductMapping:
+      type: object
+      required: [productId, productName, sku, registrationKind, remoteProductId, createStatus]
+      properties:
+        productId: { type: number, multipleOf: 1 }
+        productName: { type: string }
+        sku: { type: string }
+        registrationKind: { type: string, enum: [existing, new] }
+        remoteProductId: { type: ["string", "null"] }
+        createStatus: { type: string }
+      additionalProperties: false
+    ShipHeroDispatch:
+      type: object
+      required: [id, orderId, orderNumber, status, remoteOrderId, attempts, lastError, sentAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        orderId: { type: number, multipleOf: 1 }
+        orderNumber: { type: string }
+        status: { type: string }
+        remoteOrderId: { type: ["string", "null"] }
+        attempts: { type: number, multipleOf: 1 }
+        lastError: { type: ["string", "null"] }
+        sentAt: { type: ["string", "null"], format: date-time }
+      additionalProperties: false
+    ShipHeroWebhookEvent:
+      type: object
+      required: [id, messageId, eventType, outcome, detail, eventAt, receivedAt]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        messageId: { type: string }
+        eventType: { type: string }
+        outcome: { type: string }
+        detail: { type: ["string", "null"] }
+        eventAt: { type: ["string", "null"], format: date-time }
+        receivedAt: { type: string, format: date-time }
+      additionalProperties: false
+    ShipHeroSettingsInput:
+      type: object
+      required: [dryShippingCode, coldShippingCode, coldCoverageCities, statusMappings]
+      properties:
+        dryShippingCode: { type: ["string", "null"], maxLength: 120 }
+        coldShippingCode: { type: ["string", "null"], maxLength: 120 }
+        coldCoverageCities:
+          type: array
+          items: { type: string, minLength: 1, maxLength: 120 }
+        statusMappings:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [ready, in_transit, delivered]
+      additionalProperties: false
+    ShipHeroMappingInput:
+      type: object
+      required: [productName, sku, registrationKind]
+      properties:
+        productName: { type: string, minLength: 1, maxLength: 200 }
+        sku: { type: string, minLength: 1, maxLength: 120 }
+        registrationKind: { type: string, enum: [existing, new] }
+      additionalProperties: false
+    ShipHeroProductRegistrationInput:
+      type: object
+      required: [confirmNotRegistered]
+      properties:
+        confirmNotRegistered: { type: boolean }
+      additionalProperties: false
+    ShipHeroActionResult:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean }
+      additionalProperties: false
+    ShipHeroWebhookInput:
+      type: object
+      properties:
+        type: { type: string }
+        webhook_type: { type: string }
+      additionalProperties: true
+    ShipHeroWebhookResult:
+      type: object
+      required: [code, Status]
+      properties:
+        code: { type: string }
+        Status: { type: string }
+      additionalProperties: false
     AdminIntegration:
       type: object
       required: [providerId, status, configuredAt, updatedAt]

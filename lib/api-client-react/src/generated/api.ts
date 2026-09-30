@@ -273,6 +273,13 @@ import type {
   SallaInvoiceImportInput,
   SallaInvoiceImportResult,
   ServiceUnavailableResponse,
+  ShipHeroActionResult,
+  ShipHeroAdminSnapshot,
+  ShipHeroMappingInput,
+  ShipHeroProductRegistrationInput,
+  ShipHeroSettingsInput,
+  ShipHeroWebhookInput,
+  ShipHeroWebhookResult,
   Shipment,
   ShipmentInput,
   ShipmentUpdate,
@@ -6468,6 +6475,469 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminDisconnectIntegrationMutationOptions(options));
+    }
+
+export const getAdminGetShipHeroUrl = () => {
+
+
+
+
+  return `/api/admin/shiphero`
+}
+
+export const adminGetShipHero = async ( options?: Parameters<typeof customFetch>[1]): Promise<ShipHeroAdminSnapshot> => {
+
+  return customFetch<ShipHeroAdminSnapshot>(getAdminGetShipHeroUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetShipHeroQueryKey = () => {
+    return [
+    `/api/admin/shiphero`
+    ] as const;
+    }
+
+
+export const getAdminGetShipHeroQueryOptions = <TData = Awaited<ReturnType<typeof adminGetShipHero>>, TError = ErrorType<ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetShipHero>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetShipHeroQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetShipHero>>> = ({ signal }) => adminGetShipHero({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetShipHero>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetShipHeroQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetShipHero>>>
+export type AdminGetShipHeroQueryError = ErrorType<ForbiddenResponse>
+
+
+
+export function useAdminGetShipHero<TData = Awaited<ReturnType<typeof adminGetShipHero>>, TError = ErrorType<ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetShipHero>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetShipHeroQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminUpdateShipHeroSettingsUrl = () => {
+
+
+
+
+  return `/api/admin/shiphero/settings`
+}
+
+export const adminUpdateShipHeroSettings = async (shipHeroSettingsInput: ShipHeroSettingsInput, options?: Parameters<typeof customFetch>[1]): Promise<ShipHeroActionResult> => {
+
+  return customFetch<ShipHeroActionResult>(getAdminUpdateShipHeroSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(shipHeroSettingsInput)
+  }
+);}
+
+
+
+
+
+export const getAdminUpdateShipHeroSettingsMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateShipHeroSettings>>, TError,{data: BodyType<ShipHeroSettingsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpdateShipHeroSettings>>, TError,{data: BodyType<ShipHeroSettingsInput>}, TContext> => {
+
+const mutationKey = ['adminUpdateShipHeroSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpdateShipHeroSettings>>, {data: BodyType<ShipHeroSettingsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminUpdateShipHeroSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpdateShipHeroSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpdateShipHeroSettings>>>
+    export type AdminUpdateShipHeroSettingsMutationBody = BodyType<ShipHeroSettingsInput>
+    export type AdminUpdateShipHeroSettingsMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    export const useAdminUpdateShipHeroSettings = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpdateShipHeroSettings>>, TError,{data: BodyType<ShipHeroSettingsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpdateShipHeroSettings>>,
+        TError,
+        {data: BodyType<ShipHeroSettingsInput>},
+        TContext
+      > => {
+      return useMutation(getAdminUpdateShipHeroSettingsMutationOptions(options));
+    }
+
+export const getAdminUpsertShipHeroMappingUrl = (productId: number,) => {
+
+
+
+
+  return `/api/admin/shiphero/mappings/${productId}`
+}
+
+export const adminUpsertShipHeroMapping = async (productId: number,
+    shipHeroMappingInput: ShipHeroMappingInput, options?: Parameters<typeof customFetch>[1]): Promise<ShipHeroActionResult> => {
+
+  return customFetch<ShipHeroActionResult>(getAdminUpsertShipHeroMappingUrl(productId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(shipHeroMappingInput)
+  }
+);}
+
+
+
+
+
+export const getAdminUpsertShipHeroMappingMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpsertShipHeroMapping>>, TError,{productId: number;data: BodyType<ShipHeroMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminUpsertShipHeroMapping>>, TError,{productId: number;data: BodyType<ShipHeroMappingInput>}, TContext> => {
+
+const mutationKey = ['adminUpsertShipHeroMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminUpsertShipHeroMapping>>, {productId: number;data: BodyType<ShipHeroMappingInput>}> = (props) => {
+          const {productId,data} = props ?? {};
+
+          return  adminUpsertShipHeroMapping(productId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminUpsertShipHeroMappingMutationResult = NonNullable<Awaited<ReturnType<typeof adminUpsertShipHeroMapping>>>
+    export type AdminUpsertShipHeroMappingMutationBody = BodyType<ShipHeroMappingInput>
+    export type AdminUpsertShipHeroMappingMutationError = ErrorType<BadRequestResponse | ForbiddenResponse>
+
+    export const useAdminUpsertShipHeroMapping = <TError = ErrorType<BadRequestResponse | ForbiddenResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminUpsertShipHeroMapping>>, TError,{productId: number;data: BodyType<ShipHeroMappingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminUpsertShipHeroMapping>>,
+        TError,
+        {productId: number;data: BodyType<ShipHeroMappingInput>},
+        TContext
+      > => {
+      return useMutation(getAdminUpsertShipHeroMappingMutationOptions(options));
+    }
+
+export const getAdminDeleteShipHeroMappingUrl = (productId: number,) => {
+
+
+
+
+  return `/api/admin/shiphero/mappings/${productId}`
+}
+
+export const adminDeleteShipHeroMapping = async (productId: number, options?: Parameters<typeof customFetch>[1]): Promise<ShipHeroActionResult> => {
+
+  return customFetch<ShipHeroActionResult>(getAdminDeleteShipHeroMappingUrl(productId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteShipHeroMappingMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteShipHeroMapping>>, TError,{productId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteShipHeroMapping>>, TError,{productId: number}, TContext> => {
+
+const mutationKey = ['adminDeleteShipHeroMapping'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteShipHeroMapping>>, {productId: number}> = (props) => {
+          const {productId} = props ?? {};
+
+          return  adminDeleteShipHeroMapping(productId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteShipHeroMappingMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteShipHeroMapping>>>
+
+    export type AdminDeleteShipHeroMappingMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+
+    export const useAdminDeleteShipHeroMapping = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteShipHeroMapping>>, TError,{productId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteShipHeroMapping>>,
+        TError,
+        {productId: number},
+        TContext
+      > => {
+      return useMutation(getAdminDeleteShipHeroMappingMutationOptions(options));
+    }
+
+export const getAdminSendShipHeroOrderUrl = (orderId: number,) => {
+
+
+
+
+  return `/api/admin/shiphero/orders/${orderId}/send`
+}
+
+export const adminSendShipHeroOrder = async (orderId: number, options?: Parameters<typeof customFetch>[1]): Promise<ShipHeroActionResult> => {
+
+  return customFetch<ShipHeroActionResult>(getAdminSendShipHeroOrderUrl(orderId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminSendShipHeroOrderMutationOptions = <TError = ErrorType<ForbiddenResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendShipHeroOrder>>, TError,{orderId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSendShipHeroOrder>>, TError,{orderId: number}, TContext> => {
+
+const mutationKey = ['adminSendShipHeroOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSendShipHeroOrder>>, {orderId: number}> = (props) => {
+          const {orderId} = props ?? {};
+
+          return  adminSendShipHeroOrder(orderId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSendShipHeroOrderMutationResult = NonNullable<Awaited<ReturnType<typeof adminSendShipHeroOrder>>>
+
+    export type AdminSendShipHeroOrderMutationError = ErrorType<ForbiddenResponse | ServiceUnavailableResponse>
+
+    export const useAdminSendShipHeroOrder = <TError = ErrorType<ForbiddenResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSendShipHeroOrder>>, TError,{orderId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSendShipHeroOrder>>,
+        TError,
+        {orderId: number},
+        TContext
+      > => {
+      return useMutation(getAdminSendShipHeroOrderMutationOptions(options));
+    }
+
+export const getAdminCreateShipHeroProductUrl = (productId: number,) => {
+
+
+
+
+  return `/api/admin/shiphero/products/${productId}/create`
+}
+
+export const adminCreateShipHeroProduct = async (productId: number,
+    shipHeroProductRegistrationInput: ShipHeroProductRegistrationInput, options?: Parameters<typeof customFetch>[1]): Promise<ShipHeroActionResult> => {
+
+  return customFetch<ShipHeroActionResult>(getAdminCreateShipHeroProductUrl(productId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(shipHeroProductRegistrationInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateShipHeroProductMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateShipHeroProduct>>, TError,{productId: number;data: BodyType<ShipHeroProductRegistrationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateShipHeroProduct>>, TError,{productId: number;data: BodyType<ShipHeroProductRegistrationInput>}, TContext> => {
+
+const mutationKey = ['adminCreateShipHeroProduct'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateShipHeroProduct>>, {productId: number;data: BodyType<ShipHeroProductRegistrationInput>}> = (props) => {
+          const {productId,data} = props ?? {};
+
+          return  adminCreateShipHeroProduct(productId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateShipHeroProductMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateShipHeroProduct>>>
+    export type AdminCreateShipHeroProductMutationBody = BodyType<ShipHeroProductRegistrationInput>
+    export type AdminCreateShipHeroProductMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | ServiceUnavailableResponse>
+
+    export const useAdminCreateShipHeroProduct = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateShipHeroProduct>>, TError,{productId: number;data: BodyType<ShipHeroProductRegistrationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateShipHeroProduct>>,
+        TError,
+        {productId: number;data: BodyType<ShipHeroProductRegistrationInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateShipHeroProductMutationOptions(options));
+    }
+
+export const getReceiveShipHeroWebhookUrl = () => {
+
+
+
+
+  return `/api/webhooks/shiphero`
+}
+
+export const receiveShipHeroWebhook = async (shipHeroWebhookInput: ShipHeroWebhookInput, options?: Parameters<typeof customFetch>[1]): Promise<ShipHeroWebhookResult> => {
+
+  return customFetch<ShipHeroWebhookResult>(getReceiveShipHeroWebhookUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(shipHeroWebhookInput)
+  }
+);}
+
+
+
+
+
+export const getReceiveShipHeroWebhookMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ConflictResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveShipHeroWebhook>>, TError,{data: BodyType<ShipHeroWebhookInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof receiveShipHeroWebhook>>, TError,{data: BodyType<ShipHeroWebhookInput>}, TContext> => {
+
+const mutationKey = ['receiveShipHeroWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof receiveShipHeroWebhook>>, {data: BodyType<ShipHeroWebhookInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  receiveShipHeroWebhook(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReceiveShipHeroWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof receiveShipHeroWebhook>>>
+    export type ReceiveShipHeroWebhookMutationBody = BodyType<ShipHeroWebhookInput>
+    export type ReceiveShipHeroWebhookMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ConflictResponse | ServiceUnavailableResponse>
+
+    export const useReceiveShipHeroWebhook = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ConflictResponse | ServiceUnavailableResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof receiveShipHeroWebhook>>, TError,{data: BodyType<ShipHeroWebhookInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof receiveShipHeroWebhook>>,
+        TError,
+        {data: BodyType<ShipHeroWebhookInput>},
+        TContext
+      > => {
+      return useMutation(getReceiveShipHeroWebhookMutationOptions(options));
     }
 
 export const getAdminListProductsUrl = (params?: AdminListProductsParams,) => {

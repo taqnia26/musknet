@@ -1215,6 +1215,140 @@ export interface TrackPageViewInput {
   referrer?: string | null;
 }
 
+export type ShipHeroSettingsStatusMappings = {[key: string]: 'ready' | 'in_transit' | 'delivered'};
+
+export interface ShipHeroSettings {
+  /** @nullable */
+  dryShippingCode: string | null;
+  /** @nullable */
+  coldShippingCode: string | null;
+  coldCoverageCities: string[];
+  statusMappings: ShipHeroSettingsStatusMappings;
+}
+
+export interface ShipHeroReadiness {
+  configured: boolean;
+  partnerContractConfirmed: boolean;
+  webhookConfigured: boolean;
+  triggerStatus: string;
+  missing: string[];
+  blockingReason: string;
+}
+
+export type ShipHeroProductMappingRegistrationKind = typeof ShipHeroProductMappingRegistrationKind[keyof typeof ShipHeroProductMappingRegistrationKind];
+
+
+export const ShipHeroProductMappingRegistrationKind = {
+  existing: 'existing',
+  new: 'new',
+} as const;
+
+export interface ShipHeroProductMapping {
+  productId: number;
+  productName: string;
+  sku: string;
+  registrationKind: ShipHeroProductMappingRegistrationKind;
+  /** @nullable */
+  remoteProductId: string | null;
+  createStatus: string;
+}
+
+export interface ShipHeroDispatch {
+  id: number;
+  orderId: number;
+  orderNumber: string;
+  status: string;
+  /** @nullable */
+  remoteOrderId: string | null;
+  attempts: number;
+  /** @nullable */
+  lastError: string | null;
+  /** @nullable */
+  sentAt: string | null;
+}
+
+export interface ShipHeroWebhookEvent {
+  id: number;
+  messageId: string;
+  eventType: string;
+  outcome: string;
+  /** @nullable */
+  detail: string | null;
+  /** @nullable */
+  eventAt: string | null;
+  receivedAt: string;
+}
+
+export interface ShipHeroAdminSnapshot {
+  settings: ShipHeroSettings;
+  readiness: ShipHeroReadiness;
+  mappings: ShipHeroProductMapping[];
+  dispatches: ShipHeroDispatch[];
+  events: ShipHeroWebhookEvent[];
+}
+
+export type ShipHeroSettingsInputStatusMappings = {[key: string]: 'ready' | 'in_transit' | 'delivered'};
+
+export interface ShipHeroSettingsInput {
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  dryShippingCode: string | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  coldShippingCode: string | null;
+  /**
+     * @items.minLength 1
+     * @items.maxLength 120
+     */
+  coldCoverageCities: string[];
+  statusMappings: ShipHeroSettingsInputStatusMappings;
+}
+
+export type ShipHeroMappingInputRegistrationKind = typeof ShipHeroMappingInputRegistrationKind[keyof typeof ShipHeroMappingInputRegistrationKind];
+
+
+export const ShipHeroMappingInputRegistrationKind = {
+  existing: 'existing',
+  new: 'new',
+} as const;
+
+export interface ShipHeroMappingInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  productName: string;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  sku: string;
+  registrationKind: ShipHeroMappingInputRegistrationKind;
+}
+
+export interface ShipHeroProductRegistrationInput {
+  confirmNotRegistered: boolean;
+}
+
+export interface ShipHeroActionResult {
+  success: boolean;
+}
+
+export interface ShipHeroWebhookInput {
+  type?: string;
+  webhook_type?: string;
+  [key: string]: unknown;
+ }
+
+export interface ShipHeroWebhookResult {
+  code: string;
+  Status: string;
+}
+
 export type AdminIntegrationStatus = typeof AdminIntegrationStatus[keyof typeof AdminIntegrationStatus];
 
 
@@ -6273,3 +6407,4 @@ export const GetInventoryAuditReportFormat = {
   json: 'json',
   csv: 'csv',
 } as const;
+

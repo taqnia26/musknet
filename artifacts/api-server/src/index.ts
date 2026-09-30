@@ -1,6 +1,9 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { whatsappManager } from "./lib/whatsapp";
+import { getShipHeroSettings } from "./lib/shiphero-config";
+import { startShipHeroOutboundWorker } from "./lib/shiphero-outbound";
+import { startShipHeroWebhookWorker } from "./lib/shiphero-webhooks";
 
 const rawPort = process.env["PORT"];
 
@@ -24,4 +27,8 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
   void whatsappManager.restore().catch(() => logger.warn("Could not restore WhatsApp connection"));
+  void getShipHeroSettings().then(() => {
+    startShipHeroOutboundWorker();
+    startShipHeroWebhookWorker();
+  }).catch(() => logger.error("Could not initialize ShipHero integration tables"));
 });

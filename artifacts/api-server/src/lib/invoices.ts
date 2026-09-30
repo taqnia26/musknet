@@ -5,6 +5,8 @@ import { adjustOperationalBalances } from "./operations";
 import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType, type TaxTreatment } from "./vat";
 import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
 import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
+import { shipheroDispatchesTable } from "@workspace/db";
+import { SHIPHERO_TRIGGER_STATUS } from "./shiphero-config";
 import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, shipmentEventsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
@@ -755,6 +757,11 @@ export async function updateOrderAndIssueInvoice(
       throw new AccountingConflictError("Use the refund workflow before marking an order returned");
     const cancelling = values.status === "cancelled" && order.status !== "cancelled";
     if (cancelling) {
+      const [dispatch] = await tx.select().from(shipheroDispatchesTable)
+        .where(eq(shipheroDispatchesTable.orderId, order.id)).for("update");
+      if (dispatch && ["sending", "sent", "uncertain"].includes(dispatch.status)) {
+        throw new AccountingConflictError("ShipHero dispatch may have reached the warehouse; reconcile it before cancelling");
+      }
       const [shipment] = await tx.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, order.id)).for("update");
       if (shipment) {
         if (shipment.status !== "pending" || shipment.trackingNumber || shipment.carrierShipmentId || shipment.labelUrl || shipment.shippedAt ||
@@ -842,8 +849,25 @@ export async function updateOrderAndIssueInvoice(
         }
       }
     }
-    const [updated] = await tx.update(ordersTable).set(values)
+    const statusChanged = values.status !== undefined && values.status !== order.status;
+    const [updated] = await tx.update(ordersTable).set({
+      ...values,
+      ...(actorId !== undefined && values.status !== undefined ? { statusManuallyUpdatedAt: new Date() } : {}),
+    })
       .where(eq(ordersTable.id, order.id)).returning();
+    // Only entering preparing creates a durable job. Order creation and earlier
+    // statuses never call ShipHero; the worker rechecks payment and live readiness.
+    if (statusChanged && updated.status === SHIPHERO_TRIGGER_STATUS) {
+      await tx.insert(shipheroDispatchesTable).values({
+        orderId: updated.id, orderNumber: updated.orderNumber, status: "queued",
+      }).onConflictDoNothing({ target: shipheroDispatchesTable.orderId });
+    }
+    if (cancelling) {
+      await tx.update(shipheroDispatchesTable).set({
+        status: "skipped", lastError: "Order cancelled before dispatch",
+      }).where(and(eq(shipheroDispatchesTable.orderId, order.id),
+        sql`${shipheroDispatchesTable.status} in ('queued', 'blocked', 'failed')`));
+    }
     if (cancelling && actorId !== undefined) {
       const items = await tx.select({ productId: orderItemsTable.productId, quantity: orderItemsTable.quantity, costSnapshot: orderItemsTable.costSnapshot })
         .from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));

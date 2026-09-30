@@ -26,6 +26,7 @@ export const ordersTable = pgTable("storefront_orders", {
   shippingMethod: text("shipping_method").notNull(),
   paymentMethod: text("payment_method").notNull(),
   adminNotes: text("admin_notes"),
+  statusManuallyUpdatedAt: timestamp("status_manually_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
