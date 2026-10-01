@@ -1,7 +1,20 @@
 import { backupWritePool } from "@workspace/db";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { getMaintenanceState } from "./backup-control";
 
 const WRITE_FENCE = 764_211_904;
+const connectFence = async () => backupWritePool.connect();
+const exclusiveContext = new AsyncLocalStorage<Awaited<ReturnType<typeof connectFence>>>();
+
+export async function assertBackupExclusiveFence() {
+  const client = exclusiveContext.getStore();
+  if (!client) throw new Error("A drained exclusive writer fence is required for backup or restore");
+  const result = await client.query<{ held: boolean }>(
+    "SELECT EXISTS(SELECT 1 FROM pg_locks WHERE locktype='advisory' AND pid=pg_backend_pid() AND objid=$1::oid AND mode='ExclusiveLock' AND granted) AS held",
+    [WRITE_FENCE],
+  );
+  if (!result.rows[0]?.held) throw new Error("Backup writer fence was lost");
+}
 
 /** Separate connections keep admission locks from starving business queries. */
 export async function acquireBackupWriteFence(): Promise<(() => Promise<void>) | null> {
@@ -49,7 +62,7 @@ export async function withExclusiveBackupFence<T>(handler: () => Promise<T>): Pr
     await client.query("SELECT pg_advisory_lock($1)", [WRITE_FENCE]);
     locked = true;
     await client.query("SET statement_timeout = 0");
-    return await handler();
+    return await exclusiveContext.run(client, handler);
   } finally {
     try {
       if (locked) await client.query("SELECT pg_advisory_unlock($1)", [WRITE_FENCE]);

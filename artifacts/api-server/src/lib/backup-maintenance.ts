@@ -20,8 +20,17 @@ export async function backupMaintenanceGuard(req: Request, res: Response, next: 
           res.status(503).json({ code: "backup_maintenance", error: "بدأت صيانة النسخ الاحتياطي. حاول لاحقاً." });
           return;
         }
+        // A client disconnect is not proof the handler's DB/file work stopped.
+        // Release when the handler ends its response, even on a closed socket.
+        const originalEnd = res.end;
+        res.end = function (this: Response, ...args: Parameters<Response["end"]>) {
+          try { return originalEnd.apply(this, args); }
+          finally { void release(); }
+        } as Response["end"];
         res.once("finish", () => { void release(); });
-        res.once("close", () => { void release(); });
+        res.once("close", () => {
+          if (res.writableEnded) void release();
+        });
       }
       next();
       return;

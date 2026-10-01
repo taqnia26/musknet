@@ -155,6 +155,168 @@ class FakeDatabase {
   }
 }
 
+class ProviderFactDatabase {
+  readonly statements: string[] = [];
+  orders: Record<string, string | null>[] = [];
+  dispatches: Record<string, string | null>[] = [];
+  readonly providerFacts: { source_table: string; row_hash: string; payload: unknown }[] = [];
+  readonly client: BackupDbClient = {
+    query: async (text: string, values: unknown[] = []) => {
+      this.statements.push(text);
+      const query = text.trim();
+      if (query.includes("pg_try_advisory_lock")) return { rows: [{ locked: true }], rowCount: 1 };
+      if (query.includes("pg_advisory_unlock")) return { rows: [{ pg_advisory_unlock: true }], rowCount: 1 };
+      if (query.startsWith("SELECT c.relname AS name")) {
+        return {
+          rows: [
+            { name: "backup_external_facts", kind: "r", isPartition: false },
+            { name: "orders", kind: "r", isPartition: false },
+            { name: "shiphero_dispatches", kind: "r", isPartition: false },
+          ],
+          rowCount: 3,
+        };
+      }
+      if (query.startsWith("SELECT c.relname AS table_name, i.indnkeyatts")) {
+        return {
+          rows: [
+            { table_name: "shiphero_dispatches", key_count: 1, predicate: null, columns: ["id"] },
+            { table_name: "shiphero_dispatches", key_count: 1, predicate: null, columns: ["order_id"] },
+            { table_name: "shiphero_dispatches", key_count: 1, predicate: null, columns: ["order_number"] },
+          ],
+          rowCount: 3,
+        };
+      }
+      if (query.startsWith("SELECT source.relname AS source_table")) {
+        return {
+          rows: [{
+            source_table: "shiphero_dispatches",
+            target_table: "orders",
+            constraint_name: "shiphero_dispatches_order_id_fk",
+            deferrable: false,
+          }],
+          rowCount: 1,
+        };
+      }
+      if (query.startsWith("SELECT c.relname AS table_name, a.attname AS column_name,") && query.includes("a.attidentity AS identity_kind")) {
+        const definitions = [
+          ["backup_external_facts", "source_table", "text"],
+          ["backup_external_facts", "row_hash", "text"],
+          ["backup_external_facts", "payload", "jsonb"],
+          ["backup_external_facts", "preserved_at", "timestamp with time zone"],
+          ["backup_external_facts", "backup_id", "uuid"],
+          ["orders", "id", "bigint"],
+          ["orders", "amount", "numeric(30,3)"],
+          ["shiphero_dispatches", "id", "bigint"],
+          ["shiphero_dispatches", "order_id", "bigint"],
+          ["shiphero_dispatches", "status", "text"],
+          ["shiphero_dispatches", "order_number", "text"],
+          ["shiphero_dispatches", "last_error", "text"],
+        ];
+        return {
+          rows: definitions.map(([table_name, column_name, type_sql]) => ({
+            table_name,
+            column_name,
+            type_sql,
+            identity_kind: "",
+            generated_kind: "",
+          })),
+          rowCount: definitions.length,
+        };
+      }
+      if (query.startsWith("SELECT c.relname AS table_name, a.attname AS column_name, a.attnum")) {
+        const definitions = [
+          ["backup_external_facts", "source_table", "text"],
+          ["backup_external_facts", "row_hash", "text"],
+          ["backup_external_facts", "payload", "jsonb"],
+          ["backup_external_facts", "preserved_at", "timestamp with time zone"],
+          ["backup_external_facts", "backup_id", "uuid"],
+          ["orders", "id", "bigint"],
+          ["orders", "amount", "numeric(30,3)"],
+          ["shiphero_dispatches", "id", "bigint"],
+          ["shiphero_dispatches", "order_id", "bigint"],
+          ["shiphero_dispatches", "status", "text"],
+          ["shiphero_dispatches", "order_number", "text"],
+          ["shiphero_dispatches", "last_error", "text"],
+        ];
+        return {
+          rows: definitions.map(([table_name, column_name, type_sql], index) => ({
+            table_name,
+            column_name,
+            attnum: index + 1,
+            type_sql,
+            attnotnull: false,
+            default_sql: null,
+            attidentity: "",
+            attgenerated: "",
+          })),
+          rowCount: definitions.length,
+        };
+      }
+      if (query.startsWith("SELECT pg_get_serial_sequence")) {
+        return { rows: [{ sequence: null }], rowCount: 1 };
+      }
+      if (query.startsWith('SELECT "source_table", "row_hash", "payload"')) {
+        return {
+          rows: this.providerFacts
+            .filter((fact) => (values[0] as string[]).includes(fact.source_table))
+            .map((fact) => ({ ...fact })),
+          rowCount: this.providerFacts.length,
+        };
+      }
+      if (query.startsWith('SELECT "id"::text AS "id"')) {
+        const table = query.match(/FROM public\."([^"]+)"/)?.[1];
+        const source = table === "orders" ? this.orders : table === "shiphero_dispatches" ? this.dispatches : [];
+        const rows = source.map((row) => ({ ...row }));
+        return { rows, rowCount: rows.length };
+      }
+      if (query.startsWith(`INSERT INTO public."backup_external_facts"`)) {
+        const source_table = String(values[0]);
+        const row_hash = String(values[1]);
+        if (!this.providerFacts.some((fact) => fact.source_table === source_table && fact.row_hash === row_hash)) {
+          this.providerFacts.push({
+            source_table,
+            row_hash,
+            payload: JSON.parse(String(values[2])),
+          });
+        }
+        return { rows: [], rowCount: 1 };
+      }
+      if (query.startsWith("TRUNCATE TABLE")) {
+        if (query.includes('public."orders"')) this.orders = [];
+        if (query.includes('public."shiphero_dispatches"')) this.dispatches = [];
+        return { rows: [], rowCount: 0 };
+      }
+      if (query.startsWith(`INSERT INTO public."orders"`)) {
+        this.orders.push({ id: String(values[0]), amount: values[1] == null ? null : String(values[1]) });
+        return { rows: [], rowCount: 1 };
+      }
+      if (query.startsWith(`INSERT INTO public."shiphero_dispatches"`)) {
+        const row = {
+          id: String(values[0]),
+          order_id: String(values[1]),
+          status: String(values[2]),
+          order_number: String(values[3]),
+          last_error: values[4] == null ? null : String(values[4]),
+        };
+        if (!this.orders.some((order) => order.id === row.order_id)) {
+          throw Object.assign(new Error("insert or update violates foreign key constraint"), { code: "23503" });
+        }
+        this.dispatches.push(row);
+        return { rows: [], rowCount: 1 };
+      }
+      if (query.includes("pg_constraint con") || query.includes("pg_index x") || query.includes("pg_trigger t")) {
+        return { rows: [], rowCount: 0 };
+      }
+      return { rows: [], rowCount: 0 };
+    },
+    release: () => undefined,
+  };
+
+  pool() {
+    return { connect: async () => this.client };
+  }
+}
+
 describe("business backup engine", () => {
   it("uses every configured public App Storage search root without duplicating PRIVATE_OBJECT_DIR", () => {
     const storage = new GcsBackupStorage(
@@ -345,6 +507,43 @@ describe("business backup engine", () => {
     expect(lockIndex).toBeGreaterThanOrEqual(0);
     expect(laterSchemaQueryIndex).toBeGreaterThan(lockIndex);
     expect(database.statements.some((sql) => /^TRUNCATE\b|^INSERT INTO\b/.test(sql.trim()))).toBe(false);
+  });
+
+  it("rehydrates retained provider facts on later restores and prefers terminal state over retryable facts", async () => {
+    const database = new ProviderFactDatabase();
+    const storage = new MemoryStorage();
+    const engine = createBackupEngine({
+      pool: database.pool(),
+      storage,
+      privateObjectRoot: "private-bucket/business",
+      fileRoots: [],
+      uploadQuiescenceMs: 0,
+    });
+
+    await engine.runBackup({ id: "provider-without-parent", reason: "pre_restore", actorId: 7 });
+    database.orders = [{ id: "42", amount: null }];
+    database.dispatches = [{
+      id: "9",
+      order_id: "42",
+      status: "queued",
+      order_number: "order-42",
+      last_error: null,
+    }];
+    await engine.runBackup({ id: "provider-parent-snapshot", reason: "pre_restore", actorId: 7 });
+
+    await engine.runRestore("provider-without-parent");
+    expect(database.dispatches).toEqual([]);
+    expect(database.providerFacts.some((fact) => (fact.payload as { values: string[] }).values[2] === "queued")).toBe(true);
+
+    await engine.runRestore("provider-parent-snapshot");
+    expect(database.dispatches).toMatchObject([{ id: "9", order_id: "42", status: "blocked" }]);
+
+    // A later terminal provider outcome must outrank the older retryable fact.
+    database.dispatches[0].status = "sent";
+    await engine.runRestore("provider-without-parent");
+    expect(database.dispatches).toEqual([]);
+    await engine.runRestore("provider-parent-snapshot");
+    expect(database.dispatches).toMatchObject([{ id: "9", order_id: "42", status: "sent" }]);
   });
 
   it("requires operator recovery when the restore COMMIT outcome is ambiguous", async () => {

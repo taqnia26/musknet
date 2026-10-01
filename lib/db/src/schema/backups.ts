@@ -5,7 +5,9 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
+  primaryKey,
   serial,
   text,
   timestamp,
@@ -90,6 +92,38 @@ export const backupAccessGrantsTable = pgTable("backup_access_grants", {
   check("backup_access_grants_outcome_check", sql`${table.outcome} in ('granted', 'rejected', 'restore-authorized')`),
   index("backup_access_grants_attempt_window_idx").on(table.adminSessionHash, table.outcome, table.createdAt),
   uniqueIndex("backup_access_grants_token_unique").on(table.accessTokenHash),
+]);
+
+/** FK-free retention of current provider facts when their business parent is absent after restore. */
+export const backupExternalFactsTable = pgTable("backup_external_facts", {
+  sourceTable: text("source_table").notNull(),
+  rowHash: text("row_hash").notNull(),
+  payload: jsonb("payload").notNull(),
+  preservedAt: timestamp("preserved_at", { withTimezone: true }).notNull().defaultNow(),
+  backupId: uuid("backup_id").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.sourceTable, table.rowHash] }),
+]);
+
+/** Numbers already visible outside the store must never be allocated again. */
+export const backupInvoiceHighwaterTable = pgTable("backup_invoice_highwater", {
+  scope: text("scope").primaryKey(),
+  value: bigint("value", { mode: "bigint" }).notNull().default(sql`0`),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check("backup_invoice_highwater_nonnegative", sql`${table.value} >= 0`),
+]);
+
+/** Incoming business events remain durable while recovery pauses business writes. */
+export const backupDeferredWhatsappTable = pgTable("backup_deferred_whatsapp", {
+  id: serial("id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  payload: jsonb("payload").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
+  error: text("error"),
+}, (table) => [
+  index("backup_deferred_whatsapp_pending_idx").on(table.processedAt, table.id),
 ]);
 
 export const insertBackupRecordSchema = createInsertSchema(backupRecordsTable).omit({ createdAt: true });

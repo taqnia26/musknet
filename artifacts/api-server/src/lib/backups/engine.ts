@@ -15,6 +15,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { INVOICE_SEQUENCE_SCOPE } from "../invoice-sequence";
 
 export const BACKUP_OBJECT_PREFIX = "backups/";
 const ARCHIVE_ROOT = BACKUP_OBJECT_PREFIX.slice(0, -1);
@@ -81,9 +82,9 @@ export const BACKUP_EXCLUSIONS = [
   "Production schema and migrations are never restored; the public schema fingerprint must match before data restore.",
   "backup_* control/history tables, explicitly named admin/owner security tables, credentials, and integration credentials are not overwritten; business tables such as billing_settings are backed up and restored.",
   "Ephemeral admin/owner/influencer sessions and OTP tables are not archived and are cleared on restore, requiring users to sign in again.",
-  "Current external-provider delivery, dispatch, webhook, outbox, and idempotency state is omitted from snapshots and retained in place to prevent replay.",
+  "Current external-provider delivery, dispatch, webhook, outbox, and idempotency state is omitted from snapshots, preserved as FK-free external facts, and selectively reinserted with active work quarantined to prevent replay.",
   "Dedicated external invoice-number counter tables are retained in place so restore cannot lower their high-water marks.",
-  "Where invoice numbering is derived from max(invoices.sequence_number), restores that would lower the current high-water are refused rather than risk reusing an external number.",
+  "The max-based tax-invoice allocator is protected by the FK-free backup_invoice_highwater ledger, merged with GREATEST before invoice rows are truncated.",
   "WhatsApp auth/session/secrets are retained in place and are not archived or restored.",
   "App Storage backups/ archive objects are excluded from recursive file enumeration.",
   "Every configured PRIVATE_OBJECT_DIR and PUBLIC_OBJECT_SEARCH_PATHS App Storage root is included without recursive backup archives; LOCAL_CONTRACT_STORAGE_DIR when configured, served attached_assets, and served site-assets are also included.",
@@ -134,6 +135,14 @@ type BackupManifest = {
 };
 type ColumnInfo = { name: string; type: string; identity: string; generated: string };
 type TableInfo = { name: string; kind: string; isPartition: boolean; columns: ColumnInfo[] };
+type ForeignKeyInfo = { source: string; target: string; name: string; deferrable: boolean };
+type CapturedProviderTable = { table: TableInfo; rows: (string | null)[][] };
+type ProviderCandidate = {
+  values: (string | null)[];
+  source: "current" | "fact";
+  rowHash: string;
+  precedence: number;
+};
 type LocalFile = { root: BackupFileRoot; relativePath: string; absolutePath: string; size: number };
 
 export type BackupEngineOptions = {
@@ -167,6 +176,37 @@ export class BackupRecoveryRequiredError extends BackupEngineError {
 
 function sha256(data: Buffer | string) {
   return createHash("sha256").update(data).digest("hex");
+}
+
+function externalProviderFactJson(table: TableInfo, values: (string | null)[]) {
+  return JSON.stringify({
+    format: "replit-external-provider-fact",
+    version: 1,
+    sourceTable: table.name,
+    columns: table.columns.map(({ name, type }) => ({ name, type })),
+    values,
+  });
+}
+
+function providerFactPrecedence(table: TableInfo, values: (string | null)[]) {
+  let precedence = 0;
+  for (const columnName of ["status", "outcome", "create_status", "state"]) {
+    const index = table.columns.findIndex((column) => column.name === columnName);
+    const value = values[index]?.toLowerCase();
+    if (!value) continue;
+    if (/^(sent|delivered|processed|succeeded|success|completed?|created|acknowledged|accepted)$/.test(value)) {
+      precedence = Math.max(precedence, 100);
+    } else if (value === "uncertain") {
+      precedence = Math.max(precedence, 90);
+    } else if (/^(blocked|quarantined|failed|rejected|error)$/.test(value)) {
+      precedence = Math.max(precedence, 80);
+    } else if (/^(sending|processing|received|in_progress)$/.test(value)) {
+      precedence = Math.max(precedence, 40);
+    } else if (/^(queued|pending|retry|retrying|ready)$/.test(value)) {
+      precedence = Math.max(precedence, 10);
+    }
+  }
+  return precedence;
 }
 
 function isUuidUploadedObject(key: string) {
@@ -218,7 +258,7 @@ function protectedTableReason(name: string): string | null {
     return "external invoice numbering high-water counters are retained in place";
   }
   if (isProviderStateTable(name)) {
-    return "current provider integration settings, dispatch, webhook, delivery, outbox, and idempotency state is retained in place";
+    return "current provider state is omitted from snapshots, preserved in FK-free external facts, and selectively reinserted with active work quarantined";
   }
   return null;
 }
@@ -591,6 +631,9 @@ function validateDatabasePayload(value: unknown, manifest: BackupManifest): Tabl
       JSON.stringify(metadata.columns) !== JSON.stringify(table.columns)
     ) {
       throw new BackupEngineError(`Backup table manifest is inconsistent for ${table.name}`);
+    }
+    if (classifyTable(table.name) !== "restore") {
+      throw new BackupEngineError(`Backup payload attempts to restore excluded table ${table.name}`);
     }
   }
   return result;
@@ -1134,7 +1177,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
     return { tables: archived, excluded };
   }
 
-  async function listForeignKeys(client: BackupDbClient) {
+  async function listForeignKeys(client: BackupDbClient): Promise<ForeignKeyInfo[]> {
     const result = await client.query(`
       SELECT source.relname AS source_table, target.relname AS target_table,
              con.conname AS constraint_name, con.condeferrable AS deferrable
@@ -1154,23 +1197,241 @@ export function createBackupEngine(options: BackupEngineOptions) {
     }));
   }
 
-  async function lockRestoreTables(client: BackupDbClient, allTables: TableInfo[]) {
-    const mutating = allTables
-      .filter((table) => classifyTable(table.name) !== "preserve")
-      .map((table) => table.name)
-      .sort();
-    const mutatingSet = new Set(mutating);
-    const foreignKeys = await listForeignKeys(client);
-    const unsafeReferences = foreignKeys.filter((key) => mutatingSet.has(key.target) && !mutatingSet.has(key.source));
+  async function listProviderUniqueKeys(client: BackupDbClient, tableNames: string[]) {
+    if (!tableNames.length) return new Map<string, string[][]>();
+    const result = await client.query(`
+      SELECT c.relname AS table_name, i.indnkeyatts AS key_count,
+             pg_get_expr(i.indpred, i.indrelid, true) AS predicate,
+             ARRAY(
+               SELECT a.attname
+                 FROM unnest(i.indkey) WITH ORDINALITY AS key(attnum, ordinal)
+                 JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = key.attnum
+                WHERE key.ordinal <= i.indnkeyatts
+                ORDER BY key.ordinal
+             ) AS columns
+        FROM pg_index i
+        JOIN pg_class c ON c.oid = i.indrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND c.relname = ANY($1::text[])
+         AND i.indisunique
+         AND i.indisvalid
+         AND NOT i.indisexclusion
+       ORDER BY c.relname, i.indisprimary DESC, i.indexrelid
+    `, [tableNames]);
+    const keys = new Map<string, string[][]>();
+    for (const row of result.rows) {
+      if (row.predicate !== null && row.predicate !== undefined) continue;
+      const columns = Array.isArray(row.columns) ? row.columns.map(String) : [];
+      if (!columns.length || columns.length !== Number(row.key_count)) continue;
+      const tableName = String(row.table_name);
+      const current = keys.get(tableName) ?? [];
+      current.push(columns);
+      keys.set(tableName, current);
+    }
+    return keys;
+  }
+
+  function restoreTruncateNames(allTables: TableInfo[], foreignKeys: ForeignKeyInfo[]) {
+    const truncateNames = [...new Set(allTables
+      .filter((table) => classifyTable(table.name) !== "preserve" || isProviderStateTable(table.name))
+      .map((table) => table.name))].sort();
+    const truncateSet = new Set(truncateNames);
+    const unsafeReferences = foreignKeys.filter((key) => truncateSet.has(key.target) && !truncateSet.has(key.source));
     if (unsafeReferences.length) {
       throw new BackupEngineError(
-        `Restore would alter data referenced by protected tables: ${unsafeReferences.map((item) => `${item.source}.${item.name}`).join(", ")}`,
+        `Restore cannot safely replace business tables referenced by retained tables: ${unsafeReferences.map((item) => `${item.source}.${item.name}`).join(", ")}`,
       );
     }
-    const providerStateNames = allTables
-      .filter((table) => isProviderStateTable(table.name))
-      .map((table) => table.name);
-    const qualifiedNames = [...new Set([...mutating, ...providerStateNames])].sort().map(qualifiedTable);
+    return truncateNames;
+  }
+
+  async function captureCurrentProviderRows(
+    client: BackupDbClient,
+    allTables: TableInfo[],
+    preservationId: string,
+  ): Promise<CapturedProviderTable[]> {
+    const providerTables = allTables.filter((table) => isProviderStateTable(table.name)).sort((a, b) => a.name.localeCompare(b.name));
+    if (!providerTables.length) return [];
+    const factsTable = allTables.find((table) => table.name === "backup_external_facts");
+    const expectedFactColumns: Record<string, string> = {
+      source_table: "text",
+      row_hash: "text",
+      payload: "jsonb",
+      preserved_at: "timestamp with time zone",
+      backup_id: "uuid",
+    };
+    if (!factsTable || Object.entries(expectedFactColumns).some(([name, type]) =>
+      factsTable.columns.find((column) => column.name === name)?.type !== type,
+    )) {
+      throw new BackupEngineError("Restore requires the FK-free backup_external_facts control table with its expected columns");
+    }
+
+    const captured: CapturedProviderTable[] = [];
+    for (const table of providerTables) {
+      const selection = table.columns
+        .map((column) => `${quoteIdentifier(column.name)}::text AS ${quoteIdentifier(column.name)}`)
+        .join(", ");
+      const result = table.columns.length
+        ? await client.query(`SELECT ${selection} FROM ${qualifiedTable(table.name)}`)
+        : { rows: [] as Record<string, unknown>[], rowCount: 0 };
+      const rows = result.rows.map((row) => table.columns.map((column) => {
+        const value = row[column.name];
+        return value === null || value === undefined ? null : String(value);
+      }));
+      captured.push({ table, rows });
+      for (const values of rows) {
+        const serialized = externalProviderFactJson(table, values);
+        const rowHash = sha256(serialized);
+        await client.query(
+          `INSERT INTO ${qualifiedTable("backup_external_facts")}
+             ("source_table", "row_hash", "payload", "preserved_at", "backup_id")
+           VALUES ($1, $2, $3::jsonb, clock_timestamp(), $4::uuid)
+           ON CONFLICT ("source_table", "row_hash") DO NOTHING`,
+          [table.name, rowHash, serialized, preservationId],
+        );
+      }
+    }
+
+    const factResult = await client.query(
+      `SELECT "source_table", "row_hash", "payload"
+         FROM ${qualifiedTable("backup_external_facts")}
+        WHERE "source_table" = ANY($1::text[])
+        ORDER BY "source_table", "row_hash"`,
+      [providerTables.map((table) => table.name)],
+    );
+    const tableByName = new Map(providerTables.map((table) => [table.name, table]));
+    const candidatesByTable = new Map<string, ProviderCandidate[]>();
+    for (const { table, rows } of captured) {
+      candidatesByTable.set(table.name, rows.map((values) => ({
+        values,
+        source: "current",
+        rowHash: sha256(externalProviderFactJson(table, values)),
+        precedence: providerFactPrecedence(table, values),
+      })));
+    }
+    for (const fact of factResult.rows) {
+      const sourceTable = String(fact.source_table);
+      const table = tableByName.get(sourceTable);
+      if (!table) continue;
+      let payload: unknown = fact.payload;
+      if (typeof payload === "string") {
+        try {
+          payload = JSON.parse(payload);
+        } catch {
+          throw new BackupEngineError(`Preserved provider facts contain invalid JSON for ${sourceTable}`);
+        }
+      }
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        throw new BackupEngineError(`Preserved provider facts contain an invalid payload for ${sourceTable}`);
+      }
+      const record = payload as Record<string, unknown>;
+      if (
+        record.format !== "replit-external-provider-fact" ||
+        record.version !== 1 ||
+        record.sourceTable !== sourceTable ||
+        !Array.isArray(record.columns) ||
+        !Array.isArray(record.values) ||
+        record.columns.some((column) => !column || typeof column !== "object" ||
+          typeof (column as Record<string, unknown>).name !== "string" ||
+          typeof (column as Record<string, unknown>).type !== "string") ||
+        record.values.some((value) => value !== null && typeof value !== "string")
+      ) {
+        throw new BackupEngineError(`Preserved provider facts have an unsupported payload for ${sourceTable}`);
+      }
+      const columns = (record.columns as Record<string, unknown>[]).map((column) => ({
+        name: String(column.name),
+        type: String(column.type),
+      }));
+      const values = record.values as (string | null)[];
+      if (values.length !== columns.length) {
+        throw new BackupEngineError(`Preserved provider facts have an invalid column count for ${sourceTable}`);
+      }
+      const factTable = { name: sourceTable, columns } as TableInfo;
+      const serialized = externalProviderFactJson(factTable, values);
+      const rowHash = String(fact.row_hash);
+      if (!/^[a-f0-9]{64}$/.test(rowHash) || sha256(serialized) !== rowHash) {
+        throw new BackupEngineError(`Preserved provider fact integrity verification failed for ${sourceTable}`);
+      }
+      const matchesCurrentSchema = JSON.stringify(columns) === JSON.stringify(
+        table.columns.map(({ name, type }) => ({ name, type })),
+      );
+      if (!matchesCurrentSchema) continue;
+      const candidates = candidatesByTable.get(sourceTable) ?? [];
+      candidates.push({
+        values,
+        source: "fact",
+        rowHash,
+        precedence: providerFactPrecedence(table, values),
+      });
+      candidatesByTable.set(sourceTable, candidates);
+    }
+
+    const uniqueKeys = await listProviderUniqueKeys(client, providerTables.map((table) => table.name));
+    for (const entry of captured) {
+      const candidates = candidatesByTable.get(entry.table.name) ?? [];
+      const schemaColumns = entry.table.columns.map((column) => column.name);
+      const keys = uniqueKeys.get(entry.table.name) ?? [];
+      const parents = candidates.map((_, index) => index);
+      const findRoot = (index: number): number => {
+        if (parents[index] !== index) parents[index] = findRoot(parents[index]);
+        return parents[index];
+      };
+      const union = (left: number, right: number) => {
+        const leftRoot = findRoot(left);
+        const rightRoot = findRoot(right);
+        if (leftRoot !== rightRoot) parents[rightRoot] = leftRoot;
+      };
+      const firstByExactRow = new Map<string, number>();
+      for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
+        const signature = JSON.stringify(candidates[candidateIndex].values);
+        const first = firstByExactRow.get(signature);
+        if (first === undefined) firstByExactRow.set(signature, candidateIndex);
+        else union(first, candidateIndex);
+      }
+      for (let keyIndex = 0; keyIndex < keys.length; keyIndex++) {
+        const indexes = keys[keyIndex].map((column) => schemaColumns.indexOf(column));
+        if (indexes.some((index) => index < 0)) continue;
+        const firstByValue = new Map<string, number>();
+        for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
+          const tuple = indexes.map((index) => candidates[candidateIndex].values[index]);
+          // PostgreSQL's ordinary unique indexes allow multiple NULL values.
+          if (tuple.some((value) => value === null || value === undefined)) continue;
+          const signature = JSON.stringify([keyIndex, tuple]);
+          const first = firstByValue.get(signature);
+          if (first === undefined) firstByValue.set(signature, candidateIndex);
+          else union(first, candidateIndex);
+        }
+      }
+      const groups = new Map<number, ProviderCandidate[]>();
+      for (let index = 0; index < candidates.length; index++) {
+        const root = findRoot(index);
+        const group = groups.get(root) ?? [];
+        group.push(candidates[index]);
+        groups.set(root, group);
+      }
+      const winners = [...groups.values()].map((group) => {
+        group.sort((left, right) =>
+          right.precedence - left.precedence ||
+          Number(right.source === "current") - Number(left.source === "current") ||
+          left.rowHash.localeCompare(right.rowHash),
+        );
+        return group[0];
+      });
+      winners.sort((left, right) =>
+        right.precedence - left.precedence ||
+        Number(right.source === "current") - Number(left.source === "current") ||
+        left.rowHash.localeCompare(right.rowHash),
+      );
+      entry.rows = winners.map((winner) => winner.values);
+    }
+    return captured;
+  }
+
+  async function lockRestoreTables(client: BackupDbClient, allTables: TableInfo[]) {
+    const foreignKeys = await listForeignKeys(client);
+    const truncateNames = restoreTruncateNames(allTables, foreignKeys);
+    const qualifiedNames = truncateNames.map(qualifiedTable);
     if (qualifiedNames.length) {
       await client.query(`LOCK TABLE ${qualifiedNames.join(", ")} IN ACCESS EXCLUSIVE MODE`);
     }
@@ -1203,45 +1464,124 @@ export function createBackupEngine(options: BackupEngineOptions) {
     return ordered;
   }
 
-  async function clearAndRestoreDatabase(client: BackupDbClient, tables: TableArchive[], allTables: TableInfo[]) {
-    const targetNames = allTables.filter((table) => classifyTable(table.name) === "restore").map((table) => table.name);
-    const clearNames = allTables.filter((table) => classifyTable(table.name) === "clear").map((table) => table.name);
-    const truncateNames = [...new Set([...targetNames, ...clearNames])].sort();
-    const foreignKeys = await listForeignKeys(client);
-    const mutatingSet = new Set(truncateNames);
-    const unsafeReferences = foreignKeys.filter((key) => mutatingSet.has(key.target) && !mutatingSet.has(key.source));
-    if (unsafeReferences.length) {
-      throw new BackupEngineError(
-        `Restore would alter data referenced by retained tables: ${unsafeReferences.map((item) => `${item.source}.${item.name}`).join(", ")}`,
-      );
-    }
-    const providerStateNames = allTables
-      .filter((table) => isProviderStateTable(table.name))
-      .map((table) => table.name);
-    const lockedNames = [...new Set([...truncateNames, ...providerStateNames])].sort();
-    const lockNames = lockedNames.map(qualifiedTable);
-    if (lockNames.length) await client.query(`LOCK TABLE ${lockNames.join(", ")} IN ACCESS EXCLUSIVE MODE`);
+  function quarantinedProviderValues(table: TableInfo, values: (string | null)[]) {
+    const quarantined = [...values];
+    const index = (columnName: string) => table.columns.findIndex((column) => column.name === columnName);
+    const quarantineDispatch = (statusColumn: string) => {
+      const statusIndex = index(statusColumn);
+      if (statusIndex < 0) return;
+      const status = quarantined[statusIndex];
+      if (status === "queued" || status === "pending") {
+        quarantined[statusIndex] = "blocked";
+        const errorIndex = index("last_error");
+        if (errorIndex >= 0 && quarantined[errorIndex] === null) {
+          quarantined[errorIndex] = "Quarantined by business restore; review before retry";
+        }
+      } else if (status === "sending" || status === "processing") {
+        quarantined[statusIndex] = "uncertain";
+        const errorIndex = index("last_error");
+        if (errorIndex >= 0 && quarantined[errorIndex] === null) {
+          quarantined[errorIndex] = "Quarantined by business restore; verify remote outcome before retry";
+        }
+      }
+    };
 
-    // Keep the current idempotency/history rows; only move work that was still
-    // eligible for automatic delivery into non-replaying administrative states.
-    const shipheroDispatches = allTables.find((table) => table.name === "shiphero_dispatches");
-    if (shipheroDispatches?.columns.some((column) => column.name === "status")) {
-      await client.query(`
-        UPDATE ${qualifiedTable("shiphero_dispatches")}
-           SET status = 'blocked',
-               last_error = COALESCE(last_error, 'Quarantined by business restore; review before retry')
-         WHERE status = 'queued'
-      `);
+    if (table.name === "shiphero_dispatches" || table.name === "invoice_email_deliveries") {
+      quarantineDispatch("status");
     }
-    const shipheroWebhooks = allTables.find((table) => table.name === "shiphero_webhook_events");
-    if (shipheroWebhooks?.columns.some((column) => column.name === "outcome")) {
-      await client.query(`
-        UPDATE ${qualifiedTable("shiphero_webhook_events")}
-           SET outcome = 'quarantined',
-               detail = COALESCE(detail, 'Quarantined by business restore; review before processing')
-         WHERE outcome = 'received'
-      `);
+    if (table.name === "shiphero_product_mappings") {
+      const statusIndex = index("create_status");
+      if (statusIndex >= 0 && quarantined[statusIndex] === "sending") {
+        quarantined[statusIndex] = "uncertain";
+      }
     }
+    if (table.name === "shiphero_webhook_events") {
+      const outcomeIndex = index("outcome");
+      if (outcomeIndex >= 0 && quarantined[outcomeIndex] === "received") {
+        quarantined[outcomeIndex] = "quarantined";
+        const detailIndex = index("detail");
+        if (detailIndex >= 0 && quarantined[detailIndex] === null) {
+          quarantined[detailIndex] = "Quarantined by business restore; review before processing";
+        }
+      }
+    }
+    return quarantined;
+  }
+
+  function postgresErrorCode(error: unknown) {
+    if (!error || typeof error !== "object" || !("code" in error)) return null;
+    return typeof error.code === "string" ? error.code : null;
+  }
+
+  async function restoreCurrentProviderRows(
+    client: BackupDbClient,
+    captured: CapturedProviderTable[],
+    foreignKeys: ForeignKeyInfo[],
+  ) {
+    const byName = new Map(captured.map((entry) => [entry.table.name, entry]));
+    const names = insertionOrder([...byName.keys()], foreignKeys);
+    const deferrableConstraints = [...new Set(foreignKeys
+      .filter((key) => byName.has(key.source) && key.deferrable)
+      .map((key) => key.name))].sort();
+    for (const constraint of deferrableConstraints) {
+      await client.query(`SET CONSTRAINTS ${quoteIdentifier(constraint)} IMMEDIATE`);
+    }
+
+    let savepointIndex = 0;
+    const pending: { table: TableInfo; values: (string | null)[] }[] = [];
+    const tryInsert = async (table: TableInfo, rawValues: (string | null)[]) => {
+      const values = quarantinedProviderValues(table, rawValues);
+      const insertIndexes = table.columns
+        .map((column, index) => ({ column, index }))
+        .filter(({ column }) => !column.generated);
+      if (!insertIndexes.length) throw new BackupEngineError(`Cannot preserve generated-only provider table ${table.name}`);
+      const savepoint = `restore_external_fact_${savepointIndex++}`;
+      await client.query(`SAVEPOINT ${savepoint}`);
+      try {
+        const parameters = insertIndexes.map(({ index }) => values[index] ?? null);
+        const placeholders = insertIndexes.map(({ column }, index) => `$${index + 1}::${column.type}`);
+        const columns = insertIndexes.map(({ column }) => quoteIdentifier(column.name));
+        const overrideIdentity = insertIndexes.some(({ column }) => column.identity !== "");
+        await client.query(
+          `INSERT INTO ${qualifiedTable(table.name)} (${columns.join(", ")})${overrideIdentity ? " OVERRIDING SYSTEM VALUE" : ""} VALUES (${placeholders.join(", ")}) ON CONFLICT DO NOTHING`,
+          parameters,
+        );
+        await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+        return true;
+      } catch (error) {
+        await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+        await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+        if (postgresErrorCode(error) === "23503") return false;
+        throw error;
+      }
+    };
+
+    for (const name of names) {
+      const entry = byName.get(name)!;
+      for (const row of entry.rows) {
+        if (!await tryInsert(entry.table, row)) pending.push({ table: entry.table, values: row });
+      }
+    }
+    let remaining = pending;
+    while (remaining.length) {
+      let progress = false;
+      const next: typeof remaining = [];
+      for (const row of remaining) {
+        if (await tryInsert(row.table, row.values)) progress = true;
+        else next.push(row);
+      }
+      if (!progress) break;
+      remaining = next;
+    }
+  }
+
+  async function clearAndRestoreDatabase(client: BackupDbClient, tables: TableArchive[], allTables: TableInfo[]) {
+    const foreignKeys = await listForeignKeys(client);
+    const truncateNames = restoreTruncateNames(allTables, foreignKeys);
+    const mutatingSet = new Set(truncateNames);
+    const lockNames = truncateNames.map(qualifiedTable);
+    if (lockNames.length) await client.query(`LOCK TABLE ${lockNames.join(", ")} IN ACCESS EXCLUSIVE MODE`);
+    const currentProviderTables = await captureCurrentProviderRows(client, allTables, randomUUID());
 
     const sequenceFloors: { table: string; column: string; sequence: string; tableMaximum: string | null; sequenceMaximum: string | null }[] = [];
     for (const table of allTables) {
@@ -1383,8 +1723,9 @@ export function createBackupEngine(options: BackupEngineOptions) {
       );
     }
 
-    // Existing sequences and dedicated invoice-number counter tables are
-    // deliberately never lowered by a historical restore.
+    await restoreCurrentProviderRows(client, currentProviderTables, foreignKeys);
+
+    // Existing sequences and durable invoice-number high-water rows are never lowered.
     for (const floor of sequenceFloors) {
       const restoredMaximum = await client.query(
         `SELECT max(${quoteIdentifier(floor.column)})::text AS max_value FROM ${qualifiedTable(floor.table)}`,
@@ -1396,34 +1737,42 @@ export function createBackupEngine(options: BackupEngineOptions) {
     }
   }
 
-  async function assertInvoiceNumberHighWater(client: BackupDbClient, archivedTables: TableArchive[], liveTables: TableInfo[]) {
-    const invoiceSchema = liveTables.find((table) =>
-      table.name === "invoices" && table.columns.some((column) => column.name === "sequence_number"),
+  async function preserveInvoiceNumberHighWater(client: BackupDbClient, liveTables: TableInfo[]) {
+    const invoiceTable = liveTables.find((table) =>
+      table.name === "tax_invoices" && table.columns.some((column) => column.name === "sequence_number"),
     );
-    if (!invoiceSchema) return;
-    const archived = archivedTables.find((table) => table.name === "invoices");
-    if (!archived) throw new BackupEngineError("Backup is missing invoices needed to verify the external invoice-number high-water");
-    const archivedIndex = archived.columns.indexOf("sequence_number");
-    if (archivedIndex < 0) throw new BackupEngineError("Backup is missing the invoice-number high-water column");
-    let archivedMaximum = 0n;
-    for (const row of archived.rows) {
-      const value = row[archivedIndex];
-      if (value === null) continue;
-      if (!/^-?\d+$/.test(value)) throw new BackupEngineError("Backup contains an invalid invoice-number high-water value");
-      const parsed = BigInt(value);
-      if (parsed > archivedMaximum) archivedMaximum = parsed;
+    if (!invoiceTable) return;
+    const ledger = liveTables.find((table) => table.name === "backup_invoice_highwater");
+    const expectedColumns: Record<string, string> = {
+      scope: "text",
+      value: "bigint",
+      updated_at: "timestamp with time zone",
+    };
+    if (!ledger || Object.entries(expectedColumns).some(([name, type]) =>
+      ledger.columns.find((column) => column.name === name)?.type !== type,
+    )) {
+      throw new BackupEngineError("Restore requires the FK-free backup_invoice_highwater control table with its expected columns");
     }
-    const current = await client.query(
-      `SELECT GREATEST(COALESCE(MAX(${quoteIdentifier("sequence_number")}), 0), 0)::text AS max_value FROM ${qualifiedTable("invoices")}`,
-    );
-    const currentValue = current.rows[0]?.max_value;
-    if (currentValue === null || currentValue === undefined) return;
-    const currentMaximum = BigInt(String(currentValue));
-    if (currentMaximum > archivedMaximum) {
-      throw new BackupEngineError(
-        `Restore refused because it would lower the external invoice-number high-water from ${currentMaximum} to ${archivedMaximum}; retain or advance the invoice counter before retrying`,
-      );
-    }
+    await client.query(`
+      INSERT INTO ${qualifiedTable("backup_invoice_highwater")} ("scope", "value", "updated_at")
+      SELECT $1,
+             GREATEST(
+               COALESCE(MAX(${quoteIdentifier("sequence_number")}), 0),
+               COALESCE((
+                 SELECT "value" FROM ${qualifiedTable("backup_invoice_highwater")}
+                  WHERE "scope" = $1
+               ), 0),
+               0
+             ),
+             clock_timestamp()
+        FROM ${qualifiedTable("tax_invoices")}
+      ON CONFLICT ("scope") DO UPDATE
+        SET "value" = GREATEST(
+              ${qualifiedTable("backup_invoice_highwater")}."value",
+              EXCLUDED."value"
+            ),
+            "updated_at" = clock_timestamp()
+    `, [INVOICE_SEQUENCE_SCOPE]);
   }
 
   async function runBackup(input: { id: string; reason: BackupReason; actorId: number | null }): Promise<BackupSummary> {
@@ -1589,7 +1938,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
         if (lockedSchemaHash !== archive.manifest.schemaHash) {
           throw new BackupEngineError("Database schema changed before restore acquired its write locks");
         }
-        await assertInvoiceNumberHighWater(client, archive.tables, tables);
+        await preserveInvoiceNumberHighWater(client, tables);
         rollbackFiles = await restoreFiles(archive);
         await clearAndRestoreDatabase(client, archive.tables, tables);
         commitSent = true;

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -342,6 +343,22 @@ describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundt
     );
     payloadId = Number(payload.rows[0]!.id);
 
+    const exhibition = await pool.query(
+      `INSERT INTO exhibitions (name, location, start_date, end_date, budget, status)
+       VALUES ('Backup E2E invoice exhibition', 'Isolated test', '2026-01-01', '2026-01-02', 0, 'completed')
+       RETURNING id`,
+    );
+    const snapshotInvoiceSequence = 401;
+    await pool.query(
+      `INSERT INTO tax_invoices (
+         exhibition_id, sequence_number, invoice_number, seller_name, issue_datetime,
+         seller_vat_number, subtotal, vat_amount, total_amount, qr_code_data
+       )
+       VALUES ($1, $2, 'E2E-INV-401', 'Isolated seller', '2026-01-01T00:00:00Z',
+               'E2E-VAT', 100, 15, 115, 'isolated-qr')`,
+      [exhibition.rows[0]!.id, snapshotInvoiceSequence],
+    );
+
     const snapshot = await engine.runBackup({ id: "roundtrip", reason: "manual", actorId: adminId });
     expect(snapshot.rowCount).toBeGreaterThan(0);
     expect(snapshot.tableCount).toBeGreaterThan(0);
@@ -393,6 +410,19 @@ describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundt
       INSERT INTO shiphero_webhook_events (message_id, event_type, payload, outcome)
       VALUES ('isolated-webhook-late', 'order.updated', '{"fixture":"late"}'::jsonb, 'queued')
     `);
+    const liveInvoiceHighwater = 90_001;
+    await pool.query(
+      `INSERT INTO tax_invoices (
+         exhibition_id, sequence_number, invoice_number, seller_name, issue_datetime,
+         seller_vat_number, subtotal, vat_amount, total_amount, qr_code_data
+       )
+       VALUES ($1, $2, 'E2E-INV-90001', 'Isolated seller', '2026-01-02T00:00:00Z',
+               'E2E-VAT', 200, 30, 230, 'isolated-qr-late')`,
+      [exhibition.rows[0]!.id, liveInvoiceHighwater],
+    );
+    expect(
+      Number((await pool.query("SELECT max(sequence_number) AS maximum FROM tax_invoices")).rows[0]!.maximum),
+    ).toBe(liveInvoiceHighwater);
     const objectAfterMutation = Buffer.from([99, 98, 97, 0]);
     const localAfterMutation = Buffer.from([1, 3, 3, 7, 255]);
     await storage.write("e2e/object.bin", objectAfterMutation, {
@@ -469,6 +499,13 @@ describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundt
     expect((await pool.query("SELECT count(*)::int AS count FROM roundtrip_payload")).rows[0]?.count).toBe(1);
     expect((await pool.query("SELECT status FROM journal_entries WHERE id = $1", [postedEntryId])).rows[0]?.status).toBe("reversed");
     expect((await pool.query("SELECT status FROM purchase_receipts WHERE id = $1", [receiptId])).rows[0]?.status).toBe("voided");
+    expect(await pool.query("SELECT sequence_number, invoice_number FROM tax_invoices")).toMatchObject({
+      rowCount: 1,
+      rows: [{ sequence_number: snapshotInvoiceSequence, invoice_number: "E2E-INV-401" }],
+    });
+    expect(
+      BigInt((await pool.query("SELECT max(value)::text AS value FROM backup_invoice_highwater")).rows[0]!.value),
+    ).toBeGreaterThanOrEqual(BigInt(liveInvoiceHighwater));
     expect((await pool.query("SELECT id FROM journal_entries WHERE status = 'posted'")).rowCount).toBe(1);
     expect((await pool.query("SELECT id FROM journal_entries WHERE status = 'reversed'")).rowCount).toBe(1);
     expect((await pool.query("SELECT debit::text, credit::text FROM journal_entry_lines WHERE id = $1", [postedLineId])).rows[0]).toEqual({
@@ -530,6 +567,109 @@ describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundt
     await expect(
       pool.query("DELETE FROM journal_entries WHERE id = $1", [postedEntryId]),
     ).rejects.toThrow(/posted journal entries are immutable/);
+
+    const providerCustomer = await pool.query(
+      `INSERT INTO storefront_customers (phone, name)
+       VALUES ('+10000000003', 'Backup E2E provider parent')
+       RETURNING id`,
+    );
+    const providerOrder = await pool.query(
+      `INSERT INTO storefront_orders (
+         user_id, order_number, subtotal, shipping_cost, discount, tax, total,
+         address_json, shipping_method, payment_method, status, payment_status
+       )
+       VALUES ($1, 'E2E-PROVIDER-PARENT-ORDER', 10, 0, 0, 0, 10,
+               '{"fixture":"isolated"}', 'standard', 'cash', 'pending_review', 'pending')
+       RETURNING id`,
+      [providerCustomer.rows[0]!.id],
+    );
+    const parentSnapshot = await engine.runBackup({
+      id: "roundtrip-with-provider-parent",
+      reason: "manual",
+      actorId: adminId,
+    });
+    expect(parentSnapshot.rowCount).toBeGreaterThan(0);
+    expect(await engine.inspectBackup("roundtrip-with-provider-parent")).toMatchObject({ compatible: true });
+
+    const dispatchPayload = { zLast: "z", aFirst: "a", nested: { y: 2, b: 1 } };
+    const dispatchResponse = { zResponse: 2, aResponse: 1 };
+    const dispatch = await pool.query(
+      `INSERT INTO shiphero_dispatches (
+         order_id, order_number, status, remote_order_id, payload, response,
+         attempts, sent_at, last_attempt_at
+       )
+       VALUES ($1, 'E2E-PROVIDER-PARENT-ORDER', 'sent', 'e2e-remote-dispatch',
+               $2::jsonb, $3::jsonb, 1, '2026-01-03T00:00:00Z', '2026-01-03T00:00:00Z')
+       RETURNING id`,
+      [providerOrder.rows[0]!.id, JSON.stringify(dispatchPayload), JSON.stringify(dispatchResponse)],
+    );
+    const dispatchId = Number(dispatch.rows[0]!.id);
+
+    // The older archive predates both the business parent and its terminal provider dispatch.
+    // The dispatch must be retained as a typed JSONB fact when the parent disappears.
+    await engine.runRestore("roundtrip");
+    expect((await pool.query("SELECT id FROM storefront_orders WHERE id = $1", [providerOrder.rows[0]!.id])).rowCount).toBe(0);
+    expect((await pool.query("SELECT id FROM shiphero_dispatches WHERE id = $1", [dispatchId])).rowCount).toBe(0);
+    const parkedDispatch = await pool.query(
+      `SELECT source_table, row_hash, payload
+         FROM backup_external_facts
+        WHERE source_table = 'shiphero_dispatches'`,
+    );
+    expect(parkedDispatch.rowCount).toBe(1);
+    const factRow = parkedDispatch.rows[0]!;
+    const factPayload = factRow.payload as {
+      format: string;
+      version: number;
+      sourceTable: string;
+      columns: { name: string; type: string }[];
+      values: (string | null)[];
+    };
+    expect(factPayload).toMatchObject({
+      format: "replit-external-provider-fact",
+      version: 1,
+      sourceTable: "shiphero_dispatches",
+    });
+    const factJson = JSON.stringify({
+      format: factPayload.format,
+      version: factPayload.version,
+      sourceTable: factPayload.sourceTable,
+      columns: factPayload.columns,
+      values: factPayload.values,
+    });
+    expect(createHash("sha256").update(factJson).digest("hex")).toBe(factRow.row_hash);
+    const dispatchPayloadIndex = factPayload.columns.findIndex((column) => column.name === "payload");
+    expect(dispatchPayloadIndex).toBeGreaterThanOrEqual(0);
+    expect(JSON.parse(factPayload.values[dispatchPayloadIndex]!)).toEqual(dispatchPayload);
+
+    // This compatible archive contains the business parent but predates its dispatch.
+    // Rehydration now succeeds from backup_external_facts without duplicating the send.
+    await engine.runRestore("roundtrip-with-provider-parent");
+    expect((await pool.query("SELECT id FROM storefront_orders WHERE id = $1", [providerOrder.rows[0]!.id])).rowCount).toBe(1);
+    const rehydratedDispatch = await pool.query(
+      `SELECT id, order_id, status, remote_order_id, payload, response
+         FROM shiphero_dispatches
+        WHERE order_id = $1`,
+      [providerOrder.rows[0]!.id],
+    );
+    expect(rehydratedDispatch).toMatchObject({
+      rowCount: 1,
+      rows: [{
+        id: dispatchId,
+        order_id: Number(providerOrder.rows[0]!.id),
+        status: "sent",
+        remote_order_id: "e2e-remote-dispatch",
+        payload: dispatchPayload,
+        response: dispatchResponse,
+      }],
+    });
+    expect(await pool.query(
+      `SELECT message_id, outcome FROM shiphero_webhook_events ORDER BY message_id`,
+    )).toMatchObject({
+      rows: [
+        { message_id: "isolated-webhook-1", outcome: "quarantined" },
+        { message_id: "isolated-webhook-late", outcome: "queued" },
+      ],
+    });
 
     const sequenceNext = BigInt(
       (await pool.query("SELECT nextval($1::regclass)::text AS value", [sequenceName])).rows[0]!.value,

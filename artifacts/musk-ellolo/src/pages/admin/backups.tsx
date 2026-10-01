@@ -6,6 +6,7 @@ import {
   useUpdateAdminBackupSchedule,
 } from '@workspace/api-client-react';
 import type { BackupRecord } from '@workspace/api-client-react';
+import { arabicBackupPolicy } from './backup-policy';
 import { useLanguage } from '@/hooks/use-language';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -260,7 +261,7 @@ export default function AdminBackups() {
     {expiresAt && <p className="text-xs text-muted-foreground">{t('ينتهي الوصول:', 'Access expires:')} {fmtDate(expiresAt, lang)}</p>}
 
     {!data.storage.ready && <div role="alert" className="flex gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive" data-testid="text-storage-unavailable"><AlertTriangle className="h-4 w-4 shrink-0" /><span>{t('مساحة التخزين غير متاحة، لذلك النسخ والجدولة معطلان.', 'Backup storage is unavailable, so backups and scheduling are disabled.')} {data.storage.reason}</span></div>}
-    {data.runtime.maintenance && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800" data-testid="text-maintenance">{t('النظام في وضع الصيانة أثناء عملية نسخ أو استعادة.', 'The system is in maintenance mode during a backup or restore.')}</div>}
+    {data.runtime.maintenance && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-800" data-testid="text-maintenance">{t('النظام في وضع الصيانة أثناء عملية نسخ أو استعادة. توجد فترة انتظار أمان مدتها 15 دقيقة لانتهاء روابط رفع الملفات السابقة قبل بدء النسخ. الاستعادة تشمل نسخة أمان وفترة انتظار أخرى، وقد تستغرق 30 دقيقة أو أكثر. لا تغلق الخادم أثناء العملية.', 'The system is in maintenance mode during a backup or restore. A 15-minute safety wait lets previously issued upload URLs expire before copying. Restore includes a safety backup and another wait, and can take 30 minutes or more. Keep the server running.')}</div>}
     {data.runtime.busy && <div className="flex items-center gap-2 rounded-xl border bg-muted/50 p-4 text-sm" data-testid="text-runtime-busy"><Loader2 className="h-4 w-4 animate-spin" /><span>{t('عملية قيد التنفيذ:', 'Operation in progress:')} {data.runtime.operation ?? ''} {running ? `(${statusLabel(running.status)})` : ''}</span></div>}
 
     <div className="grid gap-6 lg:grid-cols-2">
@@ -268,7 +269,7 @@ export default function AdminBackups() {
         <CardContent className="space-y-4">
           <div className="space-y-2"><Label htmlFor="backup-label">{t('تسمية (اختياري)', 'Label (optional)')}</Label><Input id="backup-label" data-testid="input-backup-label" maxLength={100} value={label} onChange={(e) => setLabel(e.target.value)} /></div>
           <Button onClick={() => void doCreate()} disabled={busy || !storageReady || create.isPending} className="w-full sm:w-auto" data-testid="button-create-backup">{create.isPending ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : <DatabaseBackup className="me-2 h-4 w-4" />}{t('إنشاء نسخة الآن', 'Create backup')}</Button>
-          <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground"><p className="mb-1 font-semibold">{t('غير مشمول:', 'Not included:')}</p><ul className="list-disc ps-5">{data.exclusions.map((x) => <li key={x}>{x}</li>)}</ul></div>
+          <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground"><p className="mb-1 font-semibold">{t('نطاق النسخة وسياسة الاستعادة:', 'Backup scope and restore policy:')}</p><ul className="list-disc ps-5">{data.exclusions.map((x) => <li key={x}>{t(arabicBackupPolicy(x), x)}</li>)}</ul></div>
         </CardContent></Card>
 
       <Card><CardHeader><CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5" />{t('الجدولة', 'Schedule')}</CardTitle><CardDescription>{t(`بتوقيت الرياض (${TZ}).`, `Riyadh time (${TZ}).`)}</CardDescription></CardHeader>
@@ -323,7 +324,7 @@ export default function AdminBackups() {
           {pv && <div className="rounded-lg bg-muted/60 p-3 text-sm" data-testid="text-restore-preview">
             <p>{pv.rowCount.toLocaleString('en')} {t('سجل', 'rows')} · {pv.tableCount} {t('جدول', 'tables')} · {pv.fileCount} {t('ملف', 'files')} · {fmtBytes(pv.bytes)}</p>
             {!pv.compatible && <p className="mt-1 font-semibold text-destructive">{t('غير متوافقة:', 'Incompatible:')} {pv.reason}</p>}
-            {pv.exclusions.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{t('غير مشمول:', 'Excluded:')} {pv.exclusions.join('، ')}</p>}
+            {pv.exclusions.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{t('سياسة الاستعادة:', 'Restore policy:')} {pv.exclusions.map((x) => t(arabicBackupPolicy(x), x)).join('، ')}</p>}
           </div>}
           <div className="space-y-2"><Label htmlFor="restore-pw">{t('كلمة مرور المالك', 'Owner password')}</Label><Input id="restore-pw" data-testid="input-restore-password" type="password" autoComplete="off" dir="ltr" maxLength={256} value={rPw} onChange={(e) => setRPw(e.target.value)} /></div>
           <div className="space-y-2"><Label htmlFor="restore-confirm">{t('اكتب معرّف النسخة بالضبط للتأكيد', 'Type the exact backup ID to confirm')}</Label><p dir="ltr" className="break-all text-start font-mono text-xs text-muted-foreground">{target.id}</p><Input id="restore-confirm" data-testid="input-restore-confirmation" dir="ltr" autoComplete="off" value={rConfirm} onChange={(e) => setRConfirm(e.target.value.trim())} /></div>

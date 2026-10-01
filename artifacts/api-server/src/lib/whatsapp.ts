@@ -11,6 +11,11 @@ import {
 } from "@workspace/db";
 import { logger } from "./logger";
 import { sendWhatsappDisconnectAlert } from "./whatsapp-alert";
+import { withBackupWriteFence } from "./backup-fence";
+import {
+  DEFERRED_WHATSAPP_BATCH_SIZE, drainDeferredWhatsappEvents, enqueueDeferredWhatsappEvent,
+  type DeferredWhatsappEventType,
+} from "./whatsapp-deferred";
 
 export const encryptWhatsappState = (plain: string, secret = process.env.SESSION_SECRET): string => {
   if (!secret) throw new Error("SESSION_SECRET must be configured for WhatsApp sessions");
@@ -147,6 +152,7 @@ export class WhatsAppManager {
   private monitor: ConnectionMonitor | null = null;
   private alertTimer: ReturnType<typeof setTimeout> | null = null;
   private alertInFlight = false;
+  private deferredIngressTimer: ReturnType<typeof setTimeout> | null = null;
 
   private async saveMonitor(monitor: ConnectionMonitor) {
     const value = encryptWhatsappState(encode(monitor));
@@ -194,6 +200,7 @@ export class WhatsAppManager {
 
   async start(forcePair = false) {
     if (this.starting) return this.starting;
+    await this.drainDeferredIngress().catch(() => logger.warn("Could not replay deferred WhatsApp events"));
     if (this.socket || this.status === "connected") return;
     if (!forcePair && this.failed) return;
     if (forcePair) this.failed = false;
@@ -298,6 +305,7 @@ export class WhatsAppManager {
           if (generation !== this.generation || this.socket !== socket) return;
           await this.saveMonitor({ alerted: false, disconnectedAt: null });
           this.clearAlertTimer();
+          await this.drainDeferredIngress().catch(() => logger.warn("Could not replay deferred WhatsApp events"));
           this.status = "connected"; this.lastError = null; this.pairing = false;
         } catch {
           if (generation !== this.generation) return;
@@ -351,20 +359,98 @@ export class WhatsAppManager {
         }
       }
     });
-    socket.ev.on("contacts.upsert", (contacts) => {
-      void Promise.all(contacts.map((contact) => this.upsertChat(contact.id, contact.name || contact.verifiedName || contact.notify, "contact")))
-        .catch(() => logger.warn("Could not import WhatsApp contacts"));
+    socket.ev.on("contacts.upsert", async (contacts) => {
+      await this.captureBusinessEvent("contacts.upsert", {
+        contacts: contacts.map((contact) => this.safeContact(contact)),
+      }).catch(() => logger.warn("Could not import WhatsApp contacts"));
     });
-    socket.ev.on("contacts.update", (contacts) => {
-      void Promise.all(contacts.map((contact) => this.upsertChat(contact.id, contact.name || contact.verifiedName || contact.notify, "contact")))
-        .catch(() => logger.warn("Could not update WhatsApp contacts"));
+    socket.ev.on("contacts.update", async (contacts) => {
+      await this.captureBusinessEvent("contacts.update", {
+        contacts: contacts.map((contact) => this.safeContact(contact)),
+      }).catch(() => logger.warn("Could not update WhatsApp contacts"));
     });
     socket.ev.on("messaging-history.set", async ({ chats, contacts, messages }) => {
-      for (const contact of contacts ?? []) await this.upsertChat(contact.id, contact.name || contact.verifiedName || contact.notify, "contact");
-      for (const chat of chats) if (chat.id) await this.upsertChat(chat.id, chat.name, "chat", chat.unreadCount);
-      await this.ingest(messages, true);
+      await this.captureBusinessEvent("messaging-history.set", {
+        chats: (chats ?? []).map((chat) => ({
+          id: chat.id ?? null, name: chat.name ?? null, unreadCount: chat.unreadCount ?? null,
+        })),
+        contacts: (contacts ?? []).map((contact) => this.safeContact(contact)),
+        messages: (messages ?? []).map((message) => this.safeMessage(message)),
+      }).catch(() => logger.warn("Could not import WhatsApp history"));
     });
-    socket.ev.on("messages.upsert", async ({ messages }) => this.ingest(messages));
+    socket.ev.on("messages.upsert", async ({ messages }) => {
+      await this.captureBusinessEvent("messages.upsert", {
+        messages: (messages ?? []).map((message) => this.safeMessage(message)),
+      }).catch(() => logger.warn("Could not import WhatsApp messages"));
+    });
+  }
+
+  private safeContact(contact: { id?: string | null; name?: string | null; verifiedName?: string | null; notify?: string | null }) {
+    return {
+      id: contact.id ?? null,
+      name: contact.name ?? null,
+      verifiedName: contact.verifiedName ?? null,
+      notify: contact.notify ?? null,
+    };
+  }
+
+  private safeMessage(item: proto.IWebMessageInfo) {
+    const key = item.key;
+    return {
+      key: key ? { remoteJid: key.remoteJid ?? null, id: key.id ?? null, fromMe: key.fromMe ?? false } : null,
+      pushName: item.pushName ?? null,
+      messageTimestamp: item.messageTimestamp ?? null,
+      status: item.status ?? null,
+      message: item.message ?? null,
+    };
+  }
+
+  private async captureBusinessEvent(eventType: DeferredWhatsappEventType, payload: unknown) {
+    // The provider payload has been reduced to business fields above. BufferJSON
+    // preserves binary message content without ever serializing auth state.
+    const safePayload = JSON.parse(encode(payload)) as unknown;
+    await enqueueDeferredWhatsappEvent(eventType, safePayload);
+    await this.drainDeferredIngress();
+  }
+
+  private scheduleDeferredIngressRetry() {
+    if (this.deferredIngressTimer) return;
+    this.deferredIngressTimer = setTimeout(() => {
+      this.deferredIngressTimer = null;
+      void this.drainDeferredIngress().catch(() => logger.warn("Could not replay deferred WhatsApp events"));
+    }, 5000);
+  }
+
+  private async drainDeferredIngress() {
+    try {
+      const processed = await drainDeferredWhatsappEvents(async (eventType, payload) => {
+        const serialized = typeof payload === "string" ? payload : JSON.stringify(payload);
+        const event = decode<Record<string, any>>(serialized);
+        if (eventType === "contacts.upsert" || eventType === "contacts.update") {
+          await Promise.all((event.contacts ?? []).map((contact: any) =>
+            this.upsertChat(contact.id, contact.name || contact.verifiedName || contact.notify, "contact")));
+        } else if (eventType === "messaging-history.set") {
+          for (const contact of event.contacts ?? []) {
+            await this.upsertChat(contact.id, contact.name || contact.verifiedName || contact.notify, "contact");
+          }
+          for (const chat of event.chats ?? []) {
+            if (chat.id) await this.upsertChat(chat.id, chat.name, "chat", chat.unreadCount);
+          }
+          await this.ingest(event.messages ?? [], true);
+        } else if (eventType === "messages.upsert") {
+          await this.ingest(event.messages ?? []);
+        }
+      });
+      if (processed === undefined || processed >= DEFERRED_WHATSAPP_BATCH_SIZE) this.scheduleDeferredIngressRetry();
+      else if (this.deferredIngressTimer) {
+        clearTimeout(this.deferredIngressTimer);
+        this.deferredIngressTimer = null;
+      }
+      return processed;
+    } catch (error) {
+      this.scheduleDeferredIngressRetry();
+      throw error;
+    }
   }
 
   private async upsertChat(jid: string | undefined | null, candidate?: string | null, source: "message" | "chat" | "contact" = "message", unread?: number | null) {
@@ -427,11 +513,15 @@ export class WhatsAppManager {
 
   state() { return { status: this.status, qr: this.qr, connected: this.status === "connected", lastError: this.lastError, connectionAlerted: this.monitor?.alerted ?? false, previouslyConnected: this.monitor !== null }; }
   async send(jid: string, text: string) {
-    if (!this.socket || this.status !== "connected") throw new Error("WhatsApp is not connected");
-    const result = await this.socket.sendMessage(jid, { text });
-    if (!result?.key?.id) throw new Error("WhatsApp did not return a message id");
-    await this.ingest([result as proto.IWebMessageInfo]);
-    return result.key.id;
+    const messageId = await withBackupWriteFence(async () => {
+      if (!this.socket || this.status !== "connected") throw new Error("WhatsApp is not connected");
+      const result = await this.socket.sendMessage(jid, { text });
+      if (!result?.key?.id) throw new Error("WhatsApp did not return a message id");
+      await this.ingest([result as proto.IWebMessageInfo]);
+      return result.key.id;
+    });
+    if (messageId === undefined) throw new Error("WhatsApp sending is paused during backup maintenance");
+    return messageId;
   }
 }
 

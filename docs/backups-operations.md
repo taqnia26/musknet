@@ -3,7 +3,9 @@
 ## Deployment and persistence
 
 The backup control plane is stored in PostgreSQL tables `backup_records`,
-`backup_settings`, `backup_runtime`, and `backup_access_grants`. Apply their
+`backup_settings`, `backup_runtime`, `backup_access_grants`,
+`backup_external_facts`, `backup_invoice_highwater`, and
+`backup_deferred_whatsapp`. Apply their
 Drizzle migration/schema changes through the normal deployment migration process
 before enabling the API or worker. The API and worker do not create or alter
 tables at startup.
@@ -96,6 +98,18 @@ It creates and completes a separate `pre_restore` safety backup,
 persists its UUID as `safetyBackupId`, and only then invokes the restore engine.
 Normal completion or ordinary failure resets maintenance in the worker's
 `finally` path. A restore never proceeds if the safety snapshot fails.
+
+Every engine backup/restore currently waits a conservative 15 minutes after
+draining writers, so previously issued direct-to-cloud upload URLs expire.
+This applies even when the listed objects are old: a signed upload may not yet
+have created its object. A manual backup therefore takes at least 15 minutes
+plus copying; restore includes a safety backup and a second wait, so it takes
+at least 30 minutes plus copying. Keep the worker alive throughout.
+
+WhatsApp business ingress is durably queued separately from restored data and
+replayed under the shared writer fence after maintenance. Current provider facts
+are rehydrated on successive restores with terminal/uncertain precedence; they
+must not be treated as an audit-only store or purged casually.
 
 Use `getMaintenanceState()` in server middleware to read the persisted runtime
 flag. While `maintenance` is true, block unsafe application requests. The outer

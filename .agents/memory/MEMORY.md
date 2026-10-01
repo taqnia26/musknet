@@ -58,3 +58,5 @@
 - [ShipHero confirmation boundaries](shiphero-confirmation-boundaries.md) — duplicate rejection is not replay safety; preserve partner reconciliation and environment-redaction limits.
 - [Destructive-action audits](destructive-action-audits.md) — inspect edit-form Save as well as quick actions; either can submit the same destructive change.
 - [Custom content deletion boundary](custom-content-deletion-boundary.md) — legacy keys have no provenance; missing code references do not establish deletion safety.
+- [Scoped Drizzle provisioning](scoped-drizzle-enums.md) — table filters do not isolate enum/schema diffs; inspect additive dev SQL for feature-only provisioning.
+- [Backup recovery boundaries](backup-recovery-boundaries.md) — preserve external facts and issued-number high-water marks; signed uploads and uncertain commits need separate safeguards.

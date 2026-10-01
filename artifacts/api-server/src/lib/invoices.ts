@@ -5,6 +5,7 @@ import { adjustOperationalBalances } from "./operations";
 import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType, type TaxTreatment } from "./vat";
 import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
 import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
+import { INVOICE_SEQUENCE_SCOPE, nextInvoiceSequenceNumber } from "./invoice-sequence";
 import { shipheroDispatchesTable } from "@workspace/db";
 import { SHIPHERO_TRIGGER_STATUS } from "./shiphero-config";
 import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, shipmentEventsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
@@ -14,14 +15,33 @@ const INVOICE_NUMBER_LOCK = 7_521_010_001;
 export async function nextLiveInvoiceNumber(tx: any, prefix: "INV" | "LC") {
   // Caller holds INVOICE_NUMBER_LOCK. Historical external references occupy the
   // same namespace, but never consume the live sequence.
-  const [{ next }] = await tx.select({ next: sql<number>`greatest(coalesce(max(${invoicesTable.sequenceNumber}), 0), 0) + 1` }).from(invoicesTable);
-  const sequenceNumber = Number(next);
-  let candidate = sequenceNumber;
+  const [{ liveMaximum }] = await tx.select({
+    liveMaximum: sql<number>`greatest(coalesce(max(${invoicesTable.sequenceNumber}), 0), 0)`,
+  }).from(invoicesTable);
+  const retainedHighWaterResult = await tx.execute(sql`
+    select value
+      from public.backup_invoice_highwater
+     where scope = ${INVOICE_SEQUENCE_SCOPE}
+     limit 1
+  `);
+  const retainedHighWater = Number(retainedHighWaterResult.rows[0]?.value ?? 0);
+  let candidate = nextInvoiceSequenceNumber(Number(liveMaximum), retainedHighWater);
   while (true) {
     const invoiceNumber = `${prefix}-${String(candidate).padStart(6, "0")}`;
     const [reserved] = await tx.select({ id: invoicesTable.id }).from(invoicesTable)
       .where(sql`lower(${invoicesTable.invoiceNumber}) = lower(${invoiceNumber})`).limit(1);
-    if (!reserved) return { sequenceNumber: candidate, invoiceNumber };
+    if (!reserved) {
+      // This shares the caller's transaction and advisory lock. Failed invoice
+      // issuance rolls the ledger update back together with the invoice write.
+      await tx.execute(sql`
+        insert into public.backup_invoice_highwater (scope, value)
+        values (${INVOICE_SEQUENCE_SCOPE}, ${candidate})
+        on conflict (scope) do update
+          set value = greatest(public.backup_invoice_highwater.value, excluded.value),
+              updated_at = now()
+      `);
+      return { sequenceNumber: candidate, invoiceNumber };
+    }
     candidate += 1;
   }
 }

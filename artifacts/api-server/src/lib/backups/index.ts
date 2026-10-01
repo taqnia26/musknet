@@ -17,6 +17,10 @@ function getEngine() {
       storage: new GcsBackupStorage(root),
       privateObjectRoot: root,
       fileRoots: appAssetRoots(import.meta.dirname),
+      assertFenced: async () => {
+        const { assertBackupExclusiveFence } = await import("../backup-fence");
+        await assertBackupExclusiveFence();
+      },
     });
   }
   return engine;
