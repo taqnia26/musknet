@@ -1,0 +1,16 @@
+# STOP — this is not what was asked for. Do not touch anything further.
+
+I asked for one thing: a backup feature for the existing project. What was pushed instead is a full rewrite: the entire existing structure (`artifacts/api-server`, `artifacts/misk-al-lulu`, `lib/db`, `lib/api-spec`, everything) was deleted and replaced with two new, differently-named projects (`musk-ellolo-backend`, `musk-ellolo-client`) with a different database schema, different table names, and newly invented payment/shipping/ZATCA integrations that were never requested. 779 files changed. This is not an addition to our project — it is a replacement of it.
+
+This must never happen regardless of how a request is phrased. Adding a feature means adding to the existing codebase, never deleting or restructuring what already exists, never renaming the project, and never introducing a different schema or different integrations than what is already there.
+
+## Required now
+
+1. Confirm in writing that you understand what happened: the entire existing project was replaced, not extended.
+2. Do not run, merge, or push anything else. Do not "improve" or "clean up" anything further on your own initiative.
+3. Revert the remote `main` branch to commit `66e2e27` — the last known-good state before this rewrite — exactly, with nothing from the rewrite carried over.
+4. Confirm the revert by showing the commit log and the top-level directory listing after it, so I can see `artifacts/`, `lib/`, and the existing file structure are back exactly as they were.
+
+## Then, separately, once the revert is confirmed
+
+Re-read the original backup request and re-scope it narrowly: a database backup script/routine added to the **existing** `lib/db` and `artifacts/api-server` structure, using the **existing** schema and tables. No new project folders, no renamed packages, no new payment or shipping providers, no schema changes beyond what the backup feature itself strictly requires. Describe the plan in writing — file list and what each file changes — and wait for explicit approval before writing any code.
