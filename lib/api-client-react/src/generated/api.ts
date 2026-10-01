@@ -297,6 +297,7 @@ import type {
   ShippingWebhookInput,
   ShippingWebhookResult,
   SiteContent,
+  SiteContentHistory,
   SiteContentUpsert,
   TesterStockAvailability,
   TrackPageViewInput,
@@ -5989,7 +5990,7 @@ export const getAdminDeleteSiteContentUrl = (key: string,) => {
 }
 
 /**
- * Deletes one saved custom.* content key with site-content delete permission. All other keys are protected. Upsert omission never deletes content.
+ * Deletes one safe saved custom.* content key with site-content delete permission and archives its content for restoration. Protected, secret-bearing, and financial content is rejected. Upsert omission never deletes content.
  */
 export const adminDeleteSiteContent = async (key: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
 
@@ -6046,6 +6047,145 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminDeleteSiteContentMutationOptions(options));
+    }
+
+export const getAdminListSiteContentHistoryUrl = () => {
+
+
+
+
+  return `/api/admin/site-content-history`
+}
+
+export const adminListSiteContentHistory = async ( options?: Parameters<typeof customFetch>[1]): Promise<SiteContentHistory[]> => {
+
+  return customFetch<SiteContentHistory[]>(getAdminListSiteContentHistoryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminListSiteContentHistoryQueryKey = () => {
+    return [
+    `/api/admin/site-content-history`
+    ] as const;
+    }
+
+
+export const getAdminListSiteContentHistoryQueryOptions = <TData = Awaited<ReturnType<typeof adminListSiteContentHistory>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListSiteContentHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminListSiteContentHistoryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminListSiteContentHistory>>> = ({ signal }) => adminListSiteContentHistory({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminListSiteContentHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminListSiteContentHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof adminListSiteContentHistory>>>
+export type AdminListSiteContentHistoryQueryError = ErrorType<void>
+
+
+
+export function useAdminListSiteContentHistory<TData = Awaited<ReturnType<typeof adminListSiteContentHistory>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminListSiteContentHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminListSiteContentHistoryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminRestoreSiteContentUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/site-content-history/${id}/restore`
+}
+
+/**
+ * Restores an archived safe custom.* item only if the key is still unused. Requires both site-content edit and delete permissions.
+ */
+export const adminRestoreSiteContent = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<SiteContent> => {
+
+  return customFetch<SiteContent>(getAdminRestoreSiteContentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminRestoreSiteContentMutationOptions = <TError = ErrorType<Error | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRestoreSiteContent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminRestoreSiteContent>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminRestoreSiteContent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminRestoreSiteContent>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminRestoreSiteContent(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminRestoreSiteContentMutationResult = NonNullable<Awaited<ReturnType<typeof adminRestoreSiteContent>>>
+
+    export type AdminRestoreSiteContentMutationError = ErrorType<Error | void>
+
+    export const useAdminRestoreSiteContent = <TError = ErrorType<Error | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminRestoreSiteContent>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminRestoreSiteContent>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminRestoreSiteContentMutationOptions(options));
     }
 
 export const getAdminListDistributorCatalogUrl = () => {

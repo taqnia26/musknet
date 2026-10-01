@@ -56,6 +56,7 @@ export * from "./analytics";
 export * from "./distributor-contracts";
 export * from "./uploaded-contract-files";
 export * from "./site-content";
+export * from "./site-content-history";
 export * from "./gifting-issues";
 export * from "./influencers";
 export * from "./operations";

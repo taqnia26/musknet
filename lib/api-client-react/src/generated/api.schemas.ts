@@ -1815,8 +1815,21 @@ export interface SiteContent {
   updatedAt: string;
   /** @nullable */
   updatedBy?: string | null;
-  /** Server-owned deletion eligibility; only inert custom.* content keys are eligible. Missing means protected. */
-  canDelete?: boolean;
+  /** Server-owned deletion eligibility; false for protected keys or content containing secrets or financial data. */
+  canDelete: boolean;
+}
+
+export interface SiteContentHistory {
+  id: number;
+  key: string;
+  deletedBy: string;
+  deletedAt: string;
+  /** @nullable */
+  restoredBy: string | null;
+  /** @nullable */
+  restoredAt: string | null;
+  /** False for restored, unsafe/corrupted, or currently conflicting archive records. */
+  canRestore: boolean;
 }
 
 export type SiteContentUpsertItemsItem = {

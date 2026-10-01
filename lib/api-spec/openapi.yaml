@@ -902,18 +902,45 @@ paths:
       operationId: adminDeleteSiteContent
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
-      description: Deletes one saved custom.* content key with site-content delete permission. All other keys are protected. Upsert omission never deletes content.
+      description: Deletes one safe saved custom.* content key with site-content delete permission and archives its content for restoration. Protected, secret-bearing, and financial content is rejected. Upsert omission never deletes content.
       parameters:
         - name: key
           in: path
           required: true
           schema: { type: string, minLength: 1 }
       responses:
-        "204": { description: Saved custom content deleted }
-        "400": { description: Protected key, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "204": { description: Safe custom content deleted and archived }
+        "400": { description: Protected key or unsafe content, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
         "401": { description: Authentication required }
         "403": { description: Delete permission required }
         "404": { description: Key not found }
+  /admin/site-content-history:
+    get:
+      operationId: adminListSiteContentHistory
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      responses:
+        "200": { description: Site content deletion history metadata (archived data is never returned), content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SiteContentHistory" } } } } }
+        "401": { description: Authentication required }
+        "403": { description: Site-content view permission required }
+  /admin/site-content-history/{id}/restore:
+    post:
+      operationId: adminRestoreSiteContent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      description: Restores an archived safe custom.* item only if the key is still unused. Requires both site-content edit and delete permissions.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: number, multipleOf: 1, minimum: 1 }
+      responses:
+        "200": { description: Restored site content, content: { application/json: { schema: { $ref: "#/components/schemas/SiteContent" } } } }
+        "400": { description: Protected or corrupted archive, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: Authentication required }
+        "403": { description: Both site-content edit and delete permissions required }
+        "404": { description: History entry not found }
+        "409": { description: Already restored or site-content key is already in use, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/distributor-catalog:
     get:
       operationId: adminListDistributorCatalog
@@ -4461,14 +4488,25 @@ components:
         signingUrl: { type: string }
     SiteContent:
       type: object
-      required: [id, key, data, updatedAt]
+      required: [id, key, data, updatedAt, canDelete]
       properties:
         id: { type: number }
         key: { type: string }
         data: {}
         updatedAt: { type: string, format: date-time }
         updatedBy: { type: [string, "null"] }
-        canDelete: { type: boolean, description: Server-owned deletion eligibility; only inert custom.* content keys are eligible. Missing means protected. }
+        canDelete: { type: boolean, description: Server-owned deletion eligibility; false for protected keys or content containing secrets or financial data. }
+    SiteContentHistory:
+      type: object
+      required: [id, key, deletedBy, deletedAt, restoredBy, restoredAt, canRestore]
+      properties:
+        id: { type: number }
+        key: { type: string }
+        deletedBy: { type: string }
+        deletedAt: { type: string, format: date-time }
+        restoredBy: { type: [string, "null"] }
+        restoredAt: { type: [string, "null"], format: date-time }
+        canRestore: { type: boolean, description: "False for restored, unsafe/corrupted, or currently conflicting archive records." }
     SiteContentUpsert:
       type: object
       required: [items]

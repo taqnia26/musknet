@@ -541,6 +541,7 @@ export * from './shippingWebhookInput';
 export * from './shippingWebhookInputStatus';
 export * from './shippingWebhookResult';
 export * from './siteContent';
+export * from './siteContentHistory';
 export * from './siteContentUpsert';
 export * from './siteContentUpsertItemsItem';
 export * from './testerStockAvailability';

@@ -2672,7 +2672,7 @@ export const AdminListSiteContentResponseItem = zod.object({
   "data": zod.unknown(),
   "updatedAt": zod.coerce.date(),
   "updatedBy": zod.string().nullish(),
-  "canDelete": zod.boolean().optional().describe('Server-owned deletion eligibility; only inert custom.\* content keys are eligible. Missing means protected.')
+  "canDelete": zod.boolean().describe('Server-owned deletion eligibility; false for protected keys or content containing secrets or financial data.')
 })
 export const AdminListSiteContentResponse = zod.array(AdminListSiteContentResponseItem)
 
@@ -2693,13 +2693,13 @@ export const AdminUpsertSiteContentResponseItem = zod.object({
   "data": zod.unknown(),
   "updatedAt": zod.coerce.date(),
   "updatedBy": zod.string().nullish(),
-  "canDelete": zod.boolean().optional().describe('Server-owned deletion eligibility; only inert custom.\* content keys are eligible. Missing means protected.')
+  "canDelete": zod.boolean().describe('Server-owned deletion eligibility; false for protected keys or content containing secrets or financial data.')
 })
 export const AdminUpsertSiteContentResponse = zod.array(AdminUpsertSiteContentResponseItem)
 
 
 /**
- * Deletes one saved custom.* content key with site-content delete permission. All other keys are protected. Upsert omission never deletes content.
+ * Deletes one safe saved custom.* content key with site-content delete permission and archives its content for restoration. Protected, secret-bearing, and financial content is rejected. Upsert omission never deletes content.
  */
 
 
@@ -2709,6 +2709,39 @@ export const AdminDeleteSiteContentParams = zod.object({
 })
 
 export const AdminDeleteSiteContentResponse = zod.void()
+
+
+export const AdminListSiteContentHistoryResponseItem = zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "deletedBy": zod.string(),
+  "deletedAt": zod.coerce.date(),
+  "restoredBy": zod.string().nullable(),
+  "restoredAt": zod.coerce.date().nullable(),
+  "canRestore": zod.boolean().describe('False for restored, unsafe\/corrupted, or currently conflicting archive records.')
+})
+export const AdminListSiteContentHistoryResponse = zod.array(AdminListSiteContentHistoryResponseItem)
+
+
+/**
+ * Restores an archived safe custom.* item only if the key is still unused. Requires both site-content edit and delete permissions.
+ */
+export const adminRestoreSiteContentPathIdMultipleOf = 1;
+
+
+
+export const AdminRestoreSiteContentParams = zod.object({
+  "id": zod.coerce.number().min(1).multipleOf(adminRestoreSiteContentPathIdMultipleOf)
+})
+
+export const AdminRestoreSiteContentResponse = zod.object({
+  "id": zod.number(),
+  "key": zod.string(),
+  "data": zod.unknown(),
+  "updatedAt": zod.coerce.date(),
+  "updatedBy": zod.string().nullish(),
+  "canDelete": zod.boolean().describe('Server-owned deletion eligibility; false for protected keys or content containing secrets or financial data.')
+})
 
 
 export const AdminListDistributorCatalogResponseItem = zod.object({

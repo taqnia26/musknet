@@ -13,6 +13,6 @@ export interface SiteContent {
   updatedAt: Date;
   /** @nullable */
   updatedBy?: string | null;
-  /** Server-owned deletion eligibility; only inert custom.* content keys are eligible. Missing means protected. */
-  canDelete?: boolean;
+  /** Server-owned deletion eligibility; false for protected keys or content containing secrets or financial data. */
+  canDelete: boolean;
 }

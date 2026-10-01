@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAdminListSiteContent, useAdminUpsertSiteContent, useAdminDeleteSiteContent, useGetAdminMe, getAdminListSiteContentQueryKey, type SiteContent } from '@workspace/api-client-react';
+import { useAdminListSiteContent, useAdminUpsertSiteContent, useAdminDeleteSiteContent, useAdminRestoreSiteContent, useGetAdminMe, getAdminListSiteContentQueryKey, getAdminListSiteContentHistoryQueryKey, type SiteContent, type SiteContentHistory } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { sellerDefaults, sellerNumberLabel, sellerProfile } from '../contracts/s
 import { useLanguage } from '@/hooks/use-language';
 import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { hasPermission } from '@/lib/permissions';
+import { DeletionHistory } from './deletion-history';
 
 const defaultSellerLegalProfile = sellerDefaults;
 
@@ -20,12 +21,14 @@ export default function AdminSiteContent() {
   const { data: content, isLoading } = useAdminListSiteContent();
   const upsert = useAdminUpsertSiteContent();
   const deleteContent = useAdminDeleteSiteContent();
+  const restoreContent = useAdminRestoreSiteContent();
   const { data: admin } = useGetAdminMe();
   const { t } = useLanguage();
   const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
-  const busy = isConfirming || upsert.isPending || deleteContent.isPending;
+  const busy = isConfirming || upsert.isPending || deleteContent.isPending || restoreContent.isPending;
   const canDelete = hasPermission(admin, 'site-content', 'delete');
   const canEdit = hasPermission(admin, 'site-content', 'edit');
+  const canView = hasPermission(admin, 'site-content', 'view');
   const dirtyRef = useRef(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -85,6 +88,7 @@ export default function AdminSiteContent() {
             dirtyRef.current = false;
             queryClient.setQueryData(getAdminListSiteContentQueryKey(), rows);
             queryClient.invalidateQueries({ queryKey: getAdminListSiteContentQueryKey() });
+            void queryClient.invalidateQueries({ queryKey: getAdminListSiteContentHistoryQueryKey() });
             toast({ title: 'تم الحفظ', description: 'تم حفظ المحتوى بنجاح / Content saved successfully' });
           },
           onError: (error: any) => {
@@ -124,17 +128,47 @@ export default function AdminSiteContent() {
     confirmAction({
       title: t('حذف محتوى محفوظ', 'Delete saved content'),
       description: t(
-        `سيُحذف المفتاح «${key}» وقيمته نهائياً من محتوى الموقع المحفوظ. لن يعود بعد التحديث، وستُفقد أي تعديلات غير محفوظة لهذا السطر فقط. لن تُحذف المفاتيح الأخرى أو بيانات الفوترة والإعدادات المحمية. لا يمكن التراجع عن الحذف.`,
-        `The saved key “${key}” and its value will be permanently deleted. It will not return after reload. Any unsaved edits to this row only will be lost. Other keys, billing data, and protected settings will not be deleted. This cannot be undone.`,
+        `سيُحذف المفتاح «${key}» وقيمته من المحتوى النشط مع حفظ نسخة في سجل المحذوفات. لن يعود تلقائياً بعد التحديث؛ يمكن استعادته لاحقاً بالصلاحيات المناسبة ما لم يُعد إنشاء المفتاح. ستُفقد التعديلات غير المحفوظة لهذا السطر فقط. لن تُحذف المفاتيح الأخرى أو بيانات الفوترة والإعدادات المحمية.`,
+        `The saved key “${key}” and its value will be removed from active content, with a copy kept in deletion history. It will not return automatically after reload. Authorized users can restore it unless the key is recreated. Unsaved edits to this row only will be lost. Other keys, billing data, and protected settings will not be deleted.`,
       ),
-      confirmLabel: t('حذف المحفوظ نهائياً', 'Permanently delete saved content'),
+      confirmLabel: t('تأكيد حذف المحفوظ', 'Confirm deletion'),
       onConfirm: async () => {
         await deleteContent.mutateAsync({ key });
         setLocalItems(items => items.filter(item => item.key !== key || item.isNew));
         queryClient.setQueryData<SiteContent[]>(getAdminListSiteContentQueryKey(), rows => rows?.filter(item => item.key !== key));
         // Dirty drafts remain local even when this refresh updates the saved list.
         void queryClient.invalidateQueries({ queryKey: getAdminListSiteContentQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getAdminListSiteContentHistoryQueryKey() });
         toast({ title: t('تم حذف المحتوى المحفوظ', 'Saved content deleted'), description: key });
+      },
+    });
+  };
+
+  const handleRestore = (entry: SiteContentHistory) => {
+    if (busy || !canEdit || !canDelete || !entry.canRestore || localItems.some(item => item.key === entry.key)) return;
+    confirmAction({
+      title: t('استعادة محتوى مخصص', 'Restore custom content'),
+      description: t(
+        `ستتم استعادة النسخة المحفوظة للمفتاح «${entry.key}» إلى المحتوى النشط. لن تُستبدل أي قيمة موجودة، ولن تُستعاد عناصر أخرى أو إعدادات محمية. ستبقى تعديلاتك غير المحفوظة على الأسطر الأخرى كما هي.`,
+        `The saved copy of “${entry.key}” will be restored to active content. No existing value will be replaced. No other items or protected settings will be restored. Unsaved edits to other rows will be preserved.`,
+      ),
+      confirmLabel: t('تأكيد استعادة هذا العنصر', 'Confirm restoring this item'),
+      onConfirm: async () => {
+        try {
+          const restored = await restoreContent.mutateAsync({ id: entry.id });
+          setLocalItems(items => items.some(item => item.key === restored.key) ? items : [...items, {
+            key: restored.key,
+            data: typeof restored.data === 'string' ? restored.data : JSON.stringify(restored.data, null, 2),
+            canDelete: restored.canDelete,
+          }]);
+          queryClient.setQueryData<SiteContent[]>(getAdminListSiteContentQueryKey(), rows => rows
+            ? [...rows.filter(item => item.key !== restored.key), restored]
+            : [restored]);
+          toast({ title: t('تمت استعادة المحتوى', 'Content restored'), description: restored.key });
+        } finally {
+          void queryClient.invalidateQueries({ queryKey: getAdminListSiteContentQueryKey() });
+          void queryClient.invalidateQueries({ queryKey: getAdminListSiteContentHistoryQueryKey() });
+        }
       },
     });
   };
@@ -328,6 +362,7 @@ export default function AdminSiteContent() {
           )}
         </div>
       </div>
+      <DeletionHistory canView={canView} canRestore={canEdit && canDelete} busy={busy} localKeys={new Set(localItems.map(item => item.key))} onRestore={handleRestore} />
     </fieldset>
     </>
   );

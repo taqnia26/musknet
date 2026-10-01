@@ -6,7 +6,7 @@ import QRCode from "qrcode";
 import { open } from "node:fs/promises";
 import { constants } from "node:fs";
 import { suggestContractSignedDate } from "../lib/contract-signed-date";
-import { canDeleteSiteContentKey } from "../lib/site-content-policy";
+import { canArchiveSiteContent, canDeleteSiteContentKey } from "../lib/site-content-policy";
 import { createSocialMarketingRouter } from "./social-marketing";
 import { createProductionPlansRouter } from "./production-plans";
 import { createAnnualAgendaRouter } from "./annual-agenda";
@@ -55,6 +55,7 @@ import {
   uploadedContractFilesTable,
   influencersTable,
   siteContentTable,
+  siteContentHistoryTable,
   ownerCredentialsTable,
   ownerUsersTable,
   ownerObligationEventsTable,
@@ -1015,7 +1016,7 @@ router.get("/admin/site-content", route(async (_req, res) => {
     .orderBy(siteContentTable.key);
   res.json(Api.AdminListSiteContentResponse.parse(rows.map((row) => ({
     ...row,
-    canDelete: canDeleteSiteContentKey(row.key),
+    canDelete: canArchiveSiteContent(row.key, row.data),
   }))));
 }));
 router.put("/admin/site-content", permit("site-content", "edit"), route(async (req, res) => {
@@ -1027,7 +1028,7 @@ router.put("/admin/site-content", permit("site-content", "edit"), route(async (r
   const rows = await db.select().from(siteContentTable).orderBy(siteContentTable.key);
   res.json(Api.AdminUpsertSiteContentResponse.parse(rows.map((row) => ({
     ...row,
-    canDelete: canDeleteSiteContentKey(row.key),
+    canDelete: canArchiveSiteContent(row.key, row.data),
   }))));
 }));
 router.delete("/admin/site-content/:key", permit("site-content", "delete"), route(async (req, res) => {
@@ -1038,16 +1039,113 @@ router.delete("/admin/site-content/:key", permit("site-content", "delete"), rout
     });
     return;
   }
-  const [deleted] = await db.delete(siteContentTable)
-    .where(eq(siteContentTable.key, params.key))
-    .returning();
-  if (!deleted) {
+  const result = await db.transaction(async (tx) => {
+    const [existing] = await tx.select().from(siteContentTable)
+      .where(eq(siteContentTable.key, params.key)).for("update").limit(1);
+    if (!existing) return { kind: "not-found" } as const;
+    if (!canArchiveSiteContent(existing.key, existing.data)) return { kind: "unsafe" } as const;
+
+    const [deleted] = await tx.delete(siteContentTable)
+      .where(eq(siteContentTable.id, existing.id))
+      .returning();
+    if (!deleted) return { kind: "not-found" } as const;
+    await tx.insert(siteContentHistoryTable).values({
+      key: deleted.key,
+      data: deleted.data,
+      deletedBy: String(res.locals.admin.id),
+    });
+    return { kind: "deleted" } as const;
+  });
+  if (result.kind === "not-found") {
     res.status(404).json({ error: "Site content not found" });
     return;
   }
-  req.log.info({ actorId: res.locals.admin.id, key: params.key }, "Admin deleted site content");
+  if (result.kind === "unsafe") {
+    res.status(400).json({
+      error: "This site content is protected because it contains secret or financial data / محتوى الموقع محمي لاحتوائه على بيانات سرية أو مالية",
+    });
+    return;
+  }
+  req.log.info({ actorId: res.locals.admin.id, key: params.key }, "Admin deleted and archived site content");
   res.sendStatus(204);
 }));
+router.get("/admin/site-content-history", permit("site-content", "view"), route(async (_req, res) => {
+  const [rows, savedContent] = await Promise.all([
+    db.select().from(siteContentHistoryTable)
+      .orderBy(desc(siteContentHistoryTable.deletedAt), desc(siteContentHistoryTable.id)),
+    db.select({ key: siteContentTable.key }).from(siteContentTable),
+  ]);
+  const savedKeys = new Set(savedContent.map(({ key }) => key));
+  res.json(Api.AdminListSiteContentHistoryResponse.parse(rows.map((row) => ({
+    id: row.id,
+    key: row.key,
+    deletedBy: row.deletedBy,
+    deletedAt: row.deletedAt,
+    restoredBy: row.restoredBy,
+    restoredAt: row.restoredAt,
+    canRestore: row.restoredAt === null
+      && !savedKeys.has(row.key)
+      && canArchiveSiteContent(row.key, row.data),
+  }))));
+}));
+router.post(
+  "/admin/site-content-history/:id/restore",
+  permit("site-content", "edit"),
+  permit("site-content", "delete"),
+  route(async (req, res) => {
+    const params = parse(Api.AdminRestoreSiteContentParams, req.params, res); if (!params) return;
+    const result = await db.transaction(async (tx) => {
+      const [archive] = await tx.select().from(siteContentHistoryTable)
+        .where(eq(siteContentHistoryTable.id, params.id)).for("update").limit(1);
+      if (!archive) return { kind: "not-found" } as const;
+      if (archive.restoredAt !== null) return { kind: "already-restored" } as const;
+      if (!canArchiveSiteContent(archive.key, archive.data)) return { kind: "unsafe" } as const;
+
+      const [restored] = await tx.insert(siteContentTable).values({
+        key: archive.key,
+        data: archive.data,
+        updatedBy: String(res.locals.admin.id),
+      }).onConflictDoNothing({ target: siteContentTable.key }).returning();
+      if (!restored) return { kind: "conflict" } as const;
+
+      const restoredAt = new Date();
+      const [marked] = await tx.update(siteContentHistoryTable).set({
+        restoredBy: String(res.locals.admin.id),
+        restoredAt,
+      }).where(and(
+        eq(siteContentHistoryTable.id, archive.id),
+        isNull(siteContentHistoryTable.restoredAt),
+      )).returning({ id: siteContentHistoryTable.id });
+      if (!marked) throw new Error("Site content archive changed during restoration");
+      return { kind: "restored", row: restored } as const;
+    });
+
+    if (result.kind === "not-found") {
+      res.status(404).json({ error: "Site content history entry not found" });
+      return;
+    }
+    if (result.kind === "already-restored") {
+      res.status(409).json({ error: "Site content history entry has already been restored" });
+      return;
+    }
+    if (result.kind === "conflict") {
+      res.status(409).json({ error: "A site content item with this key already exists" });
+      return;
+    }
+    if (result.kind === "unsafe") {
+      res.status(400).json({
+        error: "This site content archive is protected or corrupted and cannot be restored / أرشيف محتوى الموقع محمي أو تالف ولا يمكن استعادته",
+      });
+      return;
+    }
+
+    req.log.info({ actorId: res.locals.admin.id, key: result.row.key, historyId: params.id }, "Admin restored site content");
+    res.json(Api.AdminRestoreSiteContentResponse.parse({
+      ...result.row,
+      canDelete: canArchiveSiteContent(result.row.key, result.row.data),
+    }));
+  }),
+);
 
 router.get("/admin/distributor-catalog", permit("distributors", "view"), route(async (_req, res) => {
   const rows = await db.select({
