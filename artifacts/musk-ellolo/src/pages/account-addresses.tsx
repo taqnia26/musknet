@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { MapPin, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
@@ -28,6 +29,7 @@ type AddressFormValues = z.infer<typeof addressSchema>;
 export default function Addresses() {
   const { t } = useLanguage();
   const { toast } = useToast();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const queryClient = useQueryClient();
   const { data: addresses, isLoading } = useListAddresses();
   
@@ -57,17 +59,36 @@ export default function Addresses() {
     });
   };
 
-  const handleDelete = (id: number) => {
-    deleteAddress.mutate({ addressId: id }, {
-      onSuccess: () => {
-        toast({ title: t('تم الحذف', 'Deleted Successfully') });
-        queryClient.invalidateQueries({ queryKey: getListAddressesQueryKey() });
-      }
+  const handleDelete = (address: NonNullable<typeof addresses>[number]) => {
+    if (deleteAddress.isPending || isConfirming) return;
+    confirmAction({
+      title: t('حذف عنوان التوصيل', 'Delete shipping address'),
+      description: t(
+        `سيتم حذف العنوان المحفوظ "${address.label}" من حسابك.`,
+        `The saved address "${address.label}" will be deleted from your account.`,
+      ),
+      confirmLabel: t('حذف العنوان', 'Delete address'),
+      onConfirm: async () => {
+        await deleteAddress.mutateAsync({ addressId: address.id }, {
+          onSuccess: () => {
+            toast({ title: t('تم الحذف', 'Deleted Successfully') });
+            queryClient.invalidateQueries({ queryKey: getListAddressesQueryKey() });
+          },
+          onError: () => {
+            toast({
+              variant: 'destructive',
+              title: t('تعذر حذف العنوان', 'Could not delete address'),
+              description: t('حاول مرة أخرى.', 'Please try again.'),
+            });
+          },
+        });
+      },
     });
   };
 
   return (
     <AccountLayout title={t('عناوين التوصيل', 'Shipping Addresses')}>
+      {confirmationDialog}
       
       {!isAdding && (
         <div className="mb-8">
@@ -145,9 +166,9 @@ export default function Addresses() {
               
               <div className="mt-6 pt-4 border-t flex justify-end">
                 <button 
-                  onClick={() => handleDelete(address.id)}
+                  onClick={() => handleDelete(address)}
                   className="text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1 text-sm"
-                  disabled={deleteAddress.isPending}
+                  disabled={deleteAddress.isPending || isConfirming}
                 >
                   <Trash2 className="w-4 h-4" /> {t('حذف', 'Delete')}
                 </button>

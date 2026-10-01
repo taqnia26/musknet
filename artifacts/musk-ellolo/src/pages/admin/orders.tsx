@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { 
   useAdminListOrders, 
   type AdminOrder,
   useAdminUpdateOrder, 
   AdminOrderUpdateStatus, 
   AdminOrderUpdatePaymentStatus, 
+  type AdminOrderUpdate,
   useGetAdminMe,
   useAdminGetOrder,
   useAdminSendOrderPaymentLink,
@@ -27,6 +28,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { CreateOrderDialog } from '@/components/admin/create-order-dialog';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 
 type OrderStage = 'all' | OrderStatus;
 function stageOf(order: AdminOrder): OrderStatus {
@@ -44,6 +46,8 @@ export default function AdminOrders() {
   const { data: currentUser } = useGetAdminMe();
   const { data: orders, isLoading, isError } = useAdminListOrders({ search });
   const updateMutation = useAdminUpdateOrder();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
+  const updateInFlight = useRef(false);
   const [paymentLinkResult, setPaymentLinkResult] = useState<{ orderId: number; message: string; error: boolean } | null>(null);
   const paymentLinkMutation = useAdminSendOrderPaymentLink({
     request: { headers: { Authorization: `Bearer ${getAdminToken() ?? ''}` } },
@@ -69,9 +73,12 @@ export default function AdminOrders() {
     }
   );
 
-  const handleUpdateStatus = (id: number, status: string) => {
+  const performUpdate = async (id: number, data: AdminOrderUpdate) => {
+    if (updateInFlight.current) return;
+    updateInFlight.current = true;
     setUpdateError(null);
-    updateMutation.mutate({ id, data: { status: status as AdminOrderUpdateStatus } }, {
+    try {
+      await updateMutation.mutateAsync({ id, data }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
         if (selectedOrderId === id) {
@@ -79,20 +86,52 @@ export default function AdminOrders() {
         }
       },
       onError: (error) => setUpdateError(error instanceof Error ? error.message : t('تعذر تحديث الطلب', 'Unable to update order'))
-    });
+      });
+    } finally {
+      updateInFlight.current = false;
+    }
+  };
+
+  const orderReference = (id: number) => {
+    const order = orderDetail?.id === id ? orderDetail : orders?.find((row) => row.id === id);
+    return `#${order?.orderNumber ?? id}`;
+  };
+
+  const handleUpdateStatus = (id: number, status: string) => {
+    if (!hasPermission(currentUser, 'orders', 'edit') || updateInFlight.current || isConfirming) return;
+    const current = orderDetail?.id === id ? orderDetail : orders?.find((row) => row.id === id);
+    if (current?.status === status) return;
+    const data = { status: status as AdminOrderUpdateStatus };
+    if (status === 'cancelled' || status === 'returned') {
+      const reference = orderReference(id);
+      confirmAction({
+        title: status === 'cancelled' ? t('تأكيد إلغاء الطلب', 'Confirm order cancellation') : t('تأكيد تسجيل الطلب كمسترجع', 'Confirm marking order returned'),
+        description: status === 'cancelled'
+          ? t(`سيتم طلب إلغاء الطلب ${reference}. ستُطبّق قواعد الإلغاء الحالية، ولن يُحذف سجل الطلب. هل تريد المتابعة؟`, `Request cancellation of order ${reference}. Existing cancellation rules will apply; the order record will not be deleted. Continue?`)
+          : t(`سيتم طلب تسجيل الطلب ${reference} كمسترجع. يجب إتمام مسار الاسترجاع المعتمد أولاً؛ هذا التأكيد لا يتجاوز القيود المالية أو المخزنية. هل تريد المتابعة؟`, `Request marking order ${reference} as returned. The approved refund workflow must be completed first; this confirmation does not bypass financial or inventory safeguards. Continue?`),
+        confirmLabel: status === 'cancelled' ? t('تأكيد الإلغاء', 'Confirm cancellation') : t('تأكيد تسجيل الاسترجاع', 'Confirm return status'),
+        onConfirm: () => performUpdate(id, data),
+      });
+    } else {
+      // The existing error callback displays failures for ordinary status changes.
+      void performUpdate(id, data).catch(() => undefined);
+    }
   };
 
   const handleUpdatePaymentStatus = (id: number, paymentStatus: string) => {
-    setUpdateError(null);
-    updateMutation.mutate({ id, data: { paymentStatus: paymentStatus as AdminOrderUpdatePaymentStatus } }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
-        if (selectedOrderId === id) {
-          queryClient.invalidateQueries({ queryKey: getAdminGetOrderQueryKey(id) });
-        }
-      },
-      onError: (error) => setUpdateError(error instanceof Error ? error.message : t('تعذر تحديث حالة الدفع', 'Unable to update payment status'))
-    });
+    if (!hasPermission(currentUser, 'orders', 'edit') || updateInFlight.current || isConfirming) return;
+    if (orderDetail?.id === id && orderDetail.paymentStatus === paymentStatus) return;
+    const data = { paymentStatus: paymentStatus as AdminOrderUpdatePaymentStatus };
+    if (paymentStatus === 'refunded') {
+      confirmAction({
+        title: t('تأكيد تغيير حالة الدفع إلى مسترجع', 'Confirm refunded payment status'),
+        description: t(`سيتم طلب تغيير حالة الدفع للطلب ${orderReference(id)} إلى «مسترجع» وفق قواعد النظام. تأكد من توثيق الاسترداد المالي المعتمد قبل تغيير الحالة. هل تريد المتابعة؟`, `Request changing the payment status of order ${orderReference(id)} to “Refunded” under existing system rules. Verify the approved financial refund is documented before changing this status. Continue?`),
+        confirmLabel: t('تأكيد حالة الدفع', 'Confirm payment status'),
+        onConfirm: () => performUpdate(id, data),
+      });
+    } else {
+      void performUpdate(id, data).catch(() => undefined);
+    }
   };
 
   const statusMap: Record<string, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', className?: string }> = {
@@ -114,6 +153,7 @@ export default function AdminOrders() {
 
   return (
     <div className="space-y-6">
+      {confirmationDialog}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('طلبات الأفراد', 'Individual Orders')}</h1>
@@ -205,7 +245,7 @@ export default function AdminOrders() {
                   <TableCell>{format(new Date(order.createdAt), 'yyyy-MM-dd')}</TableCell>
                   <TableCell className="font-semibold"><Money value={order.total} lang={lang} fractionDigits={2} /></TableCell>
                   <TableCell>
-                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={order.status} onValueChange={(v) => handleUpdateStatus(order.id, v)}>
+                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit') || updateMutation.isPending || isConfirming} value={order.status} onValueChange={(v) => handleUpdateStatus(order.id, v)}>
                       <SelectTrigger className={`h-8 text-xs font-semibold ${statusMap[order.status]?.className || ''} border-0 ring-offset-transparent focus:ring-0 focus:ring-offset-0`}>
                         <SelectValue />
                       </SelectTrigger>
@@ -291,7 +331,7 @@ export default function AdminOrders() {
                                 <div className="space-y-3 bg-muted/20 p-4 rounded-md border">
                                   <div className="space-y-1.5">
                                     <p className="text-xs font-medium text-muted-foreground">{t('تحديث حالة الطلب', 'Update Status')}</p>
-                                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={orderDetail.status} onValueChange={(v) => handleUpdateStatus(orderDetail.id, v)}>
+                                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit') || updateMutation.isPending || isConfirming} value={orderDetail.status} onValueChange={(v) => handleUpdateStatus(orderDetail.id, v)}>
                                       <SelectTrigger className="h-8 text-sm">
                                         <SelectValue />
                                       </SelectTrigger>
@@ -308,7 +348,7 @@ export default function AdminOrders() {
                                   </div>
                                   <div className="space-y-1.5">
                                     <p className="text-xs font-medium text-muted-foreground">{t('تحديث حالة الدفع', 'Update Payment')}</p>
-                                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit')} value={orderDetail.paymentStatus} onValueChange={(v) => handleUpdatePaymentStatus(orderDetail.id, v)}>
+                                    <Select disabled={!hasPermission(currentUser, 'orders', 'edit') || updateMutation.isPending || isConfirming} value={orderDetail.paymentStatus} onValueChange={(v) => handleUpdatePaymentStatus(orderDetail.id, v)}>
                                       <SelectTrigger className="h-8 text-sm">
                                         <SelectValue />
                                       </SelectTrigger>

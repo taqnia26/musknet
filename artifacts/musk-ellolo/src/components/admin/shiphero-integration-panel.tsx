@@ -17,6 +17,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { AlertCircle, CheckCircle2, Loader2, Pencil, Plus, RefreshCw, Save, Trash2, Truck, X } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { useToast } from '@/hooks/use-toast';
 import { hasPermission } from '@/lib/permissions';
 import { Badge } from '@/components/ui/badge';
@@ -89,6 +90,7 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 
 export function ShipHeroIntegrationPanel() {
   const { t, lang } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: admin } = useGetAdminMe();
@@ -242,17 +244,29 @@ export function ShipHeroIntegrationPanel() {
 
   const deleteMapping = (productId: number) => {
     const mapping = snapshot?.mappings.find((item) => item.productId === productId);
-    if (!canDeleteMappings || deleteMappingMutation.isPending || !mapping || !isShipHeroMappingDeletable(mapping.createStatus)) return;
-    deleteMappingMutation.mutate({ productId }, {
-      onSuccess: () => {
-        void refreshSnapshot();
-        if (editingProductId === productId) clearMappingForm();
-        toast({ title: t('تم حذف ربط المنتج', 'Product mapping deleted') });
+    if (!canDeleteMappings || deleteMappingMutation.isPending || isConfirming || !mapping || !isShipHeroMappingDeletable(mapping.createStatus)) return;
+    const productName = mapping.productName.trim() || t('اسم غير محدد', 'unnamed product');
+    const sku = mapping.sku.trim() || '—';
+    confirmAction({
+      title: t('حذف ربط ShipHero', 'Delete ShipHero mapping'),
+      description: t(
+        `سيُحذف الربط المحلي للمنتج "${productName}" (SKU: ${sku}) فقط. لن يُحذف المنتج من ShipHero أو من أي كتالوج بعيد.`,
+        `Only the local mapping for "${productName}" (SKU: ${sku}) will be deleted. The product will not be deleted from ShipHero or any remote catalog.`,
+      ),
+      confirmLabel: t('حذف الربط', 'Delete mapping'),
+      onConfirm: async () => {
+        await deleteMappingMutation.mutateAsync({ productId }, {
+          onSuccess: () => {
+            void refreshSnapshot();
+            if (editingProductId === productId) clearMappingForm();
+            toast({ title: t('تم حذف ربط المنتج', 'Product mapping deleted') });
+          },
+          onError: () => toast({
+            title: t('تعذر حذف ربط المنتج', 'Could not delete product mapping'),
+            variant: 'destructive',
+          }),
+        });
       },
-      onError: () => toast({
-        title: t('تعذر حذف ربط المنتج', 'Could not delete product mapping'),
-        variant: 'destructive',
-      }),
     });
   };
 
@@ -320,16 +334,19 @@ export function ShipHeroIntegrationPanel() {
 
   if (!canView) {
     return (
-      <Card data-testid="panel-shiphero-integration">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5" />ShipHero</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground" data-testid="text-shiphero-view-permission">
-            {t('تحتاج صلاحية عرض التكاملات لمشاهدة إعدادات ShipHero.', 'You need integrations:view permission to view ShipHero settings.')}
-          </p>
-        </CardContent>
-      </Card>
+      <>
+        {confirmationDialog}
+        <Card data-testid="panel-shiphero-integration">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Truck className="h-5 w-5" />ShipHero</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground" data-testid="text-shiphero-view-permission">
+              {t('تحتاج صلاحية عرض التكاملات لمشاهدة إعدادات ShipHero.', 'You need integrations:view permission to view ShipHero settings.')}
+            </p>
+          </CardContent>
+        </Card>
+      </>
     );
   }
 
@@ -355,6 +372,7 @@ export function ShipHeroIntegrationPanel() {
 
   return (
     <section className="space-y-5" aria-label={t('إدارة ShipHero', 'ShipHero management')} data-testid="panel-shiphero-integration">
+      {confirmationDialog}
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -615,7 +633,7 @@ export function ShipHeroIntegrationPanel() {
                                       size="sm"
                                       variant="outline"
                                       className="text-destructive"
-                                      disabled={!isShipHeroMappingDeletable(mapping.createStatus) || deleteMappingMutation.isPending}
+                                      disabled={!isShipHeroMappingDeletable(mapping.createStatus) || deleteMappingMutation.isPending || isConfirming}
                                       onClick={() => deleteMapping(mapping.productId)}
                                       data-testid={`button-delete-shiphero-mapping-${mapping.productId}`}
                                     >

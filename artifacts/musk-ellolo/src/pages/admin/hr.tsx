@@ -30,12 +30,14 @@ import { Search, Plus, Edit2, Check, X, Eye, MoreHorizontal } from 'lucide-react
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 
 const mutationErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.error || error?.data?.error || error?.message || fallback;
 
 function EmployeesTab({ canEdit }: { canEdit: boolean }) {
   const { t } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const [search, setSearch] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
@@ -67,13 +69,27 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
     }
 
     if (editingEmployee) {
-      updateMutation.mutate({ id: editingEmployee.id, data }, {
+      const vars = { id: editingEmployee.id, data };
+      const options = {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListEmployeesQueryKey() });
           setIsOpen(false);
           toast({ title: t('تم الحفظ', 'Saved') });
         }
-      });
+      };
+      if (editingEmployee.isActive && !data.isActive) {
+        confirmAction({
+          title: t('تعطيل سجل الموظف؟', 'Deactivate employee record?'),
+          description: t(
+            `سيتم تعطيل سجل ${editingEmployee.name} في الموارد البشرية. ستظل بياناته وسجلاته محفوظة.`,
+            `This will deactivate ${editingEmployee.name}'s HR record. Their details and history will remain stored.`,
+          ),
+          confirmLabel: t('تعطيل الموظف', 'Deactivate employee'),
+          onConfirm: async () => { await updateMutation.mutateAsync(vars, options); },
+        });
+        return;
+      }
+      updateMutation.mutate(vars, options);
     } else {
       createMutation.mutate({ data }, {
         onSuccess: () => {
@@ -86,6 +102,8 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
   };
 
   return (
+    <>
+    {confirmationDialog}
     <div className="space-y-4 mt-4">
       <div className="flex justify-between items-center gap-4">
         <div className="relative flex-1 max-w-sm">
@@ -100,7 +118,7 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
         {canEdit && (
           <Dialog open={isOpen} onOpenChange={(v) => { setIsOpen(v); if (!v) setEditingEmployee(null); }}>
             <DialogTrigger asChild>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90"><Plus className="h-4 w-4 me-2" />{t('إضافة موظف', 'Add Employee')}</Button>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={isConfirming || createMutation.isPending || updateMutation.isPending}><Plus className="h-4 w-4 me-2" />{t('إضافة موظف', 'Add Employee')}</Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
@@ -151,7 +169,7 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
                   </select>
                 </div>
                 <div className="col-span-2 mt-4 flex justify-end">
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>{t('حفظ', 'Save')}</Button>
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending || isConfirming}>{t('حفظ', 'Save')}</Button>
                 </div>
               </form>
             </DialogContent>
@@ -190,9 +208,9 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
                  </TableCell>
                  <TableCell className="text-end">
                    {canEdit && <DropdownMenu>
-                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')} disabled={isConfirming || updateMutation.isPending}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                      <DropdownMenuContent align="end">
-                       <DropdownMenuItem onClick={() => { setEditingEmployee(emp); setIsOpen(true); }}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                        <DropdownMenuItem disabled={isConfirming || updateMutation.isPending} onClick={() => { setEditingEmployee(emp); setIsOpen(true); }}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                      </DropdownMenuContent>
                    </DropdownMenu>}
                  </TableCell>
@@ -202,6 +220,7 @@ function EmployeesTab({ canEdit }: { canEdit: boolean }) {
         </Table>
       </div>
     </div>
+    </>
   );
 }
 
@@ -368,6 +387,7 @@ function AttendanceTab({ canEdit }: { canEdit: boolean }) {
 
 function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
   const { t } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const { data: requests, isLoading } = useAdminListLeaveRequests({});
   const { data: employees } = useAdminListEmployees({});
   const [isOpen, setIsOpen] = useState(false);
@@ -401,19 +421,35 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
     });
   };
 
-  const handleStatus = (id: number, status: 'approved' | 'rejected') => {
-    updateMutation.mutate({ id, data: { status } }, {
+  const handleStatus = (id: number, status: 'approved' | 'rejected', employeeName: string | number) => {
+    const vars = { id, data: { status } };
+    const options = {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListLeaveRequestsQueryKey() });
         toast({ title: t('تم التحديث', 'Updated') });
       },
-      onError: (error) => toast({ title: mutationErrorMessage(error, t('تعذر تحديث طلب الإجازة', 'Unable to update leave request')), variant: 'destructive' })
-    });
+      onError: (error: unknown) => toast({ title: mutationErrorMessage(error, t('تعذر تحديث طلب الإجازة', 'Unable to update leave request')), variant: 'destructive' })
+    };
+    if (status === 'rejected') {
+      confirmAction({
+        title: t('رفض طلب الإجازة؟', 'Reject leave request?'),
+        description: t(
+          `سيتم رفض طلب الإجازة رقم ${id} الخاص بـ ${employeeName}.`,
+          `This will reject leave request #${id} for ${employeeName}.`,
+        ),
+        confirmLabel: t('رفض الطلب', 'Reject request'),
+        onConfirm: async () => { await updateMutation.mutateAsync(vars, options); },
+      });
+      return;
+    }
+    updateMutation.mutate(vars, options);
   };
 
   const getEmpName = (id: number) => employees?.find(e => e.id === id)?.name || id;
 
   return (
+    <>
+    {confirmationDialog}
     <div className="space-y-4 mt-4">
       <div className="flex justify-end">
         {canEdit && (
@@ -455,7 +491,7 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
                   <Input name="reason" required />
                 </div>
                 <div className="flex justify-end mt-4">
-                  <Button type="submit" disabled={createMutation.isPending}>{t('حفظ', 'Save')}</Button>
+                  <Button type="submit" disabled={createMutation.isPending || isConfirming}>{t('حفظ', 'Save')}</Button>
                 </div>
               </form>
             </DialogContent>
@@ -490,11 +526,11 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
                  </TableCell>
                  <TableCell className="text-end">
                    {canEdit && req.status === 'pending' && <DropdownMenu>
-                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')} disabled={isConfirming || updateMutation.isPending}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                      <DropdownMenuContent align="end">
-                       <DropdownMenuItem className="text-success focus:text-success" onClick={() => handleStatus(req.id, 'approved')} disabled={updateMutation.isPending}><Check className="h-4 w-4 me-2" />{t('موافقة', 'Approve')}</DropdownMenuItem>
+                        <DropdownMenuItem className="text-success focus:text-success" onClick={() => handleStatus(req.id, 'approved', getEmpName(req.employeeId))} disabled={updateMutation.isPending || isConfirming}><Check className="h-4 w-4 me-2" />{t('موافقة', 'Approve')}</DropdownMenuItem>
                        <DropdownMenuSeparator />
-                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleStatus(req.id, 'rejected')} disabled={updateMutation.isPending}><X className="h-4 w-4 me-2" />{t('رفض', 'Reject')}</DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleStatus(req.id, 'rejected', getEmpName(req.employeeId))} disabled={updateMutation.isPending || isConfirming}><X className="h-4 w-4 me-2" />{t('رفض', 'Reject')}</DropdownMenuItem>
                      </DropdownMenuContent>
                    </DropdownMenu>}
                  </TableCell>
@@ -504,6 +540,7 @@ function LeaveRequestsTab({ canEdit }: { canEdit: boolean }) {
         </Table>
       </div>
     </div>
+    </>
   );
 }
 

@@ -34,6 +34,7 @@ import {
    EyeOff,
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { sortProductsForSelection } from '@/lib/product-sort';
 import { hasPermission } from '@/lib/permissions';
 import { quantityInputClass } from '@/lib/quantity-input';
@@ -173,6 +174,7 @@ function ProductRow({
   currentUser: AdminUser | null | undefined;
   onEdit: (product: AdminProduct) => void;
 }) {
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const queryClient = useQueryClient();
   const updateMutation = useAdminUpdateProduct();
   const visibilityMutation = useAdminUpdateProduct();
@@ -186,7 +188,7 @@ function ProductRow({
   const hasChanges = draftPrice !== product.price.toString() || draftCategory !== String(product.categoryId);
   const canEdit = hasPermission(currentUser, 'products', 'edit');
   const isVisible = product.isActive && product.sellable;
-  const isBusy = isSaving || visibilityMutation.isPending;
+  const isBusy = isSaving || visibilityMutation.isPending || disableMutation.isPending;
 
   useEffect(() => {
     setDraftPrice(String(product.price));
@@ -233,13 +235,27 @@ function ProductRow({
 
   const handleToggleVisibility = () => {
     setErrorMsg(null);
-    visibilityMutation.mutate({
+    const vars = {
       id: product.id,
       data: isVisible ? { sellable: false } : { isActive: true, sellable: true },
-    }, {
+    };
+    const options = {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getAdminListProductsQueryKey() }),
-      onError: (err) => setErrorMsg(err instanceof Error ? err.message : t('تعذر تحديث ظهور المنتج', 'Could not update product visibility')),
-    });
+      onError: (err: unknown) => setErrorMsg(err instanceof Error ? err.message : t('تعذر تحديث ظهور المنتج', 'Could not update product visibility')),
+    };
+    if (isVisible) {
+      confirmAction({
+        title: t('إخفاء المنتج من المتجر؟', 'Hide product from the storefront?'),
+        description: t(
+          `سيتم إيقاف عرض «${product.nameAr}» للبيع في المتجر. لن يؤثر ذلك في الطلبات السابقة.`,
+          `This will stop “${product.nameEn || product.nameAr}” from being offered for sale in the storefront. Existing orders will not be changed.`,
+        ),
+        confirmLabel: t('إخفاء المنتج', 'Hide product'),
+        onConfirm: async () => { await visibilityMutation.mutateAsync(vars, options); },
+      });
+      return;
+    }
+    visibilityMutation.mutate(vars, options);
   };
 
   const image = product.images?.[0];
@@ -248,6 +264,8 @@ function ProductRow({
     : product.displayNameEn?.trim() || product.nameEn;
 
   return (
+    <>
+    {confirmationDialog}
     <div data-testid={`card-product-${product.id}`} className="group bg-card border rounded-lg hover:border-primary/30 transition-colors shadow-sm flex flex-col p-3 gap-3 relative">
       {errorMsg && (
         <div role="alert" className="border border-destructive/30 rounded bg-destructive/10 text-destructive text-xs p-2">
@@ -336,24 +354,24 @@ function ProductRow({
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-               <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label={t('إجراءات المنتج', 'Product actions')} data-testid={`button-product-actions-${product.id}`} disabled={isBusy}>
+               <Button variant="outline" size="sm" className="h-8 w-8 p-0" aria-label={t('إجراءات المنتج', 'Product actions')} data-testid={`button-product-actions-${product.id}`} disabled={isBusy || isConfirming}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               {canEdit && (
-                <DropdownMenuItem onClick={() => onEdit(product)} className="gap-2 text-sm">
+                <DropdownMenuItem onClick={() => onEdit(product)} disabled={isBusy || isConfirming} className="gap-2 text-sm">
                   <Edit2 className="h-4 w-4" />{t('تعديل كامل', 'Full Edit')}
                 </DropdownMenuItem>
               )}
               {canEdit && (
-                <DropdownMenuItem onClick={handleToggleVisibility} className="gap-2 text-sm" data-testid={`menu-product-visibility-${product.id}`}>
+                <DropdownMenuItem onClick={handleToggleVisibility} disabled={isBusy || isConfirming} className="gap-2 text-sm" data-testid={`menu-product-visibility-${product.id}`}>
                   {isVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                    {isVisible ? t('إخفاء المنتج', 'Hide product') : t('إظهار المنتج', 'Show product')}
                 </DropdownMenuItem>
               )}
               {hasPermission(currentUser, 'products', 'delete') && product.isActive && (
-                <DropdownMenuItem onClick={handleDisable} className="gap-2 text-sm text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={handleDisable} disabled={isBusy || isConfirming} className="gap-2 text-sm text-destructive focus:text-destructive">
                   <Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}
                 </DropdownMenuItem>
               )}
@@ -375,6 +393,7 @@ function ProductRow({
         </div>
       </div>
     </div>
+    </>
   );
 }
 

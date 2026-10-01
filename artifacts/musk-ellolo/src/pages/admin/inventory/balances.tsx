@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { Money } from '@/components/money';
 import { 
   useAdminListInventory, 
@@ -48,6 +49,7 @@ export function RowActions({
   categories: AdminCategory[];
 }) {
   const { t, lang } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -71,7 +73,8 @@ export function RowActions({
       toast({ title: t('يرجى إدخال أسماء المنتج باللغتين لكل نوع', 'Enter Arabic and English names for all name types'), variant: 'destructive' });
       return;
     }
-    editMutation.mutate({
+    const isActive = fd.get('isActive') === 'on';
+    const vars = {
       id: item.id,
       data: {
         nameAr: fd.get('nameAr') as string,
@@ -84,7 +87,7 @@ export function RowActions({
         categoryId: Number(fd.get('categoryId')),
         barcode: (fd.get('barcode') as string) || null,
         inventoryNotes: String(fd.get('inventoryNotes') || '').trim(),
-        isActive: fd.get('isActive') === 'on',
+        isActive,
         operationalType: fd.get('operationalType') as any,
         unitOfMeasure: fd.get('unitOfMeasure') as string,
         preferredSupplier: (fd.get('preferredSupplier') as string) || null,
@@ -93,14 +96,33 @@ export function RowActions({
         reorderPoint: Number(fd.get('reorderPoint')),
         targetStockQuantity: Number(fd.get('targetStockQuantity'))
       }
-    }, {
+    };
+    const options = {
       onSuccess: () => {
         toast({ title: t('تم تعديل المنتج', 'Product updated') });
         setEditOpen(false);
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
       },
-      onError: (error) => toast({ title: t('تعذر تعديل الصنف', 'Could not update item'), description: error.message, variant: 'destructive' }),
-    });
+      onError: (error: Error) => toast({ title: t('تعذر تعديل الصنف', 'Could not update item'), description: error.message, variant: 'destructive' }),
+    };
+    const isDeactivating = (item.isActive && !isActive) || (item.sellable && !sellable);
+    if (isDeactivating) {
+      const effects = [
+        item.isActive && !isActive ? t('تعطيل الصنف', 'deactivating the item') : null,
+        item.sellable && !sellable ? t('إيقاف بيعه في المتجر', 'stopping storefront sales') : null,
+      ].filter(Boolean).join(t(' و', ' and '));
+      confirmAction({
+        title: t('تأكيد إيقاف الصنف أو بيعه؟', 'Confirm item availability change?'),
+        description: t(
+          `سيتم حفظ تغييرات «${item.nameAr}» مع ${effects}. لن يُحذف سجل الصنف بهذا التعديل.`,
+          `This saves the changes to “${item.nameEn || item.nameAr}” while ${effects}. The item record will not be deleted by this edit.`,
+        ),
+        confirmLabel: t('تأكيد التغيير', 'Confirm change'),
+        onConfirm: async () => { await editMutation.mutateAsync(vars, options); },
+      });
+      return;
+    }
+    editMutation.mutate(vars, options);
   };
 
   const handleAdjust = (e: React.FormEvent<HTMLFormElement>) => {
@@ -155,15 +177,16 @@ export function RowActions({
 
   return (
     <>
+      {confirmationDialog}
       <div className="flex items-center justify-end gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')} disabled={isConfirming || editMutation.isPending || adjustMutation.isPending || deleteMutation.isPending}><MoreHorizontal className="w-4 h-4" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setMovementOpen(true)}><History className="w-4 h-4 mr-2" />{t('سجل الحركات', 'Movement History')}</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onPrintBarcode(item.barcode || item.sku, item.nameAr)}><Printer className="w-4 h-4 mr-2" />{t('طباعة الباركود', 'Print Barcode')}</DropdownMenuItem>
-            {canEdit && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setEditOpen(true)}><Pencil className="w-4 h-4 mr-2" />{t('تعديل البيانات', 'Edit Metadata')}</DropdownMenuItem><DropdownMenuItem onClick={() => setAdjustOpen(true)}><ArrowUpDown className="w-4 h-4 mr-2" />{t('تسوية المخزون', 'Adjust Stock')}</DropdownMenuItem></>}
+             <DropdownMenuItem onClick={() => setMovementOpen(true)} disabled={isConfirming}><History className="w-4 h-4 mr-2" />{t('سجل الحركات', 'Movement History')}</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onPrintBarcode(item.barcode || item.sku, item.nameAr)} disabled={isConfirming}><Printer className="w-4 h-4 mr-2" />{t('طباعة الباركود', 'Print Barcode')}</DropdownMenuItem>
+            {canEdit && <><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setEditOpen(true)} disabled={isConfirming || editMutation.isPending}><Pencil className="w-4 h-4 mr-2" />{t('تعديل البيانات', 'Edit Metadata')}</DropdownMenuItem><DropdownMenuItem onClick={() => setAdjustOpen(true)} disabled={isConfirming || adjustMutation.isPending}><ArrowUpDown className="w-4 h-4 mr-2" />{t('تسوية المخزون', 'Adjust Stock')}</DropdownMenuItem></>}
             {canDelete && <><DropdownMenuSeparator /><DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending} onClick={() => setDeleteOpen(true)}><Trash2 className="w-4 h-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem></>}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -260,7 +283,7 @@ export function RowActions({
               <Input name="targetStockQuantity" type="number" required defaultValue={item.targetStockQuantity} className={`mt-1 ${quantityInputClass}`} />
             </div>
             <div className="col-span-2 flex justify-end mt-4">
-              <Button type="submit" disabled={editMutation.isPending}>{t('حفظ التعديلات', 'Save Changes')}</Button>
+              <Button type="submit" disabled={editMutation.isPending || isConfirming}>{t('حفظ التعديلات', 'Save Changes')}</Button>
             </div>
           </form>
         </DialogContent>

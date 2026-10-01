@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 import { useToast } from '@/hooks/use-toast';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 
 const staffSchema = z.object({
   name: z.string().min(1),
@@ -66,6 +67,7 @@ const permissionActionOrder: Record<string, number> = { view: 0, edit: 1, delete
 
 export default function AdminStaff() {
   const { t, lang } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -126,10 +128,25 @@ export default function AdminStaff() {
     };
 
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data: payload as any }, {
+      const vars = { id: editingId, data: payload as any };
+      const options = {
         onSuccess: () => handlePermissions(editingId),
         onError: () => toast({ title: t('خطأ في حفظ المستخدم', 'Error saving user'), variant: 'destructive' })
-      });
+      };
+      const currentStaff = staff?.find((user) => user.id === editingId);
+      if (currentStaff?.isActive && !data.isActive) {
+        confirmAction({
+          title: t('تعطيل حساب المستخدم؟', 'Deactivate staff account?'),
+          description: t(
+            `سيتم إيقاف وصول ${currentStaff.name} إلى لوحة الإدارة مع الاحتفاظ بسجل المستخدم.`,
+            `This will suspend ${currentStaff.name}'s access to the admin panel while retaining the user record.`,
+          ),
+          confirmLabel: t('تعطيل الحساب', 'Deactivate account'),
+          onConfirm: async () => { await updateMutation.mutateAsync(vars, options); },
+        });
+        return;
+      }
+      updateMutation.mutate(vars, options);
     } else {
       createMutation.mutate({ data: payload as any }, {
         onSuccess: (res: any) => handlePermissions(res.id),
@@ -164,6 +181,8 @@ export default function AdminStaff() {
 
   if (currentUser && !currentUser.isSuperAdmin) {
     return (
+      <>
+      {confirmationDialog}
       <div className="flex items-center justify-center h-[50vh]">
         <div className="text-center space-y-4">
           <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
@@ -173,6 +192,7 @@ export default function AdminStaff() {
           <p className="text-muted-foreground">{t('هذه الصفحة متاحة فقط للمدراء العامين', 'This page is only available to super admins')}</p>
         </div>
       </div>
+      </>
     );
   }
 
@@ -192,6 +212,8 @@ export default function AdminStaff() {
   });
 
   return (
+    <>
+    {confirmationDialog}
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -313,7 +335,7 @@ export default function AdminStaff() {
                 )}
                 </div>
                 <div className="shrink-0 border-t bg-background px-6 py-4">
-                  <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
+                  <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending || setPermissionsMutation.isPending || isConfirming}>
                     {t('حفظ', 'Save')}
                   </Button>
                 </div>
@@ -374,14 +396,14 @@ export default function AdminStaff() {
                     <div className="flex justify-end">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')} disabled={isConfirming || updateMutation.isPending || disableMutation.isPending}><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(user)} disabled={user.id === currentUser?.id || updateMutation.isPending}>
+                          <DropdownMenuItem onClick={() => handleEdit(user)} disabled={user.id === currentUser?.id || updateMutation.isPending || isConfirming}>
                             <Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}
                           </DropdownMenuItem>
                           {user.isActive && (
-                            <DropdownMenuItem onClick={() => handleDisable(user.id)} disabled={user.id === currentUser?.id || disableMutation.isPending} className="text-destructive focus:text-destructive">
+                            <DropdownMenuItem onClick={() => handleDisable(user.id)} disabled={user.id === currentUser?.id || disableMutation.isPending || isConfirming} className="text-destructive focus:text-destructive">
                               <Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}
                             </DropdownMenuItem>
                           )}
@@ -396,5 +418,6 @@ export default function AdminStaff() {
         </Table>
       </div>
     </div>
+    </>
   );
 }

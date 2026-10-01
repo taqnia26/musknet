@@ -5,6 +5,7 @@ import {
   useAdminRequestPurchaseInvoiceUpload, getAdminListPurchasesQueryKey,
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { Money } from '@/components/money';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ const categories = [
 
 export default function AdminPurchases() {
   const { t, lang } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: purchases, isLoading } = useAdminListPurchases();
@@ -95,7 +97,30 @@ export default function AdminPurchases() {
     });
   }
 
+  const confirmArchive = (purchase: NonNullable<typeof purchases>[number]) => {
+    if (archive.isPending || isConfirming || purchase.archivedAt) return;
+    confirmAction({
+      title: t('أرشفة الشراء', 'Archive purchase'),
+      description: t(
+        `سيتم وضع عملية الشراء "${purchase.title}" في الأرشيف. لن يُحذف السجل ولن يُعكس قيدها المحاسبي.`,
+        `Purchase "${purchase.title}" will be marked as archived. Its record will not be deleted and its journal entry will not be reversed.`,
+      ),
+      confirmLabel: t('أرشفة الشراء', 'Archive purchase'),
+      onConfirm: async () => {
+        await archive.mutateAsync({ id: purchase.id }, {
+          onSuccess: () => queryClient.invalidateQueries({ queryKey: getAdminListPurchasesQueryKey() }),
+          onError: () => toast({
+            title: t('تعذرت أرشفة الشراء', 'Could not archive purchase'),
+            description: t('حاول مرة أخرى.', 'Please try again.'),
+            variant: 'destructive',
+          }),
+        });
+      },
+    });
+  };
+
   return <div className="space-y-6">
+    {confirmationDialog}
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div><h1 className="text-3xl font-bold">{t('المشتريات', 'Purchases')}</h1><p className="mt-1 text-muted-foreground">{t('تسجيل مشتريات الشركة وترحيلها محاسبياً', 'Capture purchases and post them to accounting')}</p></div>
       <Button onClick={() => setOpen(true)} className="w-full sm:w-auto"><Plus className="me-2 h-4 w-4" />{t('إضافة شراء', 'Add purchase')}</Button>
@@ -103,7 +128,7 @@ export default function AdminPurchases() {
     <div className="relative max-w-md"><Search className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" /><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('بحث في المشتريات...', 'Search purchases...')} className="ps-9" /></div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {isLoading ? <Card><CardContent className="p-6">{t('جاري التحميل...', 'Loading...')}</CardContent></Card> :
-      filtered.map((p) => <Card key={p.id} className={p.archivedAt ? 'opacity-60' : ''}><CardHeader className="pb-2"><div className="flex items-start justify-between gap-2"><CardTitle className="text-base">{p.title}</CardTitle><div className="flex items-center gap-2"><Badge variant={p.archivedAt ? 'secondary' : 'outline'}>{p.archivedAt ? t('مؤرشف', 'Archived') : p.paymentSource === 'owner_account' ? t('على المالك', 'Owner') : t('حساب الشركة', 'Company')}</Badge><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{p.invoiceObjectPath && <DropdownMenuItem onClick={() => void openInvoice(p.id)}><FileText className="h-4 w-4 mr-2" />{t('الفاتورة', 'Invoice')}</DropdownMenuItem>}{!p.archivedAt && <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={archive.isPending} onClick={() => archive.mutate({ id: p.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getAdminListPurchasesQueryKey() }) })}><Archive className="h-4 w-4 mr-2" />{t('أرشفة', 'Archive')}</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></div></div></CardHeader><CardContent className="space-y-2 text-sm"><div className="text-muted-foreground">{p.description}</div><div className="flex justify-between"><span>{p.purchaseDate}</span><strong><Money value={p.amount} lang={lang} /></strong></div><Badge variant="outline">{categories.find((c) => c[0] === p.category)?.[lang === 'ar' ? 1 : 2]}</Badge></CardContent></Card>)}
+      filtered.map((p) => <Card key={p.id} className={p.archivedAt ? 'opacity-60' : ''}><CardHeader className="pb-2"><div className="flex items-start justify-between gap-2"><CardTitle className="text-base">{p.title}</CardTitle><div className="flex items-center gap-2"><Badge variant={p.archivedAt ? 'secondary' : 'outline'}>{p.archivedAt ? t('مؤرشف', 'Archived') : p.paymentSource === 'owner_account' ? t('على المالك', 'Owner') : t('حساب الشركة', 'Company')}</Badge><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">{p.invoiceObjectPath && <DropdownMenuItem onClick={() => void openInvoice(p.id)}><FileText className="h-4 w-4 mr-2" />{t('الفاتورة', 'Invoice')}</DropdownMenuItem>}{!p.archivedAt && <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={archive.isPending || isConfirming} onClick={() => confirmArchive(p)}><Archive className="h-4 w-4 mr-2" />{t('أرشفة', 'Archive')}</DropdownMenuItem>}</DropdownMenuContent></DropdownMenu></div></div></CardHeader><CardContent className="space-y-2 text-sm"><div className="text-muted-foreground">{p.description}</div><div className="flex justify-between"><span>{p.purchaseDate}</span><strong><Money value={p.amount} lang={lang} /></strong></div><Badge variant="outline">{categories.find((c) => c[0] === p.category)?.[lang === 'ar' ? 1 : 2]}</Badge></CardContent></Card>)}
     </div>
     {!isLoading && !filtered.length && <div className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">{t('لا توجد مشتريات', 'No purchases found')}</div>}
     <Dialog open={open} onOpenChange={(next) => { setOpen(next); if (next) setIdempotencyKey(crypto.randomUUID()); }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg"><DialogHeader><DialogTitle>{t('إضافة شراء جديد', 'Add purchase')}</DialogTitle></DialogHeader><form onSubmit={save} className="space-y-4">

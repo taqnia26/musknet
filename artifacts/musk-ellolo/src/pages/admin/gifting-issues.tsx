@@ -32,6 +32,7 @@ import { giftingIssueLabels as labels, issueUses } from './gifting-issues-config
 import { formatInteger } from '@/lib/formatters';
 import { Money } from '@/components/money';
 import { quantityInputClass } from '@/lib/quantity-input';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 
 type StockSource = 'normal' | 'used_return';
 type Line = { productId: string; quantity: string; stockSource: StockSource | '' };
@@ -52,6 +53,7 @@ export default function AdminGiftingIssues() {
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
 
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<GiftingIssueCategory | undefined>();
@@ -76,6 +78,7 @@ export default function AdminGiftingIssues() {
   const lastAttemptedFormRef = useRef('');
   const returnIdempotencyKeyRef = useRef(crypto.randomUUID());
   const lastAttemptedReturnRef = useRef('');
+  const deleteInFlightRef = useRef(false);
 
   const rows = data?.rows ?? [];
   const summary = data?.summary;
@@ -266,7 +269,9 @@ export default function AdminGiftingIssues() {
   };
 
   const removeMovement = (row: GiftingIssue) => {
+    if (deleteMutation.isPending || deleteInFlightRef.current) return;
     if (!window.confirm(t('سيتم حذف الحركة وإعادة الكمية إلى مصدر مخزونها وعكس أثرها المحاسبي. هل تريد المتابعة؟', 'This will remove the movement, restore its original stock source, and reverse its accounting effect. Continue?'))) return;
+    deleteInFlightRef.current = true;
     deleteMutation.mutate({ id: row.id }, {
       onSuccess: async () => {
         if (selected === row.id) setSelected(null);
@@ -280,6 +285,9 @@ export default function AdminGiftingIssues() {
       onError: (cause: unknown) => {
         const error = cause as { data?: { error?: string }; message?: string };
         toast({ title: t('تعذر حذف الحركة', 'Could not remove movement'), description: error.data?.error ?? error.message, variant: 'destructive' });
+      },
+      onSettled: () => {
+        deleteInFlightRef.current = false;
       },
     });
   };
@@ -302,24 +310,41 @@ export default function AdminGiftingIssues() {
       returnIdempotencyKeyRef.current = crypto.randomUUID();
       lastAttemptedReturnRef.current = attempt;
     }
-    returnMutation.mutate({ id: returning.id, data: {
-      quantity,
-      condition: returnForm.condition,
-      idempotencyKey: returnIdempotencyKeyRef.current,
-    } }, {
-      onSuccess: async () => {
-        setReturning(null);
-        lastAttemptedReturnRef.current = '';
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] }),
-          queryClient.invalidateQueries({ queryKey: ['/api/admin/inventory'] }),
-          queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues/tester-availability'] }),
-        ]);
-        toast({ title: t('تم استرجاع الكمية وتحديث المخزون', 'Return recorded and inventory updated') });
+    const variables = {
+      id: returning.id,
+      data: {
+        quantity,
+        condition: returnForm.condition,
+        idempotencyKey: returnIdempotencyKeyRef.current,
       },
-      onError: (cause: unknown) => {
-        const error = cause as { data?: { error?: string }; message?: string };
-        toast({ title: t('تعذر تسجيل الاسترجاع', 'Could not record return'), description: error.data?.error ?? error.message, variant: 'destructive' });
+    };
+    const stockEffect = returnForm.condition === 'new'
+      ? t('المخزون الرئيسي كمنتج جديد', 'main stock as new product')
+      : t('مخزون التيستر المفتوح', 'opened-tester stock');
+    confirmAction({
+      title: t('تأكيد استرجاع الكمية', 'Confirm item return'),
+      description: t(
+        `ستُعاد كمية ${formatInteger(quantity, lang)} من ${returning.descriptionSnapshot} إلى ${stockEffect}.`,
+        `Quantity ${formatInteger(quantity, lang)} of ${returning.descriptionSnapshot} will be returned to ${stockEffect}.`,
+      ),
+      confirmLabel: t('تأكيد الاسترجاع', 'Confirm return'),
+      onConfirm: async () => {
+        await returnMutation.mutateAsync(variables, {
+          onSuccess: async () => {
+            setReturning(null);
+            lastAttemptedReturnRef.current = '';
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues'] }),
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/inventory'] }),
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/gifting-issues/tester-availability'] }),
+            ]);
+            toast({ title: t('تم استرجاع الكمية وتحديث المخزون', 'Return recorded and inventory updated') });
+          },
+          onError: (cause: unknown) => {
+            const error = cause as { data?: { error?: string }; message?: string };
+            toast({ title: t('تعذر تسجيل الاسترجاع', 'Could not record return'), description: error.data?.error ?? error.message, variant: 'destructive' });
+          },
+        });
       },
     });
   };
@@ -422,9 +447,11 @@ export default function AdminGiftingIssues() {
     });
   };
 
-  if (error) return <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-destructive text-sm font-medium">{t('لا تملك صلاحية عرض هذا السجل.', 'You do not have permission to view this log.')}</div>;
+  if (error) return <>{confirmationDialog}<div className="rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-destructive text-sm font-medium">{t('لا تملك صلاحية عرض هذا السجل.', 'You do not have permission to view this log.')}</div></>;
 
   return (
+    <>
+    {confirmationDialog}
     <div className="space-y-6 pb-8">
       <header>
         <div className="flex items-center gap-3">
@@ -598,7 +625,7 @@ export default function AdminGiftingIssues() {
               <Button
                 type="submit"
                 size="lg"
-                disabled={mutation.isPending || !allLinesHaveProduct || productNeedsCost || hasDuplicates}
+                disabled={mutation.isPending || isConfirming || !allLinesHaveProduct || productNeedsCost || hasDuplicates}
                 className="w-full sm:w-auto px-10 font-bold"
               >
                 {mutation.isPending ? t('جاري التسجيل...', 'Recording...') : t('تسجيل الحركات', 'Record movements')}
@@ -724,7 +751,7 @@ export default function AdminGiftingIssues() {
                                <DropdownMenuItem disabled={row.returnedQuantity > 0} onClick={() => openEdit(row)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                                 {(row.category === 'B2B_EVALUATION' || row.category === 'INFLUENCERS') && row.returnedQuantity < row.quantity && <DropdownMenuItem onClick={() => openReturn(row)}><RotateCcw className="h-4 w-4 mr-2" />{t('استرجاع', 'Return')}</DropdownMenuItem>}
                                <DropdownMenuSeparator />
-                               <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending || row.returnedQuantity > 0} onClick={() => removeMovement(row)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={deleteMutation.isPending || isConfirming || row.returnedQuantity > 0} onClick={() => removeMovement(row)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
                              </DropdownMenuContent>
                            </DropdownMenu>
                          </div>
@@ -796,7 +823,7 @@ export default function AdminGiftingIssues() {
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>{t('إلغاء', 'Cancel')}</Button>
-              <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ التعديل', 'Save changes')}</Button>
+              <Button type="submit" disabled={updateMutation.isPending || isConfirming}>{updateMutation.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ التعديل', 'Save changes')}</Button>
             </div>
           </form>
           ) : detail.data ? (
@@ -850,13 +877,14 @@ export default function AdminGiftingIssues() {
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setReturning(null)}>{t('إلغاء', 'Cancel')}</Button>
-                <Button type="submit" disabled={returnMutation.isPending}>{returnMutation.isPending ? t('جارٍ الاسترجاع...', 'Returning...') : t('تأكيد الاسترجاع', 'Confirm return')}</Button>
+                <Button type="submit" disabled={returnMutation.isPending || isConfirming}>{returnMutation.isPending ? t('جارٍ الاسترجاع...', 'Returning...') : t('تأكيد الاسترجاع', 'Confirm return')}</Button>
               </div>
             </form>
           )}
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }
 

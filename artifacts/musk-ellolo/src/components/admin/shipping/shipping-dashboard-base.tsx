@@ -71,6 +71,7 @@ import {
 import { format, subDays, formatDistanceToNow } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 
 // Shared Utils for Shipping
 export function getStatusColor(status: ShipmentStatus) {
@@ -618,6 +619,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
   const { lang, t } = useLanguage();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   
   // State
   const [page, setPage] = useState(1);
@@ -809,11 +811,38 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
     }
     
     const mappedData = mapFormValuesToShipmentData(values);
-    
-    updateShipment.mutate({
+
+    const variables = {
       id: selectedShipment.id,
       data: mappedData
-    });
+    };
+    const isDestructiveStatus = values.status === 'cancelled' || values.status === 'returned';
+    if (isDestructiveStatus && selectedShipment.status !== values.status) {
+      const reference = selectedShipment.referenceNumber || String(selectedShipment.id);
+      const statusLabel = getStatusLabel(values.status, lang);
+      const isCancellation = values.status === 'cancelled';
+      confirmAction({
+        title: isCancellation
+          ? t('تأكيد إلغاء الشحنة', 'Confirm shipment cancellation')
+          : t('تأكيد إرجاع الشحنة', 'Confirm shipment return'),
+        description: isCancellation
+          ? t(
+            `ستتغير حالة الشحنة ${reference} إلى ${statusLabel}. هذا يحدّث الحالة المسجلة فقط، ولا يؤكد إلغاء الناقل أو استرداد أي مبلغ.`,
+            `Shipment ${reference} will be marked ${statusLabel}. This updates the recorded status only; it does not confirm carrier cancellation or a refund.`,
+          )
+          : t(
+            `ستتغير حالة الشحنة ${reference} إلى ${statusLabel}. هذا يحدّث الحالة المسجلة فقط، ولا يؤكد إرجاعًا لدى الناقل أو استرداد أي مبلغ.`,
+            `Shipment ${reference} will be marked ${statusLabel}. This updates the recorded status only; it does not confirm a carrier return or a refund.`,
+          ),
+        confirmLabel: isCancellation ? t('إلغاء الشحنة', 'Cancel shipment') : t('تأكيد الإرجاع', 'Mark as returned'),
+        onConfirm: async () => {
+          await updateShipment.mutateAsync(variables);
+        },
+      });
+      return;
+    }
+
+    updateShipment.mutate(variables);
   };
 
   const onRegisterSubmit = (values: ShipmentInputValues) => {
@@ -826,24 +855,54 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
       }
     }
     const mappedData = mapFormValuesToShipmentData(values);
-    
-    createShipment.mutate({
+
+    const variables = {
       data: {
         ...mappedData,
         sourceId: values.sourceId,
         channel: channel as any
       }
-    });
+    };
+    const isDestructiveStatus = values.status === 'cancelled' || values.status === 'returned';
+    if (isDestructiveStatus) {
+      const reference = `${sourceLabel} ${values.sourceId}`;
+      const statusLabel = getStatusLabel(values.status, lang);
+      const isCancellation = values.status === 'cancelled';
+      confirmAction({
+        title: isCancellation
+          ? t('تأكيد تسجيل شحنة ملغاة', 'Confirm registering a cancelled shipment')
+          : t('تأكيد تسجيل شحنة مرتجعة', 'Confirm registering a returned shipment'),
+        description: isCancellation
+          ? t(
+            `سيتم تسجيل الشحنة المرتبطة بـ ${reference} بحالة ${statusLabel}. هذا يسجل الحالة فقط، ولا يؤكد إلغاء الناقل أو استرداد أي مبلغ.`,
+            `The shipment for ${reference} will be recorded as ${statusLabel}. This records the status only; it does not confirm carrier cancellation or a refund.`,
+          )
+          : t(
+            `سيتم تسجيل الشحنة المرتبطة بـ ${reference} بحالة ${statusLabel}. هذا يسجل الحالة فقط، ولا يؤكد إرجاعًا لدى الناقل أو استرداد أي مبلغ.`,
+            `The shipment for ${reference} will be recorded as ${statusLabel}. This records the status only; it does not confirm a carrier return or a refund.`,
+          ),
+        confirmLabel: isCancellation ? t('تسجيل كملغاة', 'Register as cancelled') : t('تسجيل كمرتجعة', 'Register as returned'),
+        onConfirm: async () => {
+          await createShipment.mutateAsync(variables);
+        },
+      });
+      return;
+    }
+
+    createShipment.mutate(variables);
   };
 
   if (isError) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center h-[50vh]">
-        <AlertCircle className="h-10 w-10 text-destructive mb-4" />
-        <h2 className="text-xl font-bold mb-2">{t('حدث خطأ', 'An error occurred')}</h2>
-        <p className="text-muted-foreground mb-4">{t('تعذر تحميل بيانات الشحن', 'Could not load shipping data')}</p>
-        <Button onClick={() => refetch()}>{t('إعادة المحاولة', 'Retry')}</Button>
-      </div>
+      <>
+        {confirmationDialog}
+        <div className="flex flex-col items-center justify-center p-12 text-center h-[50vh]">
+          <AlertCircle className="h-10 w-10 text-destructive mb-4" />
+          <h2 className="text-xl font-bold mb-2">{t('حدث خطأ', 'An error occurred')}</h2>
+          <p className="text-muted-foreground mb-4">{t('تعذر تحميل بيانات الشحن', 'Could not load shipping data')}</p>
+          <Button onClick={() => refetch()}>{t('إعادة المحاولة', 'Retry')}</Button>
+        </div>
+      </>
     );
   }
 
@@ -889,8 +948,8 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                         <Button type="button" variant="outline" onClick={() => setRegisterOpen(false)}>
                           {t('إلغاء', 'Cancel')}
                         </Button>
-                        <Button type="submit" disabled={createShipment.isPending}>
-                          {createShipment.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : t('تسجيل', 'Register')}
+                        <Button type="submit" disabled={createShipment.isPending || isConfirming}>
+                          {createShipment.isPending || isConfirming ? <RefreshCw className="h-4 w-4 animate-spin" /> : t('تسجيل', 'Register')}
                         </Button>
                       </DialogFooter>
                     </div>
@@ -1411,8 +1470,8 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
                   <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>
                     {t('إلغاء', 'Cancel')}
                   </Button>
-                  <Button type="submit" disabled={updateShipment.isPending}>
-                    {updateShipment.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : t('حفظ التغييرات', 'Save Changes')}
+                  <Button type="submit" disabled={updateShipment.isPending || isConfirming}>
+                    {updateShipment.isPending || isConfirming ? <RefreshCw className="h-4 w-4 animate-spin" /> : t('حفظ التغييرات', 'Save Changes')}
                   </Button>
                 </DialogFooter>
               </div>
@@ -1420,6 +1479,7 @@ export function ShippingDashboardBase({ channel }: { channel: ShipmentChannel })
           </Form>
         </DialogContent>
       </Dialog>
+      {confirmationDialog}
     </div>
   );
 }

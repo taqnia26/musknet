@@ -29,6 +29,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react';
 import { useLanguage } from '@/hooks/use-language';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { Money } from '@/components/money';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +87,7 @@ function formatDate(value: string | null | undefined, lang: string) {
 
 export default function AdminInfluencers() {
   const { t, lang } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const queryClient = useQueryClient();
   const list = useListInfluencers({ query: { retry: false, queryKey: getListInfluencersQueryKey() } });
   const coupons = useAdminListCoupons(undefined, { query: { queryKey: getAdminListCouponsQueryKey() } });
@@ -160,6 +162,43 @@ export default function AdminInfluencers() {
   const averageOrder = totals.orders ? totals.sales / totals.orders : 0;
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: getListInfluencersQueryKey() });
+  const toggleInfluencerStatus = (item: InfluencerRow) => {
+    const isDeactivating = item.isActive !== false;
+    const vars = { id: item.id, data: { isActive: !isDeactivating } };
+    const options = { onSuccess: refresh };
+    if (isDeactivating) {
+      confirmAction({
+        title: t('تعطيل المشهور؟', 'Deactivate influencer?'),
+        description: t(
+          `سيتم إيقاف المشهور ${item.name} عن الإحالة النشطة. سيظل سجل الأداء والعمولات محفوظاً.`,
+          `This will deactivate ${item.name} for active referrals. Historical performance and commissions will remain.`,
+        ),
+        confirmLabel: t('تعطيل المشهور', 'Deactivate influencer'),
+        onConfirm: async () => { await update.mutateAsync(vars, options); },
+      });
+      return;
+    }
+    update.mutate(vars, options);
+  };
+
+  const unlinkInfluencerCoupon = (item: InfluencerRow, coupon: { id: number; code: string }) => {
+    confirmAction({
+      title: t('فصل الكوبون عن المشهور؟', 'Unlink coupon from influencer?'),
+      description: t(
+        `سيتم فصل الكوبون ${coupon.code} عن ${item.name}. سيؤثر ذلك على ارتباطات الاستخدام المستقبلية، ولن يحذف سجل الطلبات.`,
+        `This will unlink coupon ${coupon.code} from ${item.name}, affecting future attribution. Existing order history will not be deleted.`,
+      ),
+      confirmLabel: t('فصل الكوبون', 'Unlink coupon'),
+      onConfirm: async () => {
+        await unlink.mutateAsync({ id: item.id, couponId: coupon.id }, {
+          onSuccess: () => {
+            setLinked((value) => ({ ...value, [item.id]: (value[item.id] ?? []).filter((id) => id !== coupon.id) }));
+            void refresh();
+          },
+        });
+      },
+    });
+  };
 
   const closeDialog = () => {
     setOpen(false);
@@ -234,6 +273,8 @@ export default function AdminInfluencers() {
   };
 
   return (
+    <>
+    {confirmationDialog}
     <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="space-y-6 pb-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -428,11 +469,11 @@ export default function AdminInfluencers() {
 
                     <div className="flex flex-wrap items-center gap-2 xl:max-w-[190px] xl:justify-end">
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                         <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" aria-label={t('المزيد', 'More')} disabled={isConfirming || update.isPending || unlink.isPending}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => edit(item)}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                          <DropdownMenuItem disabled={isConfirming || update.isPending || unlink.isPending} onClick={() => edit(item)}><Edit2 className="h-4 w-4 me-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem disabled={update.isPending} onClick={() => update.mutate({ id: item.id, data: { isActive: item.isActive === false } }, { onSuccess: refresh })}>
+                          <DropdownMenuItem disabled={update.isPending || isConfirming} onClick={() => toggleInfluencerStatus(item)}>
                             <Power className="h-4 w-4 me-2" />{item.isActive === false ? t('تفعيل', 'Activate') : t('تعطيل', 'Deactivate')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -449,12 +490,8 @@ export default function AdminInfluencers() {
                         <button
                           key={coupon.id}
                           className="rounded-full border bg-muted/50 px-2.5 py-1 text-xs hover:border-destructive/40 hover:text-destructive"
-                          onClick={() => unlink.mutate({ id: item.id, couponId: coupon.id }, {
-                            onSuccess: () => {
-                              setLinked((value) => ({ ...value, [item.id]: (value[item.id] ?? []).filter((id) => id !== coupon.id) }));
-                              void refresh();
-                            },
-                          })}
+                          onClick={() => unlinkInfluencerCoupon(item, coupon)}
+                          disabled={unlink.isPending || isConfirming}
                         >
                           {coupon.code}<Unlink className="ms-1 inline h-3 w-3" />
                         </button>
@@ -463,6 +500,7 @@ export default function AdminInfluencers() {
                     <select
                       className="h-7 max-w-[170px] rounded-full border bg-background px-2 text-xs"
                       value=""
+                      disabled={link.isPending || isConfirming}
                       onChange={(event) => {
                         const couponId = Number(event.target.value);
                         if (couponId) {
@@ -509,6 +547,7 @@ export default function AdminInfluencers() {
         {t('ملاحظة: «الصافي بعد العمولة» يخصم عمولة المشهور من المبيعات المنسوبة فقط، ولا يمثل صافي الربح المحاسبي لأنه لا يشمل تكلفة المنتج والشحن والمصاريف الأخرى.', 'Note: “Net after commission” only subtracts influencer commission from attributed sales. It is not accounting net profit because product, shipping and other costs are not included.')}
       </p>
     </div>
+    </>
   );
 }
 

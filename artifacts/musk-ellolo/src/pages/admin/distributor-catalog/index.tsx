@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAdminListDistributorCatalog, useAdminUpdateDistributorCatalog, getAdminListDistributorCatalogQueryKey } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLanguage } from '@/hooks/use-language';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +14,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { sortProductsForSelection } from '@/lib/product-sort';
 
 export default function AdminDistributorCatalog() {
+  const { t } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const { data: catalog, isLoading } = useAdminListDistributorCatalog();
   const updateCatalog = useAdminUpdateDistributorCatalog();
   const queryClient = useQueryClient();
@@ -51,57 +55,83 @@ export default function AdminDistributorCatalog() {
 
   const handleSave = (productId: number) => {
     if (!editValues) return;
+    const item = catalog?.find((candidate) => candidate.id === productId);
+    if (!item) return;
 
-    updateCatalog.mutate(
-      {
-        data: {
-          productId,
-          showOnDistributors: editValues.showOnDistributors,
-          distributorNameOverride: editValues.distributorNameOverride || null,
-          distributorImageOverride: editValues.distributorImageOverride || null,
-        }
-      },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getAdminListDistributorCatalogQueryKey() });
-          toast({ title: 'تم الحفظ', description: 'تم تحديث إعدادات المنتج بنجاح' });
-          setEditingId(null);
-          setEditValues(null);
-        },
-        onError: () => {
-          toast({ title: 'خطأ', description: 'حدث خطأ أثناء الحفظ', variant: 'destructive' });
-        }
+    const vars = {
+      data: {
+        productId,
+        showOnDistributors: editValues.showOnDistributors,
+        distributorNameOverride: editValues.distributorNameOverride || null,
+        distributorImageOverride: editValues.distributorImageOverride || null,
       }
-    );
+    };
+    const options = {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getAdminListDistributorCatalogQueryKey() });
+        toast({ title: 'تم الحفظ', description: 'تم تحديث إعدادات المنتج بنجاح' });
+        setEditingId(null);
+        setEditValues(null);
+      },
+      onError: () => {
+        toast({ title: 'خطأ', description: 'حدث خطأ أثناء الحفظ', variant: 'destructive' });
+      }
+    };
+    if (item.showOnDistributors && !editValues.showOnDistributors) {
+      confirmAction({
+        title: t('إخفاء المنتج عن الموزعين؟', 'Hide product from distributors?'),
+        description: t(
+          `سيتم حفظ التعديلات مع إخفاء «${item.nameAr}» من كتالوج الموزعين.`,
+          `The edits will be saved and “${item.nameEn || item.nameAr}” will be hidden from the distributor catalog.`,
+        ),
+        confirmLabel: t('حفظ وإخفاء المنتج', 'Save and hide product'),
+        onConfirm: async () => { await updateCatalog.mutateAsync(vars, options); },
+      });
+      return;
+    }
+    updateCatalog.mutate(vars, options);
   };
 
   const toggleVisibility = (productId: number, currentVisibility: boolean) => {
     const item = catalog?.find(c => c.id === productId);
     if (!item) return;
 
-    updateCatalog.mutate(
-      {
+    const vars = {
         data: {
           productId,
           showOnDistributors: !currentVisibility,
           distributorNameOverride: item.distributorNameOverride,
           distributorImageOverride: item.distributorImageOverride,
         }
-      },
-      {
+      };
+    const options = {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListDistributorCatalogQueryKey() });
           toast({ title: 'تم التحديث', description: 'تم تحديث حالة الظهور بنجاح' });
         }
-      }
-    );
+      };
+    if (currentVisibility) {
+      confirmAction({
+        title: t('إخفاء المنتج عن الموزعين؟', 'Hide product from distributors?'),
+        description: t(
+          `سيتم إخفاء «${item.nameAr}» من كتالوج الموزعين؛ لن يظهر لهم حتى إعادة إظهاره.`,
+          `This will hide “${item.nameEn || item.nameAr}” from the distributor catalog until it is shown again.`,
+        ),
+        confirmLabel: t('إخفاء المنتج', 'Hide product'),
+        onConfirm: async () => { await updateCatalog.mutateAsync(vars, options); },
+      });
+      return;
+    }
+    updateCatalog.mutate(vars, options);
   };
 
   if (isLoading) {
-    return <div className="flex h-[200px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return <>{confirmationDialog}<div className="flex h-[200px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></>;
   }
 
   return (
+    <>
+    {confirmationDialog}
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -146,6 +176,7 @@ export default function AdminDistributorCatalog() {
                       <div className="flex items-center justify-center gap-2">
                         <Switch 
                           checked={editValues?.showOnDistributors} 
+                          disabled={isConfirming || updateCatalog.isPending}
                           onCheckedChange={(c) => setEditValues(prev => prev ? {...prev, showOnDistributors: c} : null)}
                         />
                         <span className="text-sm">{editValues?.showOnDistributors ? 'ظاهر' : 'مخفي'}</span>
@@ -205,7 +236,7 @@ export default function AdminDistributorCatalog() {
                     {isEditing ? (
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={cancelEditing}>إلغاء</Button>
-                        <Button size="sm" onClick={() => handleSave(item.id)} disabled={updateCatalog.isPending}>
+                        <Button size="sm" onClick={() => handleSave(item.id)} disabled={updateCatalog.isPending || isConfirming}>
                           {updateCatalog.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -213,8 +244,8 @@ export default function AdminDistributorCatalog() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label="إجراءات المنتج"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem disabled={updateCatalog.isPending} onClick={() => toggleVisibility(item.id, item.showOnDistributors)}>{item.showOnDistributors ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}{item.showOnDistributors ? 'إخفاء' : 'إظهار'}</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => startEditing(item)}><Pencil className="h-4 w-4 mr-2" />تعديل</DropdownMenuItem>
+                          <DropdownMenuItem disabled={updateCatalog.isPending || isConfirming} onClick={() => toggleVisibility(item.id, item.showOnDistributors)}>{item.showOnDistributors ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}{item.showOnDistributors ? 'إخفاء' : 'إظهار'}</DropdownMenuItem>
+                          <DropdownMenuItem disabled={updateCatalog.isPending || isConfirming} onClick={() => startEditing(item)}><Pencil className="h-4 w-4 mr-2" />تعديل</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -234,5 +265,6 @@ export default function AdminDistributorCatalog() {
         </Table>
       </div>
     </div>
+    </>
   );
 }

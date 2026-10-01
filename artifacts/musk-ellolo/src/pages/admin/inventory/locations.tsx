@@ -1,4 +1,5 @@
 import { useLanguage } from '@/hooks/use-language';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { useListInventoryLocations, useCreateInventoryLocation, useUpdateInventoryLocation, useDeleteInventoryLocation, type InventoryLocation } from '@workspace/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function AdminInventoryLocations() {
   const { t } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: rawLocations, isLoading } = useListInventoryLocations();
@@ -54,7 +56,8 @@ export default function AdminInventoryLocations() {
     e.preventDefault();
     if (!editing) return;
     const fd = new FormData(e.currentTarget);
-    updateMutation.mutate({
+    const active = fd.get('active') === 'on';
+    const vars = {
       id: editing.id,
       data: {
         name: String(fd.get('name') || ''),
@@ -64,16 +67,30 @@ export default function AdminInventoryLocations() {
         phone: String(fd.get('phone') || ''),
         type: (fd.get('type') as 'warehouse' | 'store' | 'virtual') || 'warehouse',
         isDefault: editing.isDefault || fd.get('isDefault') === 'on',
-        active: fd.get('active') === 'on',
+        active,
       },
-    }, {
+    };
+    const options = {
       onSuccess: () => {
         toast({ title: t('تم تعديل الموقع', 'Location updated') });
         setEditing(null);
         queryClient.invalidateQueries({ queryKey: getListInventoryLocationsQueryKey() });
       },
-      onError: (error) => toast({ title: t('تعذر تعديل الموقع', 'Could not update location'), description: error.message, variant: 'destructive' }),
-    });
+      onError: (error: Error) => toast({ title: t('تعذر تعديل الموقع', 'Could not update location'), description: error.message, variant: 'destructive' }),
+    };
+    if (editing.active && !active) {
+      confirmAction({
+        title: t('تعطيل موقع المخزون؟', 'Deactivate inventory location?'),
+        description: t(
+          `سيتم تعطيل موقع «${editing.name}». لن يكون متاحاً للعمليات الجديدة حتى إعادة تفعيله.`,
+          `This will deactivate “${editing.name}”. It will no longer be available for new operations until reactivated.`,
+        ),
+        confirmLabel: t('تعطيل الموقع', 'Deactivate location'),
+        onConfirm: async () => { await updateMutation.mutateAsync(vars, options); },
+      });
+      return;
+    }
+    updateMutation.mutate(vars, options);
   };
 
   const removeLocation = (location: InventoryLocation) => {
@@ -92,6 +109,8 @@ export default function AdminInventoryLocations() {
   };
 
   return (
+    <>
+    {confirmationDialog}
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -199,13 +218,13 @@ export default function AdminInventoryLocations() {
                     <TableCell>
                         <div className="flex items-center justify-center">
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('المزيد', 'More actions')} disabled={isConfirming || updateMutation.isPending || deleteMutation.isPending}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => setViewing(loc)}><Eye className="h-4 w-4 mr-2" />{t('عرض', 'View')}</DropdownMenuItem>
                               {loc.code !== 'B2B_USED_RETURN' && (
                                 <>
-                                  <DropdownMenuItem onClick={() => setEditing(loc)}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
-                                  <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={loc.isDefault || deleteMutation.isPending} onClick={() => removeLocation(loc)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
+                                   <DropdownMenuItem onClick={() => setEditing(loc)} disabled={isConfirming || updateMutation.isPending}><Pencil className="h-4 w-4 mr-2" />{t('تعديل', 'Edit')}</DropdownMenuItem>
+                                  <DropdownMenuItem className="text-destructive focus:text-destructive" disabled={loc.isDefault || deleteMutation.isPending || isConfirming} onClick={() => removeLocation(loc)}><Trash2 className="h-4 w-4 mr-2" />{t('حذف', 'Delete')}</DropdownMenuItem>
                                 </>
                               )}
                             </DropdownMenuContent>
@@ -269,11 +288,12 @@ export default function AdminInventoryLocations() {
                 <input type="checkbox" name="isDefault" id="edit-default" defaultChecked={editing.isDefault} disabled={editing.isDefault} className="h-4 w-4 rounded" />
                 <Label htmlFor="edit-default">{editing.isDefault ? t('الموقع الأساسي الحالي', 'Current default location') : t('تعيينه كموقع أساسي', 'Set as default location')}</Label>
               </div>
-              <div className="flex justify-end pt-2"><Button type="submit" disabled={updateMutation.isPending}>{t('حفظ التعديلات', 'Save Changes')}</Button></div>
+              <div className="flex justify-end pt-2"><Button type="submit" disabled={updateMutation.isPending || isConfirming}>{t('حفظ التعديلات', 'Save Changes')}</Button></div>
             </form>
           )}
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }
