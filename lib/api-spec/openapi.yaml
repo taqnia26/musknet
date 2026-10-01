@@ -18,6 +18,54 @@ tags:
   - name: owner
   - name: webhooks
 paths:
+  /admin/backups/unlock:
+    post:
+      operationId: unlockAdminBackups
+      tags: [admin]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BackupAccessInput" } } } }
+      responses:
+        "200": { description: Owner-password verified temporary access, content: { application/json: { schema: { $ref: "#/components/schemas/BackupAccess" } } } }
+  /admin/backups:
+    get:
+      operationId: getAdminBackups
+      tags: [admin]
+      parameters: [{ in: header, name: X-Backup-Access, required: true, schema: { type: string } }]
+      responses:
+        "200": { description: Actual backup jobs and schedule, content: { application/json: { schema: { $ref: "#/components/schemas/BackupDashboard" } } } }
+    post:
+      operationId: createAdminBackup
+      tags: [admin]
+      parameters: [{ in: header, name: X-Backup-Access, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BackupInput" } } } }
+      responses:
+        "202": { description: Durable backup job accepted, content: { application/json: { schema: { $ref: "#/components/schemas/BackupJobResult" } } } }
+  /admin/backups/schedule:
+    put:
+      operationId: updateAdminBackupSchedule
+      tags: [admin]
+      parameters: [{ in: header, name: X-Backup-Access, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BackupScheduleInput" } } } }
+      responses:
+        "200": { description: Persisted schedule, content: { application/json: { schema: { $ref: "#/components/schemas/BackupSchedule" } } } }
+  /admin/backups/{id}/preview:
+    get:
+      operationId: previewAdminBackupRestore
+      tags: [admin]
+      parameters:
+        - { in: header, name: X-Backup-Access, required: true, schema: { type: string } }
+        - { in: path, name: id, required: true, schema: { type: string, pattern: '^[0-9a-fA-F-]{36}$' } }
+      responses:
+        "200": { description: Verified restore preview, content: { application/json: { schema: { $ref: "#/components/schemas/BackupRestorePreview" } } } }
+  /admin/backups/{id}/restore:
+    post:
+      operationId: restoreAdminBackup
+      tags: [admin]
+      parameters:
+        - { in: header, name: X-Backup-Access, required: true, schema: { type: string } }
+        - { in: path, name: id, required: true, schema: { type: string, pattern: '^[0-9a-fA-F-]{36}$' } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BackupRestoreInput" } } } }
+      responses:
+        "202": { description: Restore job accepted with mandatory safety backup, content: { application/json: { schema: { $ref: "#/components/schemas/BackupJobResult" } } } }
   /owner/obligations:
     get:
       operationId: listOwnerObligations
@@ -2937,6 +2985,110 @@ components:
           schema:
             $ref: "#/components/schemas/Error"
   schemas:
+    BackupAccessInput:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password: { type: string, minLength: 1, maxLength: 256 }
+    BackupAccess:
+      type: object
+      required: [accessToken, expiresAt]
+      properties:
+        accessToken: { type: string }
+        expiresAt: { type: string }
+    BackupInput:
+      type: object
+      additionalProperties: false
+      properties:
+        label: { type: string, maxLength: 100 }
+    BackupRestoreInput:
+      type: object
+      additionalProperties: false
+      required: [password, confirmation]
+      properties:
+        password: { type: string, minLength: 1, maxLength: 256 }
+        confirmation: { type: string, pattern: '^[0-9a-fA-F-]{36}$' }
+    BackupRecord:
+      type: object
+      required: [id, reason, status, createdAt, completedAt, bytes, rowCount, tableCount, fileCount, error, safetyBackupId]
+      properties:
+        id: { type: string }
+        label: { type: [string, "null"] }
+        reason: { type: string, enum: [manual, scheduled, pre_restore, restore] }
+        status: { type: string, enum: [queued, running, completed, failed] }
+        createdAt: { type: string }
+        completedAt: { type: [string, "null"] }
+        bytes: { type: number }
+        rowCount: { type: number }
+        tableCount: { type: number }
+        fileCount: { type: number }
+        error: { type: [string, "null"] }
+        safetyBackupId: { type: [string, "null"] }
+    BackupJobResult:
+      type: object
+      required: [job]
+      properties:
+        job: { $ref: "#/components/schemas/BackupRecord" }
+    BackupScheduleInput:
+      type: object
+      additionalProperties: false
+      required: [enabled, frequency, localTime, timeZone]
+      properties:
+        enabled: { type: boolean }
+        frequency: { type: string, enum: [once, daily, weekly] }
+        localDate: { type: [string, "null"], pattern: '^\d{4}-\d{2}-\d{2}$' }
+        localTime: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+        weekday: { type: [number, "null"], minimum: 0, maximum: 6, multipleOf: 1 }
+        timeZone: { type: string, maxLength: 100 }
+    BackupSchedule:
+      type: object
+      required: [enabled, frequency, localDate, localTime, weekday, timeZone, nextRunAt, lastRunAt]
+      properties:
+        enabled: { type: boolean }
+        frequency: { type: string, enum: [once, daily, weekly] }
+        localDate: { type: [string, "null"] }
+        localTime: { type: string }
+        weekday: { type: [number, "null"] }
+        timeZone: { type: string }
+        nextRunAt: { type: [string, "null"] }
+        lastRunAt: { type: [string, "null"] }
+    BackupRuntime:
+      type: object
+      required: [busy, operation, jobId, maintenance]
+      properties:
+        busy: { type: boolean }
+        operation: { type: [string, "null"] }
+        jobId: { type: [string, "null"] }
+        maintenance: { type: boolean }
+    BackupStorageStatus:
+      type: object
+      required: [ready, reason]
+      properties:
+        ready: { type: boolean }
+        reason: { type: [string, "null"] }
+    BackupDashboard:
+      type: object
+      required: [backups, schedule, runtime, storage, exclusions]
+      properties:
+        backups: { type: array, items: { $ref: "#/components/schemas/BackupRecord" } }
+        schedule: { $ref: "#/components/schemas/BackupSchedule" }
+        runtime: { $ref: "#/components/schemas/BackupRuntime" }
+        storage: { $ref: "#/components/schemas/BackupStorageStatus" }
+        exclusions: { type: array, items: { type: string } }
+    BackupRestorePreview:
+      type: object
+      required: [id, createdAt, rowCount, tableCount, fileCount, bytes, compatible, reason, exclusions]
+      properties:
+        id: { type: string }
+        createdAt: { type: string }
+        rowCount: { type: number }
+        tableCount: { type: number }
+        fileCount: { type: number }
+        bytes: { type: number }
+        compatible: { type: boolean }
+        reason: { type: [string, "null"] }
+        exclusions: { type: array, items: { type: string } }
     OwnerEvidenceUploadRequest:
       type: object
       required: [contentType, size]

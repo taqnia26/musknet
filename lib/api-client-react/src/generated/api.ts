@@ -106,6 +106,15 @@ import type {
   AttendanceRecord,
   AuthSession,
   B2BEvaluationReturnInput,
+  BackupAccess,
+  BackupAccessInput,
+  BackupDashboard,
+  BackupInput,
+  BackupJobResult,
+  BackupRestoreInput,
+  BackupRestorePreview,
+  BackupSchedule,
+  BackupScheduleInput,
   BadRequestResponse,
   CaptureInfluencerReferralParams,
   Cart,
@@ -324,6 +333,409 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getUnlockAdminBackupsUrl = () => {
+
+
+
+
+  return `/api/admin/backups/unlock`
+}
+
+export const unlockAdminBackups = async (backupAccessInput: BackupAccessInput, options?: Parameters<typeof customFetch>[1]): Promise<BackupAccess> => {
+
+  return customFetch<BackupAccess>(getUnlockAdminBackupsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(backupAccessInput)
+  }
+);}
+
+
+
+
+
+export const getUnlockAdminBackupsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlockAdminBackups>>, TError,{data: BodyType<BackupAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unlockAdminBackups>>, TError,{data: BodyType<BackupAccessInput>}, TContext> => {
+
+const mutationKey = ['unlockAdminBackups'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unlockAdminBackups>>, {data: BodyType<BackupAccessInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  unlockAdminBackups(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnlockAdminBackupsMutationResult = NonNullable<Awaited<ReturnType<typeof unlockAdminBackups>>>
+    export type UnlockAdminBackupsMutationBody = BodyType<BackupAccessInput>
+    export type UnlockAdminBackupsMutationError = ErrorType<unknown>
+
+    export const useUnlockAdminBackups = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlockAdminBackups>>, TError,{data: BodyType<BackupAccessInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unlockAdminBackups>>,
+        TError,
+        {data: BodyType<BackupAccessInput>},
+        TContext
+      > => {
+      return useMutation(getUnlockAdminBackupsMutationOptions(options));
+    }
+
+export const getGetAdminBackupsUrl = () => {
+
+
+
+
+  return `/api/admin/backups`
+}
+
+export const getAdminBackups = async ( options?: Parameters<typeof customFetch>[1]): Promise<BackupDashboard> => {
+
+  return customFetch<BackupDashboard>(getGetAdminBackupsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminBackupsQueryKey = () => {
+    return [
+    `/api/admin/backups`
+    ] as const;
+    }
+
+
+export const getGetAdminBackupsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminBackups>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminBackups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminBackupsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminBackups>>> = ({ signal }) => getAdminBackups({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminBackups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminBackupsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminBackups>>>
+export type GetAdminBackupsQueryError = ErrorType<unknown>
+
+
+
+export function useGetAdminBackups<TData = Awaited<ReturnType<typeof getAdminBackups>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminBackups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminBackupsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminBackupUrl = () => {
+
+
+
+
+  return `/api/admin/backups`
+}
+
+export const createAdminBackup = async (backupInput: BackupInput, options?: Parameters<typeof customFetch>[1]): Promise<BackupJobResult> => {
+
+  return customFetch<BackupJobResult>(getCreateAdminBackupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(backupInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminBackupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminBackup>>, TError,{data: BodyType<BackupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminBackup>>, TError,{data: BodyType<BackupInput>}, TContext> => {
+
+const mutationKey = ['createAdminBackup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminBackup>>, {data: BodyType<BackupInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminBackup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminBackupMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminBackup>>>
+    export type CreateAdminBackupMutationBody = BodyType<BackupInput>
+    export type CreateAdminBackupMutationError = ErrorType<unknown>
+
+    export const useCreateAdminBackup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminBackup>>, TError,{data: BodyType<BackupInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminBackup>>,
+        TError,
+        {data: BodyType<BackupInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAdminBackupMutationOptions(options));
+    }
+
+export const getUpdateAdminBackupScheduleUrl = () => {
+
+
+
+
+  return `/api/admin/backups/schedule`
+}
+
+export const updateAdminBackupSchedule = async (backupScheduleInput: BackupScheduleInput, options?: Parameters<typeof customFetch>[1]): Promise<BackupSchedule> => {
+
+  return customFetch<BackupSchedule>(getUpdateAdminBackupScheduleUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(backupScheduleInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminBackupScheduleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminBackupSchedule>>, TError,{data: BodyType<BackupScheduleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminBackupSchedule>>, TError,{data: BodyType<BackupScheduleInput>}, TContext> => {
+
+const mutationKey = ['updateAdminBackupSchedule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminBackupSchedule>>, {data: BodyType<BackupScheduleInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateAdminBackupSchedule(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminBackupScheduleMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminBackupSchedule>>>
+    export type UpdateAdminBackupScheduleMutationBody = BodyType<BackupScheduleInput>
+    export type UpdateAdminBackupScheduleMutationError = ErrorType<unknown>
+
+    export const useUpdateAdminBackupSchedule = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminBackupSchedule>>, TError,{data: BodyType<BackupScheduleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminBackupSchedule>>,
+        TError,
+        {data: BodyType<BackupScheduleInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminBackupScheduleMutationOptions(options));
+    }
+
+export const getPreviewAdminBackupRestoreUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/backups/${id}/preview`
+}
+
+export const previewAdminBackupRestore = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<BackupRestorePreview> => {
+
+  return customFetch<BackupRestorePreview>(getPreviewAdminBackupRestoreUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPreviewAdminBackupRestoreQueryKey = (id: string,) => {
+    return [
+    `/api/admin/backups/${id}/preview`
+    ] as const;
+    }
+
+
+export const getPreviewAdminBackupRestoreQueryOptions = <TData = Awaited<ReturnType<typeof previewAdminBackupRestore>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof previewAdminBackupRestore>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPreviewAdminBackupRestoreQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof previewAdminBackupRestore>>> = ({ signal }) => previewAdminBackupRestore(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof previewAdminBackupRestore>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PreviewAdminBackupRestoreQueryResult = NonNullable<Awaited<ReturnType<typeof previewAdminBackupRestore>>>
+export type PreviewAdminBackupRestoreQueryError = ErrorType<unknown>
+
+
+
+export function usePreviewAdminBackupRestore<TData = Awaited<ReturnType<typeof previewAdminBackupRestore>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof previewAdminBackupRestore>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPreviewAdminBackupRestoreQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRestoreAdminBackupUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/backups/${id}/restore`
+}
+
+export const restoreAdminBackup = async (id: string,
+    backupRestoreInput: BackupRestoreInput, options?: Parameters<typeof customFetch>[1]): Promise<BackupJobResult> => {
+
+  return customFetch<BackupJobResult>(getRestoreAdminBackupUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(backupRestoreInput)
+  }
+);}
+
+
+
+
+
+export const getRestoreAdminBackupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreAdminBackup>>, TError,{id: string;data: BodyType<BackupRestoreInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreAdminBackup>>, TError,{id: string;data: BodyType<BackupRestoreInput>}, TContext> => {
+
+const mutationKey = ['restoreAdminBackup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreAdminBackup>>, {id: string;data: BodyType<BackupRestoreInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  restoreAdminBackup(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreAdminBackupMutationResult = NonNullable<Awaited<ReturnType<typeof restoreAdminBackup>>>
+    export type RestoreAdminBackupMutationBody = BodyType<BackupRestoreInput>
+    export type RestoreAdminBackupMutationError = ErrorType<unknown>
+
+    export const useRestoreAdminBackup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreAdminBackup>>, TError,{id: string;data: BodyType<BackupRestoreInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreAdminBackup>>,
+        TError,
+        {id: string;data: BodyType<BackupRestoreInput>},
+        TContext
+      > => {
+      return useMutation(getRestoreAdminBackupMutationOptions(options));
+    }
 
 export const getListOwnerObligationsUrl = () => {
 

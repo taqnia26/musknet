@@ -5,6 +5,166 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+export interface BackupAccessInput {
+  /**
+     * @minLength 1
+     * @maxLength 256
+     */
+  password: string;
+}
+
+export interface BackupAccess {
+  accessToken: string;
+  expiresAt: string;
+}
+
+export interface BackupInput {
+  /** @maxLength 100 */
+  label?: string;
+}
+
+export interface BackupRestoreInput {
+  /**
+     * @minLength 1
+     * @maxLength 256
+     */
+  password: string;
+  /** @pattern ^[0-9a-fA-F-]{36}$ */
+  confirmation: string;
+}
+
+export type BackupRecordReason = typeof BackupRecordReason[keyof typeof BackupRecordReason];
+
+
+export const BackupRecordReason = {
+  manual: 'manual',
+  scheduled: 'scheduled',
+  pre_restore: 'pre_restore',
+  restore: 'restore',
+} as const;
+
+export type BackupRecordStatus = typeof BackupRecordStatus[keyof typeof BackupRecordStatus];
+
+
+export const BackupRecordStatus = {
+  queued: 'queued',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed',
+} as const;
+
+export interface BackupRecord {
+  id: string;
+  /** @nullable */
+  label?: string | null;
+  reason: BackupRecordReason;
+  status: BackupRecordStatus;
+  createdAt: string;
+  /** @nullable */
+  completedAt: string | null;
+  bytes: number;
+  rowCount: number;
+  tableCount: number;
+  fileCount: number;
+  /** @nullable */
+  error: string | null;
+  /** @nullable */
+  safetyBackupId: string | null;
+}
+
+export interface BackupJobResult {
+  job: BackupRecord;
+}
+
+export type BackupScheduleInputFrequency = typeof BackupScheduleInputFrequency[keyof typeof BackupScheduleInputFrequency];
+
+
+export const BackupScheduleInputFrequency = {
+  once: 'once',
+  daily: 'daily',
+  weekly: 'weekly',
+} as const;
+
+export interface BackupScheduleInput {
+  enabled: boolean;
+  frequency: BackupScheduleInputFrequency;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  localDate?: string | null;
+  /** @pattern ^([01]\d|2[0-3]):[0-5]\d$ */
+  localTime: string;
+  /**
+     * @minimum 0
+     * @maximum 6
+     * @nullable
+     */
+  weekday?: number | null;
+  /** @maxLength 100 */
+  timeZone: string;
+}
+
+export type BackupScheduleFrequency = typeof BackupScheduleFrequency[keyof typeof BackupScheduleFrequency];
+
+
+export const BackupScheduleFrequency = {
+  once: 'once',
+  daily: 'daily',
+  weekly: 'weekly',
+} as const;
+
+export interface BackupSchedule {
+  enabled: boolean;
+  frequency: BackupScheduleFrequency;
+  /** @nullable */
+  localDate: string | null;
+  localTime: string;
+  /** @nullable */
+  weekday: number | null;
+  timeZone: string;
+  /** @nullable */
+  nextRunAt: string | null;
+  /** @nullable */
+  lastRunAt: string | null;
+}
+
+export interface BackupRuntime {
+  busy: boolean;
+  /** @nullable */
+  operation: string | null;
+  /** @nullable */
+  jobId: string | null;
+  maintenance: boolean;
+}
+
+export interface BackupStorageStatus {
+  ready: boolean;
+  /** @nullable */
+  reason: string | null;
+}
+
+export interface BackupDashboard {
+  backups: BackupRecord[];
+  schedule: BackupSchedule;
+  runtime: BackupRuntime;
+  storage: BackupStorageStatus;
+  exclusions: string[];
+}
+
+export interface BackupRestorePreview {
+  id: string;
+  createdAt: string;
+  rowCount: number;
+  tableCount: number;
+  fileCount: number;
+  bytes: number;
+  compatible: boolean;
+  /** @nullable */
+  reason: string | null;
+  exclusions: string[];
+}
+
 export interface OwnerEvidenceUploadRequest {
   contentType: string;
   size: number;

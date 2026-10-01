@@ -8,6 +8,191 @@
 import * as zod from 'zod';
 
 
+export const unlockAdminBackupsBodyPasswordMax = 256;
+
+
+
+export const UnlockAdminBackupsBody = zod.object({
+  "password": zod.string().min(1).max(unlockAdminBackupsBodyPasswordMax)
+})
+
+export const UnlockAdminBackupsResponse = zod.object({
+  "accessToken": zod.string(),
+  "expiresAt": zod.string()
+})
+
+
+export const GetAdminBackupsHeader = zod.object({
+  "X-Backup-Access": zod.string()
+})
+
+export const GetAdminBackupsResponse = zod.object({
+  "backups": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string().nullish(),
+  "reason": zod.enum(['manual', 'scheduled', 'pre_restore', 'restore']),
+  "status": zod.enum(['queued', 'running', 'completed', 'failed']),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable(),
+  "bytes": zod.number(),
+  "rowCount": zod.number(),
+  "tableCount": zod.number(),
+  "fileCount": zod.number(),
+  "error": zod.string().nullable(),
+  "safetyBackupId": zod.string().nullable()
+})),
+  "schedule": zod.object({
+  "enabled": zod.boolean(),
+  "frequency": zod.enum(['once', 'daily', 'weekly']),
+  "localDate": zod.string().nullable(),
+  "localTime": zod.string(),
+  "weekday": zod.number().nullable(),
+  "timeZone": zod.string(),
+  "nextRunAt": zod.string().nullable(),
+  "lastRunAt": zod.string().nullable()
+}),
+  "runtime": zod.object({
+  "busy": zod.boolean(),
+  "operation": zod.string().nullable(),
+  "jobId": zod.string().nullable(),
+  "maintenance": zod.boolean()
+}),
+  "storage": zod.object({
+  "ready": zod.boolean(),
+  "reason": zod.string().nullable()
+}),
+  "exclusions": zod.array(zod.string())
+})
+
+
+export const CreateAdminBackupHeader = zod.object({
+  "X-Backup-Access": zod.string()
+})
+
+export const createAdminBackupBodyLabelMax = 100;
+
+
+
+export const CreateAdminBackupBody = zod.object({
+  "label": zod.string().max(createAdminBackupBodyLabelMax).optional()
+})
+
+export const CreateAdminBackupResponse = zod.object({
+  "job": zod.object({
+  "id": zod.string(),
+  "label": zod.string().nullish(),
+  "reason": zod.enum(['manual', 'scheduled', 'pre_restore', 'restore']),
+  "status": zod.enum(['queued', 'running', 'completed', 'failed']),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable(),
+  "bytes": zod.number(),
+  "rowCount": zod.number(),
+  "tableCount": zod.number(),
+  "fileCount": zod.number(),
+  "error": zod.string().nullable(),
+  "safetyBackupId": zod.string().nullable()
+})
+})
+
+
+export const UpdateAdminBackupScheduleHeader = zod.object({
+  "X-Backup-Access": zod.string()
+})
+
+export const updateAdminBackupScheduleBodyLocalDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateAdminBackupScheduleBodyLocalTimeRegExp = new RegExp('^([01]\\d|2[0-3]):[0-5]\\d$');
+export const updateAdminBackupScheduleBodyWeekdayMin = 0;
+export const updateAdminBackupScheduleBodyWeekdayMax = 6;
+export const updateAdminBackupScheduleBodyWeekdayMultipleOf = 1;
+
+export const updateAdminBackupScheduleBodyTimeZoneMax = 100;
+
+
+
+export const UpdateAdminBackupScheduleBody = zod.object({
+  "enabled": zod.boolean(),
+  "frequency": zod.enum(['once', 'daily', 'weekly']),
+  "localDate": zod.string().regex(updateAdminBackupScheduleBodyLocalDateRegExp).nullish(),
+  "localTime": zod.string().regex(updateAdminBackupScheduleBodyLocalTimeRegExp),
+  "weekday": zod.number().min(updateAdminBackupScheduleBodyWeekdayMin).max(updateAdminBackupScheduleBodyWeekdayMax).multipleOf(updateAdminBackupScheduleBodyWeekdayMultipleOf).nullish(),
+  "timeZone": zod.string().max(updateAdminBackupScheduleBodyTimeZoneMax)
+})
+
+export const UpdateAdminBackupScheduleResponse = zod.object({
+  "enabled": zod.boolean(),
+  "frequency": zod.enum(['once', 'daily', 'weekly']),
+  "localDate": zod.string().nullable(),
+  "localTime": zod.string(),
+  "weekday": zod.number().nullable(),
+  "timeZone": zod.string(),
+  "nextRunAt": zod.string().nullable(),
+  "lastRunAt": zod.string().nullable()
+})
+
+
+export const previewAdminBackupRestorePathIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+
+
+export const PreviewAdminBackupRestoreParams = zod.object({
+  "id": zod.coerce.string().regex(previewAdminBackupRestorePathIdRegExp)
+})
+
+export const PreviewAdminBackupRestoreHeader = zod.object({
+  "X-Backup-Access": zod.string()
+})
+
+export const PreviewAdminBackupRestoreResponse = zod.object({
+  "id": zod.string(),
+  "createdAt": zod.string(),
+  "rowCount": zod.number(),
+  "tableCount": zod.number(),
+  "fileCount": zod.number(),
+  "bytes": zod.number(),
+  "compatible": zod.boolean(),
+  "reason": zod.string().nullable(),
+  "exclusions": zod.array(zod.string())
+})
+
+
+export const restoreAdminBackupPathIdRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+
+
+export const RestoreAdminBackupParams = zod.object({
+  "id": zod.coerce.string().regex(restoreAdminBackupPathIdRegExp)
+})
+
+export const RestoreAdminBackupHeader = zod.object({
+  "X-Backup-Access": zod.string()
+})
+
+export const restoreAdminBackupBodyPasswordMax = 256;
+
+export const restoreAdminBackupBodyConfirmationRegExp = new RegExp('^[0-9a-fA-F-]{36}$');
+
+
+export const RestoreAdminBackupBody = zod.object({
+  "password": zod.string().min(1).max(restoreAdminBackupBodyPasswordMax),
+  "confirmation": zod.string().regex(restoreAdminBackupBodyConfirmationRegExp)
+})
+
+export const RestoreAdminBackupResponse = zod.object({
+  "job": zod.object({
+  "id": zod.string(),
+  "label": zod.string().nullish(),
+  "reason": zod.enum(['manual', 'scheduled', 'pre_restore', 'restore']),
+  "status": zod.enum(['queued', 'running', 'completed', 'failed']),
+  "createdAt": zod.string(),
+  "completedAt": zod.string().nullable(),
+  "bytes": zod.number(),
+  "rowCount": zod.number(),
+  "tableCount": zod.number(),
+  "fileCount": zod.number(),
+  "error": zod.string().nullable(),
+  "safetyBackupId": zod.string().nullable()
+})
+})
+
+
 export const listOwnerObligationsResponseIdMultipleOf = 1;
 
 export const listOwnerObligationsResponseEventsItemIdMultipleOf = 1;
