@@ -1,5 +1,94 @@
 # Backups operations
 
+## Storage backend (local by default; GCS is optional)
+
+The backup feature does **not** require Replit Object Storage, its sidecar, or
+Google credentials. `BACKUP_STORAGE_DRIVER` defaults to `local`. The API wiring
+selects the driver explicitly and rejects unsupported values.
+
+For a plain Linux VPS:
+
+```sh
+BACKUP_STORAGE_DRIVER=local
+BACKUP_STORAGE_DIR=/var/lib/musk-ellolo/backups
+```
+
+`BACKUP_STORAGE_DIR` defaults to `.backups` relative to the API process's working
+directory, resolved to an absolute path. Use an explicit absolute path on a
+persistent disk in production. The service account must be able to create/write
+this directory. The adapter creates private directories (0700) and files (0600),
+and rejects insecure existing directories, symlink ancestry and object entries.
+Never put this directory under served uploads or assets; the wiring rejects
+that configuration. `PRIVATE_OBJECT_DIR` and `PUBLIC_OBJECT_SEARCH_PATHS` are
+not required or used by the local driver.
+
+Objects use a private, versioned binary envelope under
+`.objects/<logical-root-sha256>/<object-key-sha256>.lbk`; do not edit these files
+or treat them as ordinary uploaded files. The envelope persists the key, root,
+raw bytes, content type, custom metadata, SHA-256, creation time, and a fresh
+UUID on every replacement, including replacement with identical bytes.
+The format is four-byte `LBK2` magic, a four-byte big-endian JSON-header length,
+the bounded JSON header, then raw payload bytes. The returned generation hashes
+the stored UUID and exact header bytes (including the payload digest). Intact
+copies to another disk or VPS retain the generations recorded inside manifests.
+A valid external content/header rewrite retaining the UUID still invalidates
+stale generation conditions.
+File/directory fsync and atomic rename publish the envelope as one object.
+Cross-process directory locking protects generation preconditions and deletion;
+abandoned locks fail closed rather than being guessed stale and removed.
+Reads verify the payload digest and nanosecond file identity/stat stability.
+Listing checks the bounded header, declared file size and stable file identity
+without routinely scanning all historical payloads. If file stats change since
+the adapter last observed an object, listing also verifies its payload digest;
+reads always verify it. Physical inode/device/timestamps detect active races but
+are deliberately not part of the portable generation token. The engine's own
+hash, generation, timeCreated, and concurrent-change checks are unchanged.
+
+Keep the directory on a local POSIX filesystem with reliable exclusive mkdir,
+atomic rename and fsync semantics. All API workers must see the same disk and
+run as the same service account. Do not use separate per-replica disks. A copy
+on the same VPS does not protect against loss of the VPS/disk; arrange a
+separate off-host copy of this private directory using your existing operations
+process. Preserve the entire directory, not just some payload files.
+
+### Optional GCS
+
+Set `BACKUP_STORAGE_DRIVER=gcs` and configure the existing `PRIVATE_OBJECT_DIR`
+(`bucket/prefix`) and optional `PUBLIC_OBJECT_SEARCH_PATHS`. GCS is **optional,
+not required**. `BACKUP_GCS_AUTH` defaults to `adc`, using the Google SDK's
+Application Default Credentials (for example an operator-managed
+`GOOGLE_APPLICATION_CREDENTIALS` file). The Replit sidecar is used **only** when
+`BACKUP_GCS_AUTH=replit` is explicitly selected; it is unavailable on a plain VPS.
+
+Changing drivers does not migrate existing archives or cloud uploads. Existing
+history stays in PostgreSQL, but an old archive can be inspected/restored only
+with its original storage available. Keep that storage and its configuration;
+do not delete it after switching. The local driver archives the existing
+configured local contracts/served asset roots and objects already written
+through its local namespace. It does not download remote uploads from GCS:
+remote-file references without locally available objects cause backup to fail
+explicitly, not silently omit the files.
+
+### Verification without GCS
+
+```sh
+env -u BACKUP_GCS_INTEGRATION -u GOOGLE_APPLICATION_CREDENTIALS \
+  pnpm exec vitest run artifacts/api-server/src/lib/backups/engine.test.ts \
+  artifacts/api-server/src/lib/backups/local-storage.test.ts \
+  artifacts/api-server/src/lib/backups/storage-config.test.ts
+sh scripts/run-backup-e2e.sh
+pnpm run typecheck
+```
+
+The end-to-end runner provisions a disposable PostgreSQL cluster and a temporary
+local storage directory; it never restores the application's database. It
+requires local PostgreSQL tools and an unprivileged account. GCS-specific
+coverage is skipped unless `BACKUP_GCS_INTEGRATION=true` and
+`GOOGLE_APPLICATION_CREDENTIALS` points to an existing credentials file.
+The conservative upload quiet window remains unchanged, including for local
+storage; the isolated tests inject zero/virtual wait rather than change production
+backup or restore logic.
+
 ## Deployment and persistence
 
 The backup control plane is stored in PostgreSQL tables `backup_records`,

@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { gunzipSync } from "node:zlib";
 import {
@@ -10,92 +13,38 @@ import {
   isBackupObjectPath,
   privateStorageRoot,
   type BackupDbClient,
-  type BackupObjectStorage,
-  type StoredObject,
 } from "./engine";
 import { GcsBackupStorage } from "./gcs-storage";
+import { LocalBackupStorage } from "./local-storage";
 
-class MemoryStorage implements BackupObjectStorage {
-  readonly objectRoots = ["private-bucket/business", "public-bucket/media"];
-  private values = new Map<string, {
-    data: Buffer;
-    contentType: string;
-    metadata: Record<string, string>;
-    generation: string;
-    timeCreated: string | null;
-  }>();
-  private generation = 0;
+class CountingLocalBackupStorage extends LocalBackupStorage {
   writes = 0;
 
-  private objectKey(key: string, root?: string) {
-    return `${root ?? this.objectRoots[0]}:${key}`;
-  }
-
-  async list(prefix: string): Promise<StoredObject[]> {
-    return [...this.values.entries()]
-      .map(([objectKey, value]) => {
-        const separator = objectKey.indexOf(":");
-        return { root: objectKey.slice(0, separator), key: objectKey.slice(separator + 1), value };
-      })
-      .filter(({ key }) => !prefix || key.startsWith(prefix))
-      .map(({ root, key, value }) => ({
-        key,
-        root,
-        size: value.data.length,
-        generation: value.generation,
-        contentType: value.contentType,
-        metadata: { ...value.metadata },
-        timeCreated: value.timeCreated,
-      }));
-  }
-
-  async read(key: string, root?: string) {
-    const value = this.values.get(this.objectKey(key, root));
-    if (!value) throw new Error(`missing fake object ${key}`);
-    return {
-      data: Buffer.from(value.data),
-      contentType: value.contentType,
-      metadata: { ...value.metadata },
-      generation: value.generation,
-      timeCreated: value.timeCreated,
-    };
-  }
-
-  async write(
-    key: string,
-    data: Buffer,
-    options: { contentType: string; metadata?: Record<string, string>; ifGenerationMatch?: string | null; root?: string },
-  ) {
+  override async write(...args: Parameters<LocalBackupStorage["write"]>) {
     this.writes += 1;
-    const objectKey = this.objectKey(key, options.root);
-    if (options.ifGenerationMatch === null && this.values.has(objectKey)) throw new Error("immutable archive object already exists");
-    const value = {
-      data: Buffer.from(data),
-      contentType: options.contentType,
-      metadata: { ...options.metadata },
-      generation: String(++this.generation),
-      timeCreated: options.metadata?.timeCreated ?? null,
-    };
-    this.values.set(objectKey, value);
-    return {
-      key,
-      root: options.root ?? this.objectRoots[0],
-      size: value.data.length,
-      generation: value.generation,
-      contentType: value.contentType,
-      metadata: { ...value.metadata },
-      timeCreated: value.timeCreated,
-    };
-  }
-
-  async delete(key: string, ifGenerationMatch?: string | null, root?: string) {
-    const objectKey = this.objectKey(key, root);
-    const current = this.values.get(objectKey);
-    if (!current) return;
-    if (ifGenerationMatch && current.generation !== ifGenerationMatch) throw new Error("generation conflict");
-    this.values.delete(objectKey);
+    return super.write(...args);
   }
 }
+
+const storageDirectories: string[] = [];
+
+async function createStorage(): Promise<LocalBackupStorage>;
+async function createStorage(countWrites: true): Promise<CountingLocalBackupStorage>;
+async function createStorage(countWrites = false) {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "backup-engine-test-"));
+  storageDirectories.push(directory);
+  return countWrites
+    ? new CountingLocalBackupStorage(directory, "private-bucket/business", ["public-bucket/media"])
+    : new LocalBackupStorage(directory, "private-bucket/business", ["public-bucket/media"]);
+}
+
+afterEach(async () => {
+  await Promise.all(storageDirectories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
+});
+
+const runGcsIntegration =
+  process.env.BACKUP_GCS_INTEGRATION === "true" &&
+  Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS && existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS));
 
 class FakeDatabase {
   readonly statements: string[] = [];
@@ -318,7 +267,7 @@ class ProviderFactDatabase {
 }
 
 describe("business backup engine", () => {
-  it("uses every configured public App Storage search root without duplicating PRIVATE_OBJECT_DIR", () => {
+  it.runIf(runGcsIntegration)("uses every configured public App Storage search root without duplicating PRIVATE_OBJECT_DIR", () => {
     const storage = new GcsBackupStorage(
       "/private-bucket/business",
       "/public-bucket/media,/second-public-bucket/assets,/private-bucket/business",
@@ -349,7 +298,7 @@ describe("business backup engine", () => {
     const database = new FakeDatabase();
     const engine = createBackupEngine({
       pool: database.pool(),
-      storage: new MemoryStorage(),
+      storage: await createStorage(),
       privateObjectRoot: "private-bucket/business",
       fileRoots: [],
       uploadQuiescenceMs: 0,
@@ -359,7 +308,7 @@ describe("business backup engine", () => {
 
   it("archives exact database text values off-database and verifies the private snapshot", async () => {
     const database = new FakeDatabase();
-    const storage = new MemoryStorage();
+    const storage = await createStorage();
     const engine = createBackupEngine({
       pool: database.pool(),
       storage,
@@ -395,7 +344,7 @@ describe("business backup engine", () => {
 
   it("copies uploaded App Storage objects into immutable per-snapshot objects and verifies their bytes", async () => {
     const database = new FakeDatabase();
-    const storage = new MemoryStorage();
+    const storage = await createStorage();
     await storage.write("uploads/products/item.jpg", Buffer.from([0, 1, 2, 250, 255]), {
       contentType: "image/jpeg",
       metadata: { source: "upload" },
@@ -417,7 +366,7 @@ describe("business backup engine", () => {
 
   it("archives objects from each configured public search root with root identity", async () => {
     const database = new FakeDatabase();
-    const storage = new MemoryStorage();
+    const storage = await createStorage();
     await storage.write("uploads/catalog/item.jpg", Buffer.from("public image"), {
       contentType: "image/jpeg",
       root: "public-bucket/media",
@@ -439,15 +388,16 @@ describe("business backup engine", () => {
   });
 
   it("waits through the configured signed-upload quiescence using injected time", async () => {
-    let clock = new Date("2025-01-02T03:04:05.000Z");
     const waits: number[] = [];
     const database = new FakeDatabase();
-    const storage = new MemoryStorage();
+    const storage = await createStorage();
     const objectPath = "uploads/products/7f0f7cf7-a2b6-4e8e-8f5f-1e57e7b03f12";
     await storage.write(objectPath, Buffer.from("upload"), {
       contentType: "image/jpeg",
-      metadata: { timeCreated: new Date(clock.getTime() - 1_000).toISOString() },
     });
+    const object = (await storage.listRoot("", "private-bucket/business")).find((item) => item.key === objectPath);
+    expect(object?.timeCreated).toBeTruthy();
+    let clock = new Date(Date.parse(object!.timeCreated!));
     const engine = createBackupEngine({
       pool: database.pool(),
       storage,
@@ -467,7 +417,7 @@ describe("business backup engine", () => {
 
   it("refuses a schema-incompatible restore before opening a write transaction", async () => {
     const database = new FakeDatabase();
-    const storage = new MemoryStorage();
+    const storage = await createStorage();
     const engine = createBackupEngine({
       pool: database.pool(),
       storage,
@@ -485,7 +435,7 @@ describe("business backup engine", () => {
 
   it("rechecks the schema after restore table locks and before changing files or rows", async () => {
     const database = new FakeDatabase();
-    const storage = new MemoryStorage();
+    const storage = await createStorage(true);
     const engine = createBackupEngine({
       pool: database.pool(),
       storage,
@@ -511,7 +461,7 @@ describe("business backup engine", () => {
 
   it("rehydrates retained provider facts on later restores and prefers terminal state over retryable facts", async () => {
     const database = new ProviderFactDatabase();
-    const storage = new MemoryStorage();
+    const storage = await createStorage();
     const engine = createBackupEngine({
       pool: database.pool(),
       storage,
@@ -550,7 +500,7 @@ describe("business backup engine", () => {
     const database = new FakeDatabase();
     const engine = createBackupEngine({
       pool: database.pool(),
-      storage: new MemoryStorage(),
+      storage: await createStorage(),
       privateObjectRoot: "private-bucket/business",
       fileRoots: [],
       uploadQuiescenceMs: 0,

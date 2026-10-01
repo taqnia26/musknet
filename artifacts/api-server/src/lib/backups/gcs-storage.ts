@@ -33,8 +33,15 @@ export class GcsBackupStorage implements BackupObjectStorage {
   private readonly roots = new Map<string, StorageRoot>();
   private readonly privateRoot: string;
 
-  constructor(privateRoot: string, publicSearchPaths = process.env.PUBLIC_OBJECT_SEARCH_PATHS ?? "") {
-    const client = new Storage({
+  constructor(
+    privateRoot: string,
+    publicSearchPaths = process.env.PUBLIC_OBJECT_SEARCH_PATHS ?? "",
+    authentication = process.env.BACKUP_GCS_AUTH?.trim() || "adc",
+  ) {
+    if (authentication !== "adc" && authentication !== "replit") {
+      throw new Error("BACKUP_GCS_AUTH must be adc or replit");
+    }
+    const client = authentication === "adc" ? new Storage() : new Storage({
       credentials: {
         audience: "replit",
         subject_token_type: "access_token",

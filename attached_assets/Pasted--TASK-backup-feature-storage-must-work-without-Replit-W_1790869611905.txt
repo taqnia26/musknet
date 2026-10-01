@@ -1,0 +1,30 @@
+# TASK — backup feature storage must work without Replit
+
+## What's wrong
+
+`artifacts/api-server/src/lib/backups/index.ts` wires the backup engine to exactly one storage backend: `GcsBackupStorage` from `gcs-storage.ts`, which talks to `http://127.0.0.1:1106` — Replit's internal Object Storage sidecar. That sidecar does not exist outside a Repl. On our production VPS (plain Linux, Node, PostgreSQL, no Replit services), every backup run will fail immediately trying to reach that port. There is no alternative storage implementation in the `backups/` folder.
+
+This is the same category of problem as the Clerk and Google Cloud Storage issues found earlier today in other projects: a feature hard-wired to a Replit-only service with no path to run elsewhere.
+
+## Required
+
+1. Add a local filesystem storage backend implementing the same `BackupObjectStorage` interface `GcsBackupStorage` implements (see `engine.ts` for the interface shape). Store objects under a configurable directory (env var, e.g. `BACKUP_STORAGE_DIR`), using the same generation/integrity-check semantics the engine already expects (the engine calls read generation, timeCreated, and verifies objects haven't changed mid-operation — the local implementation must honor these checks, not stub them out).
+2. Make storage backend selection explicit and defaulting to local: an env var (e.g. `BACKUP_STORAGE_DRIVER=local` default, `gcs` opt-in) chosen in `index.ts`, instead of hardcoding `GcsBackupStorage`.
+3. Do not weaken or remove any of the integrity/generation checks already in `engine.ts` — the local backend must satisfy the same contract, not bypass it.
+4. Update `engine.test.ts` so it exercises the local backend by default; keep GCS-specific tests but mark them as requiring real GCS credentials (skip if absent).
+5. Update `docs/backups-operations.md` to document the local storage path and the new env var, and state plainly that GCS is optional, not required.
+
+## Do not
+
+- Do not touch anything about ShipHero, invoice cancellation, or site-content history — those are separate, already reviewed and being deployed.
+- Do not change the backup/restore logic itself, only which storage backend it writes to.
+
+## Verify
+
+- `pnpm run typecheck` passes.
+- Backup engine tests pass using the local backend with no GCS credentials present in the environment.
+- A manual backup-and-restore round trip works end to end against a local directory.
+
+## Deliver
+
+Files changed, the new env var and its default, and confirmation the local backend satisfies every integrity check the engine performs (generation tracking, timeCreated, concurrent-change detection).

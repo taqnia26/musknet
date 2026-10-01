@@ -1,118 +1,30 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import {
-  createBackupEngine,
-  type BackupObjectStorage,
-  type StoredObject,
-} from "../../../artifacts/api-server/src/lib/backups/engine";
+import { createBackupEngine } from "../../../artifacts/api-server/src/lib/backups/engine";
+import { LocalBackupStorage } from "../../../artifacts/api-server/src/lib/backups/local-storage";
 
 const runIntegration = process.env.BACKUP_POSTGRES_E2E === "true";
 const { Pool } = pg;
-
-class PrivateMemoryStorage implements BackupObjectStorage {
-  readonly objectRoots = ["private-backup-e2e", "public-e2e-inputs"] as const;
-  private readonly values = new Map<
-    string,
-    { key: string; root: string; data: Buffer; contentType: string; metadata: Record<string, string>; generation: string }
-  >();
-  private nextGeneration = 0;
-
-  async list(prefix: string): Promise<StoredObject[]> {
-    return [...this.values.values()]
-      .filter((value) => !prefix || value.key.startsWith(prefix))
-      .map((value) => ({
-        key: value.key,
-        size: value.data.length,
-        generation: value.generation,
-        contentType: value.contentType,
-        metadata: { ...value.metadata },
-        root: value.root,
-      }));
-  }
-
-  private identity(key: string, root = this.objectRoots[0]) {
-    if (!this.objectRoots.includes(root as (typeof this.objectRoots)[number])) {
-      throw new Error(`Unconfigured isolated object root: ${root}`);
-    }
-    return `${root}\0${key}`;
-  }
-
-  async read(key: string, root?: string) {
-    const value = this.values.get(this.identity(key, root));
-    if (!value) throw new Error(`Missing isolated backup test object: ${key}`);
-    return {
-      data: Buffer.from(value.data),
-      contentType: value.contentType,
-      metadata: { ...value.metadata },
-      generation: value.generation,
-    };
-  }
-
-  async write(
-    key: string,
-    data: Buffer,
-    options: { contentType: string; metadata?: Record<string, string>; ifGenerationMatch?: string | null; root?: string },
-  ) {
-    const root = options.root ?? this.objectRoots[0];
-    const identity = this.identity(key, root);
-    const existing = this.values.get(identity);
-    if (options.ifGenerationMatch === null && existing) {
-      throw new Error(`Immutable test archive object already exists: ${key}`);
-    }
-    if (options.ifGenerationMatch && existing?.generation !== options.ifGenerationMatch) {
-      throw new Error(`Test object generation conflict: ${key}`);
-    }
-    const value = {
-      key,
-      root,
-      data: Buffer.from(data),
-      contentType: options.contentType,
-      metadata: { ...options.metadata },
-      generation: String(++this.nextGeneration),
-    };
-    this.values.set(identity, value);
-    return {
-      key,
-      size: value.data.length,
-      generation: value.generation,
-      contentType: value.contentType,
-      metadata: { ...value.metadata },
-      root,
-    };
-  }
-
-  async delete(key: string, ifGenerationMatch?: string | null, root?: string) {
-    const identity = this.identity(key, root);
-    const existing = this.values.get(identity);
-    if (!existing) return;
-    if (ifGenerationMatch && existing.generation !== ifGenerationMatch) {
-      throw new Error(`Test object generation conflict: ${key}`);
-    }
-    this.values.delete(identity);
-  }
-
-  tamper(key: string, data: Buffer) {
-    const existing = this.values.get(this.identity(key));
-    if (!existing) throw new Error(`Missing isolated backup test object: ${key}`);
-    existing.data = Buffer.from(data);
-  }
-}
 
 describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundtrip", () => {
   const databaseUrl = process.env.DATABASE_URL;
   const clusterDirectory = process.env.BACKUP_E2E_CLUSTER_DIR;
   const expectedDatabase = process.env.BACKUP_E2E_DATABASE;
   let pool: InstanceType<typeof Pool>;
-  let storage: PrivateMemoryStorage;
+  let storage: LocalBackupStorage;
   let engine: ReturnType<typeof createBackupEngine>;
   let fileRoot: string;
+  let storageDirectory: string;
+  let copiedStorageDirectory: string;
   let initialObjectBytes: Buffer;
   let initialLocalBytes: Buffer;
   let archivedDatabaseBytes: Buffer;
+  let archivedDatabaseContentType: string | null;
+  let archivedDatabaseMetadata: Record<string, string>;
   let payloadId: number;
   let postedEntryId: number;
   let postedLineId: number;
@@ -188,7 +100,8 @@ describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundt
     `);
 
     fileRoot = await mkdtemp(path.join(os.tmpdir(), "backup-e2e-files-"));
-    storage = new PrivateMemoryStorage();
+    storageDirectory = await mkdtemp(path.join(os.tmpdir(), "backup-e2e-storage-"));
+    storage = new LocalBackupStorage(storageDirectory, "private-backup-e2e", ["public-e2e-inputs"]);
     initialObjectBytes = Buffer.from([0, 1, 17, 128, 254, 255]);
     initialLocalBytes = Buffer.from([255, 0, 34, 67, 200]);
     await storage.write("e2e/object.bin", initialObjectBytes, {
@@ -211,6 +124,8 @@ describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundt
   afterAll(async () => {
     await pool?.end();
     if (fileRoot) await rm(fileRoot, { recursive: true, force: true });
+    if (storageDirectory) await rm(storageDirectory, { recursive: true, force: true });
+    if (copiedStorageDirectory) await rm(copiedStorageDirectory, { recursive: true, force: true });
   });
 
   it("verifies archive-before-write checks, transactional rollback, and faithful restore against PostgreSQL", async () => {
@@ -366,7 +281,10 @@ describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundt
     expect(snapshot.bytes).toBeGreaterThan(0);
     expect(snapshot.schemaHash).toMatch(/^[a-f0-9]{64}$/);
     expect(await engine.inspectBackup("roundtrip")).toMatchObject({ compatible: true, fileCount: 2 });
-    archivedDatabaseBytes = (await storage.read("backups/roundtrip/database.json.gz")).data;
+    const archivedDatabase = await storage.read("backups/roundtrip/database.json.gz");
+    archivedDatabaseBytes = archivedDatabase.data;
+    archivedDatabaseContentType = archivedDatabase.contentType;
+    archivedDatabaseMetadata = archivedDatabase.metadata;
 
     const immutableBefore = await pool.query(
       `SELECT id, exact_amount::text AS amount, encode(binary_value, 'hex') AS "binaryHex", marker
@@ -470,16 +388,47 @@ describe.runIf(runIntegration)("backup engine: disposable real PostgreSQL roundt
     await unchangedAfterFailedPreflight();
     await pool.query("ALTER TABLE roundtrip_payload DROP COLUMN schema_drift");
 
-    storage.tamper("backups/roundtrip/database.json.gz", Buffer.from("corrupt archive bytes"));
+    await storage.write("backups/roundtrip/database.json.gz", Buffer.from("corrupt archive bytes"), {
+      contentType: "application/gzip",
+      root: "private-backup-e2e",
+    });
     await expect(engine.runRestore("roundtrip")).rejects.toThrow(/corrupt/i);
     await unchangedAfterFailedPreflight();
-    storage.tamper("backups/roundtrip/database.json.gz", archivedDatabaseBytes);
+    const repairedDatabase = await storage.write("backups/roundtrip/database.json.gz", archivedDatabaseBytes, {
+      contentType: archivedDatabaseContentType ?? "application/gzip",
+      metadata: archivedDatabaseMetadata,
+      root: "private-backup-e2e",
+    });
+    if (!repairedDatabase.generation) throw new Error("Local backup storage did not return a repaired archive generation.");
+    const manifestKey = "backups/roundtrip/manifest.json";
+    const storedManifest = await storage.read(manifestKey, "private-backup-e2e");
+    const manifest = JSON.parse(storedManifest.data.toString("utf8")) as Record<string, unknown>;
+    manifest.databaseGeneration = repairedDatabase.generation;
+    const repairedManifestBytes = Buffer.from(JSON.stringify(manifest));
+    expect(manifest.databaseSha256).toBe(createHash("sha256").update(archivedDatabaseBytes).digest("hex"));
+    await storage.write(manifestKey, repairedManifestBytes, {
+      contentType: storedManifest.contentType ?? "application/json",
+      metadata: storedManifest.metadata,
+      root: "private-backup-e2e",
+    });
 
     await pool.query("UPDATE backup_runtime SET recovery_required = true WHERE id = 1");
     await expect(engine.runRestore("roundtrip")).rejects.toThrow(/backup e2e injected restore failure/);
     await unchangedAfterFailedPreflight();
     await pool.query("UPDATE backup_runtime SET recovery_required = false WHERE id = 1");
 
+    copiedStorageDirectory = await mkdtemp(path.join(os.tmpdir(), "backup-e2e-storage-copy-"));
+    await cp(storageDirectory, copiedStorageDirectory, { recursive: true, preserveTimestamps: true });
+    storage = new LocalBackupStorage(copiedStorageDirectory, "private-backup-e2e", ["public-e2e-inputs"]);
+    engine = createBackupEngine({
+      pool,
+      storage,
+      privateObjectRoot: "private-backup-e2e",
+      fileRoots: [{ kind: "attached_assets", directory: fileRoot }],
+      operationLockTimeoutMs: 5_000,
+      uploadQuiescenceMs: 0,
+    });
+    expect(await engine.inspectBackup("roundtrip")).toMatchObject({ compatible: true, fileCount: 2 });
     await engine.runRestore("roundtrip");
 
     const restoredPayload = await pool.query(

@@ -2,21 +2,29 @@ import { pool } from "@workspace/db";
 import {
   appAssetRoots,
   createBackupEngine,
-  privateStorageRoot,
   type BackupReason,
 } from "./engine";
 import { GcsBackupStorage } from "./gcs-storage";
+import { LocalBackupStorage } from "./local-storage";
+import { assertPrivateBackupDirectory, backupStorageConfig } from "./storage-config";
 
 let engine: ReturnType<typeof createBackupEngine> | undefined;
 
 function getEngine() {
   if (!engine) {
-    const root = privateStorageRoot(process.env.PRIVATE_OBJECT_DIR);
+    const config = backupStorageConfig();
+    const root = config.privateRoot;
+    const fileRoots = appAssetRoots(import.meta.dirname);
+    if (config.driver === "local") {
+      assertPrivateBackupDirectory(config.directory, fileRoots);
+    }
     engine = createBackupEngine({
       pool,
-      storage: new GcsBackupStorage(root),
+      storage: config.driver === "local"
+        ? new LocalBackupStorage(config.directory, root)
+        : new GcsBackupStorage(root),
       privateObjectRoot: root,
-      fileRoots: appAssetRoots(import.meta.dirname),
+      fileRoots,
       assertFenced: async () => {
         const { assertBackupExclusiveFence } = await import("../backup-fence");
         await assertBackupExclusiveFence();

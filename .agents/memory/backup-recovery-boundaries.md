@@ -20,3 +20,9 @@ API admission fences alone cannot stop previously signed cloud uploads.
 **Why:** Those uploads go directly to the storage provider and remain valid after the app blocks new requests.
 
 **How to apply:** Drain admitted writers, account for the outstanding upload validity window, and use conditional generation/integrity checks. Never infer database/files consistency solely from an HTTP maintenance flag.
+
+Archive version tokens must survive intact copies to another disk or host. Physical inode/device/change timestamps belong in active-read race detection, not in the version tokens recorded inside archive manifests.
+
+**Why:** A filesystem copy preserves archive contents but changes physical file identity. Binding manifest versions to that identity makes otherwise valid off-host backups impossible to restore.
+
+**How to apply:** Keep logical versions content/metadata-aware and persistent, independently verify payload digests and filesystem read stability, and verify inspection plus restoration from a copied archive directory with a fresh storage instance.
