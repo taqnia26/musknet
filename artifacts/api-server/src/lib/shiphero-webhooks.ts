@@ -368,9 +368,12 @@ export async function processShipHeroWebhookQueue(maxEvents = 100): Promise<numb
   if (queueRunning) return 0;
   queueRunning = true;
   try {
-    let processed = 0;
-    while (processed < maxEvents && await processOneQueuedShipHeroWebhook()) processed += 1;
-    return processed;
+    const { withBackupWriteFence } = await import("./backup-fence");
+    return await withBackupWriteFence(async () => {
+      let processed = 0;
+      while (processed < maxEvents && await processOneQueuedShipHeroWebhook()) processed += 1;
+      return processed;
+    }) ?? 0;
   } finally {
     queueRunning = false;
   }

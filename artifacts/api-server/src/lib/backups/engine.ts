@@ -54,16 +54,22 @@ export type StoredObject = {
   generation: string | null;
   contentType: string | null;
   metadata: Record<string, string>;
+  root?: string;
+  timeCreated?: string | null;
 };
 export type BackupObjectStorage = {
+  readonly objectRoots?: readonly string[];
   list(prefix: string): Promise<StoredObject[]>;
-  read(key: string): Promise<{ data: Buffer; contentType: string | null; metadata: Record<string, string>; generation: string | null }>;
+  read(
+    key: string,
+    root?: string,
+  ): Promise<{ data: Buffer; contentType: string | null; metadata: Record<string, string>; generation: string | null; timeCreated?: string | null }>;
   write(
     key: string,
     data: Buffer,
-    options: { contentType: string; metadata?: Record<string, string>; ifGenerationMatch?: string | null },
+    options: { contentType: string; metadata?: Record<string, string>; ifGenerationMatch?: string | null; root?: string },
   ): Promise<StoredObject>;
-  delete(key: string, ifGenerationMatch?: string | null): Promise<void>;
+  delete(key: string, ifGenerationMatch?: string | null, root?: string): Promise<void>;
 };
 
 export type BackupFileRoot = {
@@ -73,12 +79,14 @@ export type BackupFileRoot = {
 
 export const BACKUP_EXCLUSIONS = [
   "Production schema and migrations are never restored; the public schema fingerprint must match before data restore.",
-  "backup_* control/history tables and admin/owner users, credentials, roles, permissions, security settings, and integration credentials are not overwritten.",
+  "backup_* control/history tables, explicitly named admin/owner security tables, credentials, and integration credentials are not overwritten; business tables such as billing_settings are backed up and restored.",
   "Ephemeral admin/owner/influencer sessions and OTP tables are not archived and are cleared on restore, requiring users to sign in again.",
-  "External-provider delivery, dispatch, webhook, outbox, and idempotency state is omitted from snapshots and cleared on restore to prevent replay.",
+  "Current external-provider delivery, dispatch, webhook, outbox, and idempotency state is omitted from snapshots and retained in place to prevent replay.",
+  "Dedicated external invoice-number counter tables are retained in place so restore cannot lower their high-water marks.",
+  "Where invoice numbering is derived from max(invoices.sequence_number), restores that would lower the current high-water are refused rather than risk reusing an external number.",
   "WhatsApp auth/session/secrets are retained in place and are not archived or restored.",
   "App Storage backups/ archive objects are excluded from recursive file enumeration.",
-  "Only private App Storage under PRIVATE_OBJECT_DIR, LOCAL_CONTRACT_STORAGE_DIR when configured, served attached_assets, and served site-assets are included.",
+  "Every configured PRIVATE_OBJECT_DIR and PUBLIC_OBJECT_SEARCH_PATHS App Storage root is included without recursive backup archives; LOCAL_CONTRACT_STORAGE_DIR when configured, served attached_assets, and served site-assets are also included.",
   "Source code, environment files, Git metadata, dependency trees, and all files outside the configured storage roots are excluded.",
 ];
 
@@ -91,6 +99,7 @@ type ArchiveFile = {
   source: FileSource;
   path: string;
   archiveObject: string;
+  storageRoot?: string;
   bytes: number;
   sha256: string;
   generation: string;
@@ -134,6 +143,12 @@ export type BackupEngineOptions = {
   fileRoots: BackupFileRoot[];
   now?: () => Date;
   operationLockTimeoutMs?: number;
+  /** Defaults to the 15-minute signed-upload URL validity period; injectable for isolated tests. */
+  uploadQuiescenceMs?: number;
+  /** Test clock / sleeper injection; production uses a real timer. */
+  wait?: (milliseconds: number) => Promise<void>;
+  /** Establish a durable writer, background-worker, and signed-URL-issuance fence for this operation. */
+  assertFenced?: (operation: "backup" | "restore") => Promise<void>;
 };
 
 export class BackupEngineError extends Error {
@@ -152,6 +167,11 @@ export class BackupRecoveryRequiredError extends BackupEngineError {
 
 function sha256(data: Buffer | string) {
   return createHash("sha256").update(data).digest("hex");
+}
+
+function isUuidUploadedObject(key: string) {
+  const basename = path.basename(key).replace(/\.[^.]+$/, "");
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(basename);
 }
 
 function quoteIdentifier(value: string) {
@@ -174,26 +194,31 @@ function backupPrefix(id: string) {
 }
 
 function isEphemeralTable(name: string) {
-  return (
-    /(^|_)(sessions?|session_tokens?|otp_records)$/.test(name) ||
-    /(^|_)(webhook_events?|idempotency(_keys)?|outbox|provider_deliveries|deliveries|dispatches)$/.test(name) ||
-    /(^|_)(delivery|dispatch|idempotency|outbox|webhook)_/.test(name)
-  );
+  return /(^|_)(sessions?|session_tokens?|otp_records)$/.test(name);
+}
+
+function isProviderStateTable(name: string) {
+  return name.startsWith("shiphero_") ||
+    /(^|_)(webhook_events?|idempotency(_keys)?|outbox|provider_deliveries|deliveries|dispatches)(_|$)/.test(name) ||
+    /(^|_)(delivery|dispatch|idempotency|outbox|webhook)_/.test(name);
 }
 
 function protectedTableReason(name: string): string | null {
   if (name.startsWith("backup_")) return "backup control and history are retained in place";
   if (
-    /(^|_)(admin|owner)_(users?|credentials?|roles?|permissions?|integrations?|security|settings?)$/.test(name) ||
-    /(^|_)(security_config|auth_config|authentication_config)$/.test(name) ||
+    /^(admin|owner)_(users?|credentials?|roles?|permissions?|settings?|security_settings?|integrations?)$/.test(name) ||
+    /^(security_config|auth_config|authentication_config|security_settings)$/.test(name) ||
     /(^|_)(credentials?|secrets?)$/.test(name) ||
     name === "whatsapp_auth_state" ||
     /whatsapp_(auth|credential|secret|session)/.test(name)
   ) {
     return "security credentials, roles, permissions, or integration configuration are retained in place";
   }
-  if (/(^|_)(settings|configuration|config)$/.test(name)) {
-    return "provider and security configuration is retained in place";
+  if (/(invoice|billing)/.test(name) && /(counter|sequence|high.?water)/.test(name)) {
+    return "external invoice numbering high-water counters are retained in place";
+  }
+  if (isProviderStateTable(name)) {
+    return "current provider integration settings, dispatch, webhook, delivery, outbox, and idempotency state is retained in place";
   }
   return null;
 }
@@ -297,7 +322,6 @@ async function walkRoot(root: BackupFileRoot): Promise<LocalFile[]> {
   try {
     rootInfo = await lstat(configured);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT" && root.kind !== "contracts") return [];
     throw new BackupEngineError(`Required ${root.kind} storage path is unavailable`, { cause: error });
   }
   if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) {
@@ -575,6 +599,8 @@ function validateDatabasePayload(value: unknown, manifest: BackupManifest): Tabl
 export function createBackupEngine(options: BackupEngineOptions) {
   const now = options.now ?? (() => new Date());
   const lockTimeout = options.operationLockTimeoutMs ?? OPERATION_LOCK_TIMEOUT_MS;
+  const uploadQuiescenceMs = options.uploadQuiescenceMs ?? 15 * 60 * 1000;
+  const wait = options.wait ?? ((milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
   const configuredRoots = options.fileRoots.map((root) => ({ ...root, directory: checkedRootPath(root) }));
   if (new Set(configuredRoots.map((root) => root.kind)).size !== configuredRoots.length) {
     throw new BackupEngineError("Each local backup root may be configured only once");
@@ -613,6 +639,46 @@ export function createBackupEngine(options: BackupEngineOptions) {
     }
   }
 
+  async function waitForObjectUploadQuiescence(operation: "backup" | "restore") {
+    await options.assertFenced?.(operation);
+    if (!Number.isSafeInteger(uploadQuiescenceMs) || uploadQuiescenceMs < 0) {
+      throw new BackupEngineError("Upload URL quiescence duration must be a non-negative integer");
+    }
+    if (uploadQuiescenceMs === 0) return;
+    const fenceStartedAt = now().getTime();
+    let observed = await options.storage.list("");
+    for (;;) {
+      let notBefore = fenceStartedAt + uploadQuiescenceMs;
+      for (const object of observed) {
+        if (!isUuidUploadedObject(object.key)) continue;
+        if (!object.generation) {
+          throw new BackupEngineError(`App Storage did not provide a generation for uploaded object ${object.key}`);
+        }
+        const createdAt = object.timeCreated ? Date.parse(object.timeCreated) : Number.NaN;
+        if (!Number.isFinite(createdAt)) {
+          throw new BackupEngineError(`App Storage did not provide timeCreated for uploaded object ${object.key}`);
+        }
+        notBefore = Math.max(notBefore, createdAt + uploadQuiescenceMs);
+      }
+      const remaining = notBefore - now().getTime();
+      if (remaining > 0) {
+        const beforeWait = now().getTime();
+        await wait(remaining);
+        if (now().getTime() <= beforeWait) {
+          throw new BackupEngineError("Upload quiescence wait returned without advancing the configured clock");
+        }
+      }
+      const refreshed = await options.storage.list("");
+      const fingerprint = (objects: StoredObject[]) => objects
+        .filter((object) => isUuidUploadedObject(object.key))
+        .map((object) => `${object.root ?? ""}:${object.key}:${object.generation ?? ""}:${object.timeCreated ?? ""}`)
+        .sort()
+        .join("\n");
+      if (fingerprint(observed) === fingerprint(refreshed) && now().getTime() >= notBefore) return;
+      observed = refreshed;
+    }
+  }
+
   async function captureFiles(id: string): Promise<{ files: ArchiveFile[]; fileBytes: number }> {
     const files: ArchiveFile[] = [];
     let fileBytes = 0;
@@ -622,6 +688,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
       content: Buffer,
       contentType: string,
       metadata: Record<string, string>,
+      storageRoot?: string,
     ) => {
       safeRelativePath(relativePath);
       if (content.length > MAX_FILE_BYTES) throw new BackupEngineError(`File exceeds the 256 MiB backup limit: ${relativePath}`);
@@ -648,6 +715,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
         source,
         path: relativePath,
         archiveObject,
+        ...(storageRoot ? { storageRoot } : {}),
         bytes: content.length,
         sha256: digest,
         generation: uploaded.generation,
@@ -656,18 +724,30 @@ export function createBackupEngine(options: BackupEngineOptions) {
       });
     };
 
-    const objects = await options.storage.list("");
+    const objects = (await options.storage.list("")).filter(
+      (item) => item.key !== ARCHIVE_ROOT && !item.key.startsWith(`${ARCHIVE_ROOT}/`),
+    );
+    const objectFingerprint = (items: StoredObject[]) => items
+      .filter((item) => item.key !== ARCHIVE_ROOT && !item.key.startsWith(`${ARCHIVE_ROOT}/`))
+      .map((item) => `${item.root ?? ""}:${item.key}:${item.generation ?? ""}`)
+      .sort()
+      .join("\n");
+    const initialObjectFingerprint = objectFingerprint(objects);
     for (const item of objects) {
-      if (item.key === ARCHIVE_ROOT || item.key.startsWith(`${ARCHIVE_ROOT}/`)) continue;
       if (item.size > MAX_FILE_BYTES) throw new BackupEngineError(`File exceeds the 256 MiB backup limit: ${item.key}`);
-      const loaded = await options.storage.read(item.key);
+      if (!item.generation) throw new BackupEngineError(`App Storage did not provide a generation for ${item.key}`);
+      const loaded = await options.storage.read(item.key, item.root);
       if (
         loaded.data.length !== item.size ||
-        (item.generation !== null && loaded.generation !== item.generation)
+        loaded.generation !== item.generation
       ) {
         throw new BackupEngineError(`App Storage file changed while it was being backed up: ${item.key}`);
       }
-      await add("object", item.key, loaded.data, loaded.contentType ?? "application/octet-stream", loaded.metadata);
+      await add("object", item.key, loaded.data, loaded.contentType ?? "application/octet-stream", loaded.metadata, item.root);
+      const afterCopy = await options.storage.read(item.key, item.root);
+      if (afterCopy.generation !== item.generation) {
+        throw new BackupEngineError(`App Storage file changed while it was being copied: ${item.key}`);
+      }
     }
 
     for (const root of configuredRoots) {
@@ -680,6 +760,9 @@ export function createBackupEngine(options: BackupEngineOptions) {
         if (content.length !== file.size) throw new BackupEngineError(`File changed while it was being backed up: ${file.relativePath}`);
         await add(root.kind, file.relativePath, content, normalizeMimeType(null, file.relativePath), {});
       }
+    }
+    if (objectFingerprint(await options.storage.list("")) !== initialObjectFingerprint) {
+      throw new BackupEngineError("App Storage objects were added or changed during the business snapshot");
     }
     return { files, fileBytes };
   }
@@ -739,6 +822,10 @@ export function createBackupEngine(options: BackupEngineOptions) {
         typeof file.path !== "string" ||
         typeof file.archiveObject !== "string" ||
         typeof file.contentType !== "string" ||
+        (file.source !== "object" && file.storageRoot !== undefined) ||
+        (file.storageRoot !== undefined &&
+          (typeof file.storageRoot !== "string" ||
+            !options.storage.objectRoots?.includes(file.storageRoot))) ||
         !file.metadata ||
         typeof file.metadata !== "object" ||
         !/^[a-f0-9]{64}$/.test(file.sha256) ||
@@ -753,7 +840,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
       if (file.source === "object" && isBackupObjectPath(file.path)) {
         throw new BackupEngineError("Backup manifest attempts to recurse into its archive objects");
       }
-      const recordKey = `${file.source}:${file.path}`;
+      const recordKey = `${file.source}:${file.source === "object" ? `${file.storageRoot ?? ""}:` : ""}${file.path}`;
       if (seen.has(recordKey)) throw new BackupEngineError("Backup manifest contains duplicate file paths");
       seen.add(recordKey);
       if (!file.archiveObject.startsWith(`${backupPrefix(id)}/files/`)) {
@@ -799,7 +886,13 @@ export function createBackupEngine(options: BackupEngineOptions) {
   }
 
   async function listCurrentObjects() {
-    return (await options.storage.list("")).filter((object) => !object.key.startsWith(`${ARCHIVE_ROOT}/`));
+    return (await options.storage.list("")).filter(
+      (object) => object.key !== ARCHIVE_ROOT && !object.key.startsWith(`${ARCHIVE_ROOT}/`),
+    );
+  }
+
+  function objectIdentity(object: Pick<StoredObject, "key" | "root">) {
+    return `${object.root ?? ""}:${object.key}`;
   }
 
   async function listLocalFiles() {
@@ -849,26 +942,51 @@ export function createBackupEngine(options: BackupEngineOptions) {
     const localSnapshotDir = await mkdtemp(path.join(process.env.TMPDIR ?? "/tmp", "business-restore-rollback-"));
     const oldLocals = await createLocalSnapshot(localSnapshotDir, currentLocals);
     const rollbackPrefix = `${backupPrefix(archive.manifest.id)}/restore-rollback/${randomUUID()}`;
-    const oldObjects: { key: string; rollbackKey: string; contentType: string; metadata: Record<string, string> }[] = [];
+    const oldObjects: {
+      key: string;
+      root?: string;
+      generation: string;
+      rollbackKey: string;
+      contentType: string;
+      metadata: Record<string, string>;
+    }[] = [];
     try {
       for (const object of currentObjects) {
-        const current = await options.storage.read(object.key);
-        if (current.data.length !== object.size) throw new BackupEngineError(`App Storage file changed before restore: ${object.key}`);
+        if (!object.generation) throw new BackupEngineError(`App Storage did not provide a generation for ${object.key}`);
+        const current = await options.storage.read(object.key, object.root);
+        if (current.data.length !== object.size || current.generation !== object.generation) {
+          throw new BackupEngineError(`App Storage file changed before restore: ${object.key}`);
+        }
         const rollbackKey = `${rollbackPrefix}/${String(oldObjects.length).padStart(6, "0")}`;
-        await options.storage.write(rollbackKey, current.data, {
+        const saved = await options.storage.write(rollbackKey, current.data, {
           contentType: current.contentType ?? "application/octet-stream",
           metadata: current.metadata,
           ifGenerationMatch: null,
         });
+        const savedRead = await options.storage.read(rollbackKey);
+        const sourceAfterCopy = await options.storage.read(object.key, object.root);
+        if (
+          !saved.generation ||
+          savedRead.generation !== saved.generation ||
+          savedRead.data.length !== current.data.length ||
+          sha256(savedRead.data) !== sha256(current.data) ||
+          sourceAfterCopy.generation !== object.generation
+        ) {
+          throw new BackupEngineError(`App Storage file changed while creating restore rollback evidence: ${object.key}`);
+        }
         oldObjects.push({
           key: object.key,
+          ...(object.root ? { root: object.root } : {}),
+          generation: object.generation,
           rollbackKey,
           contentType: current.contentType ?? "application/octet-stream",
           metadata: current.metadata,
         });
       }
       const archivedObjectKeys = new Set(
-        archive.stagedFiles.filter((item) => item.record.source === "object").map((item) => item.record.path),
+        archive.stagedFiles
+          .filter((item) => item.record.source === "object")
+          .map((item) => `${item.record.storageRoot ?? ""}:${item.record.path}`),
       );
       const archivedLocalKeys = new Set(
         archive.stagedFiles
@@ -883,10 +1001,25 @@ export function createBackupEngine(options: BackupEngineOptions) {
         for (const item of archive.stagedFiles) {
           const data = await readFile(item.stagedPath);
           if (item.record.source === "object") {
-            await options.storage.write(item.record.path, data, {
+            const root = item.record.storageRoot;
+            const current = currentObjects.find((object) =>
+              objectIdentity(object) === `${root ?? ""}:${item.record.path}`,
+            );
+            const written = await options.storage.write(item.record.path, data, {
               contentType: item.record.contentType,
               metadata: item.record.metadata,
+              ifGenerationMatch: current?.generation ?? null,
+              ...(root ? { root } : {}),
             });
+            const verified = await options.storage.read(item.record.path, root);
+            if (
+              !written.generation ||
+              verified.generation !== written.generation ||
+              verified.data.length !== data.length ||
+              sha256(verified.data) !== sha256(data)
+            ) {
+              throw new BackupEngineError(`Restored App Storage file failed generation or byte verification: ${item.record.path}`);
+            }
           } else {
             const root = configuredRoots.find((candidate) => candidate.kind === item.record.source);
             if (!root) throw new BackupEngineError(`Backup requires unconfigured ${item.record.source} storage`);
@@ -894,7 +1027,10 @@ export function createBackupEngine(options: BackupEngineOptions) {
           }
         }
         for (const object of currentObjects) {
-          if (!archivedObjectKeys.has(object.key)) await options.storage.delete(object.key, object.generation);
+          if (!archivedObjectKeys.has(objectIdentity(object))) {
+            if (!object.generation) throw new BackupEngineError(`App Storage did not provide a generation for ${object.key}`);
+            await options.storage.delete(object.key, object.generation, object.root);
+          }
         }
         for (const file of currentLocals) {
           if (!archivedLocalKeys.has(`${file.root.kind}:${file.relativePath}`)) {
@@ -929,21 +1065,38 @@ export function createBackupEngine(options: BackupEngineOptions) {
   }
 
   async function rollbackFiles(
-    oldObjects: { key: string; rollbackKey: string; contentType: string; metadata: Record<string, string> }[],
+    oldObjects: { key: string; root?: string; generation: string; rollbackKey: string; contentType: string; metadata: Record<string, string> }[],
     oldLocals: { root: BackupFileRoot; relativePath: string; stagedPath: string }[],
     currentObjects: StoredObject[],
     currentLocals: LocalFile[],
   ) {
-    const originalObjectKeys = new Set(oldObjects.map((item) => item.key));
+    const originalObjectKeys = new Set(oldObjects.map((item) => `${item.root ?? ""}:${item.key}`));
     for (const object of await listCurrentObjects()) {
-      if (!originalObjectKeys.has(object.key)) await options.storage.delete(object.key, object.generation);
+      if (!object.generation) throw new BackupEngineError(`App Storage did not provide a generation for ${object.key}`);
+      if (!originalObjectKeys.has(objectIdentity(object))) {
+        await options.storage.delete(object.key, object.generation, object.root);
+      }
     }
     for (const saved of oldObjects) {
       const contents = await options.storage.read(saved.rollbackKey);
-      await options.storage.write(saved.key, contents.data, {
+      const current = (await options.storage.list("")).find((object) =>
+        objectIdentity(object) === `${saved.root ?? ""}:${saved.key}`,
+      );
+      const written = await options.storage.write(saved.key, contents.data, {
         contentType: saved.contentType,
         metadata: saved.metadata,
+        ifGenerationMatch: current?.generation ?? null,
+        ...(saved.root ? { root: saved.root } : {}),
       });
+      const verified = await options.storage.read(saved.key, saved.root);
+      if (
+        !written.generation ||
+        verified.generation !== written.generation ||
+        verified.data.length !== contents.data.length ||
+        sha256(verified.data) !== sha256(contents.data)
+      ) {
+        throw new BackupEngineError(`App Storage rollback verification failed for ${saved.key}`);
+      }
     }
     const originalLocalKeys = new Set(oldLocals.map((item) => `${item.root.kind}:${item.relativePath}`));
     for (const file of await listLocalFiles()) {
@@ -975,7 +1128,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
     const excluded = tables.flatMap((table) => {
       const reason = protectedTableReason(table.name);
       if (reason) return [{ name: table.name, reason }];
-      if (classifyTable(table.name) === "clear") return [{ name: table.name, reason: "ephemeral sessions or provider delivery/idempotency state is not restored" }];
+      if (classifyTable(table.name) === "clear") return [{ name: table.name, reason: "ephemeral sessions and OTP state is not archived and is cleared on restore" }];
       return [];
     });
     return { tables: archived, excluded };
@@ -1014,7 +1167,10 @@ export function createBackupEngine(options: BackupEngineOptions) {
         `Restore would alter data referenced by protected tables: ${unsafeReferences.map((item) => `${item.source}.${item.name}`).join(", ")}`,
       );
     }
-    const qualifiedNames = mutating.map(qualifiedTable);
+    const providerStateNames = allTables
+      .filter((table) => isProviderStateTable(table.name))
+      .map((table) => table.name);
+    const qualifiedNames = [...new Set([...mutating, ...providerStateNames])].sort().map(qualifiedTable);
     if (qualifiedNames.length) {
       await client.query(`LOCK TABLE ${qualifiedNames.join(", ")} IN ACCESS EXCLUSIVE MODE`);
     }
@@ -1050,17 +1206,42 @@ export function createBackupEngine(options: BackupEngineOptions) {
   async function clearAndRestoreDatabase(client: BackupDbClient, tables: TableArchive[], allTables: TableInfo[]) {
     const targetNames = allTables.filter((table) => classifyTable(table.name) === "restore").map((table) => table.name);
     const clearNames = allTables.filter((table) => classifyTable(table.name) === "clear").map((table) => table.name);
-    const mutating = [...new Set([...targetNames, ...clearNames])].sort();
-      const foreignKeys = await listForeignKeys(client);
-    const mutatingSet = new Set(mutating);
+    const truncateNames = [...new Set([...targetNames, ...clearNames])].sort();
+    const foreignKeys = await listForeignKeys(client);
+    const mutatingSet = new Set(truncateNames);
     const unsafeReferences = foreignKeys.filter((key) => mutatingSet.has(key.target) && !mutatingSet.has(key.source));
     if (unsafeReferences.length) {
       throw new BackupEngineError(
-        `Restore would alter data referenced by protected tables: ${unsafeReferences.map((item) => `${item.source}.${item.name}`).join(", ")}`,
+        `Restore would alter data referenced by retained tables: ${unsafeReferences.map((item) => `${item.source}.${item.name}`).join(", ")}`,
       );
     }
-    const lockNames = mutating.map(qualifiedTable);
+    const providerStateNames = allTables
+      .filter((table) => isProviderStateTable(table.name))
+      .map((table) => table.name);
+    const lockedNames = [...new Set([...truncateNames, ...providerStateNames])].sort();
+    const lockNames = lockedNames.map(qualifiedTable);
     if (lockNames.length) await client.query(`LOCK TABLE ${lockNames.join(", ")} IN ACCESS EXCLUSIVE MODE`);
+
+    // Keep the current idempotency/history rows; only move work that was still
+    // eligible for automatic delivery into non-replaying administrative states.
+    const shipheroDispatches = allTables.find((table) => table.name === "shiphero_dispatches");
+    if (shipheroDispatches?.columns.some((column) => column.name === "status")) {
+      await client.query(`
+        UPDATE ${qualifiedTable("shiphero_dispatches")}
+           SET status = 'blocked',
+               last_error = COALESCE(last_error, 'Quarantined by business restore; review before retry')
+         WHERE status = 'queued'
+      `);
+    }
+    const shipheroWebhooks = allTables.find((table) => table.name === "shiphero_webhook_events");
+    if (shipheroWebhooks?.columns.some((column) => column.name === "outcome")) {
+      await client.query(`
+        UPDATE ${qualifiedTable("shiphero_webhook_events")}
+           SET outcome = 'quarantined',
+               detail = COALESCE(detail, 'Quarantined by business restore; review before processing')
+         WHERE outcome = 'received'
+      `);
+    }
 
     const sequenceFloors: { table: string; column: string; sequence: string; tableMaximum: string | null; sequenceMaximum: string | null }[] = [];
     for (const table of allTables) {
@@ -1085,12 +1266,19 @@ export function createBackupEngine(options: BackupEngineOptions) {
 
     // TRUNCATE is set-based, handles FK cycles among restored business tables, and
     // does not remove or disable the permanent posted-ledger immutability triggers.
-    if (lockNames.length) await client.query(`TRUNCATE TABLE ${lockNames.join(", ")}`);
+    if (truncateNames.length) await client.query(`TRUNCATE TABLE ${truncateNames.map(qualifiedTable).join(", ")}`);
     await client.query("SET CONSTRAINTS ALL DEFERRED");
 
     const archived = new Map(tables.map((table) => [table.name, table]));
     const schemaByName = new Map(allTables.map((table) => [table.name, table]));
     const ordered = insertionOrder([...archived.keys()], foreignKeys);
+    const journalStatusRestores: {
+      row: (string | null)[];
+      table: TableArchive;
+      schema: TableInfo;
+      statusIndex: number;
+      reversalIndex: number;
+    }[] = [];
     for (const name of ordered) {
       const table = archived.get(name)!;
       const schema = schemaByName.get(name);
@@ -1108,16 +1296,19 @@ export function createBackupEngine(options: BackupEngineOptions) {
       const journalEntries = name === "journal_entries";
       const statusIndex = journalEntries ? table.columns.indexOf("status") : -1;
       const reversalIndex = journalEntries ? table.columns.indexOf("reversal_of_entry_id") : -1;
+      const postedAtIndex = journalEntries ? table.columns.indexOf("posted_at") : -1;
+      const postedByIndex = journalEntries ? table.columns.indexOf("posted_by") : -1;
       const batchSize = Math.max(1, Math.floor(500 / Math.max(1, schema.columns.length)));
       for (let start = 0; start < table.rows.length; start += batchSize) {
         const slice = table.rows.slice(start, start + batchSize);
         const values: unknown[] = [];
         const tuples = slice.map((row) => {
           const cells = insertIndexes.map(({ column, index }) => {
-            const value = row[index] ?? null;
-            let storedValue = value;
-            if (journalEntries && statusIndex >= 0 && ["posted", "reversed"].includes(storedValue ?? "")) storedValue = "draft";
-            if (journalEntries && reversalIndex >= 0) storedValue = index === reversalIndex ? null : storedValue;
+            let storedValue = row[index] ?? null;
+            if (journalEntries && statusIndex >= 0 && ["posted", "reversed"].includes(row[statusIndex] ?? "")) {
+              if (index === statusIndex) storedValue = "draft";
+              if (index === postedAtIndex || index === postedByIndex) storedValue = null;
+            }
             values.push(storedValue);
             return `$${values.length}::${column.type}`;
           });
@@ -1129,27 +1320,71 @@ export function createBackupEngine(options: BackupEngineOptions) {
           values,
         );
       }
-      if (table.rows.length && journalEntries && statusIndex >= 0) {
-        const statusColumn = quoteIdentifier("status");
-        const idColumn = quoteIdentifier("id");
+      if (journalEntries && statusIndex >= 0) {
         for (const row of table.rows) {
-          const oldStatus = row[statusIndex];
-          if (!["posted", "reversed"].includes(oldStatus ?? "")) continue;
-          const id = row[table.columns.indexOf("id")];
-          if (id === undefined || id === null) throw new BackupEngineError("Journal entry archive lacks its primary id");
-          const setParts = [`${statusColumn} = $1::${schemaByName.get(name)!.columns.find((col) => col.name === "status")!.type}`];
-          const values: unknown[] = [oldStatus, id];
-          if (reversalIndex >= 0) {
-            setParts.push(`${quoteIdentifier("reversal_of_entry_id")} = $3::${schemaByName.get(name)!.columns[reversalIndex]!.type}`);
-            values.push(row[reversalIndex]);
-          }
-          await client.query(`UPDATE ${qualifiedTable(name)} SET ${setParts.join(", ")} WHERE ${idColumn} = $2`, values);
+          if (!["posted", "reversed"].includes(row[statusIndex] ?? "")) continue;
+          journalStatusRestores.push({ row, table, schema, statusIndex, reversalIndex });
         }
       }
     }
 
-    // Existing sequences are deliberately never restarted or set below their current
-    // value: IDs seen by external systems cannot be reused after restoring an older snapshot.
+    // Keep every journal row staged as a valid draft until all entries and all
+    // journal_entry_lines have been inserted. Then restore posted/reversed states
+    // in dependency order so the permanent ledger guards see a complete ledger.
+    journalStatusRestores.sort((left, right) => {
+      const leftRank = left.row[left.statusIndex] === "posted" ? 0 : 1;
+      const rightRank = right.row[right.statusIndex] === "posted" ? 0 : 1;
+      return leftRank - rightRank;
+    });
+    for (const restore of journalStatusRestores) {
+      const idIndex = restore.table.columns.indexOf("id");
+      const postedAtIndex = restore.table.columns.indexOf("posted_at");
+      const postedByIndex = restore.table.columns.indexOf("posted_by");
+      if (idIndex < 0 || postedAtIndex < 0 || postedByIndex < 0) {
+        throw new BackupEngineError("Journal entry archive lacks its posting audit fields");
+      }
+      const id = restore.row[idIndex];
+      if (id === undefined || id === null) throw new BackupEngineError("Journal entry archive lacks its primary id");
+      const columnType = (columnName: string) => {
+        const column = restore.schema.columns.find((candidate) => candidate.name === columnName);
+        if (!column) throw new BackupEngineError(`Journal entry schema lacks ${columnName}`);
+        return column.type;
+      };
+      const setParts = [
+        `${quoteIdentifier("status")} = $1::${columnType("status")}`,
+        `${quoteIdentifier("posted_at")} = $2::${columnType("posted_at")}`,
+        `${quoteIdentifier("posted_by")} = $3::${columnType("posted_by")}`,
+      ];
+      const values: unknown[] = [
+        "posted",
+        restore.row[postedAtIndex],
+        restore.row[postedByIndex],
+      ];
+      if (restore.reversalIndex >= 0) {
+        setParts.push(`${quoteIdentifier("reversal_of_entry_id")} = $4::${columnType("reversal_of_entry_id")}`);
+        values.push(restore.row[restore.reversalIndex]);
+      }
+      values.push(id);
+      await client.query(
+        `UPDATE ${qualifiedTable("journal_entries")} SET ${setParts.join(", ")} WHERE ${quoteIdentifier("id")} = $${values.length}`,
+        values,
+      );
+    }
+    for (const restore of journalStatusRestores) {
+      if (restore.row[restore.statusIndex] !== "reversed") continue;
+      const idIndex = restore.table.columns.indexOf("id");
+      const id = restore.row[idIndex];
+      if (id === undefined || id === null) throw new BackupEngineError("Journal entry archive lacks its primary id");
+      const statusType = restore.schema.columns.find((column) => column.name === "status")?.type;
+      if (!statusType) throw new BackupEngineError("Journal entry schema lacks status");
+      await client.query(
+        `UPDATE ${qualifiedTable("journal_entries")} SET ${quoteIdentifier("status")} = $1::${statusType} WHERE ${quoteIdentifier("id")} = $2`,
+        ["reversed", id],
+      );
+    }
+
+    // Existing sequences and dedicated invoice-number counter tables are
+    // deliberately never lowered by a historical restore.
     for (const floor of sequenceFloors) {
       const restoredMaximum = await client.query(
         `SELECT max(${quoteIdentifier(floor.column)})::text AS max_value FROM ${qualifiedTable(floor.table)}`,
@@ -1161,6 +1396,36 @@ export function createBackupEngine(options: BackupEngineOptions) {
     }
   }
 
+  async function assertInvoiceNumberHighWater(client: BackupDbClient, archivedTables: TableArchive[], liveTables: TableInfo[]) {
+    const invoiceSchema = liveTables.find((table) =>
+      table.name === "invoices" && table.columns.some((column) => column.name === "sequence_number"),
+    );
+    if (!invoiceSchema) return;
+    const archived = archivedTables.find((table) => table.name === "invoices");
+    if (!archived) throw new BackupEngineError("Backup is missing invoices needed to verify the external invoice-number high-water");
+    const archivedIndex = archived.columns.indexOf("sequence_number");
+    if (archivedIndex < 0) throw new BackupEngineError("Backup is missing the invoice-number high-water column");
+    let archivedMaximum = 0n;
+    for (const row of archived.rows) {
+      const value = row[archivedIndex];
+      if (value === null) continue;
+      if (!/^-?\d+$/.test(value)) throw new BackupEngineError("Backup contains an invalid invoice-number high-water value");
+      const parsed = BigInt(value);
+      if (parsed > archivedMaximum) archivedMaximum = parsed;
+    }
+    const current = await client.query(
+      `SELECT GREATEST(COALESCE(MAX(${quoteIdentifier("sequence_number")}), 0), 0)::text AS max_value FROM ${qualifiedTable("invoices")}`,
+    );
+    const currentValue = current.rows[0]?.max_value;
+    if (currentValue === null || currentValue === undefined) return;
+    const currentMaximum = BigInt(String(currentValue));
+    if (currentMaximum > archivedMaximum) {
+      throw new BackupEngineError(
+        `Restore refused because it would lower the external invoice-number high-water from ${currentMaximum} to ${archivedMaximum}; retain or advance the invoice counter before retrying`,
+      );
+    }
+  }
+
   async function runBackup(input: { id: string; reason: BackupReason; actorId: number | null }): Promise<BackupSummary> {
     const id = checkBackupId(input.id);
     if (!["manual", "scheduled", "pre_restore"].includes(input.reason)) throw new BackupEngineError("Invalid backup reason");
@@ -1168,9 +1433,10 @@ export function createBackupEngine(options: BackupEngineOptions) {
       throw new BackupEngineError("Invalid backup actor identifier");
     }
     return withOperationLock(async (client) => {
+      await waitForObjectUploadQuiescence("backup");
       const tables = await introspectTables(client);
       const schemaHash = await currentSchemaHash(client);
-      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ WRITE");
       let committed = false;
       try {
         await client.query("SET LOCAL lock_timeout = '30s'");
@@ -1289,6 +1555,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
   async function runRestore(id: string): Promise<void> {
     checkBackupId(id);
     await withOperationLock(async (client) => {
+      await waitForObjectUploadQuiescence("restore");
       const schemaHash = await currentSchemaHash(client);
       const tables = await introspectTables(client);
       // Every archive object, file checksum, path and schema fingerprint is verified,
@@ -1310,6 +1577,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
       }
       let rollbackFiles: Awaited<ReturnType<typeof restoreFiles>> | undefined;
       let committed = false;
+      let commitSent = false;
       try {
         await client.query("BEGIN");
         await client.query("SET LOCAL lock_timeout = '30s'");
@@ -1321,11 +1589,19 @@ export function createBackupEngine(options: BackupEngineOptions) {
         if (lockedSchemaHash !== archive.manifest.schemaHash) {
           throw new BackupEngineError("Database schema changed before restore acquired its write locks");
         }
+        await assertInvoiceNumberHighWater(client, archive.tables, tables);
         rollbackFiles = await restoreFiles(archive);
         await clearAndRestoreDatabase(client, archive.tables, tables);
+        commitSent = true;
         await client.query("COMMIT");
         committed = true;
       } catch (error) {
+        if (commitSent) {
+          throw new BackupRecoveryRequiredError(
+            "Restore COMMIT was sent but its outcome could not be confirmed; keep maintenance mode enabled and require operator recovery",
+            { cause: error },
+          );
+        }
         let databaseRollbackError: unknown;
         if (!committed) {
           try {
@@ -1351,7 +1627,14 @@ export function createBackupEngine(options: BackupEngineOptions) {
       } finally {
         await rm(archive.tempDirectory, { recursive: true, force: true }).catch(() => undefined);
       }
-      await rollbackFiles?.finalize();
+      try {
+        await rollbackFiles?.finalize();
+      } catch (error) {
+        throw new BackupRecoveryRequiredError(
+          "Restore committed but private rollback evidence could not be finalized; keep maintenance mode enabled and require operator recovery",
+          { cause: error },
+        );
+      }
     });
   }
 
@@ -1365,14 +1648,7 @@ export function createBackupEngine(options: BackupEngineOptions) {
       }
       await options.storage.list("");
       for (const root of configuredRoots) {
-        if (root.kind === "contracts") await walkRoot(root);
-        else {
-          try {
-            await walkRoot(root);
-          } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-          }
-        }
+        await walkRoot(root);
       }
       return { ready: true, reason: null };
     } catch (error) {
@@ -1393,19 +1669,23 @@ export function appAssetRoots(moduleDirectory: string, env: NodeJS.ProcessEnv = 
   ];
   const siteCandidates = [
     path.resolve(moduleDirectory, "../../musk-ellolo/public/site-assets"),
-    path.resolve(moduleDirectory, "../../../musk-ellolo/public/site-assets"),
+    path.resolve(moduleDirectory, "../../../../musk-ellolo/public/site-assets"),
   ];
-  const firstExisting = (paths: string[]) => paths.find((candidate) => existsSync(candidate)) ?? paths[0]!;
+  const servedRoot = (kind: string, candidates: string[]) => {
+    const root = candidates.find((candidate) => existsSync(candidate));
+    if (!root) throw new BackupEngineError(`Required served ${kind} root is unavailable; checked: ${candidates.join(", ")}`);
+    return root;
+  };
   const roots: BackupFileRoot[] = [];
   const localContracts = env.LOCAL_CONTRACT_STORAGE_DIR?.trim();
   if (localContracts) roots.push({ kind: "contracts", directory: localContracts });
   roots.push({
     kind: "attached_assets",
-    directory: firstExisting(attachedCandidates),
+    directory: servedRoot("attached_assets", attachedCandidates),
   });
   roots.push({
     kind: "site-assets",
-    directory: firstExisting(siteCandidates),
+    directory: servedRoot("site-assets", siteCandidates),
   });
   return roots;
 }

@@ -13,6 +13,7 @@ import {
 import { OwnerConfigurationError } from "./lib/owner-auth";
 import { ObjectNotFoundError, ObjectStorageConfigurationError } from "./lib/object-storage";
 import shipHeroWebhookRouter from "./routes/shiphero-webhook";
+import { backupMaintenanceGuard } from "./lib/backup-maintenance";
 
 const app: Express = express();
 
@@ -37,6 +38,7 @@ app.use(
 );
 app.use(cors());
 app.use(cookieParser());
+app.use("/api", backupMaintenanceGuard);
 // HMAC verification needs original bytes, so this receiver precedes JSON parsing.
 app.use("/api/webhooks/shiphero", shipHeroWebhookRouter);
 app.use(express.json());

@@ -190,7 +190,6 @@ router.get("/admin/backups", route(async (_req, res) => {
       operation: runtime.operation,
       jobId: runtime.jobId,
       maintenance: runtime.maintenance,
-      recoveryRequired: runtime.recoveryRequired,
     },
     storage,
     exclusions,

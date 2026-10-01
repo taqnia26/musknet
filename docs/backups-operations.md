@@ -11,7 +11,10 @@ tables at startup.
 The API server should mount the backups router and call
 `startBackupWorker()` from its normal server startup wiring. The worker uses a
 PostgreSQL session advisory lock plus a persisted lease/heartbeat, so at most one
-replica claims and runs a durable job. Its timer is process-local: daily/weekly
+replica claims and runs a durable job. The worker coordination lock uses
+one-integer key `764211902`; the shared/exclusive application write fence uses
+the distinct one-integer key `764211904`, while the backup engine uses its own
+two-integer lock. Its timer is process-local: daily/weekly
 jobs are not guaranteed to wake an autoscaled deployment that has gone to
 sleep. Keep at least one API worker process alive continuously or use a
 continuously running worker deployment. On restart, an expired in-progress job
@@ -52,11 +55,15 @@ All paths below are relative to `/api`. API names and payloads:
 * `GET /admin/backups` — returns
   `{ backups, schedule, runtime, storage, exclusions }`. Backup entries expose
   `id`, `reason`, `status`, `createdAt`, `completedAt`, `bytes`, `rowCount`,
-  `tableCount`, `fileCount`, `error`, and `safetyBackupId`. The schedule
-  contains `enabled`, `frequency`, `localDate`, `localTime`, `weekday`,
-  `timeZone`, `nextRunAt`, and `lastRunAt`; runtime contains `busy`,
-  `operation`, `jobId`, and `maintenance`; storage contains `ready` and
-  `reason`.
+  `tableCount`, `fileCount`, `error`, and `safetyBackupId`. Counts are numeric
+  and default to `0` while queued, never `null`. Reasons are `manual`,
+  `scheduled`, `restore`, and `pre_restore`; `pre_restore` is the mandatory
+  safety snapshot. The schedule contains `enabled`, `frequency`, `localDate`,
+  `localTime`, `weekday`, `timeZone`, `nextRunAt`, and `lastRunAt`; runtime
+  contains `busy`, `operation`, `jobId`, and `maintenance`; the sentinel
+  `operation: "recovery_required"` signals operator recovery. Storage contains
+  `ready` and `reason`. All response
+  timestamps are ISO-8601 strings.
 * `POST /admin/backups` — optional body `{ "label": "..." }`; returns
   `{ "job": record }` with HTTP 202.
 * `PUT /admin/backups/schedule` — body
@@ -80,18 +87,64 @@ than enqueuing every missed interval.
 ## Restore safety and maintenance
 
 Restore preview calls the backup engine's manifest/integrity inspection before
-the restore can be queued. The worker checks it again, marks runtime maintenance
-before restore work, creates and completes a separate `restore-safety` backup,
+the restore can be queued. The worker checks it again and marks runtime
+maintenance during the entire backup or restore job, including file reads and
+writes. After setting maintenance, it obtains the exclusive application write
+fence to drain already-admitted shared-fence writers before starting engine
+work; API mutations and admitted background writers must hold the shared fence.
+It creates and completes a separate `pre_restore` safety backup,
 persists its UUID as `safetyBackupId`, and only then invokes the restore engine.
-Any error fails the restore job and the worker's `finally` path clears
-maintenance. A restore never proceeds if the safety snapshot fails.
+Normal completion or ordinary failure resets maintenance in the worker's
+`finally` path. A restore never proceeds if the safety snapshot fails.
 
 Use `getMaintenanceState()` in server middleware to read the persisted runtime
-flag. While `maintenance` is true, block unsafe/non-GET application requests;
-`backupExemptFromMaintenance(method, path)` identifies the guarded backups GET
-paths that must remain readable. Backup POST/PUT routes are not exempt. Do not
-mount a broad pathless authentication middleware for this feature; its router
-auth is scoped to `/admin/backups`.
+flag. While `maintenance` is true, block unsafe application requests. The outer
+middleware must exempt the guarded `/admin/backups` namespace using
+`backupExemptFromMaintenance(method, path)`; that router enforces a fresh
+superadministrator session and access grant and rejects mutations when recovery
+is required. Its authentication middleware is scoped to `/admin/backups`.
+
+### Recovery-required state
+
+If the engine throws `BackupRecoveryRequiredError`, or the worker lease expires
+during a restore, the job remains `failed` and runtime persists
+`recoveryRequired: true`, `operation: "recovery_required"`, and
+`maintenance: true`. The worker neither clears this state nor resumes queued
+jobs after restart. Reads remain available to a freshly authenticated and
+unlocked superadministrator; mutations return HTTP 423 until recovery is
+complete.
+
+An authorized operator should:
+
+1. Keep application writes blocked and inspect the failed restore record, its
+   `safetyBackupId`, engine error, database state, and affected files. Do not
+   mark the restore job completed or automatically retry it.
+2. Verify the live database and file state against the completed safety
+   snapshot, using a separately reviewed recovery procedure where needed. If
+   verification is inconclusive, leave maintenance enabled and escalate.
+3. Only after external validation confirms that the live store is consistent,
+   use a privileged database session to clear the sentinel in a transaction:
+
+   ```sql
+   BEGIN;
+   SELECT id, operation, job_id, maintenance, recovery_required
+   FROM backup_runtime WHERE id = 1 FOR UPDATE;
+   UPDATE backup_runtime
+   SET operation = NULL,
+       job_id = NULL,
+       maintenance = false,
+       recovery_required = false,
+       lease_owner = NULL,
+       lease_expires_at = NULL,
+       heartbeat_at = now(),
+       updated_at = now()
+   WHERE id = 1 AND recovery_required = true;
+   COMMIT;
+   ```
+
+   Keep the restore job `failed`; clearing runtime is an explicit operator
+   attestation, not a fake completion or automatic resume. Queued jobs can run
+   only after this deliberate clearing step.
 
 ## API error responses
 
@@ -100,7 +153,8 @@ Responses use `{ "error": "..." }`. Important status/error pairs:
 * **401** — `Admin authentication required`, or `Owner password is incorrect`.
 * **403** — `Super administrator access required`.
 * **423** — `Backup access is locked; unlock with the owner password`, or
-  `Backup access is expired or invalid; unlock again`.
+  `Backup access is expired or invalid; unlock again`, or
+  `Backup recovery required; maintenance remains enabled until an operator completes recovery`.
 * **429** — `Too many incorrect backup password attempts; try again in 15 minutes`.
 * **400** — invalid UUID, schedule, label, missing password, or a confirmation
   that does not exactly match the requested backup UUID.

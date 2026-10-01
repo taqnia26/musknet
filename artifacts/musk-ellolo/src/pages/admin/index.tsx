@@ -42,6 +42,7 @@ import AdminPurchases from '@/pages/admin/purchases';
 import AdminWalletBilling from '@/pages/admin/wallet-billing';
 import AdminGiftingIssues from '@/pages/admin/gifting-issues';
 import OwnerCredentialsSettings from '@/pages/admin/owner-credentials';
+import AdminBackups from '@/pages/admin/backups';
 import AdminInfluencers from '@/pages/admin/influencers';
 import AdminCampaigns from '@/pages/admin/campaigns';
 import { MarketingOverview, MarketingContent, MarketingCalendar, MarketingChannels } from '@/pages/admin/social-marketing';
@@ -128,6 +129,7 @@ export default function AdminRoutes() {
         <Route path="/admin/marketing" component={AdminCampaigns} />
         <Route path="/admin/integrations" component={AdminIntegrations} />
         <Route path="/admin/settings/owner-credentials" component={OwnerCredentialsSettings} />
+        <Route path="/admin/settings/backups" component={AdminBackups} />
         <Route component={AdminNotFound} />
       </Switch>
     </AdminLayout>

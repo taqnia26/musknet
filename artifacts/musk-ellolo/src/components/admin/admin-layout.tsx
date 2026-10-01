@@ -187,6 +187,7 @@ export const navStructure = [
     ]
   },
   { href: '/admin/settings/owner-credentials', icon: KeyRound, labelEn: 'Owner credentials', labelAr: 'بيانات دخول المالك', superAdminOnly: true, direct: true },
+  { href: '/admin/settings/backups', icon: Warehouse, labelEn: 'Backups & restore', labelAr: 'النسخ الاحتياطي والاستعادة', superAdminOnly: true, direct: true },
 ];
 
 export const isAdminNavActive = (href: string, location: string) =>

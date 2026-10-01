@@ -8,10 +8,12 @@ import storageRouter from "./storage";
 import analyticsRouter from "./analytics";
 import influencerRouter from "./influencer";
 import whatsappRouter from "./whatsapp";
+import backupsRouter from "./backups";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(backupsRouter);
 router.use(storefrontRouter);
 router.use(storageRouter);
 router.use(analyticsRouter);

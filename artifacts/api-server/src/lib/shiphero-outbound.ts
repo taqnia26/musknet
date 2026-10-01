@@ -853,9 +853,12 @@ export function startShipHeroOutboundWorker(intervalMs = 5_000): () => void {
     if (running) return;
     running = true;
     try {
-      const service = await getDefaultService();
-      await service.recoverStaleSendingDispatches();
-      await service.processShipHeroDispatchQueue();
+      const { withBackupWriteFence } = await import("./backup-fence");
+      await withBackupWriteFence(async () => {
+        const service = await getDefaultService();
+        await service.recoverStaleSendingDispatches();
+        await service.processShipHeroDispatchQueue();
+      });
     } catch (error) {
       const { logger } = await import("./logger");
       logger.error({ error: safeErrorMessage(error, process.env) }, "ShipHero outbound worker iteration failed");

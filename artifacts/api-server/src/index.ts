@@ -4,6 +4,7 @@ import { whatsappManager } from "./lib/whatsapp";
 import { getShipHeroSettings } from "./lib/shiphero-config";
 import { startShipHeroOutboundWorker } from "./lib/shiphero-outbound";
 import { startShipHeroWebhookWorker } from "./lib/shiphero-webhooks";
+import { startBackupWorker } from "./lib/backup-control";
 
 const rawPort = process.env["PORT"];
 
@@ -26,6 +27,7 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  startBackupWorker();
   void whatsappManager.restore().catch(() => logger.warn("Could not restore WhatsApp connection"));
   void getShipHeroSettings().then(() => {
     startShipHeroOutboundWorker();

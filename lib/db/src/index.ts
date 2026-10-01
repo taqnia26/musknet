@@ -11,6 +11,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Writer fences must not occupy the business pool while handlers await queries.
+export const backupWritePool = new Pool({ connectionString: process.env.DATABASE_URL, max: 32 });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";

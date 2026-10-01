@@ -40,7 +40,7 @@ export const backupRecordsTable = pgTable("backup_records", {
   index("backup_records_created_idx").on(table.createdAt),
   index("backup_records_status_created_idx").on(table.status, table.createdAt),
   uniqueIndex("backup_records_one_active_job").on(sql`(1)`)
-    .where(sql`${table.status} in ('queued', 'running') and ${table.reason} <> 'restore-safety'`),
+    .where(sql`${table.status} in ('queued', 'running') and ${table.reason} <> 'pre_restore'`),
 ]);
 
 export const backupSettingsTable = pgTable("backup_settings", {

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  backupEngineRunInput,
   backupExemptFromMaintenance,
+  normalizeBackupCounts,
   nextScheduledAt,
   sanitizeBackupError,
   validateBackupSchedule,
+  withBackupWorkerLock,
   type BackupScheduleInput,
 } from "./backup-control";
 
@@ -18,6 +21,58 @@ const dailySchedule = (overrides: Partial<BackupScheduleInput> = {}): BackupSche
 });
 
 describe("backup control scheduling", () => {
+  it("passes null actor ids for scheduled system backups", () => {
+    expect(backupEngineRunInput({ id: "scheduled-job", actorId: null }, "scheduled")).toEqual({
+      id: "scheduled-job",
+      reason: "scheduled",
+      actorId: null,
+    });
+  });
+
+  it("rejects missing engine counts instead of fabricating zeros", () => {
+    expect(normalizeBackupCounts({
+      bytes: 24,
+      rowCount: 3,
+      tableCount: 2,
+      fileCount: 1,
+    })).toEqual({ bytes: 24, rowCount: 3, tableCount: 2, fileCount: 1 });
+    expect(() => normalizeBackupCounts({ rowCount: 3, tableCount: 2, fileCount: 1 }))
+      .toThrow("Backup engine returned an invalid bytes count");
+  });
+
+  it("balances the control lock across sequential jobs on the same connection", async () => {
+    let locked = false;
+    const calls: string[] = [];
+    const client = {
+      async query<T extends Record<string, unknown>>(text: string): Promise<{ rows: T[] }> {
+        if (text.includes("pg_try_advisory_lock")) {
+          calls.push("lock");
+          const acquired = !locked;
+          locked = acquired || locked;
+          return { rows: [{ locked: acquired } as unknown as T] };
+        }
+        if (text.includes("pg_advisory_unlock")) {
+          calls.push("unlock");
+          const wasLocked = locked;
+          locked = false;
+          return { rows: [{ pg_advisory_unlock: wasLocked } as unknown as T] };
+        }
+        throw new Error("Unexpected worker query");
+      },
+      release() {},
+    };
+
+    for (const job of ["job-1", "job-2"]) {
+      const result = await withBackupWorkerLock(client, async () => {
+        calls.push(job);
+        return job;
+      });
+      expect(result).toEqual({ acquired: true, value: job });
+      expect(locked).toBe(false);
+    }
+    expect(calls).toEqual(["lock", "job-1", "unlock", "lock", "job-2", "unlock"]);
+  });
+
   it("computes local daily times with the selected IANA zone", () => {
     expect(nextScheduledAt(dailySchedule(), new Date("2025-01-01T14:00:00.000Z"))?.toISOString())
       .toBe("2025-01-01T15:00:00.000Z");

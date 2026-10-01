@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, lte } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, lte } from "drizzle-orm";
 import {
   backupRecordsTable,
   backupRuntimeTable,
@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import type { BackupRecord, BackupSettings } from "@workspace/db";
 import { BackupRecoveryRequiredError } from "./backups/index";
+import { withExclusiveBackupFence } from "./backup-fence";
 
 const DEFAULT_TIME_ZONE = "Asia/Riyadh";
 const WORKER_POLL_MS = 10_000;
@@ -22,6 +23,12 @@ type BackupWorkerClient = {
   query<T extends Record<string, unknown>>(text: string, values?: unknown[]): Promise<{ rows: T[] }>;
   release(error?: Error | boolean): void;
 };
+
+class BackupCompletionUncertainError extends BackupRecoveryRequiredError {
+  constructor(cause: unknown) {
+    super("Restore completed but its job status could not be confirmed; operator recovery is required", { cause });
+  }
+}
 
 export type BackupFrequency = "once" | "daily" | "weekly";
 export type BackupScheduleInput = {
@@ -150,7 +157,7 @@ export async function getMaintenanceState() {
     recoveryRequired: runtime?.recoveryRequired ?? false,
     operation: runtime?.operation ?? null,
     jobId: runtime?.jobId ?? null,
-    busy: runtime?.jobId !== null && runtime?.jobId !== undefined,
+    busy: Boolean(runtime?.jobId) && !runtime?.recoveryRequired,
     leaseExpiresAt: runtime?.leaseExpiresAt ?? null,
   };
 }
@@ -218,14 +225,21 @@ export function sanitizeBackupError(error: unknown) {
 }
 
 type CountValues = { bytes: number; rowCount: number; tableCount: number; fileCount: number };
-function countValues(value: unknown): CountValues {
+export function normalizeBackupCounts(value: unknown): CountValues {
   const root = value && typeof value === "object" ? value as Record<string, unknown> : {};
   const nested = root.counts && typeof root.counts === "object" ? root.counts as Record<string, unknown> : {};
   const metric = (name: string) => {
-    const number = Number(root[name] ?? nested[name]);
-    return Number.isSafeInteger(number) && number >= 0 ? number : 0;
+    const number = root[name] ?? nested[name];
+    if (typeof number !== "number" || !Number.isSafeInteger(number) || number < 0) {
+      throw new Error(`Backup engine returned an invalid ${name} count`);
+    }
+    return number;
   };
   return { bytes: metric("bytes"), rowCount: metric("rowCount"), tableCount: metric("tableCount"), fileCount: metric("fileCount") };
+}
+
+export function backupEngineRunInput(record: Pick<BackupRecord, "id" | "actorId">, reason: BackupEngineReason) {
+  return { id: record.id, reason, actorId: record.actorId };
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -250,14 +264,11 @@ export async function getBackupStorageStatus() {
 }
 
 export async function getBackupExclusions() {
-  try {
-    const engine = await backupEngine() as { BACKUP_EXCLUSIONS?: unknown };
-    return Array.isArray(engine.BACKUP_EXCLUSIONS)
-      ? engine.BACKUP_EXCLUSIONS.filter((item): item is string => typeof item === "string")
-      : [];
-  } catch {
-    return [];
+  const engine = await backupEngine() as { BACKUP_EXCLUSIONS?: unknown };
+  if (!Array.isArray(engine.BACKUP_EXCLUSIONS)) {
+    throw new Error("Backup engine exclusion policy is unavailable");
   }
+  return engine.BACKUP_EXCLUSIONS.filter((item): item is string => typeof item === "string");
 }
 
 export async function listBackupRecords() {
@@ -291,7 +302,7 @@ export async function previewBackup(backupId: string) {
   const inspected = await (await backupEngine()).inspectBackup(backupId);
   const root = asRecord(inspected);
   const manifest = asRecord(root.manifest ?? inspected);
-  const counts = countValues(root.counts ? root : manifest);
+  const counts = normalizeBackupCounts(root.counts ? root : manifest);
   const compatible = root.compatible === true || manifest.compatible === true;
   const reason = typeof root.reason === "string" ? sanitizeBackupError(root.reason)
     : typeof manifest.reason === "string" ? sanitizeBackupError(manifest.reason)
@@ -301,10 +312,10 @@ export async function previewBackup(backupId: string) {
   return {
     id: backupId,
     createdAt: record.createdAt,
-    bytes: counts.bytes ?? record.bytes,
-    rowCount: counts.rowCount ?? record.rowCount,
-    tableCount: counts.tableCount ?? record.tableCount,
-    fileCount: counts.fileCount ?? record.fileCount,
+    bytes: counts.bytes,
+    rowCount: counts.rowCount,
+    tableCount: counts.tableCount,
+    fileCount: counts.fileCount,
     compatible,
     reason,
     exclusions: exclusions.filter((item): item is string => typeof item === "string"),
@@ -315,11 +326,11 @@ async function updateRecord(id: string, values: Partial<typeof backupRecordsTabl
   await db.update(backupRecordsTable).set(values).where(eq(backupRecordsTable.id, id));
 }
 
-async function runBackupRecord(id: string, reason: BackupEngineReason, actorId: number) {
+async function runBackupRecord(record: Pick<BackupRecord, "id" | "actorId">, reason: BackupEngineReason) {
   const storage = await probeStorage();
   if (!storage.ready) throw new Error(storage.reason ?? "Backup storage is unavailable");
-  const result = await (await backupEngine()).runBackup({ id, reason, actorId });
-  return countValues(result);
+  const result = await (await backupEngine()).runBackup(backupEngineRunInput(record, reason));
+  return normalizeBackupCounts(result);
 }
 
 async function finishBackupRecord(id: string, counts: CountValues) {
@@ -327,10 +338,9 @@ async function finishBackupRecord(id: string, counts: CountValues) {
 }
 
 async function processBackupJob(job: BackupRecord) {
-  const actorId = job.actorId ?? 0;
   if (job.reason !== "restore") {
     const reason = job.reason === "scheduled" ? "scheduled" : "manual";
-    const counts = await runBackupRecord(job.id, reason, actorId);
+    const counts = await runBackupRecord(job, reason);
     await finishBackupRecord(job.id, counts);
     return;
   }
@@ -346,7 +356,7 @@ async function processBackupJob(job: BackupRecord) {
   }).returning();
   await updateRecord(job.id, { safetyBackupId: safetyRecord.id });
   try {
-    const safetyCounts = await runBackupRecord(safetyRecord.id, "pre_restore", actorId);
+    const safetyCounts = await runBackupRecord(safetyRecord, "pre_restore");
     await finishBackupRecord(safetyRecord.id, safetyCounts);
   } catch (error) {
     await updateRecord(safetyRecord.id, {
@@ -359,7 +369,11 @@ async function processBackupJob(job: BackupRecord) {
 
   // The engine is invoked only after a completed safety snapshot is durable.
   await (await backupEngine()).runRestore(targetId);
-  await updateRecord(job.id, { status: "completed", completedAt: new Date(), error: null });
+  try {
+    await updateRecord(job.id, { status: "completed", completedAt: new Date(), error: null });
+  } catch (error) {
+    throw new BackupCompletionUncertainError(error);
+  }
 }
 
 async function runtimeUpsert() {
@@ -453,13 +467,13 @@ async function processNextJob(workerId: string) {
   });
   const runningJob = { ...job, status: "running" as const };
   let requiresRecovery = false;
+  let keepLeaseForRecovery = false;
   try {
-    await processBackupJob(runningJob);
+    await withExclusiveBackupFence(() => processBackupJob(runningJob));
   } catch (error) {
-    const sanitized = sanitizeBackupError(error);
-    await updateRecord(job.id, { status: "failed", error: sanitized, completedAt: new Date() });
-    if (error instanceof BackupRecoveryRequiredError) {
-      requiresRecovery = true;
+    requiresRecovery = error instanceof BackupRecoveryRequiredError;
+    if (requiresRecovery) {
+      console.error("Backup worker requires operator recovery:", sanitizeBackupError(error));
       const at = new Date();
       await db.update(backupRuntimeTable).set({
         operation: "recovery_required",
@@ -471,8 +485,17 @@ async function processNextJob(workerId: string) {
         updatedAt: at,
       }).where(and(eq(backupRuntimeTable.id, 1), eq(backupRuntimeTable.jobId, job.id)));
     }
+    if (!(error instanceof BackupCompletionUncertainError)) {
+      const sanitized = sanitizeBackupError(error);
+      try {
+        await updateRecord(job.id, { status: "failed", error: sanitized, completedAt: new Date() });
+      } catch (persistError) {
+        keepLeaseForRecovery = true;
+        throw persistError;
+      }
+    }
   } finally {
-    if (!requiresRecovery) {
+    if (!requiresRecovery && !keepLeaseForRecovery) {
       const endedAt = new Date();
       await db.update(backupRuntimeTable).set({
         jobId: null, operation: null, maintenance: false, recoveryRequired: false, leaseOwner: workerId,
@@ -483,6 +506,22 @@ async function processNextJob(workerId: string) {
   return true;
 }
 
+export async function withBackupWorkerLock<T>(
+  client: BackupWorkerClient,
+  run: () => Promise<T>,
+): Promise<{ acquired: false } | { acquired: true; value: T }> {
+  const lock = await client.query<{ locked: boolean }>(
+    "select pg_try_advisory_lock($1) as locked",
+    [WORKER_ADVISORY_LOCK],
+  );
+  if (!lock.rows[0]?.locked) return { acquired: false };
+  try {
+    return { acquired: true, value: await run() };
+  } finally {
+    await client.query("select pg_advisory_unlock($1)", [WORKER_ADVISORY_LOCK]);
+  }
+}
+
 let workerStarted = false;
 let workerStopping = false;
 export function startBackupWorker() {
@@ -490,84 +529,69 @@ export function startBackupWorker() {
   workerStarted = true;
   workerStopping = false;
   const workerId = randomUUID();
-  let client: BackupWorkerClient | undefined;
   let heartbeat: ReturnType<typeof setInterval> | undefined;
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const releaseIdleLease = async (workerId: string) => {
+    const at = new Date();
+    await db.update(backupRuntimeTable).set({
+      leaseOwner: null, leaseExpiresAt: null, heartbeatAt: at, updatedAt: at,
+    }).where(and(
+      eq(backupRuntimeTable.id, 1),
+      eq(backupRuntimeTable.leaseOwner, workerId),
+      isNull(backupRuntimeTable.jobId),
+    ));
+  };
   const loop = async () => {
     try {
       while (!workerStopping) {
+        let currentClient: BackupWorkerClient | undefined;
+        let destroyClient = false;
+        let waitMs = WORKER_POLL_MS;
         try {
-          const currentClient = client ?? await pool.connect();
-          client = currentClient;
-          const lock = await currentClient.query<{ locked: boolean }>("select pg_try_advisory_lock($1) as locked", [WORKER_ADVISORY_LOCK]);
-          if (!lock.rows[0]?.locked) {
-            currentClient.release();
-            client = undefined;
-            await sleep(WORKER_POLL_MS);
-            continue;
-          }
+          currentClient = await pool.connect();
+          const iteration = await withBackupWorkerLock(currentClient, async () => {
+            await runtimeUpsert();
+            await recoverExpiredLease();
+            const priorRuntime = await getMaintenanceState();
+            if (priorRuntime.recoveryRequired) return WORKER_POLL_MS;
+            if (priorRuntime.jobId) {
+              return Math.max(1000, Math.min(
+                WORKER_POLL_MS,
+                (priorRuntime.leaseExpiresAt?.getTime() ?? Date.now()) - Date.now() + 500,
+              ));
+            }
+            const now = new Date();
+            await db.update(backupRuntimeTable).set({
+              leaseOwner: workerId, leaseExpiresAt: new Date(now.getTime() + LEASE_MS),
+              heartbeatAt: now, updatedAt: now,
+            }).where(eq(backupRuntimeTable.id, 1));
+            heartbeat = setInterval(() => {
+              const at = new Date();
+              void db.update(backupRuntimeTable).set({
+                leaseExpiresAt: new Date(at.getTime() + LEASE_MS), heartbeatAt: at, updatedAt: at,
+              }).where(and(eq(backupRuntimeTable.id, 1), eq(backupRuntimeTable.leaseOwner, workerId)))
+                .catch(() => undefined);
+            }, HEARTBEAT_MS);
 
-          await runtimeUpsert();
-          await recoverExpiredLease();
-          const priorRuntime = await getMaintenanceState();
-          if (priorRuntime.recoveryRequired) {
-            if (heartbeat) clearInterval(heartbeat);
-            heartbeat = undefined;
-            await currentClient.query("select pg_advisory_unlock($1)", [WORKER_ADVISORY_LOCK]);
-            currentClient.release();
-            client = undefined;
-            await sleep(WORKER_POLL_MS);
-            continue;
-          }
-          if (priorRuntime.jobId) {
-            const waitMs = Math.max(1000, Math.min(WORKER_POLL_MS, (priorRuntime.leaseExpiresAt?.getTime() ?? Date.now()) - Date.now() + 500));
-            await currentClient.query("select pg_advisory_unlock($1)", [WORKER_ADVISORY_LOCK]);
-            currentClient.release();
-            client = undefined;
-            await sleep(waitMs);
-            continue;
-          }
-          const now = new Date();
-          await db.update(backupRuntimeTable).set({
-            leaseOwner: workerId, leaseExpiresAt: new Date(now.getTime() + LEASE_MS),
-            heartbeatAt: now, updatedAt: now,
-          }).where(eq(backupRuntimeTable.id, 1));
-          heartbeat = setInterval(() => {
-            const at = new Date();
-            void db.update(backupRuntimeTable).set({
-              leaseExpiresAt: new Date(at.getTime() + LEASE_MS), heartbeatAt: at, updatedAt: at,
-            }).where(and(eq(backupRuntimeTable.id, 1), eq(backupRuntimeTable.leaseOwner, workerId)))
-              .catch(() => undefined);
-          }, HEARTBEAT_MS);
-
-          const processed = await processNextJob(workerId);
-          if (processed) continue;
-          // Reacquire / release between scheduler polls so a sleeping deployment
-          // does not falsely suggest the scheduler has run while it was stopped.
-          clearInterval(heartbeat);
-          heartbeat = undefined;
-          await currentClient.query("select pg_advisory_unlock($1)", [WORKER_ADVISORY_LOCK]);
-          currentClient.release();
-          client = undefined;
-          await sleep(WORKER_POLL_MS);
+            const processed = await processNextJob(workerId);
+            await releaseIdleLease(workerId);
+            return processed ? 0 : WORKER_POLL_MS;
+          });
+          waitMs = iteration.acquired ? iteration.value : WORKER_POLL_MS;
         } catch (error) {
           console.error("Backup worker iteration failed:", sanitizeBackupError(error));
+          destroyClient = true;
+          waitMs = WORKER_POLL_MS;
+        } finally {
           if (heartbeat) clearInterval(heartbeat);
           heartbeat = undefined;
-          if (client) {
-            try { client.release(true); } catch { /* already released */ }
-            client = undefined;
-          }
-          await sleep(WORKER_POLL_MS);
+          currentClient?.release(destroyClient);
         }
+        if (waitMs > 0) await sleep(waitMs);
       }
     } finally {
       if (heartbeat) clearInterval(heartbeat);
-      if (client) {
-        try { await client.query("select pg_advisory_unlock($1)", [WORKER_ADVISORY_LOCK]); } catch { /* connection lost */ }
-        client.release();
-      }
       workerStarted = false;
     }
   };
