@@ -33,16 +33,27 @@ The edit-control audit found no additional persisted status bypasses in the prod
 
 ## Not persisted / excluded from destructive confirmation
 
-- Site-content row removal only changes `localItems`; Save sends the remaining items to an upsert endpoint. The server loops over submitted keys and inserts/updates them; omitted keys are not deleted. Therefore no persisted-delete confirmation or fake delete path was added. A real delete operation is a deferred product/API capability.
+- Site-content new-draft removal only changes `localItems` and is labelled “Remove draft only” / «إزالة المسودة فقط». Saved rows use a separate confirmed permanent-delete action; they cannot be removed as drafts. Save remains an upsert, and omitted keys are never deleted.
 - Shopping-cart quantity edits and removing an item from the shopper's editable cart are normal cart editing, not administrative record deletion.
 - Unsaved form-row/file-selection removal and other local-only editing were not treated as persisted business-record deletion.
 
 ## Unsupported operations retained
 
-- Site-content keys have no persisted delete endpoint/semantics, so removal remains local-only.
+- Site-content deletion is restricted to the explicitly reserved inert custom-content namespace (`custom.` followed by 1–100 lowercase ASCII letters/digits/underscores/hyphens, starting with a letter/digit). All other keys, including `seller_legal_profile`, unknown legacy keys and billing/operational settings, are protected. Operational code must not store required settings in this namespace. No existing keys are renamed, converted, or deleted automatically.
 - No new order/invoice permanent-delete action, refund workflow, accounting reversal permission, or inventory bypass was introduced.
 
+## Saved site-content deletion
+
+- `DELETE /api/admin/site-content/{key}` requires the existing `site-content:delete` permission (not merely view/edit or contracts access), evaluates the server-owned key policy, and deletes a single exact key. GET and PUT expose policy eligibility; eligibility never substitutes for permission.
+- The bilingual shared confirmation names the key, permanent deletion, loss of that row's unsaved edits, persistence after reload, and preservation of other keys/protected settings. Back/Escape send no mutation; synchronous execution guards prevent duplicate confirmations during an in-flight request.
+- The editor locks while confirming, deleting, or saving. Successful deletion removes the saved row/cache entry and refreshes the saved query without discarding unrelated dirty drafts. Save promotes new drafts to saved rows. Duplicate draft keys are rejected instead of silently overwriting saved rows.
+- Protected saved rows display a disabled protected-key action. A permitted custom key without deletion permission displays a disabled permission-required action. Errors stay in the confirmation dialog; failed deletions leave the row unchanged.
+
 ## Verification
+
+- Site-content deletion: four isolated route tests pass, covering unauthenticated/view/edit/contracts-only rejection, real deletion followed by list reload, protected/lookalike keys, upsert omission, and preservation of existing saved settings. Fixtures are uniquely named and cleaned up; no existing business key is deleted or edited.
+- Shared library code generation/typechecking and focused storefront/API TypeScript checks pass. Managed storefront and API services restart cleanly.
+- A mock-only site-content browser pass verified draft removal/cancel/Escape send zero DELETEs; rapid double confirmation sends one delayed DELETE; a deleted row stays absent after reload; unrelated drafts/edits survive the refetch; protected/view-only deletion is disabled; and a 403 leaves the dialog and saved row intact. Arabic/English and 390px layout were checked without real credentials or database mutations. Draft promotion via PUT and a reusable browser regression file were not exercised in this pass.
 
 - Shared libraries and final frontend TypeScript checks passed. The production Vite build passed with the managed service's port and root base path supplied.
 - Static review covered the added handlers, mutation snapshots, callbacks, idempotency, and duplicate/cancellation guards. It caught and closed the distributor-catalog edit-form bypass.

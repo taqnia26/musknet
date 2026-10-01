@@ -5568,6 +5568,74 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getAdminUpsertSiteContentMutationOptions(options));
     }
 
+export const getAdminDeleteSiteContentUrl = (key: string,) => {
+
+
+
+
+  return `/api/admin/site-content/${key}`
+}
+
+/**
+ * Deletes one saved custom.* content key with site-content delete permission. All other keys are protected. Upsert omission never deletes content.
+ */
+export const adminDeleteSiteContent = async (key: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getAdminDeleteSiteContentUrl(key),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminDeleteSiteContentMutationOptions = <TError = ErrorType<Error | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteSiteContent>>, TError,{key: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminDeleteSiteContent>>, TError,{key: string}, TContext> => {
+
+const mutationKey = ['adminDeleteSiteContent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminDeleteSiteContent>>, {key: string}> = (props) => {
+          const {key} = props ?? {};
+
+          return  adminDeleteSiteContent(key,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminDeleteSiteContentMutationResult = NonNullable<Awaited<ReturnType<typeof adminDeleteSiteContent>>>
+
+    export type AdminDeleteSiteContentMutationError = ErrorType<Error | void>
+
+    export const useAdminDeleteSiteContent = <TError = ErrorType<Error | void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminDeleteSiteContent>>, TError,{key: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminDeleteSiteContent>>,
+        TError,
+        {key: string},
+        TContext
+      > => {
+      return useMutation(getAdminDeleteSiteContentMutationOptions(options));
+    }
+
 export const getAdminListDistributorCatalogUrl = () => {
 
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useAdminListSiteContent, useAdminUpsertSiteContent, getAdminListSiteContentQueryKey } from '@workspace/api-client-react';
+import { useEffect, useRef, useState } from 'react';
+import { useAdminListSiteContent, useAdminUpsertSiteContent, useAdminDeleteSiteContent, useGetAdminMe, getAdminListSiteContentQueryKey, type SiteContent } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,22 +10,34 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { sellerDefaults, sellerNumberLabel, sellerProfile } from '../contracts/seller-defaults';
+import { useLanguage } from '@/hooks/use-language';
+import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
+import { hasPermission } from '@/lib/permissions';
 
 const defaultSellerLegalProfile = sellerDefaults;
 
 export default function AdminSiteContent() {
   const { data: content, isLoading } = useAdminListSiteContent();
   const upsert = useAdminUpsertSiteContent();
+  const deleteContent = useAdminDeleteSiteContent();
+  const { data: admin } = useGetAdminMe();
+  const { t } = useLanguage();
+  const { confirmAction, confirmationDialog, isConfirming } = useDestructiveConfirmation();
+  const busy = isConfirming || upsert.isPending || deleteContent.isPending;
+  const canDelete = hasPermission(admin, 'site-content', 'delete');
+  const canEdit = hasPermission(admin, 'site-content', 'edit');
+  const dirtyRef = useRef(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const [localItems, setLocalItems] = useState<{ key: string; data: string; isNew?: boolean }[]>([]);
+  const [localItems, setLocalItems] = useState<{ key: string; data: string; isNew?: boolean; canDelete?: boolean }[]>([]);
   const [sellerLegalProfile, setSellerLegalProfile] = useState(defaultSellerLegalProfile);
 
   useEffect(() => {
-    if (content) {
+    if (content && !dirtyRef.current) {
       setLocalItems(content.filter(c => c.key !== 'seller_legal_profile').map(c => ({
         key: c.key,
+        canDelete: c.canDelete,
         data: typeof c.data === 'string' ? c.data : JSON.stringify(c.data, null, 2)
       })));
 
@@ -37,6 +49,13 @@ export default function AdminSiteContent() {
   }, [content]);
 
   const handleSave = () => {
+    if (busy || !canEdit) return;
+    const savedKeys = new Set(content?.map(item => item.key));
+    const keys = localItems.map(item => item.key);
+    if (new Set(keys).size !== keys.length || localItems.some(item => item.isNew && (savedKeys.has(item.key) || item.key === 'seller_legal_profile'))) {
+      toast({ title: t('المفتاح مستخدم بالفعل', 'Key already in use'), description: t('اختر مفتاحاً مختلفاً للمسودة؛ لا تستبدل محتوى محفوظاً بمسودة جديدة.', 'Choose a different draft key; do not overwrite saved content with a new draft.'), variant: 'destructive' });
+      return;
+    }
     try {
       const itemsToSave = localItems.map(item => {
         let parsedData: unknown = item.data;
@@ -62,7 +81,9 @@ export default function AdminSiteContent() {
       upsert.mutate(
         { data: { items: itemsToSave } },
         {
-          onSuccess: () => {
+          onSuccess: (rows) => {
+            dirtyRef.current = false;
+            queryClient.setQueryData(getAdminListSiteContentQueryKey(), rows);
             queryClient.invalidateQueries({ queryKey: getAdminListSiteContentQueryKey() });
             toast({ title: 'تم الحفظ', description: 'تم حفظ المحتوى بنجاح / Content saved successfully' });
           },
@@ -85,22 +106,48 @@ export default function AdminSiteContent() {
   };
 
   const handleAdd = () => {
+    if (busy || !canEdit) return;
+    dirtyRef.current = true;
     setLocalItems([{ key: '', data: '', isNew: true }, ...localItems]);
   };
 
   const handleRemove = (index: number) => {
+    if (busy || !localItems[index]?.isNew) return;
+    dirtyRef.current = true;
     const newItems = [...localItems];
     newItems.splice(index, 1);
     setLocalItems(newItems);
   };
 
+  const handleDeleteSaved = (key: string) => {
+    if (busy || !canDelete) return;
+    confirmAction({
+      title: t('حذف محتوى محفوظ', 'Delete saved content'),
+      description: t(
+        `سيُحذف المفتاح «${key}» وقيمته نهائياً من محتوى الموقع المحفوظ. لن يعود بعد التحديث، وستُفقد أي تعديلات غير محفوظة لهذا السطر فقط. لن تُحذف المفاتيح الأخرى أو بيانات الفوترة والإعدادات المحمية. لا يمكن التراجع عن الحذف.`,
+        `The saved key “${key}” and its value will be permanently deleted. It will not return after reload. Any unsaved edits to this row only will be lost. Other keys, billing data, and protected settings will not be deleted. This cannot be undone.`,
+      ),
+      confirmLabel: t('حذف المحفوظ نهائياً', 'Permanently delete saved content'),
+      onConfirm: async () => {
+        await deleteContent.mutateAsync({ key });
+        setLocalItems(items => items.filter(item => item.key !== key || item.isNew));
+        queryClient.setQueryData<SiteContent[]>(getAdminListSiteContentQueryKey(), rows => rows?.filter(item => item.key !== key));
+        // Dirty drafts remain local even when this refresh updates the saved list.
+        void queryClient.invalidateQueries({ queryKey: getAdminListSiteContentQueryKey() });
+        toast({ title: t('تم حذف المحتوى المحفوظ', 'Saved content deleted'), description: key });
+      },
+    });
+  };
+
   const updateItem = (index: number, field: 'key' | 'data', value: string) => {
+    dirtyRef.current = true;
     const newItems = [...localItems];
     newItems[index][field] = value;
     setLocalItems(newItems);
   };
 
   const updateSellerField = (field: keyof typeof defaultSellerLegalProfile, value: string) => {
+    dirtyRef.current = true;
     setSellerLegalProfile(prev => ({ ...prev, [field]: value }));
   };
 
@@ -109,18 +156,20 @@ export default function AdminSiteContent() {
   }
 
   return (
-    <div className="space-y-8">
+    <>
+    {confirmationDialog}
+    <fieldset disabled={busy} className="space-y-8 min-w-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">محتوى الموقع / Site Content</h1>
           <p className="text-muted-foreground mt-2">إدارة نصوص ومحتويات الموقع (Staging) والبيانات المركزية</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleAdd}>
+          <Button variant="outline" onClick={handleAdd} disabled={!canEdit || busy}>
             <Plus className="mr-2 h-4 w-4 rtl:ml-2 rtl:mr-0" />
             إضافة مفتاح جديد
           </Button>
-          <Button onClick={handleSave} disabled={upsert.isPending}>
+           <Button onClick={handleSave} disabled={!canEdit || busy}>
             {upsert.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin rtl:ml-2 rtl:mr-0" />}
             <Save className="mr-2 h-4 w-4 rtl:ml-2 rtl:mr-0" />
             حفظ التغييرات
@@ -216,10 +265,20 @@ export default function AdminSiteContent() {
 
       <div className="space-y-4">
         <h2 className="text-xl font-bold">محتويات عامة (Key/Value)</h2>
+        <p className="text-sm text-muted-foreground">
+          {t('الحفظ يضيف أو يعدل فقط، ولا يحذف المفاتيح الغائبة. للحذف استخدم «حذف المحتوى المحفوظ». المفاتيح المخصصة القابلة للحذف تبدأ بـ custom. ثم حروف إنجليزية صغيرة أو أرقام أو _ أو -. بقية المفاتيح محمية.', 'Save only adds or updates; missing keys are not deleted. Use “Delete saved content” for deletion. Deletable custom keys start with custom. followed by lowercase letters, digits, _ or -. All other keys are protected.')}
+        </p>
         <div className="grid gap-4">
           {localItems.map((item, index) => (
             <Card key={index}>
               <CardContent className="pt-6">
+                <p className="text-sm mb-4" data-testid="site-content-row-status">
+                  {item.isNew
+                    ? t('مسودة جديدة — لم تُحفظ بعد. إزالتها لا تحذف أي محتوى محفوظ.', 'New draft — not saved yet. Removing it does not delete any saved content.')
+                    : item.canDelete
+                      ? t('محتوى محفوظ — مفتاح مخصص قابل للحذف.', 'Saved content — deletable custom key.')
+                      : t('محتوى محفوظ — مفتاح محمي من الحذف.', 'Saved content — protected from deletion.')}
+                </p>
                 <div className="flex items-start gap-4">
                   <div className="flex-1 space-y-4">
                     <div className="space-y-2">
@@ -227,7 +286,8 @@ export default function AdminSiteContent() {
                       <Input
                         value={item.key}
                         onChange={(e) => updateItem(index, 'key', e.target.value)}
-                        disabled={!item.isNew}
+                        disabled={!canEdit || !item.isNew}
+                        placeholder="custom.example"
                         className="font-mono text-left"
                         dir="ltr"
                       />
@@ -235,6 +295,7 @@ export default function AdminSiteContent() {
                     <div className="space-y-2">
                       <Label>القيمة (Data / JSON)</Label>
                       <Textarea
+                        disabled={!canEdit}
                         value={item.data}
                         onChange={(e) => updateItem(index, 'data', e.target.value)}
                         rows={typeof item.data === 'string' && (item.data.trim().startsWith('{') || item.data.trim().startsWith('[')) ? 6 : 2}
@@ -244,9 +305,16 @@ export default function AdminSiteContent() {
                     </div>
                   </div>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="shrink-0 mt-8" aria-label="المزيد"><MoreHorizontal className="h-5 w-5" /></Button></DropdownMenuTrigger>
+                    <DropdownMenuTrigger asChild><Button disabled={busy} variant="ghost" size="icon" className="shrink-0 mt-8" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-5 w-5" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleRemove(index)}><Trash2 className="h-4 w-4 mr-2" />حذف</DropdownMenuItem>
+                      {item.isNew ? (
+                        <DropdownMenuItem disabled={busy} onClick={() => handleRemove(index)}><Trash2 className="h-4 w-4 mr-2" />{t('إزالة المسودة فقط', 'Remove draft only')}</DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem disabled={busy || !item.canDelete || !canDelete} className="text-destructive focus:text-destructive" onClick={() => handleDeleteSaved(item.key)}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {!item.canDelete ? t('مفتاح محمي — لا يمكن حذفه', 'Protected key — cannot delete') : !canDelete ? t('الحذف يحتاج صلاحية', 'Delete permission required') : t('حذف المحتوى المحفوظ', 'Delete saved content')}
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -260,6 +328,7 @@ export default function AdminSiteContent() {
           )}
         </div>
       </div>
-    </div>
+    </fieldset>
+    </>
   );
 }

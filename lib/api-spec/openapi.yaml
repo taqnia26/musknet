@@ -849,6 +849,23 @@ paths:
       security: [{ adminBearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SiteContentUpsert" } } } }
       responses: { "200": { description: Site content, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SiteContent" } } } } } }
+  /admin/site-content/{key}:
+    delete:
+      operationId: adminDeleteSiteContent
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      description: Deletes one saved custom.* content key with site-content delete permission. All other keys are protected. Upsert omission never deletes content.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "204": { description: Saved custom content deleted }
+        "400": { description: Protected key, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "401": { description: Authentication required }
+        "403": { description: Delete permission required }
+        "404": { description: Key not found }
   /admin/distributor-catalog:
     get:
       operationId: adminListDistributorCatalog
@@ -4299,6 +4316,7 @@ components:
         data: {}
         updatedAt: { type: string, format: date-time }
         updatedBy: { type: [string, "null"] }
+        canDelete: { type: boolean, description: Server-owned deletion eligibility; only inert custom.* content keys are eligible. Missing means protected. }
     SiteContentUpsert:
       type: object
       required: [items]

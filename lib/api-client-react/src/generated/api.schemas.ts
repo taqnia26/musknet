@@ -1655,6 +1655,8 @@ export interface SiteContent {
   updatedAt: string;
   /** @nullable */
   updatedBy?: string | null;
+  /** Server-owned deletion eligibility; only inert custom.* content keys are eligible. Missing means protected. */
+  canDelete?: boolean;
 }
 
 export type SiteContentUpsertItemsItem = {

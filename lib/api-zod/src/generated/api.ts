@@ -2486,7 +2486,8 @@ export const AdminListSiteContentResponseItem = zod.object({
   "key": zod.string(),
   "data": zod.unknown(),
   "updatedAt": zod.coerce.date(),
-  "updatedBy": zod.string().nullish()
+  "updatedBy": zod.string().nullish(),
+  "canDelete": zod.boolean().optional().describe('Server-owned deletion eligibility; only inert custom.\* content keys are eligible. Missing means protected.')
 })
 export const AdminListSiteContentResponse = zod.array(AdminListSiteContentResponseItem)
 
@@ -2506,9 +2507,23 @@ export const AdminUpsertSiteContentResponseItem = zod.object({
   "key": zod.string(),
   "data": zod.unknown(),
   "updatedAt": zod.coerce.date(),
-  "updatedBy": zod.string().nullish()
+  "updatedBy": zod.string().nullish(),
+  "canDelete": zod.boolean().optional().describe('Server-owned deletion eligibility; only inert custom.\* content keys are eligible. Missing means protected.')
 })
 export const AdminUpsertSiteContentResponse = zod.array(AdminUpsertSiteContentResponseItem)
+
+
+/**
+ * Deletes one saved custom.* content key with site-content delete permission. All other keys are protected. Upsert omission never deletes content.
+ */
+
+
+
+export const AdminDeleteSiteContentParams = zod.object({
+  "key": zod.coerce.string().min(1)
+})
+
+export const AdminDeleteSiteContentResponse = zod.void()
 
 
 export const AdminListDistributorCatalogResponseItem = zod.object({

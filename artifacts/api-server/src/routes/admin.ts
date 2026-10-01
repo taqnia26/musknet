@@ -6,6 +6,7 @@ import QRCode from "qrcode";
 import { open } from "node:fs/promises";
 import { constants } from "node:fs";
 import { suggestContractSignedDate } from "../lib/contract-signed-date";
+import { canDeleteSiteContentKey } from "../lib/site-content-policy";
 import { createSocialMarketingRouter } from "./social-marketing";
 import { createProductionPlansRouter } from "./production-plans";
 import { createAnnualAgendaRouter } from "./annual-agenda";
@@ -1012,7 +1013,10 @@ router.get("/admin/site-content", route(async (_req, res) => {
   const rows = await db.select().from(siteContentTable)
     .where(canViewContent ? undefined : eq(siteContentTable.key, "seller_legal_profile"))
     .orderBy(siteContentTable.key);
-  res.json(Api.AdminListSiteContentResponse.parse(rows));
+  res.json(Api.AdminListSiteContentResponse.parse(rows.map((row) => ({
+    ...row,
+    canDelete: canDeleteSiteContentKey(row.key),
+  }))));
 }));
 router.put("/admin/site-content", permit("site-content", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminUpsertSiteContentBody, req.body, res); if (!body) return;
@@ -1021,7 +1025,28 @@ router.put("/admin/site-content", permit("site-content", "edit"), route(async (r
       .onConflictDoUpdate({ target: siteContentTable.key, set: { data: item.data, updatedBy: String(res.locals.admin.id), updatedAt: new Date() } });
   }
   const rows = await db.select().from(siteContentTable).orderBy(siteContentTable.key);
-  res.json(Api.AdminUpsertSiteContentResponse.parse(rows));
+  res.json(Api.AdminUpsertSiteContentResponse.parse(rows.map((row) => ({
+    ...row,
+    canDelete: canDeleteSiteContentKey(row.key),
+  }))));
+}));
+router.delete("/admin/site-content/:key", permit("site-content", "delete"), route(async (req, res) => {
+  const params = parse(Api.AdminDeleteSiteContentParams, req.params, res); if (!params) return;
+  if (!canDeleteSiteContentKey(params.key)) {
+    res.status(400).json({
+      error: "This site content key is protected and cannot be deleted / هذا المفتاح من محتوى الموقع محمي ولا يمكن حذفه",
+    });
+    return;
+  }
+  const [deleted] = await db.delete(siteContentTable)
+    .where(eq(siteContentTable.key, params.key))
+    .returning();
+  if (!deleted) {
+    res.status(404).json({ error: "Site content not found" });
+    return;
+  }
+  req.log.info({ actorId: res.locals.admin.id, key: params.key }, "Admin deleted site content");
+  res.sendStatus(204);
 }));
 
 router.get("/admin/distributor-catalog", permit("distributors", "view"), route(async (_req, res) => {
