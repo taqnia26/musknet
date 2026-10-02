@@ -18,6 +18,8 @@ const modules = [
 const actions = ["view", "edit", "delete"];
 const permissionSpecs = [
   ...modules.flatMap((module) => actions.map((action) => ({ module, action }))),
+  { module: "company-orders", action: "view" },
+  { module: "company-orders", action: "edit" },
   { module: "accounting", action: "view" },
   { module: "accounting", action: "edit" },
 ];

@@ -7,6 +7,8 @@ describe("contracts", () => {
     const input = {
       contractType: "عقد توريد أجل المملكة العربية السعودية",
       contractDate: new Date("2027-03-02T09:00:00Z"),
+      startDate: new Date("2027-03-02T09:00:00Z"),
+      endDate: new Date("2028-03-01T09:00:00Z"),
       sellerName: "بائع تجريبي", sellerCrNumber: "777777", sellerCrDate: "01/01/2027",
       sellerCrIssuer: "جهة الاختبار", sellerAddress: "العنوان الجديد",
       sellerRepName: "ممثلة جديدة", sellerRepTitle: "مديرة",
@@ -15,12 +17,13 @@ describe("contracts", () => {
       buyerRepTitle: "مدير", buyerEmail: "buyer@example.test", buyerPhone: "0501234567",
       marginPercent: "18", paymentDays: 45, deliveryDays: 12, inspectionDays: 4,
       warrantyMonths: 9, vatRate: "15", notes: "شرط إضافي خاص",
+      templateVersion: 1, status: "draft", contractCreditLimit: "12500.00",
     };
     const result = renderContract(input);
-    const text = result.sections.flatMap(section => section.paragraphs).join("\n");
+    const text = result.sections.flatMap(section => [section.heading, ...section.paragraphs]).join("\n");
     for (const phrase of ["بائع تجريبي", "777777", "01/01/2027", "جهة الاختبار", "العنوان الجديد",
       "ممثلة جديدة", "شركة مختلفة", "888888", "ممثل جديد", "buyer@example.test", "0501234567",
-      "18%", "45 يوماً", "12 يوم عمل", "4 أيام عمل", "9 أشهر", "شرط إضافي خاص",
+      "18%", "45 يوماً", "12 يوم عمل", "4 أيام عمل", "9 أشهر", "شرط إضافي خاص", "حد الائتمان التعاقدي", "12,500.00",
       "02/03/2027", "01/03/2028"]) expect(text).toContain(phrase);
     expect(result.missing).toEqual([]);
     expect(result.products).toHaveLength(9);
@@ -28,6 +31,10 @@ describe("contracts", () => {
     expect(text).not.toMatch(/2026|هياء فهد اليوسف|1010311811|\[\s*●\s*\]/);
     expect(renderContract({ ...input, buyerCrIssuer: null, endDate: new Date("2026-01-01") }).missing)
       .toEqual(expect.arrayContaining(["مصدر سجل المشتري", "تاريخ النهاية يجب أن يلي البداية"]));
+    expect(renderContract({ ...input, contractCreditLimit: null }).missing).toContain("حد الائتمان التعاقدي");
+    const legacyFinal = renderContract({ ...input, status: "final", contractCreditLimit: null });
+    expect(legacyFinal.missing).not.toContain("حد الائتمان التعاقدي");
+    expect(legacyFinal.sections.flatMap(section => section.paragraphs).join("\n")).not.toContain("حد الائتمان التعاقدي");
   });
   it("enforces the contract state machine", () => {
     expect(() => assertTransition("draft", "seller_signed")).not.toThrow();
@@ -57,11 +64,12 @@ describe("contracts", () => {
       showroomName: null, showroomLocation: null, showroomCity: null, marginPercent: "0",
       minOrderValue: "3000", startDate: null, endDate: null, vatRate: "15",
       latePaymentWeeklyRate: "2", latePaymentCapRate: "10", inspectionDays: 7, warrantyMonths: 6,
-      deliveryDays: 15, paymentDays: 30, products: [], notes: null, signingTokenHash: null,
+       deliveryDays: 15, paymentDays: 30, contractCreditLimit: "25000.00", products: [], notes: null, signingTokenHash: null,
       signingTokenExpiresAt: null, sentForSignatureAt: null, sellerSignaturePath: null,
       sellerSignedAt: null, sellerSignedBy: null, sellerSignedByUserId: null, sellerSignedIp: null,
       buyerSignaturePath: null, buyerSignedAt: null, buyerSignedName: null, buyerSignedIp: null,
       buyerSignedUserAgent: null, downloadTokenHash: null, downloadTokenExpiresAt: null,
+       creditLimit: null, creditLimitApprovedBy: null, creditLimitApprovedAt: null, creditLimitApprovalReason: null,
       finalPdfPath: null, createdBy: 1, createdAt: new Date(), updatedAt: new Date(),
     }, "https://example.test/contracts/verify");
     expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");

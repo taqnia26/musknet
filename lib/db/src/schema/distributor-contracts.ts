@@ -1,4 +1,5 @@
 import {
+  check,
   integer,
   jsonb,
   numeric,
@@ -8,6 +9,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { adminUsersTable } from "./admin-users";
@@ -60,6 +62,11 @@ export const distributorContractsTable = pgTable("distributor_contracts", {
   warrantyMonths: integer("warranty_months").notNull().default(6),
   deliveryDays: integer("delivery_days").notNull().default(15),
   paymentDays: integer("payment_days").notNull().default(30),
+  contractCreditLimit: numeric("contract_credit_limit", { precision: 14, scale: 2 }),
+  creditLimit: numeric("credit_limit", { precision: 14, scale: 2 }),
+  creditLimitApprovedBy: integer("credit_limit_approved_by").references(() => adminUsersTable.id, { onDelete: "restrict" }),
+  creditLimitApprovedAt: timestamp("credit_limit_approved_at", { withTimezone: true }),
+  creditLimitApprovalReason: text("credit_limit_approval_reason"),
   products: jsonb("products").$type<unknown[]>().notNull().default([]),
   notes: text("notes"),
   signingTokenHash: text("signing_token_hash"),
@@ -82,6 +89,13 @@ export const distributorContractsTable = pgTable("distributor_contracts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
+  check("distributor_contracts_contract_credit_limit_nonnegative", sql`${table.contractCreditLimit} is null or ${table.contractCreditLimit} >= 0`),
+  check("distributor_contracts_credit_limit_nonnegative", sql`${table.creditLimit} is null or ${table.creditLimit} >= 0`),
+  check("distributor_contracts_credit_approval_complete", sql`
+    (${table.creditLimitApprovedBy} is null and ${table.creditLimitApprovedAt} is null and ${table.creditLimitApprovalReason} is null)
+    or (${table.creditLimit} is not null and ${table.creditLimitApprovedBy} is not null and
+      ${table.creditLimitApprovedAt} is not null and length(trim(${table.creditLimitApprovalReason})) between 10 and 500)
+  `),
   uniqueIndex("distributor_contracts_number_unique").on(table.contractNumber),
   uniqueIndex("distributor_contracts_signing_token_unique").on(table.signingTokenHash),
   uniqueIndex("distributor_contracts_download_token_unique").on(table.downloadTokenHash),

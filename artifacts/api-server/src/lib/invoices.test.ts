@@ -19,12 +19,36 @@ let inactiveDistributorId: number;
 let internationalDistributorId: number;
 let concurrentDistributorId: number;
 let paidTestDistributorId: number | undefined;
+let creditTestDistributorId: number | undefined;
 let productId: number;
 let actorId: number;
 let successfulInvoiceId: number;
 const uploadedContractFileIds: number[] = [];
 
 const generatedContractIds: number[] = [];
+async function insertApprovedCreditContract(ownerId: number, companyName: string, contractType = "Saudi distributor agreement", creditLimit = "1000000.00") {
+  const [contract] = await db.insert(distributorContractsTable).values({
+    contractNumber: `CREDIT-${ownerId}-${base}`,
+    distributorId: ownerId,
+    contractType,
+    status: "final",
+    sellerName: "Test seller",
+    sellerCrNumber: "123",
+    sellerCrDate: "01/01/2027",
+    sellerCrIssuer: "Test",
+    sellerAddress: "Test address",
+    sellerRepName: "Test representative",
+    sellerRepTitle: "Manager",
+    buyerCompanyName: companyName,
+    createdBy: actorId,
+    creditLimit,
+    creditLimitApprovedBy: actorId,
+    creditLimitApprovedAt: new Date(),
+    creditLimitApprovalReason: "Reviewed credit limit for invoice test fixture",
+  }).returning();
+  generatedContractIds.push(contract.id);
+  return contract;
+}
 const order = (id: number) => ({
   id,
   userId: customerId,
@@ -79,10 +103,12 @@ beforeAll(async () => {
   inactiveDistributorId = distributors.find((row) => !row.isActive)!.id;
   internationalDistributorId = distributors[2].id;
   concurrentDistributorId = distributors[3].id;
+  await insertApprovedCreditContract(distributorId, "موزع اختبار");
+  await insertApprovedCreditContract(internationalDistributorId, "موزع دولي للاختبار", "Gulf distributor agreement");
 });
 
 afterAll(async () => {
-  const testDistributorIds = [distributorId, inactiveDistributorId, internationalDistributorId, concurrentDistributorId, paidTestDistributorId]
+  const testDistributorIds = [distributorId, inactiveDistributorId, internationalDistributorId, concurrentDistributorId, paidTestDistributorId, creditTestDistributorId]
     .filter((id): id is number => Number.isSafeInteger(id));
   const distributorInvoices = await db.select({ id: invoicesTable.id }).from(invoicesTable)
     .where(inArray(invoicesTable.distributorId, testDistributorIds));
@@ -318,6 +344,10 @@ describe.sequential("distributor invoice issuance", () => {
       sellerRepTitle: "Manager", buyerCompanyName: "موزع اختبار", createdBy: actorId,
       marginPercent: "7.50", startDate: new Date("2025-01-01T12:00:00Z"),
       endDate: new Date("2025-12-31T12:00:00Z"),
+      creditLimit: "1000.00",
+      creditLimitApprovedBy: actorId,
+      creditLimitApprovedAt: new Date(),
+      creditLimitApprovalReason: "Reviewed credit limit for historical invoice fixture",
     }).returning();
     generatedContractIds.push(contract.id);
     const today = saudiCalendarDate(new Date());
@@ -489,6 +519,10 @@ describe.sequential("distributor invoice issuance", () => {
       paymentDays: null,
       termsConfirmedAt: new Date(),
       termsConfirmedBy: actorId,
+      creditLimit: "1000000.00",
+      creditLimitApprovedBy: actorId,
+      creditLimitApprovedAt: new Date(),
+      creditLimitApprovalReason: "Reviewed credit limit for uploaded file test fixture",
       uploadedBy: actorId,
     }))).returning();
     uploadedContractFileIds.push(...files.map((file) => file.id));
@@ -654,6 +688,117 @@ describe.sequential("distributor invoice issuance", () => {
     }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
   });
 
+  it("enforces company-wide outstanding exposure across contract sources after collections", async () => {
+    const [company] = await db.insert(wholesaleDistributorsTable).values({
+      companyName: `Credit exposure test ${base}`,
+      contactName: "Credit reviewer test",
+      phone: `056${String(base).slice(-7)}`,
+    }).returning({ id: wholesaleDistributorsTable.id });
+    creditTestDistributorId = company.id;
+    const generated = await insertApprovedCreditContract(company.id, `Credit exposure test ${base}`, "Saudi distributor agreement", "50.00");
+    const today = saudiCalendarDate(new Date());
+    const first = await createCompanyInvoice({
+      creationKey: `credit-first-${base}`,
+      distributorId: company.id,
+      contractId: generated.id,
+      issueDate: today,
+      dueDate: today,
+      items: [{ productId, quantity: 1, unitPrice: 40 }],
+    }, actorId, env);
+    await createReceivablePayment(first.id, {
+      paymentKey: `credit-first-payment-${base}`,
+      paymentDate: today,
+      amount: 15,
+      paymentMethod: "bank_transfer",
+    }, actorId);
+    const second = await createCompanyInvoice({
+      creationKey: `credit-second-${base}`,
+      distributorId: company.id,
+      contractId: generated.id,
+      issueDate: today,
+      dueDate: today,
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env);
+    await expect(createCompanyInvoice({
+      creationKey: `credit-over-limit-${base}`,
+      distributorId: company.id,
+      contractId: generated.id,
+      issueDate: today,
+      dueDate: today,
+      items: [{ productId, quantity: 1, unitPrice: 6 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+
+    const [uploaded] = await db.insert(uploadedContractFilesTable).values({
+      ownerType: "distributor",
+      ownerId: company.id,
+      ownerName: `Credit exposure test ${base}`,
+      fileName: `credit-exposure-${base}.pdf`,
+      objectPath: `/objects/uploads/contracts/files/credit-exposure-${base}`,
+      mimeType: "application/pdf",
+      sizeBytes: 100,
+      contractType: "Saudi distributor agreement",
+      discountPercent: "0",
+      paymentTerm: "due_on_issue",
+      termsConfirmedAt: new Date(),
+      termsConfirmedBy: actorId,
+      creditLimit: "50.00",
+      creditLimitApprovedBy: actorId,
+      creditLimitApprovedAt: new Date(),
+      creditLimitApprovalReason: "Reviewed uploaded credit limit for exposure test",
+      uploadedBy: actorId,
+    }).returning();
+    uploadedContractFileIds.push(uploaded.id);
+    await expect(createCompanyInvoice({
+      creationKey: `credit-cross-source-over-limit-${base}`,
+      distributorId: company.id,
+      uploadedContractFileId: uploaded.id,
+      issueDate: today,
+      dueDate: today,
+      items: [{ productId, quantity: 1, unitPrice: 6 }],
+    }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+
+    await cancelCompanyInvoice(second.id, "Release exposure in credit limit test", actorId);
+    const afterCancellation = await createCompanyInvoice({
+      creationKey: `credit-cross-source-after-cancel-${base}`,
+      distributorId: company.id,
+      uploadedContractFileId: uploaded.id,
+      issueDate: today,
+      dueDate: today,
+      items: [{ productId, quantity: 1, unitPrice: 6 }],
+    }, actorId, env);
+    const [afterCancellationRecord] = await db.select({ uploadedContractFileId: invoicesTable.uploadedContractFileId })
+      .from(invoicesTable).where(eq(invoicesTable.id, afterCancellation.id));
+    expect(afterCancellationRecord.uploadedContractFileId).toBe(uploaded.id);
+    expect(first.outstandingAmount).toBe(40);
+    await createReceivablePayment(first.id, {
+      paymentKey: `credit-first-final-payment-${base}`,
+      paymentDate: today,
+      amount: first.outstandingAmount - 15,
+      paymentMethod: "bank_transfer",
+    }, actorId);
+    const firstPayments = await db.select({ amount: receivablePaymentsTable.amount }).from(receivablePaymentsTable)
+      .where(eq(receivablePaymentsTable.invoiceId, first.id));
+    const [firstRecord] = await db.select({ totalAmount: invoicesTable.totalAmount }).from(invoicesTable)
+      .where(eq(invoicesTable.id, first.id));
+    expect(firstPayments.reduce((sum, payment) => sum + payment.amount, 0)).toBe(Number(firstRecord.totalAmount));
+    await cancelCompanyInvoice(afterCancellation.id, "Release exposure in credit limit test", actorId);
+    await db.update(distributorContractsTable).set({ creditLimit: "0.00" }).where(eq(distributorContractsTable.id, generated.id));
+    const fullyCollected = await createCompanyInvoice({
+      creationKey: `credit-fully-collected-${base}`,
+      distributorId: company.id,
+      contractId: generated.id,
+      issueDate: today,
+      dueDate: today,
+      collected: true,
+      paymentDate: today,
+      paymentMethod: "cash",
+      items: [{ productId, quantity: 1, unitPrice: 20 }],
+    }, actorId, env);
+    expect(fullyCollected.outstandingAmount).toBe(0);
+    await db.update(productsTable).set({ stockQuantity: 10 }).where(eq(productsTable.id, productId));
+    await db.update(inventoryBalancesTable).set({ available: 10 }).where(eq(inventoryBalancesTable.productId, productId));
+  });
+
   it("waits for a concurrent terms confirmation before resolving invoice sources", async () => {
     const [file] = await db.insert(uploadedContractFilesTable).values({
       ownerType: "distributor",
@@ -681,6 +826,10 @@ describe.sequential("distributor invoice issuance", () => {
         paymentDays: null,
         termsConfirmedAt: new Date(),
         termsConfirmedBy: actorId,
+        creditLimit: "1000000.00",
+        creditLimitApprovedBy: actorId,
+        creditLimitApprovedAt: new Date(),
+        creditLimitApprovalReason: "Reviewed credit limit for concurrent uploaded file fixture",
       }).where(eq(uploadedContractFilesTable.id, file.id));
     });
     await lockAcquired;
@@ -796,6 +945,7 @@ describe.sequential("distributor invoice issuance", () => {
       companyName: `Paid invoice test ${base}`, contactName: "Tester", phone: `054${String(base).slice(-7)}`,
     }).returning({ id: wholesaleDistributorsTable.id });
     paidTestDistributorId = paidTestDistributor.id;
+    await insertApprovedCreditContract(paidTestDistributorId, `Paid invoice test ${base}`);
     const today = saudiCalendarDate(new Date());
     const input = {
       creationKey,

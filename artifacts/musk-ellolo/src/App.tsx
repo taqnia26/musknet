@@ -39,12 +39,17 @@ import AdminRoutes from '@/pages/admin';
 import OwnerLogin from '@/pages/owner-login';
 import OwnerPortal from '@/pages/owner-portal';
 import InfluencerRoutes from '@/pages/influencer';
+import DistributorsPortal from '@/pages/distributors';
 
 function Router() {
   const [location] = useLocation();
 
   if (location.startsWith('/admin')) {
     return <AdminRoutes />;
+  }
+
+  if (location === '/distributors' || location.startsWith('/distributors/')) {
+    return <DistributorsPortal />;
   }
 
   if (location.startsWith('/owner')) {
@@ -119,7 +124,7 @@ function StorefrontAnalytics() {
   const [location] = useLocation();
 
   useEffect(() => {
-    if (location.startsWith('/admin') || location.startsWith('/owner') || location.startsWith('/influencer') || location.startsWith('/infulancer')) return;
+    if (location.startsWith('/admin') || location.startsWith('/distributors') || location.startsWith('/owner') || location.startsWith('/influencer') || location.startsWith('/infulancer')) return;
     const referral = new URLSearchParams(window.location.search).get('ref');
     if (referral) void captureInfluencerReferral({ ref: referral }).catch(() => undefined);
 
@@ -148,7 +153,7 @@ function StorefrontAnalytics() {
 }
 
 function App() {
-  const showSiteIntro = !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/owner') && !window.location.pathname.startsWith('/influencer') && !window.location.pathname.startsWith('/infulancer');
+  const showSiteIntro = !window.location.pathname.startsWith('/distributors') && !window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/owner') && !window.location.pathname.startsWith('/influencer') && !window.location.pathname.startsWith('/infulancer');
 
   return (
     <QueryClientProvider client={queryClient}>

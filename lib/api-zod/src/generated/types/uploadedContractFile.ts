@@ -36,6 +36,17 @@ export interface UploadedContractFile {
   termsConfirmedAt: Date | null;
   /** @nullable */
   termsConfirmedBy: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  creditLimit: number | null;
+  /** @nullable */
+  creditLimitApprovedBy: number | null;
+  /** @nullable */
+  creditLimitApprovedAt: Date | null;
+  /** @nullable */
+  creditLimitApprovalReason: string | null;
   uploadedBy: number;
   uploadedAt: Date;
 }

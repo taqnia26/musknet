@@ -1,12 +1,13 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import {
-  accountingAccountsTable, adminUsersTable, db, inventoryMovementsTable, invoiceItemsTable, invoicesTable,
+  accountingAccountsTable, adminUsersTable, backupInvoiceHighwaterTable, db, inventoryMovementsTable, invoiceItemsTable, invoicesTable,
   journalEntriesTable, journalEntryAuditTable, journalEntryLinesTable, operationEventsTable,
   receivablePaymentsTable, shipmentsTable, wholesaleDistributorsTable,
 } from "@workspace/db";
 import { createHistoricalInvoice, reconcileHistoricalInvoice, type HistoricalInvoiceInput } from "./historical-company-invoices";
 import { cancelCompanyInvoice, createReceivablePayment, DistributorInvoiceConflictError, nextLiveInvoiceNumber } from "./invoices";
+import { INVOICE_SEQUENCE_SCOPE, nextInvoiceSequenceNumber } from "./invoice-sequence";
 
 const key = `historical-test-${Date.now()}`;
 let distributorId: number;
@@ -117,16 +118,23 @@ describe.sequential("historical company invoices", () => {
     expect((await createHistoricalInvoice(input(), actorId)).id).toBe(a.id);
   });
   it("reserves a historical live-format number while keeping its separate negative sequence", async () => {
-    const [row] = await db.select({ next: sql<number>`greatest(coalesce(max(${invoicesTable.sequenceNumber}), 0), 0) + 1` }).from(invoicesTable);
-    const reservedNumber = `LC-${String(Number(row.next)).padStart(6, "0")}`;
+    const [row] = await db.select({ liveMaximum: sql<number>`greatest(coalesce(max(${invoicesTable.sequenceNumber}), 0), 0)` }).from(invoicesTable);
+    const [highwater] = await db.select({ value: backupInvoiceHighwaterTable.value }).from(backupInvoiceHighwaterTable)
+      .where(eq(backupInvoiceHighwaterTable.scope, INVOICE_SEQUENCE_SCOPE)).limit(1);
+    const nextSequence = nextInvoiceSequenceNumber(Number(row.liveMaximum), Number(highwater?.value ?? 0));
+    const reservedNumber = `LC-${String(nextSequence).padStart(6, "0")}`;
     const reserved = await createHistoricalInvoice({ ...input(), creationKey: `${key}-reserved-create`, invoiceNumber: reservedNumber, issueDate: "2026-06-10", dueDate: "2026-07-10", payments: [] }, actorId);
     invoiceIds.push(reserved.id);
     reservedInvoiceId = reserved.id;
+    const occupiedNumbers = new Set((await db.select({ invoiceNumber: invoicesTable.invoiceNumber }).from(invoicesTable))
+      .map(invoice => invoice.invoiceNumber.toLowerCase()));
+    let expectedNextSequence = nextSequence;
+    while (occupiedNumbers.has(`LC-${String(expectedNextSequence).padStart(6, "0")}`.toLowerCase())) expectedNextSequence += 1;
     await db.transaction(async tx => {
       await tx.execute(sql`select pg_advisory_xact_lock(${7_521_010_001})`);
       const next = await nextLiveInvoiceNumber(tx, "LC");
       expect(next.invoiceNumber).not.toBe(reservedNumber);
-      expect(next.sequenceNumber).toBe(Number(row.next) + 1);
+      expect(next.sequenceNumber).toBe(expectedNextSequence);
     });
   });
   it("stores an internal invoice reference separately from the original document number", async () => {

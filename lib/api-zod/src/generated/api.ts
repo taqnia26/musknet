@@ -1739,6 +1739,10 @@ export const AdminListContractsQueryParams = zod.object({
   "search": zod.coerce.string().optional()
 })
 
+export const adminListContractsResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminListContractsResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
+
 export const AdminListContractsResponseItem = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
@@ -1783,6 +1787,11 @@ export const AdminListContractsResponseItem = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminListContractsResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminListContractsResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -1804,6 +1813,9 @@ export const AdminListContractsResponse = zod.array(AdminListContractsResponseIt
 
 
 
+
+export const adminCreateContractBodyContractCreditLimitMin = 0;
+export const adminCreateContractBodyContractCreditLimitMultipleOf = 0.01;
 
 
 
@@ -1848,9 +1860,14 @@ export const AdminCreateContractBody = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.number().min(adminCreateContractBodyContractCreditLimitMin).multipleOf(adminCreateContractBodyContractCreditLimitMultipleOf).nullish(),
   "products": zod.array(zod.unknown()).optional(),
   "notes": zod.string().nullish()
 })
+
+export const adminCreateContractResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminCreateContractResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
 
 export const AdminCreateContractResponse = zod.object({
   "id": zod.number(),
@@ -1896,6 +1913,11 @@ export const AdminCreateContractResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminCreateContractResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminCreateContractResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -1916,6 +1938,9 @@ export const AdminCreateContractResponse = zod.object({
 
 
 
+
+export const adminPreviewContractBodyContractCreditLimitMin = 0;
+export const adminPreviewContractBodyContractCreditLimitMultipleOf = 0.01;
 
 
 
@@ -1960,6 +1985,7 @@ export const AdminPreviewContractBody = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.number().min(adminPreviewContractBodyContractCreditLimitMin).multipleOf(adminPreviewContractBodyContractCreditLimitMultipleOf).nullish(),
   "products": zod.array(zod.unknown()).optional(),
   "notes": zod.string().nullish()
 })
@@ -1983,6 +2009,10 @@ export const AdminPreviewContractResponse = zod.object({
 export const AdminGetContractParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const adminGetContractResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminGetContractResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
 
 export const AdminGetContractResponse = zod.object({
   "id": zod.number(),
@@ -2028,6 +2058,11 @@ export const AdminGetContractResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminGetContractResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminGetContractResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -2052,6 +2087,9 @@ export const AdminUpdateContractParams = zod.object({
 
 
 
+
+export const adminUpdateContractBodyOneContractCreditLimitMin = 0;
+export const adminUpdateContractBodyOneContractCreditLimitMultipleOf = 0.01;
 
 
 
@@ -2096,9 +2134,14 @@ export const AdminUpdateContractBody = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.number().min(adminUpdateContractBodyOneContractCreditLimitMin).multipleOf(adminUpdateContractBodyOneContractCreditLimitMultipleOf).nullish(),
   "products": zod.array(zod.unknown()).optional(),
   "notes": zod.string().nullish()
 })
+
+export const adminUpdateContractResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminUpdateContractResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
 
 export const AdminUpdateContractResponse = zod.object({
   "id": zod.number(),
@@ -2144,6 +2187,11 @@ export const AdminUpdateContractResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminUpdateContractResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminUpdateContractResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -2164,6 +2212,143 @@ export const AdminDeleteContractParams = zod.object({
 export const AdminDeleteContractResponse = zod.void()
 
 
+/**
+ * @summary Explicitly approve a credit limit for a generated distributor contract
+ */
+export const AdminApproveDistributorContractCreditLimitParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminApproveDistributorContractCreditLimitBodyCreditLimitMin = 0;
+export const adminApproveDistributorContractCreditLimitBodyCreditLimitMultipleOf = 0.01;
+
+export const adminApproveDistributorContractCreditLimitBodyReasonMin = 10;
+export const adminApproveDistributorContractCreditLimitBodyReasonMax = 500;
+
+
+
+export const AdminApproveDistributorContractCreditLimitBody = zod.object({
+  "creditLimit": zod.number().min(adminApproveDistributorContractCreditLimitBodyCreditLimitMin).multipleOf(adminApproveDistributorContractCreditLimitBodyCreditLimitMultipleOf),
+  "reason": zod.string().min(adminApproveDistributorContractCreditLimitBodyReasonMin).max(adminApproveDistributorContractCreditLimitBodyReasonMax)
+})
+
+export const adminApproveDistributorContractCreditLimitResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminApproveDistributorContractCreditLimitResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
+
+export const AdminApproveDistributorContractCreditLimitResponse = zod.object({
+  "id": zod.number(),
+  "contractNumber": zod.string(),
+  "distributorId": zod.number().nullish(),
+  "contractType": zod.enum(['موزع', 'امتياز', 'وكالة', 'عقد توريد أجل المملكة العربية السعودية', 'عقد توريد نقد المملكة العربية السعودية', 'عقد توريد أجل دول الخليج', 'عقد توريد نقد دول الخليج']),
+  "status": zod.enum(['draft', 'seller_signed', 'sent', 'final', 'cancelled']),
+  "contractDate": zod.coerce.date().nullish(),
+  "templateVersion": zod.number().optional(),
+  "hijriDateStr": zod.string().nullish(),
+  "gregorianDateStr": zod.string().nullish(),
+  "contractDayName": zod.string().nullish(),
+  "sellerName": zod.string(),
+  "sellerCrNumber": zod.string(),
+  "sellerCrDate": zod.string(),
+  "sellerCrIssuer": zod.string(),
+  "sellerAddress": zod.string(),
+  "sellerRepName": zod.string(),
+  "sellerRepTitle": zod.string(),
+  "buyerCompanyName": zod.string(),
+  "buyerCrNumber": zod.string().nullish(),
+  "buyerCrDate": zod.string().nullish(),
+  "buyerCrIssuer": zod.string().nullish(),
+  "buyerNeighborhood": zod.string().nullish(),
+  "buyerCity": zod.string().nullish(),
+  "buyerPoBox": zod.string().nullish(),
+  "buyerPostalCode": zod.string().nullish(),
+  "buyerRepName": zod.string().nullish(),
+  "buyerRepTitle": zod.string().nullish(),
+  "buyerEmail": zod.string().nullish(),
+  "buyerPhone": zod.string().nullish(),
+  "showroomName": zod.string().nullish(),
+  "showroomLocation": zod.string().nullish(),
+  "showroomCity": zod.string().nullish(),
+  "marginPercent": zod.string().optional(),
+  "minOrderValue": zod.string().optional(),
+  "startDate": zod.coerce.date().nullish(),
+  "endDate": zod.coerce.date().nullish(),
+  "vatRate": zod.string().optional(),
+  "latePaymentWeeklyRate": zod.string().optional(),
+  "latePaymentCapRate": zod.string().optional(),
+  "inspectionDays": zod.number().optional(),
+  "warrantyMonths": zod.number().optional(),
+  "deliveryDays": zod.number().optional(),
+  "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminApproveDistributorContractCreditLimitResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminApproveDistributorContractCreditLimitResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
+  "products": zod.array(zod.unknown()),
+  "notes": zod.string().nullish(),
+  "sellerSignaturePath": zod.string().nullish(),
+  "sellerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignaturePath": zod.string().nullish(),
+  "buyerSignedAt": zod.coerce.date().nullish(),
+  "buyerSignedName": zod.string().nullish(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Explicitly approve a credit limit without changing an uploaded signed file
+ */
+export const AdminApproveUploadedContractCreditLimitParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminApproveUploadedContractCreditLimitBodyCreditLimitMin = 0;
+export const adminApproveUploadedContractCreditLimitBodyCreditLimitMultipleOf = 0.01;
+
+export const adminApproveUploadedContractCreditLimitBodyReasonMin = 10;
+export const adminApproveUploadedContractCreditLimitBodyReasonMax = 500;
+
+
+
+export const AdminApproveUploadedContractCreditLimitBody = zod.object({
+  "creditLimit": zod.number().min(adminApproveUploadedContractCreditLimitBodyCreditLimitMin).multipleOf(adminApproveUploadedContractCreditLimitBodyCreditLimitMultipleOf),
+  "reason": zod.string().min(adminApproveUploadedContractCreditLimitBodyReasonMin).max(adminApproveUploadedContractCreditLimitBodyReasonMax)
+})
+
+export const adminApproveUploadedContractCreditLimitResponseCreditLimitMin = 0;
+
+
+
+export const AdminApproveUploadedContractCreditLimitResponse = zod.object({
+  "id": zod.number(),
+  "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
+  "ownerId": zod.number(),
+  "ownerName": zod.string(),
+  "fileName": zod.string(),
+  "mimeType": zod.string(),
+  "sizeBytes": zod.number(),
+  "notes": zod.string().nullable(),
+  "contractType": zod.string().nullable(),
+  "discountPercent": zod.number().nullable(),
+  "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
+  "paymentDays": zod.number().nullable(),
+  "startDate": zod.coerce.date().nullable(),
+  "endDate": zod.coerce.date().nullable(),
+  "signedDate": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullable(),
+  "termsConfirmedBy": zod.number().nullable(),
+  "creditLimit": zod.number().min(adminApproveUploadedContractCreditLimitResponseCreditLimitMin).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
+  "uploadedBy": zod.number(),
+  "uploadedAt": zod.coerce.date()
+})
+
+
 export const AdminLinkDistributorContractParams = zod.object({
   "id": zod.coerce.number()
 })
@@ -2175,6 +2360,10 @@ export const adminLinkDistributorContractBodyDistributorIdMultipleOf = 1;
 export const AdminLinkDistributorContractBody = zod.object({
   "distributorId": zod.number().min(1).multipleOf(adminLinkDistributorContractBodyDistributorIdMultipleOf)
 })
+
+export const adminLinkDistributorContractResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminLinkDistributorContractResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
 
 export const AdminLinkDistributorContractResponse = zod.object({
   "id": zod.number(),
@@ -2220,6 +2409,11 @@ export const AdminLinkDistributorContractResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminLinkDistributorContractResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminLinkDistributorContractResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -2241,8 +2435,13 @@ export const AdminSignContractParams = zod.object({
 
 
 export const AdminSignContractBody = zod.object({
-  "signaturePath": zod.string().min(1)
+  "signaturePath": zod.string().min(1),
+  "expectedUpdatedAt": zod.coerce.date().optional()
 })
+
+export const adminSignContractResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminSignContractResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
 
 export const AdminSignContractResponse = zod.object({
   "id": zod.number(),
@@ -2288,6 +2487,11 @@ export const AdminSignContractResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminSignContractResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminSignContractResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -2322,6 +2526,10 @@ export const AdminRequestContractSignatureUploadResponse = zod.object({
 export const AdminSendContractParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const adminSendContractResponseContractContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminSendContractResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
 
 export const AdminSendContractResponse = zod.object({
   "contract": zod.object({
@@ -2368,6 +2576,11 @@ export const AdminSendContractResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminSendContractResponseContractContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminSendContractResponseContractCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -2387,6 +2600,10 @@ export const AdminSendContractResponse = zod.object({
 export const AdminCancelContractParams = zod.object({
   "id": zod.coerce.number()
 })
+
+export const adminCancelContractResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const adminCancelContractResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
 
 export const AdminCancelContractResponse = zod.object({
   "id": zod.number(),
@@ -2432,6 +2649,11 @@ export const AdminCancelContractResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(adminCancelContractResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(adminCancelContractResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -2452,6 +2674,10 @@ export const AdminGetContractPdfParams = zod.object({
 export const AdminGetContractPdfResponse = zod.unknown()
 
 
+export const adminListContractFilesResponseCreditLimitMin = 0;
+
+
+
 export const AdminListContractFilesResponseItem = zod.object({
   "id": zod.number(),
   "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
@@ -2470,6 +2696,10 @@ export const AdminListContractFilesResponseItem = zod.object({
   "signedDate": zod.coerce.date().nullable(),
   "termsConfirmedAt": zod.coerce.date().nullable(),
   "termsConfirmedBy": zod.number().nullable(),
+  "creditLimit": zod.number().min(adminListContractFilesResponseCreditLimitMin).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "uploadedBy": zod.number(),
   "uploadedAt": zod.coerce.date()
 })
@@ -2497,6 +2727,10 @@ export const AdminCreateContractFileBody = zod.object({
   "notes": zod.string().max(adminCreateContractFileBodyNotesMax).nullish()
 })
 
+export const adminCreateContractFileResponseCreditLimitMin = 0;
+
+
+
 export const AdminCreateContractFileResponse = zod.object({
   "id": zod.number(),
   "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
@@ -2515,6 +2749,10 @@ export const AdminCreateContractFileResponse = zod.object({
   "signedDate": zod.coerce.date().nullable(),
   "termsConfirmedAt": zod.coerce.date().nullable(),
   "termsConfirmedBy": zod.number().nullable(),
+  "creditLimit": zod.number().min(adminCreateContractFileResponseCreditLimitMin).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "uploadedBy": zod.number(),
   "uploadedAt": zod.coerce.date()
 })
@@ -2572,6 +2810,10 @@ export const AdminConfirmUploadedContractTermsBody = zod.object({
   "signedDate": zod.coerce.date().nullish()
 })
 
+export const adminConfirmUploadedContractTermsResponseCreditLimitMin = 0;
+
+
+
 export const AdminConfirmUploadedContractTermsResponse = zod.object({
   "id": zod.number(),
   "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
@@ -2590,6 +2832,10 @@ export const AdminConfirmUploadedContractTermsResponse = zod.object({
   "signedDate": zod.coerce.date().nullable(),
   "termsConfirmedAt": zod.coerce.date().nullable(),
   "termsConfirmedBy": zod.number().nullable(),
+  "creditLimit": zod.number().min(adminConfirmUploadedContractTermsResponseCreditLimitMin).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "uploadedBy": zod.number(),
   "uploadedAt": zod.coerce.date()
 })
@@ -2622,6 +2868,10 @@ export const AdminUpdateUploadedContractTermsBody = zod.object({
   "signedDate": zod.coerce.date().nullish()
 })
 
+export const adminUpdateUploadedContractTermsResponseCreditLimitMin = 0;
+
+
+
 export const AdminUpdateUploadedContractTermsResponse = zod.object({
   "id": zod.number(),
   "ownerType": zod.enum(['distributor', 'customer', 'influencer', 'employee']),
@@ -2640,6 +2890,10 @@ export const AdminUpdateUploadedContractTermsResponse = zod.object({
   "signedDate": zod.coerce.date().nullable(),
   "termsConfirmedAt": zod.coerce.date().nullable(),
   "termsConfirmedBy": zod.number().nullable(),
+  "creditLimit": zod.number().min(adminUpdateUploadedContractTermsResponseCreditLimitMin).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "uploadedBy": zod.number(),
   "uploadedAt": zod.coerce.date()
 })
@@ -2780,6 +3034,10 @@ export const GetPublicContractByTokenParams = zod.object({
   "token": zod.coerce.string().min(getPublicContractByTokenPathTokenMin)
 })
 
+export const getPublicContractByTokenResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const getPublicContractByTokenResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
+
 export const GetPublicContractByTokenResponse = zod.object({
   "id": zod.number(),
   "contractNumber": zod.string(),
@@ -2824,6 +3082,11 @@ export const GetPublicContractByTokenResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(getPublicContractByTokenResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(getPublicContractByTokenResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -2853,6 +3116,10 @@ export const SignPublicContractBody = zod.object({
   "signaturePath": zod.string().min(1),
   "buyerSignedName": zod.string().min(1)
 })
+
+export const signPublicContractResponseContractCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+export const signPublicContractResponseCreditLimitRegExp = new RegExp('^\\d+(?:\\.\\d{1,2})?$');
+
 
 export const SignPublicContractResponse = zod.object({
   "id": zod.number(),
@@ -2898,6 +3165,11 @@ export const SignPublicContractResponse = zod.object({
   "warrantyMonths": zod.number().optional(),
   "deliveryDays": zod.number().optional(),
   "paymentDays": zod.number().optional(),
+  "contractCreditLimit": zod.string().regex(signPublicContractResponseContractCreditLimitRegExp).nullable(),
+  "creditLimit": zod.string().regex(signPublicContractResponseCreditLimitRegExp).nullable(),
+  "creditLimitApprovedBy": zod.number().nullable(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "creditLimitApprovalReason": zod.string().nullable(),
   "products": zod.array(zod.unknown()),
   "notes": zod.string().nullish(),
   "sellerSignaturePath": zod.string().nullish(),
@@ -10837,3 +11109,1154 @@ export const ListInventoryAlertsResponseItem = zod.object({
 export const ListInventoryAlertsResponse = zod.array(ListInventoryAlertsResponseItem)
 
 
+export const loginDistributorPortalBodyEmailMax = 254;
+
+export const loginDistributorPortalBodyPasswordMax = 256;
+
+
+
+export const LoginDistributorPortalBody = zod.object({
+  "email": zod.string().max(loginDistributorPortalBodyEmailMax),
+  "password": zod.string().min(1).max(loginDistributorPortalBodyPasswordMax)
+})
+
+export const loginDistributorPortalResponseCompanyIdMultipleOf = 1;
+
+
+
+export const LoginDistributorPortalResponse = zod.object({
+  "token": zod.string(),
+  "expiresAt": zod.coerce.date(),
+  "company": zod.object({
+  "id": zod.number().multipleOf(loginDistributorPortalResponseCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "contactName": zod.string(),
+  "email": zod.string().nullable(),
+  "countryCode": zod.string().nullable()
+})
+})
+
+
+export const getDistributorPortalSessionResponseCompanyIdMultipleOf = 1;
+
+
+
+export const GetDistributorPortalSessionResponse = zod.object({
+  "company": zod.object({
+  "id": zod.number().multipleOf(getDistributorPortalSessionResponseCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "contactName": zod.string(),
+  "email": zod.string().nullable(),
+  "countryCode": zod.string().nullable()
+}),
+  "expiresAt": zod.coerce.date()
+})
+
+
+export const revokeDistributorPortalSessionResponseRevokedSessionsMin = 0;
+export const revokeDistributorPortalSessionResponseRevokedSessionsMultipleOf = 1;
+
+
+
+export const RevokeDistributorPortalSessionResponse = zod.object({
+  "revokedSessions": zod.number().min(revokeDistributorPortalSessionResponseRevokedSessionsMin).multipleOf(revokeDistributorPortalSessionResponseRevokedSessionsMultipleOf)
+})
+
+
+export const getDistributorPortalCatalogResponseCompanyIdMultipleOf = 1;
+
+export const getDistributorPortalCatalogResponseTermsContractIdMultipleOf = 1;
+
+export const getDistributorPortalCatalogResponseTermsUploadedContractFileIdMultipleOf = 1;
+
+export const getDistributorPortalCatalogResponseTermsDiscountPercentMin = 0;
+export const getDistributorPortalCatalogResponseTermsDiscountPercentMax = 100;
+
+export const getDistributorPortalCatalogResponseTermsVatRateMin = 0;
+export const getDistributorPortalCatalogResponseTermsVatRateMax = 100;
+
+export const getDistributorPortalCatalogResponseTermsPaymentDaysMin = 0;
+export const getDistributorPortalCatalogResponseTermsPaymentDaysMultipleOf = 1;
+
+export const getDistributorPortalCatalogResponseTermsMinOrderValueMin = 0;
+
+export const getDistributorPortalCatalogResponseTermsCreditLimitMin = 0;
+
+export const getDistributorPortalCatalogResponseCatalogItemIdMultipleOf = 1;
+
+export const getDistributorPortalCatalogResponseCatalogItemUnitPriceExclusiveMin = 0;
+
+export const getDistributorPortalCatalogResponseCatalogItemStockQuantityMin = 0;
+export const getDistributorPortalCatalogResponseCatalogItemStockQuantityMultipleOf = 1;
+
+
+
+export const GetDistributorPortalCatalogResponse = zod.object({
+  "company": zod.object({
+  "id": zod.number().multipleOf(getDistributorPortalCatalogResponseCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "contactName": zod.string(),
+  "email": zod.string().nullable(),
+  "countryCode": zod.string().nullable()
+}),
+  "terms": zod.object({
+  "contractId": zod.number().multipleOf(getDistributorPortalCatalogResponseTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(getDistributorPortalCatalogResponseTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(getDistributorPortalCatalogResponseTermsDiscountPercentMin).max(getDistributorPortalCatalogResponseTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(getDistributorPortalCatalogResponseTermsVatRateMin).max(getDistributorPortalCatalogResponseTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(getDistributorPortalCatalogResponseTermsPaymentDaysMin).multipleOf(getDistributorPortalCatalogResponseTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(getDistributorPortalCatalogResponseTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(getDistributorPortalCatalogResponseTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "discountPercent": zod.number(),
+  "vatRate": zod.number(),
+  "catalog": zod.array(zod.object({
+  "id": zod.number().multipleOf(getDistributorPortalCatalogResponseCatalogItemIdMultipleOf),
+  "nameAr": zod.string(),
+  "nameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "image": zod.string().nullable(),
+  "unitPrice": zod.number().gt(getDistributorPortalCatalogResponseCatalogItemUnitPriceExclusiveMin),
+  "stockQuantity": zod.number().min(getDistributorPortalCatalogResponseCatalogItemStockQuantityMin).multipleOf(getDistributorPortalCatalogResponseCatalogItemStockQuantityMultipleOf)
+}))
+})
+
+
+export const listDistributorPortalOrdersResponseIdMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseCompanyIdMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseItemsItemProductIdMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseItemsItemQuantityMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseItemsItemUnitPriceMin = 0;
+
+export const listDistributorPortalOrdersResponseItemsItemSubtotalMin = 0;
+
+export const listDistributorPortalOrdersResponseItemsItemVatAmountMin = 0;
+
+export const listDistributorPortalOrdersResponseItemsItemTotalAmountMin = 0;
+
+export const listDistributorPortalOrdersResponseContractIdMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseUploadedContractFileIdMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseSnapshotTermsContractIdMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseSnapshotTermsDiscountPercentMin = 0;
+export const listDistributorPortalOrdersResponseSnapshotTermsDiscountPercentMax = 100;
+
+export const listDistributorPortalOrdersResponseSnapshotTermsVatRateMin = 0;
+export const listDistributorPortalOrdersResponseSnapshotTermsVatRateMax = 100;
+
+export const listDistributorPortalOrdersResponseSnapshotTermsPaymentDaysMin = 0;
+export const listDistributorPortalOrdersResponseSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseSnapshotTermsMinOrderValueMin = 0;
+
+export const listDistributorPortalOrdersResponseSnapshotTermsCreditLimitMin = 0;
+
+export const listDistributorPortalOrdersResponseReviewedByAdminIdMultipleOf = 1;
+
+export const listDistributorPortalOrdersResponseInvoiceIdMultipleOf = 1;
+
+
+
+export const ListDistributorPortalOrdersResponseItem = zod.object({
+  "id": zod.number().multipleOf(listDistributorPortalOrdersResponseIdMultipleOf),
+  "orderNumber": zod.string(),
+  "companyId": zod.number().multipleOf(listDistributorPortalOrdersResponseCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected']),
+  "items": zod.array(zod.object({
+  "productId": zod.number().multipleOf(listDistributorPortalOrdersResponseItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(listDistributorPortalOrdersResponseItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(listDistributorPortalOrdersResponseItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(listDistributorPortalOrdersResponseItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(listDistributorPortalOrdersResponseItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(listDistributorPortalOrdersResponseItemsItemTotalAmountMin)
+})),
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "contractId": zod.number().multipleOf(listDistributorPortalOrdersResponseContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(listDistributorPortalOrdersResponseUploadedContractFileIdMultipleOf).nullable(),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(listDistributorPortalOrdersResponseSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(listDistributorPortalOrdersResponseSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(listDistributorPortalOrdersResponseSnapshotTermsDiscountPercentMin).max(listDistributorPortalOrdersResponseSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(listDistributorPortalOrdersResponseSnapshotTermsVatRateMin).max(listDistributorPortalOrdersResponseSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(listDistributorPortalOrdersResponseSnapshotTermsPaymentDaysMin).multipleOf(listDistributorPortalOrdersResponseSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(listDistributorPortalOrdersResponseSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(listDistributorPortalOrdersResponseSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "createdAt": zod.coerce.date(),
+  "reviewedByAdminId": zod.number().multipleOf(listDistributorPortalOrdersResponseReviewedByAdminIdMultipleOf).nullable(),
+  "reviewedByName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "decisionAt": zod.coerce.date().nullable(),
+  "decisionReason": zod.string().nullable(),
+  "invoiceId": zod.number().multipleOf(listDistributorPortalOrdersResponseInvoiceIdMultipleOf).nullable()
+})
+export const ListDistributorPortalOrdersResponse = zod.array(ListDistributorPortalOrdersResponseItem)
+
+
+export const submitDistributorPortalOrderBodyIdempotencyKeyMin = 16;
+export const submitDistributorPortalOrderBodyIdempotencyKeyMax = 80;
+
+export const submitDistributorPortalOrderBodyItemsItemProductIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderBodyItemsItemQuantityMax = 10000;
+export const submitDistributorPortalOrderBodyItemsItemQuantityMultipleOf = 1;
+
+export const submitDistributorPortalOrderBodyItemsMax = 100;
+
+
+
+export const SubmitDistributorPortalOrderBody = zod.object({
+  "idempotencyKey": zod.string().min(submitDistributorPortalOrderBodyIdempotencyKeyMin).max(submitDistributorPortalOrderBodyIdempotencyKeyMax),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(submitDistributorPortalOrderBodyItemsItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).max(submitDistributorPortalOrderBodyItemsItemQuantityMax).multipleOf(submitDistributorPortalOrderBodyItemsItemQuantityMultipleOf)
+})).min(1).max(submitDistributorPortalOrderBodyItemsMax)
+})
+
+export const submitDistributorPortalOrderResponseIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseCompanyIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseItemsItemProductIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseItemsItemQuantityMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseItemsItemUnitPriceMin = 0;
+
+export const submitDistributorPortalOrderResponseItemsItemSubtotalMin = 0;
+
+export const submitDistributorPortalOrderResponseItemsItemVatAmountMin = 0;
+
+export const submitDistributorPortalOrderResponseItemsItemTotalAmountMin = 0;
+
+export const submitDistributorPortalOrderResponseContractIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseUploadedContractFileIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseSnapshotTermsContractIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseSnapshotTermsDiscountPercentMin = 0;
+export const submitDistributorPortalOrderResponseSnapshotTermsDiscountPercentMax = 100;
+
+export const submitDistributorPortalOrderResponseSnapshotTermsVatRateMin = 0;
+export const submitDistributorPortalOrderResponseSnapshotTermsVatRateMax = 100;
+
+export const submitDistributorPortalOrderResponseSnapshotTermsPaymentDaysMin = 0;
+export const submitDistributorPortalOrderResponseSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseSnapshotTermsMinOrderValueMin = 0;
+
+export const submitDistributorPortalOrderResponseSnapshotTermsCreditLimitMin = 0;
+
+export const submitDistributorPortalOrderResponseReviewedByAdminIdMultipleOf = 1;
+
+export const submitDistributorPortalOrderResponseInvoiceIdMultipleOf = 1;
+
+
+
+export const SubmitDistributorPortalOrderResponse = zod.object({
+  "id": zod.number().multipleOf(submitDistributorPortalOrderResponseIdMultipleOf),
+  "orderNumber": zod.string(),
+  "companyId": zod.number().multipleOf(submitDistributorPortalOrderResponseCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected']),
+  "items": zod.array(zod.object({
+  "productId": zod.number().multipleOf(submitDistributorPortalOrderResponseItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(submitDistributorPortalOrderResponseItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(submitDistributorPortalOrderResponseItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(submitDistributorPortalOrderResponseItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(submitDistributorPortalOrderResponseItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(submitDistributorPortalOrderResponseItemsItemTotalAmountMin)
+})),
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "contractId": zod.number().multipleOf(submitDistributorPortalOrderResponseContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(submitDistributorPortalOrderResponseUploadedContractFileIdMultipleOf).nullable(),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(submitDistributorPortalOrderResponseSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(submitDistributorPortalOrderResponseSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(submitDistributorPortalOrderResponseSnapshotTermsDiscountPercentMin).max(submitDistributorPortalOrderResponseSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(submitDistributorPortalOrderResponseSnapshotTermsVatRateMin).max(submitDistributorPortalOrderResponseSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(submitDistributorPortalOrderResponseSnapshotTermsPaymentDaysMin).multipleOf(submitDistributorPortalOrderResponseSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(submitDistributorPortalOrderResponseSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(submitDistributorPortalOrderResponseSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "createdAt": zod.coerce.date(),
+  "reviewedByAdminId": zod.number().multipleOf(submitDistributorPortalOrderResponseReviewedByAdminIdMultipleOf).nullable(),
+  "reviewedByName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "decisionAt": zod.coerce.date().nullable(),
+  "decisionReason": zod.string().nullable(),
+  "invoiceId": zod.number().multipleOf(submitDistributorPortalOrderResponseInvoiceIdMultipleOf).nullable()
+})
+
+
+export const getDistributorPortalOrderPathOrderIdMultipleOf = 1;
+
+
+
+export const GetDistributorPortalOrderParams = zod.object({
+  "orderId": zod.coerce.number().min(1).multipleOf(getDistributorPortalOrderPathOrderIdMultipleOf)
+})
+
+export const getDistributorPortalOrderResponseIdMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseCompanyIdMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseItemsItemProductIdMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseItemsItemQuantityMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseItemsItemUnitPriceMin = 0;
+
+export const getDistributorPortalOrderResponseItemsItemSubtotalMin = 0;
+
+export const getDistributorPortalOrderResponseItemsItemVatAmountMin = 0;
+
+export const getDistributorPortalOrderResponseItemsItemTotalAmountMin = 0;
+
+export const getDistributorPortalOrderResponseContractIdMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseUploadedContractFileIdMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseSnapshotTermsContractIdMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseSnapshotTermsDiscountPercentMin = 0;
+export const getDistributorPortalOrderResponseSnapshotTermsDiscountPercentMax = 100;
+
+export const getDistributorPortalOrderResponseSnapshotTermsVatRateMin = 0;
+export const getDistributorPortalOrderResponseSnapshotTermsVatRateMax = 100;
+
+export const getDistributorPortalOrderResponseSnapshotTermsPaymentDaysMin = 0;
+export const getDistributorPortalOrderResponseSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseSnapshotTermsMinOrderValueMin = 0;
+
+export const getDistributorPortalOrderResponseSnapshotTermsCreditLimitMin = 0;
+
+export const getDistributorPortalOrderResponseReviewedByAdminIdMultipleOf = 1;
+
+export const getDistributorPortalOrderResponseInvoiceIdMultipleOf = 1;
+
+
+
+export const GetDistributorPortalOrderResponse = zod.object({
+  "id": zod.number().multipleOf(getDistributorPortalOrderResponseIdMultipleOf),
+  "orderNumber": zod.string(),
+  "companyId": zod.number().multipleOf(getDistributorPortalOrderResponseCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected']),
+  "items": zod.array(zod.object({
+  "productId": zod.number().multipleOf(getDistributorPortalOrderResponseItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(getDistributorPortalOrderResponseItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(getDistributorPortalOrderResponseItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(getDistributorPortalOrderResponseItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(getDistributorPortalOrderResponseItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(getDistributorPortalOrderResponseItemsItemTotalAmountMin)
+})),
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "contractId": zod.number().multipleOf(getDistributorPortalOrderResponseContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(getDistributorPortalOrderResponseUploadedContractFileIdMultipleOf).nullable(),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(getDistributorPortalOrderResponseSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(getDistributorPortalOrderResponseSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(getDistributorPortalOrderResponseSnapshotTermsDiscountPercentMin).max(getDistributorPortalOrderResponseSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(getDistributorPortalOrderResponseSnapshotTermsVatRateMin).max(getDistributorPortalOrderResponseSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(getDistributorPortalOrderResponseSnapshotTermsPaymentDaysMin).multipleOf(getDistributorPortalOrderResponseSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(getDistributorPortalOrderResponseSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(getDistributorPortalOrderResponseSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "createdAt": zod.coerce.date(),
+  "reviewedByAdminId": zod.number().multipleOf(getDistributorPortalOrderResponseReviewedByAdminIdMultipleOf).nullable(),
+  "reviewedByName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "decisionAt": zod.coerce.date().nullable(),
+  "decisionReason": zod.string().nullable(),
+  "invoiceId": zod.number().multipleOf(getDistributorPortalOrderResponseInvoiceIdMultipleOf).nullable()
+})
+
+
+export const listAdminCompanyOrdersQuerySearchMax = 100;
+
+
+
+export const ListAdminCompanyOrdersQueryParams = zod.object({
+  "status": zod.enum(['pending_review', 'approved', 'rejected']).optional(),
+  "search": zod.coerce.string().max(listAdminCompanyOrdersQuerySearchMax).optional()
+})
+
+export const listAdminCompanyOrdersResponseOrdersItemIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemCompanyIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemItemsItemProductIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemItemsItemQuantityMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemItemsItemUnitPriceMin = 0;
+
+export const listAdminCompanyOrdersResponseOrdersItemItemsItemSubtotalMin = 0;
+
+export const listAdminCompanyOrdersResponseOrdersItemItemsItemVatAmountMin = 0;
+
+export const listAdminCompanyOrdersResponseOrdersItemItemsItemTotalAmountMin = 0;
+
+export const listAdminCompanyOrdersResponseOrdersItemContractIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemUploadedContractFileIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsContractIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsDiscountPercentMin = 0;
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsDiscountPercentMax = 100;
+
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsVatRateMin = 0;
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsVatRateMax = 100;
+
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsPaymentDaysMin = 0;
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsMinOrderValueMin = 0;
+
+export const listAdminCompanyOrdersResponseOrdersItemSnapshotTermsCreditLimitMin = 0;
+
+export const listAdminCompanyOrdersResponseOrdersItemReviewedByAdminIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseOrdersItemInvoiceIdMultipleOf = 1;
+
+export const listAdminCompanyOrdersResponseTotalMin = 0;
+export const listAdminCompanyOrdersResponseTotalMultipleOf = 1;
+
+
+
+export const ListAdminCompanyOrdersResponse = zod.object({
+  "orders": zod.array(zod.object({
+  "id": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemIdMultipleOf),
+  "orderNumber": zod.string(),
+  "companyId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected']),
+  "items": zod.array(zod.object({
+  "productId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(listAdminCompanyOrdersResponseOrdersItemItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(listAdminCompanyOrdersResponseOrdersItemItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(listAdminCompanyOrdersResponseOrdersItemItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(listAdminCompanyOrdersResponseOrdersItemItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(listAdminCompanyOrdersResponseOrdersItemItemsItemTotalAmountMin)
+})),
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "contractId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemUploadedContractFileIdMultipleOf).nullable(),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsDiscountPercentMin).max(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsVatRateMin).max(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsPaymentDaysMin).multipleOf(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(listAdminCompanyOrdersResponseOrdersItemSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "createdAt": zod.coerce.date(),
+  "reviewedByAdminId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemReviewedByAdminIdMultipleOf).nullable(),
+  "reviewedByName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "decisionAt": zod.coerce.date().nullable(),
+  "decisionReason": zod.string().nullable(),
+  "invoiceId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemInvoiceIdMultipleOf).nullable()
+})),
+  "total": zod.number().min(listAdminCompanyOrdersResponseTotalMin).multipleOf(listAdminCompanyOrdersResponseTotalMultipleOf)
+})
+
+
+export const getAdminCompanyOrderReviewPathOrderIdMultipleOf = 1;
+
+
+
+export const GetAdminCompanyOrderReviewParams = zod.object({
+  "orderId": zod.coerce.number().min(1).multipleOf(getAdminCompanyOrderReviewPathOrderIdMultipleOf)
+})
+
+export const getAdminCompanyOrderReviewResponseOrderIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderCompanyIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderItemsItemProductIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderItemsItemQuantityMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderItemsItemUnitPriceMin = 0;
+
+export const getAdminCompanyOrderReviewResponseOrderItemsItemSubtotalMin = 0;
+
+export const getAdminCompanyOrderReviewResponseOrderItemsItemVatAmountMin = 0;
+
+export const getAdminCompanyOrderReviewResponseOrderItemsItemTotalAmountMin = 0;
+
+export const getAdminCompanyOrderReviewResponseOrderContractIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderUploadedContractFileIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsContractIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsDiscountPercentMin = 0;
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsDiscountPercentMax = 100;
+
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsVatRateMin = 0;
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsVatRateMax = 100;
+
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsPaymentDaysMin = 0;
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsMinOrderValueMin = 0;
+
+export const getAdminCompanyOrderReviewResponseOrderSnapshotTermsCreditLimitMin = 0;
+
+export const getAdminCompanyOrderReviewResponseOrderReviewedByAdminIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseOrderInvoiceIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseCompanyIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseSnapshotTermsContractIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseSnapshotTermsDiscountPercentMin = 0;
+export const getAdminCompanyOrderReviewResponseSnapshotTermsDiscountPercentMax = 100;
+
+export const getAdminCompanyOrderReviewResponseSnapshotTermsVatRateMin = 0;
+export const getAdminCompanyOrderReviewResponseSnapshotTermsVatRateMax = 100;
+
+export const getAdminCompanyOrderReviewResponseSnapshotTermsPaymentDaysMin = 0;
+export const getAdminCompanyOrderReviewResponseSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseSnapshotTermsMinOrderValueMin = 0;
+
+export const getAdminCompanyOrderReviewResponseSnapshotTermsCreditLimitMin = 0;
+
+export const getAdminCompanyOrderReviewResponseCurrentTermsContractIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseCurrentTermsUploadedContractFileIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseCurrentTermsDiscountPercentMin = 0;
+export const getAdminCompanyOrderReviewResponseCurrentTermsDiscountPercentMax = 100;
+
+export const getAdminCompanyOrderReviewResponseCurrentTermsVatRateMin = 0;
+export const getAdminCompanyOrderReviewResponseCurrentTermsVatRateMax = 100;
+
+export const getAdminCompanyOrderReviewResponseCurrentTermsPaymentDaysMin = 0;
+export const getAdminCompanyOrderReviewResponseCurrentTermsPaymentDaysMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseCurrentTermsMinOrderValueMin = 0;
+
+export const getAdminCompanyOrderReviewResponseCurrentTermsCreditLimitMin = 0;
+
+export const getAdminCompanyOrderReviewResponseCurrentItemsItemProductIdMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseCurrentItemsItemQuantityMultipleOf = 1;
+
+export const getAdminCompanyOrderReviewResponseCurrentItemsItemUnitPriceMin = 0;
+
+export const getAdminCompanyOrderReviewResponseCurrentItemsItemSubtotalMin = 0;
+
+export const getAdminCompanyOrderReviewResponseCurrentItemsItemVatAmountMin = 0;
+
+export const getAdminCompanyOrderReviewResponseCurrentItemsItemTotalAmountMin = 0;
+
+export const getAdminCompanyOrderReviewResponseCreditLimitMin = 0;
+
+export const getAdminCompanyOrderReviewResponseCreditOutstandingMin = 0;
+
+
+
+export const GetAdminCompanyOrderReviewResponse = zod.object({
+  "order": zod.object({
+  "id": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderIdMultipleOf),
+  "orderNumber": zod.string(),
+  "companyId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected']),
+  "items": zod.array(zod.object({
+  "productId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(getAdminCompanyOrderReviewResponseOrderItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(getAdminCompanyOrderReviewResponseOrderItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(getAdminCompanyOrderReviewResponseOrderItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(getAdminCompanyOrderReviewResponseOrderItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(getAdminCompanyOrderReviewResponseOrderItemsItemTotalAmountMin)
+})),
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "contractId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderUploadedContractFileIdMultipleOf).nullable(),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(getAdminCompanyOrderReviewResponseOrderSnapshotTermsDiscountPercentMin).max(getAdminCompanyOrderReviewResponseOrderSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(getAdminCompanyOrderReviewResponseOrderSnapshotTermsVatRateMin).max(getAdminCompanyOrderReviewResponseOrderSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(getAdminCompanyOrderReviewResponseOrderSnapshotTermsPaymentDaysMin).multipleOf(getAdminCompanyOrderReviewResponseOrderSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(getAdminCompanyOrderReviewResponseOrderSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(getAdminCompanyOrderReviewResponseOrderSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "createdAt": zod.coerce.date(),
+  "reviewedByAdminId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderReviewedByAdminIdMultipleOf).nullable(),
+  "reviewedByName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "decisionAt": zod.coerce.date().nullable(),
+  "decisionReason": zod.string().nullable(),
+  "invoiceId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseOrderInvoiceIdMultipleOf).nullable()
+}),
+  "company": zod.object({
+  "id": zod.number().multipleOf(getAdminCompanyOrderReviewResponseCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "contactName": zod.string(),
+  "email": zod.string().nullable(),
+  "countryCode": zod.string().nullable()
+}),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(getAdminCompanyOrderReviewResponseSnapshotTermsDiscountPercentMin).max(getAdminCompanyOrderReviewResponseSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(getAdminCompanyOrderReviewResponseSnapshotTermsVatRateMin).max(getAdminCompanyOrderReviewResponseSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(getAdminCompanyOrderReviewResponseSnapshotTermsPaymentDaysMin).multipleOf(getAdminCompanyOrderReviewResponseSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(getAdminCompanyOrderReviewResponseSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(getAdminCompanyOrderReviewResponseSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "currentTerms": zod.object({
+  "contractId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseCurrentTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseCurrentTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(getAdminCompanyOrderReviewResponseCurrentTermsDiscountPercentMin).max(getAdminCompanyOrderReviewResponseCurrentTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(getAdminCompanyOrderReviewResponseCurrentTermsVatRateMin).max(getAdminCompanyOrderReviewResponseCurrentTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(getAdminCompanyOrderReviewResponseCurrentTermsPaymentDaysMin).multipleOf(getAdminCompanyOrderReviewResponseCurrentTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(getAdminCompanyOrderReviewResponseCurrentTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(getAdminCompanyOrderReviewResponseCurrentTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "currentItems": zod.array(zod.object({
+  "productId": zod.number().multipleOf(getAdminCompanyOrderReviewResponseCurrentItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(getAdminCompanyOrderReviewResponseCurrentItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(getAdminCompanyOrderReviewResponseCurrentItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(getAdminCompanyOrderReviewResponseCurrentItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(getAdminCompanyOrderReviewResponseCurrentItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(getAdminCompanyOrderReviewResponseCurrentItemsItemTotalAmountMin)
+})),
+  "currentTotals": zod.object({
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number()
+}),
+  "credit": zod.object({
+  "limit": zod.number().min(getAdminCompanyOrderReviewResponseCreditLimitMin).nullable(),
+  "outstanding": zod.number().min(getAdminCompanyOrderReviewResponseCreditOutstandingMin),
+  "availableBefore": zod.number().nullable(),
+  "availableAfter": zod.number().nullable()
+}),
+  "blockReasons": zod.array(zod.string()),
+  "hasMeaningfulChanges": zod.boolean(),
+  "reviewFingerprint": zod.string()
+})
+
+
+export const decideAdminCompanyOrderPathOrderIdMultipleOf = 1;
+
+
+
+export const DecideAdminCompanyOrderParams = zod.object({
+  "orderId": zod.coerce.number().min(1).multipleOf(decideAdminCompanyOrderPathOrderIdMultipleOf)
+})
+
+export const decideAdminCompanyOrderBodyReasonMin = 10;
+export const decideAdminCompanyOrderBodyReasonMax = 500;
+
+export const decideAdminCompanyOrderBodyExpectedReviewFingerprintMin = 32;
+export const decideAdminCompanyOrderBodyExpectedReviewFingerprintMax = 128;
+
+
+
+export const DecideAdminCompanyOrderBody = zod.object({
+  "decision": zod.enum(['approve', 'reject']),
+  "reason": zod.string().min(decideAdminCompanyOrderBodyReasonMin).max(decideAdminCompanyOrderBodyReasonMax).nullish(),
+  "expectedReviewFingerprint": zod.string().min(decideAdminCompanyOrderBodyExpectedReviewFingerprintMin).max(decideAdminCompanyOrderBodyExpectedReviewFingerprintMax),
+  "acknowledgeChanges": zod.boolean()
+})
+
+export const decideAdminCompanyOrderResponseOrderIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderCompanyIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderItemsItemProductIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderItemsItemQuantityMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderItemsItemUnitPriceMin = 0;
+
+export const decideAdminCompanyOrderResponseOrderItemsItemSubtotalMin = 0;
+
+export const decideAdminCompanyOrderResponseOrderItemsItemVatAmountMin = 0;
+
+export const decideAdminCompanyOrderResponseOrderItemsItemTotalAmountMin = 0;
+
+export const decideAdminCompanyOrderResponseOrderContractIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderUploadedContractFileIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsContractIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsDiscountPercentMin = 0;
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsDiscountPercentMax = 100;
+
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsVatRateMin = 0;
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsVatRateMax = 100;
+
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsPaymentDaysMin = 0;
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsMinOrderValueMin = 0;
+
+export const decideAdminCompanyOrderResponseOrderSnapshotTermsCreditLimitMin = 0;
+
+export const decideAdminCompanyOrderResponseOrderReviewedByAdminIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseOrderInvoiceIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseInvoiceIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderCompanyIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderItemsItemProductIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderItemsItemQuantityMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderItemsItemUnitPriceMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewOrderItemsItemSubtotalMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewOrderItemsItemVatAmountMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewOrderItemsItemTotalAmountMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewOrderContractIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderUploadedContractFileIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsContractIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsDiscountPercentMin = 0;
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsDiscountPercentMax = 100;
+
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsVatRateMin = 0;
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsVatRateMax = 100;
+
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsPaymentDaysMin = 0;
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsMinOrderValueMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewOrderSnapshotTermsCreditLimitMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewOrderReviewedByAdminIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewOrderInvoiceIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewCompanyIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsContractIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsUploadedContractFileIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsDiscountPercentMin = 0;
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsDiscountPercentMax = 100;
+
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsVatRateMin = 0;
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsVatRateMax = 100;
+
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsPaymentDaysMin = 0;
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsPaymentDaysMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsMinOrderValueMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewSnapshotTermsCreditLimitMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewCurrentTermsContractIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewCurrentTermsUploadedContractFileIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewCurrentTermsDiscountPercentMin = 0;
+export const decideAdminCompanyOrderResponseReviewCurrentTermsDiscountPercentMax = 100;
+
+export const decideAdminCompanyOrderResponseReviewCurrentTermsVatRateMin = 0;
+export const decideAdminCompanyOrderResponseReviewCurrentTermsVatRateMax = 100;
+
+export const decideAdminCompanyOrderResponseReviewCurrentTermsPaymentDaysMin = 0;
+export const decideAdminCompanyOrderResponseReviewCurrentTermsPaymentDaysMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewCurrentTermsMinOrderValueMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewCurrentTermsCreditLimitMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewCurrentItemsItemProductIdMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewCurrentItemsItemQuantityMultipleOf = 1;
+
+export const decideAdminCompanyOrderResponseReviewCurrentItemsItemUnitPriceMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewCurrentItemsItemSubtotalMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewCurrentItemsItemVatAmountMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewCurrentItemsItemTotalAmountMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewCreditLimitMin = 0;
+
+export const decideAdminCompanyOrderResponseReviewCreditOutstandingMin = 0;
+
+
+
+export const DecideAdminCompanyOrderResponse = zod.object({
+  "order": zod.object({
+  "id": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderIdMultipleOf),
+  "orderNumber": zod.string(),
+  "companyId": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected']),
+  "items": zod.array(zod.object({
+  "productId": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(decideAdminCompanyOrderResponseOrderItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(decideAdminCompanyOrderResponseOrderItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(decideAdminCompanyOrderResponseOrderItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(decideAdminCompanyOrderResponseOrderItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(decideAdminCompanyOrderResponseOrderItemsItemTotalAmountMin)
+})),
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "contractId": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderUploadedContractFileIdMultipleOf).nullable(),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(decideAdminCompanyOrderResponseOrderSnapshotTermsDiscountPercentMin).max(decideAdminCompanyOrderResponseOrderSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(decideAdminCompanyOrderResponseOrderSnapshotTermsVatRateMin).max(decideAdminCompanyOrderResponseOrderSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(decideAdminCompanyOrderResponseOrderSnapshotTermsPaymentDaysMin).multipleOf(decideAdminCompanyOrderResponseOrderSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(decideAdminCompanyOrderResponseOrderSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(decideAdminCompanyOrderResponseOrderSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "createdAt": zod.coerce.date(),
+  "reviewedByAdminId": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderReviewedByAdminIdMultipleOf).nullable(),
+  "reviewedByName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "decisionAt": zod.coerce.date().nullable(),
+  "decisionReason": zod.string().nullable(),
+  "invoiceId": zod.number().multipleOf(decideAdminCompanyOrderResponseOrderInvoiceIdMultipleOf).nullable()
+}),
+  "invoiceId": zod.number().multipleOf(decideAdminCompanyOrderResponseInvoiceIdMultipleOf).nullable(),
+  "review": zod.object({
+  "order": zod.object({
+  "id": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderIdMultipleOf),
+  "orderNumber": zod.string(),
+  "companyId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "status": zod.enum(['pending_review', 'approved', 'rejected']),
+  "items": zod.array(zod.object({
+  "productId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(decideAdminCompanyOrderResponseReviewOrderItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(decideAdminCompanyOrderResponseReviewOrderItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(decideAdminCompanyOrderResponseReviewOrderItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(decideAdminCompanyOrderResponseReviewOrderItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(decideAdminCompanyOrderResponseReviewOrderItemsItemTotalAmountMin)
+})),
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "contractId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderUploadedContractFileIdMultipleOf).nullable(),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsDiscountPercentMin).max(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsVatRateMin).max(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsPaymentDaysMin).multipleOf(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(decideAdminCompanyOrderResponseReviewOrderSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "createdAt": zod.coerce.date(),
+  "reviewedByAdminId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderReviewedByAdminIdMultipleOf).nullable(),
+  "reviewedByName": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "decisionAt": zod.coerce.date().nullable(),
+  "decisionReason": zod.string().nullable(),
+  "invoiceId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewOrderInvoiceIdMultipleOf).nullable()
+}),
+  "company": zod.object({
+  "id": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewCompanyIdMultipleOf),
+  "companyName": zod.string(),
+  "contactName": zod.string(),
+  "email": zod.string().nullable(),
+  "countryCode": zod.string().nullable()
+}),
+  "snapshotTerms": zod.object({
+  "contractId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewSnapshotTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewSnapshotTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(decideAdminCompanyOrderResponseReviewSnapshotTermsDiscountPercentMin).max(decideAdminCompanyOrderResponseReviewSnapshotTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(decideAdminCompanyOrderResponseReviewSnapshotTermsVatRateMin).max(decideAdminCompanyOrderResponseReviewSnapshotTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(decideAdminCompanyOrderResponseReviewSnapshotTermsPaymentDaysMin).multipleOf(decideAdminCompanyOrderResponseReviewSnapshotTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(decideAdminCompanyOrderResponseReviewSnapshotTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(decideAdminCompanyOrderResponseReviewSnapshotTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "currentTerms": zod.object({
+  "contractId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewCurrentTermsContractIdMultipleOf).nullable(),
+  "uploadedContractFileId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewCurrentTermsUploadedContractFileIdMultipleOf).nullable(),
+  "contractType": zod.string().nullable(),
+  "contractNumber": zod.string().nullish(),
+  "discountPercent": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentTermsDiscountPercentMin).max(decideAdminCompanyOrderResponseReviewCurrentTermsDiscountPercentMax),
+  "taxTreatment": zod.enum(['domestic', 'international']),
+  "vatRate": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentTermsVatRateMin).max(decideAdminCompanyOrderResponseReviewCurrentTermsVatRateMax),
+  "paymentTerm": zod.string().nullable(),
+  "paymentDays": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentTermsPaymentDaysMin).multipleOf(decideAdminCompanyOrderResponseReviewCurrentTermsPaymentDaysMultipleOf).nullable(),
+  "minOrderValue": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentTermsMinOrderValueMin).nullable(),
+  "creditLimit": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentTermsCreditLimitMin).nullable(),
+  "creditLimitApproved": zod.boolean(),
+  "creditLimitApprovedAt": zod.coerce.date().nullable(),
+  "termsConfirmedAt": zod.coerce.date().nullish()
+}),
+  "currentItems": zod.array(zod.object({
+  "productId": zod.number().multipleOf(decideAdminCompanyOrderResponseReviewCurrentItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "productNameEn": zod.string(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number().min(1).multipleOf(decideAdminCompanyOrderResponseReviewCurrentItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentItemsItemUnitPriceMin),
+  "subtotal": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentItemsItemSubtotalMin),
+  "vatAmount": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentItemsItemVatAmountMin),
+  "totalAmount": zod.number().min(decideAdminCompanyOrderResponseReviewCurrentItemsItemTotalAmountMin)
+})),
+  "currentTotals": zod.object({
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number()
+}),
+  "credit": zod.object({
+  "limit": zod.number().min(decideAdminCompanyOrderResponseReviewCreditLimitMin).nullable(),
+  "outstanding": zod.number().min(decideAdminCompanyOrderResponseReviewCreditOutstandingMin),
+  "availableBefore": zod.number().nullable(),
+  "availableAfter": zod.number().nullable()
+}),
+  "blockReasons": zod.array(zod.string()),
+  "hasMeaningfulChanges": zod.boolean(),
+  "reviewFingerprint": zod.string()
+}),
+  "changesAcknowledged": zod.boolean()
+})
+
+
+export const getAdminDistributorPortalAccountPathCompanyIdMultipleOf = 1;
+
+
+
+export const GetAdminDistributorPortalAccountParams = zod.object({
+  "companyId": zod.coerce.number().min(1).multipleOf(getAdminDistributorPortalAccountPathCompanyIdMultipleOf)
+})
+
+export const getAdminDistributorPortalAccountResponseCompanyIdMultipleOf = 1;
+
+
+
+export const GetAdminDistributorPortalAccountResponse = zod.object({
+  "companyId": zod.number().multipleOf(getAdminDistributorPortalAccountResponseCompanyIdMultipleOf),
+  "exists": zod.boolean(),
+  "email": zod.string().nullable(),
+  "enabled": zod.boolean().nullable(),
+  "createdAt": zod.coerce.date().nullable(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+export const updateAdminDistributorPortalAccountPathCompanyIdMultipleOf = 1;
+
+
+
+export const UpdateAdminDistributorPortalAccountParams = zod.object({
+  "companyId": zod.coerce.number().min(1).multipleOf(updateAdminDistributorPortalAccountPathCompanyIdMultipleOf)
+})
+
+export const updateAdminDistributorPortalAccountBodyEmailMax = 254;
+
+export const updateAdminDistributorPortalAccountBodyPasswordMin = 12;
+export const updateAdminDistributorPortalAccountBodyPasswordMax = 256;
+
+
+
+export const UpdateAdminDistributorPortalAccountBody = zod.object({
+  "enabled": zod.boolean(),
+  "email": zod.string().max(updateAdminDistributorPortalAccountBodyEmailMax).nullish(),
+  "password": zod.string().min(updateAdminDistributorPortalAccountBodyPasswordMin).max(updateAdminDistributorPortalAccountBodyPasswordMax).nullish()
+})
+
+export const updateAdminDistributorPortalAccountResponseCompanyIdMultipleOf = 1;
+
+
+
+export const UpdateAdminDistributorPortalAccountResponse = zod.object({
+  "companyId": zod.number().multipleOf(updateAdminDistributorPortalAccountResponseCompanyIdMultipleOf),
+  "email": zod.string(),
+  "enabled": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const revokeAdminDistributorPortalSessionsPathCompanyIdMultipleOf = 1;
+
+
+
+export const RevokeAdminDistributorPortalSessionsParams = zod.object({
+  "companyId": zod.coerce.number().min(1).multipleOf(revokeAdminDistributorPortalSessionsPathCompanyIdMultipleOf)
+})
+
+export const revokeAdminDistributorPortalSessionsResponseRevokedSessionsMin = 0;
+export const revokeAdminDistributorPortalSessionsResponseRevokedSessionsMultipleOf = 1;
+
+
+
+export const RevokeAdminDistributorPortalSessionsResponse = zod.object({
+  "revokedSessions": zod.number().min(revokeAdminDistributorPortalSessionsResponseRevokedSessionsMin).multipleOf(revokeAdminDistributorPortalSessionsResponseRevokedSessionsMultipleOf)
+})

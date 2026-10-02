@@ -39,8 +39,16 @@ describe('admin commercial navigation', () => {
     ]);
   });
 
-  it('keeps order navigation on the order management screen', () => {
-    expect(group('Orders').children?.map((item: any) => item.href)).toEqual(['/admin/orders', '/admin/orders']);
+  it('separates company and individual order destinations and permissions', () => {
+    expect(group('Orders').children?.map((item: any) => item.href)).toEqual(['/admin/orders', '/admin/company-orders']);
+    expect(visibleAdminNavChildren(group('Orders'), user(['orders:view'])).map((item: any) => item.labelEn))
+      .toEqual(['Individual Orders']);
+    expect(visibleAdminNavChildren(group('Orders'), user(['company-orders:view'])).map((item: any) => item.labelEn))
+      .toEqual(['Company Orders']);
+    expect(new Set(group('Orders').children?.map((item: any) => item.href)).size).toBe(2);
+    expect(isAdminNavActive('/admin/orders', '/admin/company-orders')).toBe(false);
+    expect(isAdminNavActive('/admin/company-orders', '/admin/orders')).toBe(false);
+    expect(isAdminNavActive('/admin/orders', '/admin/orders-extra')).toBe(false);
     expect(group('Sales').children?.map((item: any) => item.href)).toEqual([
       '/admin/sales/online',
       '/admin/sales/companies',
@@ -84,9 +92,9 @@ describe('admin commercial navigation', () => {
 
   it('keeps B2B catalog and contracts independently permissioned', () => {
     expect(visibleAdminNavChildren(group('B2B'), user(['distributors:view'])).map((item: any) => item.labelEn))
-      .toEqual(['B2B Catalog']);
+      .toEqual(['B2B Catalog', 'Annual Agenda']);
     expect(visibleAdminNavChildren(group('B2B'), user(['distributors:view', 'contracts:view'])).map((item: any) => item.labelEn))
-      .toEqual(['Contracts', 'B2B Catalog']);
+      .toEqual(['Contracts', 'B2B Catalog', 'Annual Agenda']);
     expect(visibleLabels(['contracts:view'])).toContain('B2B');
   });
 

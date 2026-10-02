@@ -1629,6 +1629,22 @@ export interface DistributorContract {
   warrantyMonths?: number;
   deliveryDays?: number;
   paymentDays?: number;
+  /**
+     * @nullable
+     * @pattern ^\d+(?:\.\d{1,2})?$
+     */
+  contractCreditLimit: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d+(?:\.\d{1,2})?$
+     */
+  creditLimit: string | null;
+  /** @nullable */
+  creditLimitApprovedBy: number | null;
+  /** @nullable */
+  creditLimitApprovedAt: string | null;
+  /** @nullable */
+  creditLimitApprovalReason: string | null;
   products: unknown[];
   /** @nullable */
   notes?: string | null;
@@ -1736,6 +1752,11 @@ export interface DistributorContractInput {
   warrantyMonths?: number;
   deliveryDays?: number;
   paymentDays?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  contractCreditLimit?: number | null;
   products?: unknown[];
   /** @nullable */
   notes?: string | null;
@@ -1765,6 +1786,7 @@ export type DistributorContractUpdate = DistributorContractInput;
 export interface ContractSignatureInput {
   /** @minLength 1 */
   signaturePath: string;
+  expectedUpdatedAt?: string;
 }
 
 export type ContractSignatureUploadInputContentType = typeof ContractSignatureUploadInputContentType[keyof typeof ContractSignatureUploadInputContentType];
@@ -3251,6 +3273,17 @@ export interface UploadedContractFile {
   termsConfirmedAt: string | null;
   /** @nullable */
   termsConfirmedBy: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  creditLimit: number | null;
+  /** @nullable */
+  creditLimitApprovedBy: number | null;
+  /** @nullable */
+  creditLimitApprovedAt: string | null;
+  /** @nullable */
+  creditLimitApprovalReason: string | null;
   uploadedBy: number;
   uploadedAt: string;
 }
@@ -3287,6 +3320,16 @@ export interface UploadedContractTermsInput {
   endDate?: string | null;
   /** @nullable */
   signedDate?: string | null;
+}
+
+export interface CreditLimitApprovalInput {
+  /** @minimum 0 */
+  creditLimit: number;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     */
+  reason: string;
 }
 
 export type ContractSignedDateSuggestionSource = typeof ContractSignedDateSuggestionSource[keyof typeof ContractSignedDateSuggestionSource];
@@ -6207,6 +6250,305 @@ export interface ManufacturingInputsInput {
   lines: ManufacturingInput[];
 }
 
+export interface DistributorPortalLoginInput {
+  /** @maxLength 254 */
+  email: string;
+  /**
+     * @minLength 1
+     * @maxLength 256
+     */
+  password: string;
+}
+
+export interface DistributorPortalCompany {
+  id: number;
+  companyName: string;
+  contactName: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  countryCode: string | null;
+}
+
+export interface DistributorPortalLogin {
+  token: string;
+  expiresAt: string;
+  company: DistributorPortalCompany;
+}
+
+export interface DistributorPortalSession {
+  company: DistributorPortalCompany;
+  expiresAt: string;
+}
+
+export interface DistributorPortalRevokeSessionResponse {
+  /** @minimum 0 */
+  revokedSessions: number;
+}
+
+export type DistributorPortalTermsTaxTreatment = typeof DistributorPortalTermsTaxTreatment[keyof typeof DistributorPortalTermsTaxTreatment];
+
+
+export const DistributorPortalTermsTaxTreatment = {
+  domestic: 'domestic',
+  international: 'international',
+} as const;
+
+export interface DistributorPortalTerms {
+  /** @nullable */
+  contractId: number | null;
+  /** @nullable */
+  uploadedContractFileId: number | null;
+  /** @nullable */
+  contractType: string | null;
+  /** @nullable */
+  contractNumber?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  discountPercent: number;
+  taxTreatment: DistributorPortalTermsTaxTreatment;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  vatRate: number;
+  /** @nullable */
+  paymentTerm: string | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  paymentDays: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  minOrderValue: number | null;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  creditLimit: number | null;
+  creditLimitApproved: boolean;
+  /** @nullable */
+  creditLimitApprovedAt: string | null;
+  /** @nullable */
+  termsConfirmedAt?: string | null;
+}
+
+export interface DistributorPortalCatalogProduct {
+  id: number;
+  nameAr: string;
+  nameEn: string;
+  /** @nullable */
+  sku: string | null;
+  /** @nullable */
+  image: string | null;
+  /** @exclusiveMinimum 0 */
+  unitPrice: number;
+  /** @minimum 0 */
+  stockQuantity: number;
+}
+
+export interface DistributorPortalCatalog {
+  company: DistributorPortalCompany;
+  terms: DistributorPortalTerms;
+  discountPercent: number;
+  vatRate: number;
+  catalog: DistributorPortalCatalogProduct[];
+}
+
+export interface CompanyOrderItem {
+  productId: number;
+  productName: string;
+  productNameEn: string;
+  /** @nullable */
+  sku: string | null;
+  /** @minimum 1 */
+  quantity: number;
+  /** @minimum 0 */
+  unitPrice: number;
+  /** @minimum 0 */
+  subtotal: number;
+  /** @minimum 0 */
+  vatAmount: number;
+  /** @minimum 0 */
+  totalAmount: number;
+}
+
+export type CompanyOrderStatus = typeof CompanyOrderStatus[keyof typeof CompanyOrderStatus];
+
+
+export const CompanyOrderStatus = {
+  pending_review: 'pending_review',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+export interface CompanyOrder {
+  id: number;
+  orderNumber: string;
+  companyId: number;
+  companyName: string;
+  status: CompanyOrderStatus;
+  items: CompanyOrderItem[];
+  subtotal: number;
+  discountAmount: number;
+  vatAmount: number;
+  totalAmount: number;
+  /** @nullable */
+  contractId: number | null;
+  /** @nullable */
+  uploadedContractFileId: number | null;
+  snapshotTerms: DistributorPortalTerms;
+  createdAt: string;
+  /** @nullable */
+  reviewedByAdminId: number | null;
+  /** @nullable */
+  reviewedByName: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  /** @nullable */
+  decisionAt: string | null;
+  /** @nullable */
+  decisionReason: string | null;
+  /** @nullable */
+  invoiceId: number | null;
+}
+
+export interface DistributorPortalOrderItemInput {
+  /** @minimum 1 */
+  productId: number;
+  /**
+     * @minimum 1
+     * @maximum 10000
+     */
+  quantity: number;
+}
+
+export interface DistributorPortalOrderInput {
+  /**
+     * @minLength 16
+     * @maxLength 80
+     */
+  idempotencyKey: string;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  items: DistributorPortalOrderItemInput[];
+}
+
+export interface AdminCompanyOrdersPage {
+  orders: CompanyOrder[];
+  /** @minimum 0 */
+  total: number;
+}
+
+export interface CompanyOrderCreditReview {
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  limit: number | null;
+  /** @minimum 0 */
+  outstanding: number;
+  /** @nullable */
+  availableBefore: number | null;
+  /** @nullable */
+  availableAfter: number | null;
+}
+
+export interface CompanyOrderTotals {
+  subtotal: number;
+  discountAmount: number;
+  vatAmount: number;
+  totalAmount: number;
+}
+
+export interface CompanyOrderReview {
+  order: CompanyOrder;
+  company: DistributorPortalCompany;
+  snapshotTerms: DistributorPortalTerms;
+  currentTerms: DistributorPortalTerms;
+  currentItems: CompanyOrderItem[];
+  currentTotals: CompanyOrderTotals;
+  credit: CompanyOrderCreditReview;
+  blockReasons: string[];
+  hasMeaningfulChanges: boolean;
+  reviewFingerprint: string;
+}
+
+export type CompanyOrderDecisionInputDecision = typeof CompanyOrderDecisionInputDecision[keyof typeof CompanyOrderDecisionInputDecision];
+
+
+export const CompanyOrderDecisionInputDecision = {
+  approve: 'approve',
+  reject: 'reject',
+} as const;
+
+export interface CompanyOrderDecisionInput {
+  decision: CompanyOrderDecisionInputDecision;
+  /**
+     * @minLength 10
+     * @maxLength 500
+     * @nullable
+     */
+  reason?: string | null;
+  /**
+     * @minLength 32
+     * @maxLength 128
+     */
+  expectedReviewFingerprint: string;
+  acknowledgeChanges: boolean;
+}
+
+export interface CompanyOrderDecisionResponse {
+  order: CompanyOrder;
+  /** @nullable */
+  invoiceId: number | null;
+  review: CompanyOrderReview;
+  changesAcknowledged: boolean;
+}
+
+export interface DistributorPortalAccount {
+  companyId: number;
+  email: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DistributorPortalAccountStatus {
+  companyId: number;
+  exists: boolean;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  enabled: boolean | null;
+  /** @nullable */
+  createdAt: string | null;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
+export interface DistributorPortalAccountInput {
+  enabled: boolean;
+  /**
+     * @maxLength 254
+     * @nullable
+     */
+  email?: string | null;
+  /**
+     * @minLength 12
+     * @maxLength 256
+     * @nullable
+     */
+  password?: string | null;
+}
+
 /**
  * Invalid request
  */
@@ -6650,3 +6992,19 @@ export const GetInventoryAuditReportFormat = {
   csv: 'csv',
 } as const;
 
+export type ListAdminCompanyOrdersParams = {
+status?: ListAdminCompanyOrdersStatus;
+/**
+ * @maxLength 100
+ */
+search?: string;
+};
+
+export type ListAdminCompanyOrdersStatus = typeof ListAdminCompanyOrdersStatus[keyof typeof ListAdminCompanyOrdersStatus];
+
+
+export const ListAdminCompanyOrdersStatus = {
+  pending_review: 'pending_review',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;

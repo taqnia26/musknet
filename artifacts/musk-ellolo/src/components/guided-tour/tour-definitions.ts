@@ -110,6 +110,17 @@ export function getAdminTourSteps(navStructure: any[], user: AdminUser): GuidedT
       module: 'distributors',
     },
     {
+      id: 'admin-company-orders',
+      target: 'main h1, main',
+      title: { ar: 'طلبات الشركات', en: 'Company Orders' },
+      description: {
+        ar: 'راجع طلب الموزع والعقد والائتمان والمخزون قبل الاعتماد اليدوي. الإرسال لا يصدر فاتورة؛ الاعتماد الناجح يصدر فاتورة واحدة ولا ينفذ تحصيلاً أو شحناً تلقائياً.',
+        en: 'Review the distributor request, contract, credit and stock before manual approval. Submission creates no invoice; successful approval creates one invoice without automatic collection or shipping.',
+      },
+      route: '/admin/company-orders',
+      module: 'company-orders',
+    },
+    {
       id: 'admin-influencers',
       target: 'main h1, main',
       title: { ar: 'المشاهير', en: 'Influencers' },

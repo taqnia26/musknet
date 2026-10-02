@@ -78,7 +78,7 @@ router.post("/owner/auth/login", route(async (req, res) => {
       deviceLabel: created.session.deviceLabel,
       browser: created.session.browser,
       operatingSystem: created.session.operatingSystem,
-      expiresAt: created.session.expiresAt,
+      expiresAt: created.session.expiresAt.toISOString(),
       createdAt: created.session.createdAt,
       isCurrent: true,
     },
@@ -170,6 +170,7 @@ router.get("/owner/sessions", route(async (_req, res) => {
     .orderBy(desc(ownerSessionsTable.createdAt));
   res.json(Api.ListOwnerSessionsResponse.parse(sessions.map((session) => ({
     ...session,
+    expiresAt: session.expiresAt.toISOString(),
     isCurrent: session.id === currentSession.id,
   }))));
 }));

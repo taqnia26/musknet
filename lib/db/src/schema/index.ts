@@ -68,3 +68,4 @@ export * from "./annual-agenda";
 export * from "./production-plans";
 export * from "./shiphero";
 export * from "./backups";
+export * from "./distributor-portal";

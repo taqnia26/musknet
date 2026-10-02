@@ -9,4 +9,5 @@
 export interface ContractSignatureInput {
   /** @minLength 1 */
   signaturePath: string;
+  expectedUpdatedAt?: Date;
 }

@@ -111,6 +111,11 @@ export async function cancelCompanyInvoice(invoiceId: number, reason: string, ac
   if (explanation.length < 10 || explanation.length > 500) throw new DistributorInvoiceValidationError("A cancellation reason of 10–500 characters is required");
   await ensureStandardAccountingChart();
   return db.transaction(async (tx) => {
+    const [identity] = await tx.select({ distributorId: invoicesTable.distributorId }).from(invoicesTable)
+      .where(eq(invoicesTable.id, invoiceId)).limit(1);
+    if (identity?.distributorId !== null && identity?.distributorId !== undefined) {
+      await lockDistributorContractSource(tx, identity.distributorId);
+    }
     await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${invoiceId} for update`);
     const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
     if (!invoice || invoice.distributorId === null) throw new ReceivablePaymentNotFoundError("Company invoice not found");
@@ -316,6 +321,7 @@ export async function createDistributorInvoice(
   input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; discountOverride?: { percent: number; reason?: string }; taxTreatment?: TaxTreatment; issueDate?: string | Date; dueDate?: string | Date; collected?: { paymentDate: string | Date; paymentMethod: "cash" | "bank_transfer" }; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
   environment: NodeJS.ProcessEnv = process.env,
+  executor?: any,
 ) {
   if (!input.items.length) throw new DistributorInvoiceValidationError("At least one invoice item is required");
   if (input.creationKey.trim().length < 16) throw new DistributorInvoiceValidationError("A valid creation key is required");
@@ -335,15 +341,16 @@ export async function createDistributorInvoice(
   }
 
   await ensureStandardAccountingChart();
-  return db.transaction(async (tx) => {
-    await lockDistributorContractSource(tx, input.distributorId);
+  const issue = async (tx: any) => {
+    if (!executor) await lockDistributorContractSource(tx, input.distributorId);
     await tx.execute(sql`select pg_advisory_xact_lock(7521, hashtext(${input.creationKey}))`);
     const [previous] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (previous) {
       await assertDistributorInvoiceReplay(tx, previous, { ...input, discountOverride: input.discountOverride?.percent === Number(previous.contractDiscountPercent ?? 0) ? undefined : input.discountOverride });
       const previousItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, previous.id)).orderBy(invoiceItemsTable.id);
-      const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, previous.id)).orderBy(receivablePaymentsTable.paymentDate);
-      const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
+      const payments: (typeof receivablePaymentsTable.$inferSelect)[] = await tx.select().from(receivablePaymentsTable)
+        .where(eq(receivablePaymentsTable.invoiceId, previous.id)).orderBy(receivablePaymentsTable.paymentDate);
+      const paidAmount = fromCents(payments.reduce((sum: number, payment) => sum + cents(payment.amount), 0));
       return { ...previous, orderNumber: null, distributorName: previous.buyerName, exhibitionName: null, paidAmount, outstandingAmount: fromCents(cents(previous.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: previousItems };
     }
     const [distributor] = await tx.select().from(wholesaleDistributorsTable)
@@ -352,20 +359,20 @@ export async function createDistributorInvoice(
     if (!distributor.isActive) throw new DistributorInvoiceConflictError("Distributor is inactive");
 
     const todayDate = saudiCalendarDate(new Date());
-    const currentContracts = await tx.select().from(distributorContractsTable).where(and(
+    const currentContracts: (typeof distributorContractsTable.$inferSelect)[] = await tx.select().from(distributorContractsTable).where(and(
       eq(distributorContractsTable.distributorId, distributor.id),
       eq(distributorContractsTable.status, "final"),
       sql`(${distributorContractsTable.startDate} is null or ${distributorContractsTable.startDate}::date <= ${todayDate}::date)`,
       sql`(${distributorContractsTable.endDate} is null or ${distributorContractsTable.endDate}::date >= ${todayDate}::date)`,
     ));
-    const currentUploadedContracts = await tx.select().from(uploadedContractFilesTable).where(and(
+    const currentUploadedContracts: (typeof uploadedContractFilesTable.$inferSelect)[] = await tx.select().from(uploadedContractFilesTable).where(and(
       eq(uploadedContractFilesTable.ownerType, "distributor"),
       eq(uploadedContractFilesTable.ownerId, distributor.id),
       isNotNull(uploadedContractFilesTable.termsConfirmedAt),
       sql`(${uploadedContractFilesTable.startDate} is null or ${uploadedContractFilesTable.startDate}::date <= ${todayDate}::date)`,
       sql`(${uploadedContractFilesTable.endDate} is null or ${uploadedContractFilesTable.endDate}::date >= ${todayDate}::date)`,
     ));
-    const pendingUploadedContracts = await tx.select({ id: uploadedContractFilesTable.id }).from(uploadedContractFilesTable).where(and(
+    const pendingUploadedContracts: Array<{ id: number }> = await tx.select({ id: uploadedContractFilesTable.id }).from(uploadedContractFilesTable).where(and(
       eq(uploadedContractFilesTable.ownerType, "distributor"),
       eq(uploadedContractFilesTable.ownerId, distributor.id),
       isNull(uploadedContractFilesTable.termsConfirmedAt),
@@ -475,13 +482,25 @@ export async function createDistributorInvoice(
     const totalAmount = fromCents(lines.reduce((sum, line) => sum + cents(line.totalAmount), 0));
     const discountAmount = fromCents(cents(listSubtotal) - cents(totalAmount));
 
+    const creditSource = contract ?? uploadedContract;
+    const creditPosition = await getCompanyCreditPosition(
+      tx,
+      distributor.id,
+      creditSource,
+      Math.max(0, cents(totalAmount) - (input.collected ? cents(totalAmount) : 0)),
+    );
+    if (!creditPosition.allowed) {
+      throw new DistributorInvoiceConflictError(creditPosition.blockingReason ?? "Company credit limit is not approved");
+    }
+
     await tx.execute(sql`select pg_advisory_xact_lock(${INVOICE_NUMBER_LOCK})`);
     const [afterLock] = await tx.select().from(invoicesTable).where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (afterLock) {
       await assertDistributorInvoiceReplay(tx, afterLock, normalizedInput);
       const afterLockItems = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, afterLock.id)).orderBy(invoiceItemsTable.id);
-      const payments = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, afterLock.id)).orderBy(receivablePaymentsTable.paymentDate);
-      const paidAmount = fromCents(payments.reduce((sum, payment) => sum + cents(payment.amount), 0));
+      const payments: (typeof receivablePaymentsTable.$inferSelect)[] = await tx.select().from(receivablePaymentsTable)
+        .where(eq(receivablePaymentsTable.invoiceId, afterLock.id)).orderBy(receivablePaymentsTable.paymentDate);
+      const paidAmount = fromCents(payments.reduce((sum: number, payment) => sum + cents(payment.amount), 0));
       return { ...afterLock, orderNumber: null, distributorName: afterLock.buyerName, exhibitionName: null, paidAmount, outstandingAmount: fromCents(cents(afterLock.totalAmount) - cents(paidAmount)), paymentStatus: paidAmount > 0 ? "partial" as const : "unpaid" as const, payments, items: afterLockItems };
     }
     const configuration = zatcaSellerConfiguration(environment);
@@ -644,9 +663,20 @@ export async function createDistributorInvoice(
     return { ...invoice, orderNumber: null, distributorName: distributor.companyName, exhibitionName: null,
       paidAmount: input.collected ? totalAmount : 0, outstandingAmount: input.collected ? 0 : invoice.totalAmount,
       paymentStatus: input.collected ? "paid" as const : "unpaid" as const, payments, items: createdItems };
-  });
+  };
+  return executor ? issue(executor) : db.transaction(issue);
 }
 
+export type CompanyCreditPosition = {
+  distributorId: number;
+  creditLimitCents: number | null;
+  outstandingCents: number;
+  requestedCents: number;
+  projectedOutstandingCents: number;
+  availableCents: number | null;
+  allowed: boolean;
+  blockingReason: string | null;
+};
 export async function createReceivablePayment(
   invoiceId: number,
   input: { paymentKey: string; paymentDate: string | Date; amount: number; paymentMethod: "cash" | "bank_transfer"; reference?: string | null },
@@ -654,6 +684,11 @@ export async function createReceivablePayment(
 ) {
   await ensureStandardAccountingChart();
   return db.transaction(async (tx) => {
+    const [identity] = await tx.select({ distributorId: invoicesTable.distributorId }).from(invoicesTable)
+      .where(eq(invoicesTable.id, invoiceId)).limit(1);
+    if (identity?.distributorId !== null && identity?.distributorId !== undefined) {
+      await lockDistributorContractSource(tx, identity.distributorId);
+    }
     await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${invoiceId} for update`);
     const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
     if (!invoice || (invoice.distributorId === null && !invoice.individual)) {
@@ -976,4 +1011,58 @@ export async function updateOrderAndIssueInvoice(
     }
     return updated;
   });
+}
+
+/**
+ * Credit-limit configuration belongs to the selected current contract source;
+ * exposure belongs to the company and deliberately includes invoices under all
+ * older contracts, net of recorded collections and excluding cancelled invoices.
+ * Callers must hold lockDistributorContractSource before invoking this helper.
+ */
+export async function getCompanyCreditPosition(
+  tx: any,
+  distributorId: number,
+  source: (typeof distributorContractsTable.$inferSelect | typeof uploadedContractFilesTable.$inferSelect | undefined),
+  requestedCents = 0,
+): Promise<CompanyCreditPosition> {
+  const approved = source && source.creditLimit !== null && source.creditLimitApprovedBy !== null &&
+    source.creditLimitApprovedAt !== null && (source.creditLimitApprovalReason?.trim().length ?? 0) >= 10 &&
+    (source.creditLimitApprovalReason?.trim().length ?? 0) <= 500;
+  const creditLimitCents = approved ? cents(Number(source.creditLimit)) : null;
+  const rows = await tx.select({
+    totalCents: sql<string>`round(${invoicesTable.totalAmount} * 100)::bigint`,
+    paidCents: sql<string>`round(coalesce(sum(${receivablePaymentsTable.amount}), 0) * 100)::bigint`,
+  }).from(invoicesTable)
+    .leftJoin(receivablePaymentsTable, eq(receivablePaymentsTable.invoiceId, invoicesTable.id))
+    .where(and(eq(invoicesTable.distributorId, distributorId), isNull(invoicesTable.cancelledAt)))
+    .groupBy(invoicesTable.id);
+  const outstandingCents = rows.reduce((sum: number, row: { totalCents: string; paidCents: string }) =>
+    sum + Math.max(0, Number(row.totalCents) - Number(row.paidCents)), 0);
+  const projectedOutstandingCents = outstandingCents + requestedCents;
+  const availableCents = creditLimitCents === null ? null : Math.max(0, creditLimitCents - outstandingCents);
+  const allowed = creditLimitCents !== null && projectedOutstandingCents <= creditLimitCents;
+  const blockingReason = creditLimitCents === null
+    ? "An explicitly approved credit limit is required for this contract before current company invoices can be issued"
+    : allowed
+      ? null
+      : `Company credit limit exceeded: ${projectedOutstandingCents} cents projected against ${creditLimitCents} cents approved`;
+  return {
+    distributorId,
+    creditLimitCents,
+    outstandingCents,
+    requestedCents,
+    projectedOutstandingCents,
+    availableCents,
+    allowed,
+    blockingReason,
+  };
+}
+
+export async function createDistributorInvoiceInTransaction(
+  tx: any,
+  input: Parameters<typeof createDistributorInvoice>[0],
+  actorId: number,
+  environment: NodeJS.ProcessEnv = process.env,
+) {
+  return createDistributorInvoice(input, actorId, environment, tx);
 }

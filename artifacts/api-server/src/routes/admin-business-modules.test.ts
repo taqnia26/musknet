@@ -7,7 +7,7 @@ import {
   exhibitionProductsTable, exhibitionsTable, expensesTable, manufacturingBatchesTable,
   invoicesTable, invoiceItemsTable, inventoryBalancesTable, inventoryMovementsTable,
   journalEntriesTable, journalEntryLinesTable, journalEntryAuditTable, operationEventsTable, receivablePaymentsTable,
-  ordersTable, payrollRecordsTable, productsTable, shipmentsTable, wholesaleDistributorsTable,
+  ordersTable, payrollRecordsTable, productsTable, shipmentsTable, wholesaleDistributorsTable, distributorContractsTable,
 } from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
@@ -27,6 +27,7 @@ let exhibitionInvoiceId: number;
 const exhibitionInvoiceIds: number[] = [];
 const companyInvoiceIds: number[] = [];
 let companyDistributorId: number;
+let companyCreditContractId: number;
 let expenseId: number;
 
 const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
@@ -77,10 +78,33 @@ beforeAll(async () => {
     countryCode: "SA",
   }).returning({ id: wholesaleDistributorsTable.id });
   companyDistributorId = distributor.id;
+  const [creditContract] = await db.insert(distributorContractsTable).values({
+    contractNumber: `BUSINESS-CREDIT-${suffix}`,
+    distributorId: companyDistributorId,
+    contractType: "Saudi distributor agreement",
+    status: "final",
+    sellerName: "Test seller", sellerCrNumber: "123", sellerCrDate: "01/01/2027", sellerCrIssuer: "Test",
+    sellerAddress: "Test address", sellerRepName: "Test representative", sellerRepTitle: "Manager",
+    buyerCompanyName: `Business route company ${suffix}`,
+    createdBy: superId,
+    creditLimit: "1000000.00",
+    creditLimitApprovedBy: superId,
+    creditLimitApprovedAt: new Date(),
+    creditLimitApprovalReason: "Reviewed credit limit for admin route fixture",
+  }).returning({ id: distributorContractsTable.id });
+  companyCreditContractId = creditContract.id;
 });
 
 afterAll(async () => {
-  const invoiceIds = [...exhibitionInvoiceIds, ...companyInvoiceIds];
+  const committedCompanyInvoices = companyDistributorId
+    ? await db.select({ id: invoicesTable.id }).from(invoicesTable)
+      .where(eq(invoicesTable.distributorId, companyDistributorId))
+    : [];
+  const invoiceIds = [...new Set([
+    ...exhibitionInvoiceIds,
+    ...companyInvoiceIds,
+    ...committedCompanyInvoices.map(invoice => invoice.id),
+  ])];
   if (invoiceIds.length) {
     const entries = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
       .where(and(inArray(journalEntriesTable.sourceType, ["exhibition_invoice", "exhibition_invoice_cogs", "distributor_invoice", "distributor_invoice_cogs"]),
@@ -109,6 +133,7 @@ afterAll(async () => {
     await db.delete(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, id));
     await db.delete(invoicesTable).where(eq(invoicesTable.id, id));
   }
+  if (companyCreditContractId) await db.delete(distributorContractsTable).where(eq(distributorContractsTable.id, companyCreditContractId));
   if (companyDistributorId) await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, companyDistributorId));
   if (exhibitionId) await db.delete(exhibitionProductsTable).where(eq(exhibitionProductsTable.exhibitionId, exhibitionId));
   if (exhibitionId) await db.delete(exhibitionsTable).where(eq(exhibitionsTable.id, exhibitionId));

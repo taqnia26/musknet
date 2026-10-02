@@ -1,4 +1,5 @@
-import { date, integer, numeric, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { check, date, integer, numeric, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { adminUsersTable } from "./admin-users";
@@ -22,9 +23,19 @@ export const uploadedContractFilesTable = pgTable("uploaded_contract_files", {
   signedDate: date("signed_date", { mode: "string" }),
   termsConfirmedAt: timestamp("terms_confirmed_at", { withTimezone: true }),
   termsConfirmedBy: integer("terms_confirmed_by").references(() => adminUsersTable.id, { onDelete: "restrict" }),
+  creditLimit: numeric("credit_limit", { precision: 14, scale: 2 }),
+  creditLimitApprovedBy: integer("credit_limit_approved_by").references(() => adminUsersTable.id, { onDelete: "restrict" }),
+  creditLimitApprovedAt: timestamp("credit_limit_approved_at", { withTimezone: true }),
+  creditLimitApprovalReason: text("credit_limit_approval_reason"),
   uploadedBy: integer("uploaded_by").notNull().references(() => adminUsersTable.id, { onDelete: "restrict" }),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
+  check("uploaded_contract_files_credit_limit_nonnegative", sql`${table.creditLimit} is null or ${table.creditLimit} >= 0`),
+  check("uploaded_contract_files_credit_approval_complete", sql`
+    (${table.creditLimitApprovedBy} is null and ${table.creditLimitApprovedAt} is null and ${table.creditLimitApprovalReason} is null)
+    or (${table.creditLimit} is not null and ${table.creditLimitApprovedBy} is not null and
+      ${table.creditLimitApprovedAt} is not null and length(trim(${table.creditLimitApprovalReason})) between 10 and 500)
+  `),
   uniqueIndex("uploaded_contract_files_object_path_unique").on(table.objectPath),
 ]);
 

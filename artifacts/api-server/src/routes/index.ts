@@ -9,6 +9,7 @@ import analyticsRouter from "./analytics";
 import influencerRouter from "./influencer";
 import whatsappRouter from "./whatsapp";
 import backupsRouter from "./backups";
+import distributorPortalRouter from "./distributor-portal";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(giftingRouter);
 router.use(ownerRouter);
 router.use(influencerRouter);
 router.use(whatsappRouter);
+router.use(distributorPortalRouter);
 
 export default router;

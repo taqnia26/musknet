@@ -78,6 +78,11 @@ export interface DistributorContractInput {
   warrantyMonths?: number;
   deliveryDays?: number;
   paymentDays?: number;
+  /**
+     * @minimum 0
+     * @nullable
+     */
+  contractCreditLimit?: number | null;
   products?: unknown[];
   /** @nullable */
   notes?: string | null;

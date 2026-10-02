@@ -73,6 +73,22 @@ export interface DistributorContract {
   warrantyMonths?: number;
   deliveryDays?: number;
   paymentDays?: number;
+  /**
+     * @nullable
+     * @pattern ^\d+(?:\.\d{1,2})?$
+     */
+  contractCreditLimit: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d+(?:\.\d{1,2})?$
+     */
+  creditLimit: string | null;
+  /** @nullable */
+  creditLimitApprovedBy: number | null;
+  /** @nullable */
+  creditLimitApprovedAt: Date | null;
+  /** @nullable */
+  creditLimitApprovalReason: string | null;
   products: unknown[];
   /** @nullable */
   notes?: string | null;

@@ -16,6 +16,7 @@ tags:
   - name: account
   - name: admin
   - name: owner
+  - name: distributor-portal
   - name: webhooks
 paths:
   /admin/backups/unlock:
@@ -762,6 +763,32 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       responses: { "204": { description: Contract deleted } }
+  /admin/contracts/{id}/credit-limit:
+    put:
+      operationId: adminApproveDistributorContractCreditLimit
+      summary: Explicitly approve a credit limit for a generated distributor contract
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreditLimitApprovalInput" } } } }
+      responses:
+        "200": { description: Approved credit limit and audit details, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorContract" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Contract is not a final linked distributor contract, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/contract-files/{id}/credit-limit:
+    put:
+      operationId: adminApproveUploadedContractCreditLimit
+      summary: Explicitly approve a credit limit without changing an uploaded signed file
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CreditLimitApprovalInput" } } } }
+      responses:
+        "200": { description: Approved credit limit and audit details, content: { application/json: { schema: { $ref: "#/components/schemas/UploadedContractFile" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: Uploaded contract terms are not confirmed for a distributor, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/contracts/{id}/link-distributor:
     post:
       operationId: adminLinkDistributorContract
@@ -2915,6 +2942,93 @@ paths:
       tags: [Admin Inventory]
       security: [{ adminBearerAuth: [] }]
       responses: { "200": { description: Reorder suggestions and low stock alerts, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/InventoryAlert" } } } } } }
+  /distributor-portal/session/login:
+    post:
+      operationId: loginDistributorPortal
+      tags: [distributor-portal]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalLoginInput" } } } }
+      responses: { "200": { description: Authenticated distributor session, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalLogin" } } } } }
+  /distributor-portal/session:
+    get:
+      operationId: getDistributorPortalSession
+      tags: [distributor-portal]
+      security: [{ distributorBearerAuth: [] }]
+      responses: { "200": { description: Current company session, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalSession" } } } } }
+    delete:
+      operationId: revokeDistributorPortalSession
+      tags: [distributor-portal]
+      security: [{ distributorBearerAuth: [] }]
+      responses: { "200": { description: Session revoked, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalRevokeSessionResponse" } } } } }
+  /distributor-portal/catalog:
+    get:
+      operationId: getDistributorPortalCatalog
+      tags: [distributor-portal]
+      security: [{ distributorBearerAuth: [] }]
+      responses: { "200": { description: Company-specific B2B catalog and current terms, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalCatalog" } } } } }
+  /distributor-portal/orders:
+    get:
+      operationId: listDistributorPortalOrders
+      tags: [distributor-portal]
+      security: [{ distributorBearerAuth: [] }]
+      responses: { "200": { description: Orders belonging only to the authenticated company, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/CompanyOrder" } } } } } }
+    post:
+      operationId: submitDistributorPortalOrder
+      tags: [distributor-portal]
+      security: [{ distributorBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalOrderInput" } } } }
+      responses: { "201": { description: "Submitted immutable price and terms snapshot; no invoice, stock reservation, or ledger effect", content: { application/json: { schema: { $ref: "#/components/schemas/CompanyOrder" } } } } }
+  /distributor-portal/orders/{orderId}:
+    get:
+      operationId: getDistributorPortalOrder
+      tags: [distributor-portal]
+      security: [{ distributorBearerAuth: [] }]
+      parameters: [{ name: orderId, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }]
+      responses: { "200": { description: Company-only order detail, content: { application/json: { schema: { $ref: "#/components/schemas/CompanyOrder" } } } } }
+  /admin/company-orders:
+    get:
+      operationId: listAdminCompanyOrders
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [pending_review, approved, rejected] } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+      responses: { "200": { description: Company-order review queue, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCompanyOrdersPage" } } } } }
+  /admin/company-orders/{orderId}/review:
+    get:
+      operationId: getAdminCompanyOrderReview
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: orderId, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }]
+      responses: { "200": { description: "Current terms, credit exposure, meaningful changes, and blocking reasons", content: { application/json: { schema: { $ref: "#/components/schemas/CompanyOrderReview" } } } } }
+  /admin/company-orders/{orderId}/decision:
+    post:
+      operationId: decideAdminCompanyOrder
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: orderId, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CompanyOrderDecisionInput" } } } }
+      responses: { "200": { description: Audited decision and optional linked invoice, content: { application/json: { schema: { $ref: "#/components/schemas/CompanyOrderDecisionResponse" } } } } }
+  /admin/distributor-portal/accounts/{companyId}:
+    get:
+      operationId: getAdminDistributorPortalAccount
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: companyId, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }]
+      responses: { "200": { description: "Current company portal-account state; exists false means the account has not been created", content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalAccountStatus" } } } } }
+    put:
+      operationId: updateAdminDistributorPortalAccount
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: companyId, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalAccountInput" } } } }
+      responses: { "200": { description: Per-company activation and credential reset; hashes are never returned, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalAccount" } } } } }
+  /admin/distributor-portal/accounts/{companyId}/revoke-sessions:
+    post:
+      operationId: revokeAdminDistributorPortalSessions
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ name: companyId, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }]
+      responses: { "200": { description: All sessions revoked, content: { application/json: { schema: { $ref: "#/components/schemas/DistributorPortalRevokeSessionResponse" } } } } }
 components:
   securitySchemes:
     bearerAuth:
@@ -2926,6 +3040,10 @@ components:
       scheme: bearer
       bearerFormat: opaque
     ownerBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+    distributorBearerAuth:
       type: http
       scheme: bearer
       bearerFormat: opaque
@@ -4318,7 +4436,7 @@ components:
         apiBaseUrl: { type: ["string", "null"], maxLength: 500 }
     DistributorContract:
       type: object
-      required: [id, contractNumber, contractType, status, sellerName, sellerCrNumber, sellerCrDate, sellerCrIssuer, sellerAddress, sellerRepName, sellerRepTitle, buyerCompanyName, products, createdBy, createdAt, updatedAt]
+      required: [id, contractNumber, contractType, status, sellerName, sellerCrNumber, sellerCrDate, sellerCrIssuer, sellerAddress, sellerRepName, sellerRepTitle, buyerCompanyName, products, contractCreditLimit, creditLimit, creditLimitApprovedBy, creditLimitApprovedAt, creditLimitApprovalReason, createdBy, createdAt, updatedAt]
       properties:
         id: { type: number }
         contractNumber: { type: string }
@@ -4372,6 +4490,11 @@ components:
         warrantyMonths: { type: number }
         deliveryDays: { type: number }
         paymentDays: { type: number }
+        contractCreditLimit: { type: [string, "null"], pattern: "^\\d+(?:\\.\\d{1,2})?$" }
+        creditLimit: { type: [string, "null"], pattern: "^\\d+(?:\\.\\d{1,2})?$" }
+        creditLimitApprovedBy: { type: [number, "null"] }
+        creditLimitApprovedAt: { type: [string, "null"], format: date-time }
+        creditLimitApprovalReason: { type: [string, "null"] }
         products: { type: array, items: {} }
         notes: { type: [string, "null"] }
         sellerSignaturePath: { type: [string, "null"] }
@@ -4440,6 +4563,7 @@ components:
         warrantyMonths: { type: number }
         deliveryDays: { type: number }
         paymentDays: { type: number }
+        contractCreditLimit: { type: [number, "null"], minimum: 0, multipleOf: 0.01 }
         products: { type: array, items: {} }
         notes: { type: [string, "null"] }
     ContractPreview:
@@ -4473,6 +4597,7 @@ components:
       required: [signaturePath]
       properties:
         signaturePath: { type: string, minLength: 1 }
+        expectedUpdatedAt: { type: string, format: date-time }
     ContractSignatureUploadInput:
       type: object
       required: [name, size, contentType]
@@ -5205,7 +5330,7 @@ components:
         notes: { type: [string, "null"], maxLength: 1000 }
     UploadedContractFile:
       type: object
-      required: [id, ownerType, ownerId, ownerName, fileName, mimeType, sizeBytes, notes, contractType, discountPercent, paymentTerm, paymentDays, startDate, endDate, signedDate, termsConfirmedAt, termsConfirmedBy, uploadedBy, uploadedAt]
+      required: [id, ownerType, ownerId, ownerName, fileName, mimeType, sizeBytes, notes, contractType, discountPercent, paymentTerm, paymentDays, startDate, endDate, signedDate, termsConfirmedAt, termsConfirmedBy, creditLimit, creditLimitApprovedBy, creditLimitApprovedAt, creditLimitApprovalReason, uploadedBy, uploadedAt]
       properties:
         id: { type: number }
         ownerType: { type: string, enum: [distributor, customer, influencer, employee] }
@@ -5224,6 +5349,10 @@ components:
         signedDate: { type: [string, "null"], format: date }
         termsConfirmedAt: { type: [string, "null"], format: date-time }
         termsConfirmedBy: { type: [number, "null"] }
+        creditLimit: { type: [number, "null"], minimum: 0 }
+        creditLimitApprovedBy: { type: [number, "null"] }
+        creditLimitApprovedAt: { type: [string, "null"], format: date-time }
+        creditLimitApprovalReason: { type: [string, "null"] }
         uploadedBy: { type: number }
         uploadedAt: { type: string, format: date-time }
     UploadedContractTermsInput:
@@ -5237,6 +5366,13 @@ components:
         startDate: { type: [string, "null"], format: date }
         endDate: { type: [string, "null"], format: date }
         signedDate: { type: [string, "null"], format: date }
+    CreditLimitApprovalInput:
+      type: object
+      required: [creditLimit, reason]
+      properties:
+        creditLimit: { type: number, minimum: 0, multipleOf: 0.01 }
+        reason: { type: string, minLength: 10, maxLength: 500 }
+      additionalProperties: false
     ContractSignedDateSuggestion:
       type: object
       required: [date, source, message]
@@ -6785,3 +6921,209 @@ components:
       properties:
         materialProductId: { type: number, multipleOf: 1, minimum: 1 }
         quantity: { type: number, multipleOf: 1, minimum: 1 }
+    DistributorPortalLoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, maxLength: 254 }
+        password: { type: string, minLength: 1, maxLength: 256 }
+    DistributorPortalCompany:
+      type: object
+      required: [id, companyName, contactName, email, countryCode]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        companyName: { type: string }
+        contactName: { type: string }
+        email: { type: [string, "null"] }
+        countryCode: { type: [string, "null"] }
+    DistributorPortalLogin:
+      type: object
+      required: [token, expiresAt, company]
+      properties:
+        token: { type: string }
+        expiresAt: { type: string, format: date-time }
+        company: { $ref: "#/components/schemas/DistributorPortalCompany" }
+    DistributorPortalSession:
+      type: object
+      required: [company, expiresAt]
+      properties:
+        company: { $ref: "#/components/schemas/DistributorPortalCompany" }
+        expiresAt: { type: string, format: date-time }
+    DistributorPortalRevokeSessionResponse:
+      type: object
+      required: [revokedSessions]
+      properties:
+        revokedSessions: { type: number, multipleOf: 1, minimum: 0 }
+    DistributorPortalTerms:
+      type: object
+      required: [contractId, uploadedContractFileId, contractType, discountPercent, taxTreatment, vatRate, paymentTerm, paymentDays, minOrderValue, creditLimit, creditLimitApproved, creditLimitApprovedAt]
+      properties:
+        contractId: { type: [number, "null"], multipleOf: 1 }
+        uploadedContractFileId: { type: [number, "null"], multipleOf: 1 }
+        contractType: { type: [string, "null"] }
+        contractNumber: { type: [string, "null"] }
+        discountPercent: { type: number, minimum: 0, maximum: 100 }
+        taxTreatment: { type: string, enum: [domestic, international] }
+        vatRate: { type: number, minimum: 0, maximum: 100 }
+        paymentTerm: { type: [string, "null"] }
+        paymentDays: { type: [number, "null"], multipleOf: 1, minimum: 0 }
+        minOrderValue: { type: [number, "null"], minimum: 0 }
+        creditLimit: { type: [number, "null"], minimum: 0 }
+        creditLimitApproved: { type: boolean }
+        creditLimitApprovedAt: { type: [string, "null"], format: date-time }
+        termsConfirmedAt: { type: [string, "null"], format: date-time }
+    DistributorPortalCatalogProduct:
+      type: object
+      required: [id, nameAr, nameEn, sku, image, unitPrice, stockQuantity]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        sku: { type: [string, "null"] }
+        image: { type: [string, "null"] }
+        unitPrice: { type: number, exclusiveMinimum: 0 }
+        stockQuantity: { type: number, multipleOf: 1, minimum: 0 }
+    DistributorPortalCatalog:
+      type: object
+      required: [company, terms, discountPercent, vatRate, catalog]
+      properties:
+        company: { $ref: "#/components/schemas/DistributorPortalCompany" }
+        terms: { $ref: "#/components/schemas/DistributorPortalTerms" }
+        discountPercent: { type: number }
+        vatRate: { type: number }
+        catalog:
+          type: array
+          items: { $ref: "#/components/schemas/DistributorPortalCatalogProduct" }
+    CompanyOrderItem:
+      type: object
+      required: [productId, productName, productNameEn, sku, quantity, unitPrice, subtotal, vatAmount, totalAmount]
+      properties:
+        productId: { type: number, multipleOf: 1 }
+        productName: { type: string }
+        productNameEn: { type: string }
+        sku: { type: [string, "null"] }
+        quantity: { type: number, multipleOf: 1, minimum: 1 }
+        unitPrice: { type: number, minimum: 0 }
+        subtotal: { type: number, minimum: 0 }
+        vatAmount: { type: number, minimum: 0 }
+        totalAmount: { type: number, minimum: 0 }
+    CompanyOrder:
+      type: object
+      required: [id, orderNumber, companyId, companyName, status, items, subtotal, discountAmount, vatAmount, totalAmount, contractId, uploadedContractFileId, snapshotTerms, createdAt, reviewedByAdminId, reviewedByName, reviewedAt, decisionAt, decisionReason, invoiceId]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        orderNumber: { type: string }
+        companyId: { type: number, multipleOf: 1 }
+        companyName: { type: string }
+        status: { type: string, enum: [pending_review, approved, rejected] }
+        items: { type: array, items: { $ref: "#/components/schemas/CompanyOrderItem" } }
+        subtotal: { type: number }
+        discountAmount: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+        contractId: { type: [number, "null"], multipleOf: 1 }
+        uploadedContractFileId: { type: [number, "null"], multipleOf: 1 }
+        snapshotTerms: { $ref: "#/components/schemas/DistributorPortalTerms" }
+        createdAt: { type: string, format: date-time }
+        reviewedByAdminId: { type: [number, "null"], multipleOf: 1 }
+        reviewedByName: { type: [string, "null"] }
+        reviewedAt: { type: [string, "null"], format: date-time }
+        decisionAt: { type: [string, "null"], format: date-time }
+        decisionReason: { type: [string, "null"] }
+        invoiceId: { type: [number, "null"], multipleOf: 1 }
+    DistributorPortalOrderInput:
+      type: object
+      additionalProperties: false
+      required: [idempotencyKey, items]
+      properties:
+        idempotencyKey: { type: string, minLength: 16, maxLength: 80 }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/DistributorPortalOrderItemInput" }
+    DistributorPortalOrderItemInput:
+      type: object
+      additionalProperties: false
+      required: [productId, quantity]
+      properties:
+        productId: { type: number, multipleOf: 1, minimum: 1 }
+        quantity: { type: number, multipleOf: 1, minimum: 1, maximum: 10000 }
+    AdminCompanyOrdersPage:
+      type: object
+      required: [orders, total]
+      properties:
+        orders: { type: array, items: { $ref: "#/components/schemas/CompanyOrder" } }
+        total: { type: number, multipleOf: 1, minimum: 0 }
+    CompanyOrderCreditReview:
+      type: object
+      required: [limit, outstanding, availableBefore, availableAfter]
+      properties:
+        limit: { type: [number, "null"], minimum: 0 }
+        outstanding: { type: number, minimum: 0 }
+        availableBefore: { type: [number, "null"] }
+        availableAfter: { type: [number, "null"] }
+    CompanyOrderReview:
+      type: object
+      required: [order, company, snapshotTerms, currentTerms, currentItems, currentTotals, credit, blockReasons, hasMeaningfulChanges, reviewFingerprint]
+      properties:
+        order: { $ref: "#/components/schemas/CompanyOrder" }
+        company: { $ref: "#/components/schemas/DistributorPortalCompany" }
+        snapshotTerms: { $ref: "#/components/schemas/DistributorPortalTerms" }
+        currentTerms: { $ref: "#/components/schemas/DistributorPortalTerms" }
+        currentItems: { type: array, items: { $ref: "#/components/schemas/CompanyOrderItem" } }
+        currentTotals: { $ref: "#/components/schemas/CompanyOrderTotals" }
+        credit: { $ref: "#/components/schemas/CompanyOrderCreditReview" }
+        blockReasons: { type: array, items: { type: string } }
+        hasMeaningfulChanges: { type: boolean }
+        reviewFingerprint: { type: string }
+    CompanyOrderTotals:
+      type: object
+      required: [subtotal, discountAmount, vatAmount, totalAmount]
+      properties:
+        subtotal: { type: number }
+        discountAmount: { type: number }
+        vatAmount: { type: number }
+        totalAmount: { type: number }
+    CompanyOrderDecisionInput:
+      type: object
+      required: [decision, expectedReviewFingerprint, acknowledgeChanges]
+      properties:
+        decision: { type: string, enum: [approve, reject] }
+        reason: { type: [string, "null"], minLength: 10, maxLength: 500 }
+        expectedReviewFingerprint: { type: string, minLength: 32, maxLength: 128 }
+        acknowledgeChanges: { type: boolean }
+    CompanyOrderDecisionResponse:
+      type: object
+      required: [order, invoiceId, review, changesAcknowledged]
+      properties:
+        order: { $ref: "#/components/schemas/CompanyOrder" }
+        invoiceId: { type: [number, "null"], multipleOf: 1 }
+        review: { $ref: "#/components/schemas/CompanyOrderReview" }
+        changesAcknowledged: { type: boolean }
+    DistributorPortalAccount:
+      type: object
+      required: [companyId, email, enabled, createdAt, updatedAt]
+      properties:
+        companyId: { type: number, multipleOf: 1 }
+        email: { type: string }
+        enabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DistributorPortalAccountStatus:
+      type: object
+      required: [companyId, exists, email, enabled, createdAt, updatedAt]
+      properties:
+        companyId: { type: number, multipleOf: 1 }
+        exists: { type: boolean }
+        email: { type: [string, "null"] }
+        enabled: { type: [boolean, "null"] }
+        createdAt: { type: [string, "null"], format: date-time }
+        updatedAt: { type: [string, "null"], format: date-time }
+    DistributorPortalAccountInput:
+      type: object
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+        email: { type: [string, "null"], maxLength: 254 }
+        password: { type: [string, "null"], minLength: 12, maxLength: 256 }

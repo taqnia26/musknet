@@ -56,6 +56,9 @@ const contractSchema = z.object({
     .refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' })
     .refine(val => !val || Number(val) <= 100, { message: 'يجب ألا تتجاوز النسبة 100%' }),
   minOrderValue: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
+  contractCreditLimit: z.string().optional().nullable()
+    .refine(val => !val || /^\d+(?:\.\d{1,2})?$/.test(val), { message: 'أدخل مبلغاً صالحاً بمنزلتين عشريتين كحد أقصى' })
+    .refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون المبلغ غير سالب' }),
   
   vatRate: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
   latePaymentWeeklyRate: z.string().optional().nullable().refine(val => !val || Number(val) >= 0, { message: 'يجب أن يكون رقماً غير سالب' }),
@@ -110,6 +113,7 @@ export default function AdminContractForm() {
       sellerRepName: '',
       sellerRepTitle: '',
       buyerCompanyName: '',
+        contractCreditLimit: '',
        marginPercent: '0',
        minOrderValue: '3000',
        deliveryDays: 15,
@@ -145,6 +149,7 @@ export default function AdminContractForm() {
         sellerRepName: contract.sellerRepName,
         sellerRepTitle: contract.sellerRepTitle,
         buyerCompanyName: contract.buyerCompanyName,
+        contractCreditLimit: contract.contractCreditLimit,
         buyerCrNumber: contract.buyerCrNumber,
         buyerCrDate: contract.buyerCrDate,
         buyerCrIssuer: contract.buyerCrIssuer,
@@ -194,16 +199,17 @@ export default function AdminContractForm() {
     let active = true;
     const timer = window.setTimeout(async () => {
       const input = JSON.parse(previewInput) as FormValues;
-      const { distributorId, contractDate, startDate, endDate, ...fields } = input;
+      const { distributorId, contractDate, startDate, endDate, contractCreditLimit, ...fields } = input;
       try {
         const cleaned = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== '' && value !== null && value !== undefined));
         const result = await adminPreviewContract({
           ...cleaned,
+          contractCreditLimit: contractCreditLimit?.trim() ? Number(contractCreditLimit) : null,
           ...(contractDate ? { contractDate: new Date(`${contractDate}T12:00:00+03:00`).toISOString() } : {}),
           ...(startDate ? { startDate: new Date(`${startDate}T12:00:00+03:00`).toISOString() } : {}),
           ...(endDate ? { endDate: new Date(`${endDate}T12:00:00+03:00`).toISOString() } : {}),
           ...(distributorId ? { distributorId: Number(distributorId) } : {}),
-        } as DistributorContractInput);
+        } as DistributorContractInput & { contractCreditLimit: number | null });
         if (active) { setPreview(result); setPreviewError(false); }
       } catch {
         if (active) setPreviewError(true);
@@ -225,14 +231,15 @@ export default function AdminContractForm() {
       form.setError('endDate', { type: 'manual', message: 'يجب أن يلي تاريخ النهاية تاريخ البداية' });
       return;
     }
-    const { distributorId, startDate, endDate, ...contractValues } = values;
+    const { distributorId, startDate, endDate, contractCreditLimit, ...contractValues } = values;
     const data = {
       ...contractValues,
+      contractCreditLimit: contractCreditLimit?.trim() ? Number(contractCreditLimit) : null,
       contractDate: values.contractDate ? new Date(`${values.contractDate}T12:00:00+03:00`).toISOString() : null,
       startDate: startDate ? new Date(`${startDate}T12:00:00+03:00`).toISOString() : null,
       endDate: endDate ? new Date(`${endDate}T12:00:00+03:00`).toISOString() : null,
       distributorId: distributorId ? Number(distributorId) : null,
-    } as DistributorContractInput;
+    } as DistributorContractInput & { contractCreditLimit: number | null };
     if (isEditing) {
       updateMutation.mutate({ id, data }, {
         onSuccess: (updated) => {
@@ -560,6 +567,31 @@ export default function AdminContractForm() {
                   </FormItem>
                 )}
               />
+              {!isLegacyDraft && (
+                <FormField
+                  control={form.control}
+                  name="contractCreditLimit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>حد الائتمان التعاقدي (ر.س)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          data-testid="input-contract-credit-term"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        يظهر هذا المبلغ في نص العقد وPDF. لا يفعّل الائتمان حتى يسجل المراجع اعتماداً منفصلاً بعد اكتمال التوقيع.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="paymentDays"

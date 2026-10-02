@@ -3,6 +3,8 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
+import { z } from "zod/v4";
+import { z as generatedZod } from "zod";
 import { open } from "node:fs/promises";
 import { constants } from "node:fs";
 import { suggestContractSignedDate } from "../lib/contract-signed-date";
@@ -560,7 +562,13 @@ router.get("/admin/dashboard", permit("dashboard", "view"), route(async (_req, r
   }));
 }));
 
-const contractPublic = (row: typeof distributorContractsTable.$inferSelect) => row;
+const contractPublic = (row: typeof distributorContractsTable.$inferSelect) => ({ ...row });
+// The generated API schemas use Zod 3; extensions must use that same runtime.
+const contractCreditLimitInput = generatedZod.number().finite().nonnegative().multipleOf(0.01).nullable().optional();
+const createContractBodySchema = Api.AdminCreateContractBody.extend({ contractCreditLimit: contractCreditLimitInput });
+const updateContractBodySchema = Api.AdminUpdateContractBody.partial().extend({ contractCreditLimit: contractCreditLimitInput });
+const previewContractBodySchema = Api.AdminPreviewContractBody.partial().extend({ contractCreditLimit: contractCreditLimitInput });
+const signContractBodySchema = Api.AdminSignContractBody.extend({ expectedUpdatedAt: generatedZod.coerce.date().optional() });
 const contractNumber = () => `DC-${new Date().getUTCFullYear()}-${randomBytes(5).toString("hex").toUpperCase()}`;
 const safeSignaturePath = (value: string) => value.startsWith("/objects/") && !value.includes("..");
 
@@ -574,7 +582,7 @@ router.get("/admin/contracts", permit("contracts", "view"), route(async (req, re
   res.json(Api.AdminListContractsResponse.parse(rows.map(contractPublic)));
 }));
 router.post("/admin/contracts", permit("contracts", "edit"), route(async (req, res) => {
-  const body = parse(Api.AdminCreateContractBody, req.body, res); if (!body) return;
+  const body = parse(createContractBodySchema, req.body, res); if (!body) return;
   if (body.contractType !== "عقد توريد أجل المملكة العربية السعودية") {
     res.status(400).json({ error: "قالب وورد الحالي مخصص لعقد توريد آجل داخل المملكة العربية السعودية فقط" }); return;
   }
@@ -584,8 +592,11 @@ router.post("/admin/contracts", permit("contracts", "edit"), route(async (req, r
       .where(eq(wholesaleDistributorsTable.id, body.distributorId)).limit(1);
     if (!distributor) { res.status(400).json({ error: "Distributor not found" }); return; }
   }
+  const { contractCreditLimit, ...contractValues } = body;
   const [row] = await db.insert(distributorContractsTable).values({
-    ...body,
+    ...contractValues,
+    contractCreditLimit: contractCreditLimit == null ? null : contractCreditLimit.toFixed(2),
+    creditLimit: null,
     templateVersion: 1,
     contractDate: signedDate,
     contractNumber: body.contractNumber?.trim() || contractNumber(),
@@ -595,15 +606,55 @@ router.post("/admin/contracts", permit("contracts", "edit"), route(async (req, r
   res.status(201).json(Api.AdminCreateContractResponse.parse(contractPublic(row)));
 }));
 router.post("/admin/contracts/preview", permit("contracts", "edit"), route(async (req, res) => {
-  const body = parse(Api.AdminPreviewContractBody.partial(), req.body, res); if (!body) return;
+  const body = parse(previewContractBodySchema, req.body, res); if (!body) return;
   const { contractNumber: _contractNumber, ...fields } = body;
-  res.json(Api.AdminPreviewContractResponse.parse(renderContract(fields)));
+  res.json(Api.AdminPreviewContractResponse.parse(renderContract({
+    ...fields,
+    templateVersion: 1,
+    status: "draft",
+    contractCreditLimit: fields.contractCreditLimit == null ? null : fields.contractCreditLimit.toFixed(2),
+  })));
 }));
 router.get("/admin/contracts/:id", permit("contracts", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetContractParams, req.params, res); if (!params) return;
   const [row] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
   if (!row) { res.status(404).json({ error: "Contract not found" }); return; }
   res.json(Api.AdminGetContractResponse.parse(contractPublic(row)));
+}));
+router.put("/admin/contracts/:id/credit-limit", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminApproveDistributorContractCreditLimitParams, req.params, res); if (!params) return;
+  const body = parse(Api.AdminApproveDistributorContractCreditLimitBody, req.body, res); if (!body) return;
+  const result = await db.transaction(async (tx) => {
+    const [identity] = await tx.select({ distributorId: distributorContractsTable.distributorId })
+      .from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+    if (!identity) return { status: "not-found" as const };
+    if (identity.distributorId === null) return { status: "unlinked" as const };
+    await lockDistributorContractSource(tx, identity.distributorId);
+    await tx.execute(sql`select id from ${distributorContractsTable} where ${distributorContractsTable.id} = ${params.id} for update`);
+    const [contract] = await tx.select().from(distributorContractsTable)
+      .where(eq(distributorContractsTable.id, params.id)).limit(1);
+    if (!contract || contract.distributorId !== identity.distributorId) return { status: "changed" as const };
+    if (contract.status === "cancelled") return { status: "cancelled" as const };
+    if (contract.contractCreditLimit !== null && Number(contract.contractCreditLimit) !== body.creditLimit) {
+      return { status: "signed-limit-mismatch" as const };
+    }
+    const [row] = await tx.update(distributorContractsTable).set({
+      creditLimit: body.creditLimit.toFixed(2),
+      creditLimitApprovedBy: res.locals.admin.id,
+      creditLimitApprovedAt: new Date(),
+      creditLimitApprovalReason: body.reason.trim(),
+    }).where(eq(distributorContractsTable.id, params.id)).returning();
+    return { status: "approved" as const, row };
+  });
+  if (result.status === "not-found") { res.status(404).json({ error: "Contract not found" }); return; }
+  if (result.status !== "approved") {
+    res.status(409).json({ error: result.status === "unlinked" ? "Link the contract to a distributor before approving its credit limit" :
+      result.status === "cancelled" ? "Cancelled contracts cannot have an approved credit limit" :
+        result.status === "signed-limit-mismatch" ? "Credit approval must match the limit documented in the signed contract" :
+        "Contract changed while its credit limit was being approved" });
+    return;
+  }
+  res.json(Api.AdminApproveDistributorContractCreditLimitResponse.parse(contractPublic(result.row)));
 }));
 
 router.post("/admin/contracts/:id/link-distributor", permit("contracts", "edit"), route(async (req, res) => {
@@ -635,9 +686,15 @@ router.post("/admin/contracts/:id/link-distributor", permit("contracts", "edit")
   }
   const [linked] = contract.distributorId === body.distributorId
     ? [contract]
-    : await db.update(distributorContractsTable).set({ distributorId: distributor.id })
-      .where(and(eq(distributorContractsTable.id, contract.id), eq(distributorContractsTable.status, "final"), isNull(distributorContractsTable.distributorId)))
-      .returning();
+    : await db.transaction(async (tx) => {
+      await lockDistributorContractSource(tx, distributor.id);
+      await tx.execute(sql`select id from ${distributorContractsTable} where ${distributorContractsTable.id} = ${contract.id} for update`);
+      const [current] = await tx.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, contract.id)).limit(1);
+      if (!current || current.status !== "final" || current.distributorId !== null) return [];
+      return tx.update(distributorContractsTable).set({ distributorId: distributor.id })
+        .where(and(eq(distributorContractsTable.id, contract.id), eq(distributorContractsTable.status, "final"), isNull(distributorContractsTable.distributorId)))
+        .returning();
+    });
   if (!linked) { res.status(409).json({ error: "Contract could not be linked; refresh and retry" }); return; }
   res.json(Api.AdminLinkDistributorContractResponse.parse(contractPublic(linked)));
 }));
@@ -648,18 +705,33 @@ router.post("/admin/contracts/signatures/upload-url", permit("contracts", "edit"
 }));
 router.patch("/admin/contracts/:id", permit("contracts", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateContractParams, req.params, res);
-  const body = parse(Api.AdminUpdateContractBody.partial(), req.body, res); if (!params || !body) return;
+  const body = parse(updateContractBodySchema, req.body, res); if (!params || !body) return;
   const [existing] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
   if (existing.status !== "draft") { res.status(409).json({ error: "Only draft contracts can be edited" }); return; }
-  const { contractNumber: requestedContractNumber, ...contractUpdate } = body;
+  const { contractNumber: requestedContractNumber, contractCreditLimit, ...contractUpdate } = body;
   if (existing.templateVersion === 1 && contractUpdate.contractType && contractUpdate.contractType !== "عقد توريد أجل المملكة العربية السعودية") {
     res.status(400).json({ error: "قالب وورد الحالي مخصص لعقد توريد آجل داخل المملكة العربية السعودية فقط" }); return;
   }
+  const normalizedContractCreditLimit = contractCreditLimit === undefined
+    ? undefined : contractCreditLimit === null ? null : contractCreditLimit.toFixed(2);
+  const contractCreditTermChanged = normalizedContractCreditLimit !== undefined &&
+    normalizedContractCreditLimit !== existing.contractCreditLimit;
   const [row] = await db.update(distributorContractsTable).set({
     ...contractUpdate,
+    ...(normalizedContractCreditLimit !== undefined ? { contractCreditLimit: normalizedContractCreditLimit } : {}),
+    ...(contractCreditTermChanged ? {
+      creditLimit: null,
+      creditLimitApprovedBy: null,
+      creditLimitApprovedAt: null,
+      creditLimitApprovalReason: null,
+    } : {}),
     ...(requestedContractNumber ? { contractNumber: requestedContractNumber } : {}),
-  }).where(eq(distributorContractsTable.id, params.id)).returning();
+  }).where(and(
+    eq(distributorContractsTable.id, params.id),
+    eq(distributorContractsTable.status, "draft"),
+  )).returning();
+  if (!row) { res.status(409).json({ error: "The contract changed while it was being edited. Refresh and retry." }); return; }
   res.json(Api.AdminUpdateContractResponse.parse(contractPublic(row)));
 }));
 router.delete("/admin/contracts/:id", permit("contracts", "delete"), route(async (req, res) => {
@@ -673,18 +745,32 @@ router.delete("/admin/contracts/:id", permit("contracts", "delete"), route(async
 }));
 router.post("/admin/contracts/:id/seller-sign", permit("contracts", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminSignContractParams, req.params, res);
-  const body = parse(Api.AdminSignContractBody, req.body, res); if (!params || !body) return;
+  const body = parse(signContractBodySchema, req.body, res); if (!params || !body) return;
   if (!safeSignaturePath(body.signaturePath)) { res.status(400).json({ error: "Signature must be a private object path" }); return; }
   const [existing] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
   try { assertTransition(existing.status, "seller_signed"); } catch (error) { res.status(409).json({ error: (error as Error).message }); return; }
+  if (existing.templateVersion === 1 && !body.expectedUpdatedAt) {
+    res.status(409).json({ error: "Refresh the contract and its PDF before signing" }); return;
+  }
+  if (body.expectedUpdatedAt && existing.updatedAt.getTime() !== body.expectedUpdatedAt.getTime()) {
+    res.status(409).json({ error: "The contract changed after it was opened. Refresh the contract and PDF before signing." }); return;
+  }
   if (existing.templateVersion === 1 && renderContract(existing).missing.length) {
     res.status(400).json({ error: `أكمل بيانات العقد قبل التوقيع: ${renderContract(existing).missing.join("، ")}` }); return;
   }
+  const signatureConditions = body.expectedUpdatedAt
+    ? and(
+      eq(distributorContractsTable.id, params.id),
+      eq(distributorContractsTable.status, "draft"),
+      sql`date_trunc('milliseconds', ${distributorContractsTable.updatedAt}) = ${body.expectedUpdatedAt}`,
+    )
+    : and(eq(distributorContractsTable.id, params.id), eq(distributorContractsTable.status, "draft"));
   const [row] = await db.update(distributorContractsTable).set({
     status: "seller_signed", sellerSignaturePath: body.signaturePath, sellerSignedAt: new Date(),
     sellerSignedByUserId: res.locals.admin.id, sellerSignedBy: res.locals.admin.name, sellerSignedIp: req.ip,
-  }).where(eq(distributorContractsTable.id, params.id)).returning();
+  }).where(signatureConditions).returning();
+  if (!row) { res.status(409).json({ error: "The contract changed before signing completed. Refresh the contract and PDF." }); return; }
   res.json(Api.AdminSignContractResponse.parse(contractPublic(row)));
 }));
 router.post("/admin/contracts/:id/send", permit("contracts", "edit"), route(async (req, res) => {
@@ -704,8 +790,20 @@ router.post("/admin/contracts/:id/cancel", permit("contracts", "edit"), route(as
   const params = parse(Api.AdminCancelContractParams, req.params, res); if (!params) return;
   const [existing] = await db.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Contract not found" }); return; }
-  try { assertTransition(existing.status, "cancelled"); } catch (error) { res.status(409).json({ error: (error as Error).message }); return; }
-  const [row] = await db.update(distributorContractsTable).set({ status: "cancelled", signingTokenHash: null, downloadTokenHash: null }).where(eq(distributorContractsTable.id, params.id)).returning();
+  const outcome = await db.transaction(async (tx) => {
+    if (existing.distributorId !== null) await lockDistributorContractSource(tx, existing.distributorId);
+    await tx.execute(sql`select id from ${distributorContractsTable} where ${distributorContractsTable.id} = ${params.id} for update`);
+    const [current] = await tx.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, params.id)).limit(1);
+    if (!current) return { status: "missing" as const };
+    try { assertTransition(current.status, "cancelled"); } catch (error) { return { status: "invalid" as const, message: (error as Error).message }; }
+    const [row] = await tx.update(distributorContractsTable).set({
+      status: "cancelled", signingTokenHash: null, downloadTokenHash: null,
+    }).where(eq(distributorContractsTable.id, params.id)).returning();
+    return { status: "cancelled" as const, row };
+  });
+  if (outcome.status === "missing") { res.status(404).json({ error: "Contract not found" }); return; }
+  if (outcome.status === "invalid") { res.status(409).json({ error: outcome.message }); return; }
+  const row = outcome.row;
   res.json(Api.AdminCancelContractResponse.parse(contractPublic(row)));
 }));
 router.get("/admin/contracts/:id/pdf", permit("contracts", "view"), route(async (req, res) => {
@@ -771,12 +869,17 @@ router.get("/admin/contract-files", permit("contracts", "view"), route(async (_r
     signedDate: uploadedContractFilesTable.signedDate,
     termsConfirmedAt: uploadedContractFilesTable.termsConfirmedAt,
     termsConfirmedBy: uploadedContractFilesTable.termsConfirmedBy,
+    creditLimit: uploadedContractFilesTable.creditLimit,
+    creditLimitApprovedBy: uploadedContractFilesTable.creditLimitApprovedBy,
+    creditLimitApprovedAt: uploadedContractFilesTable.creditLimitApprovedAt,
+    creditLimitApprovalReason: uploadedContractFilesTable.creditLimitApprovalReason,
     uploadedBy: uploadedContractFilesTable.uploadedBy,
     uploadedAt: uploadedContractFilesTable.uploadedAt,
   }).from(uploadedContractFilesTable).orderBy(desc(uploadedContractFilesTable.uploadedAt));
   res.json(Api.AdminListContractFilesResponse.parse(rows.map((row) => ({
     ...row,
     discountPercent: row.discountPercent === null ? null : Number(row.discountPercent),
+    creditLimit: row.creditLimit === null ? null : Number(row.creditLimit),
   }))));
 }));
 
@@ -905,6 +1008,7 @@ router.post("/admin/contract-files/:id/terms", permit("contracts", "edit"), rout
   res.json(Api.AdminConfirmUploadedContractTermsResponse.parse({
     ...publicRow,
     discountPercent: publicRow.discountPercent === null ? null : Number(publicRow.discountPercent),
+    creditLimit: publicRow.creditLimit === null ? null : Number(publicRow.creditLimit),
   }));
 }));
 
@@ -945,6 +1049,56 @@ router.put("/admin/contract-files/:id/terms", permit("contracts", "edit"), route
   const { objectPath: _objectPath, ...publicRow } = result.row;
   res.json(Api.AdminUpdateUploadedContractTermsResponse.parse({
     ...publicRow, discountPercent: publicRow.discountPercent === null ? null : Number(publicRow.discountPercent),
+    creditLimit: publicRow.creditLimit === null ? null : Number(publicRow.creditLimit),
+  }));
+}));
+
+router.put("/admin/contract-files/:id/credit-limit", permit("contracts", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminApproveUploadedContractCreditLimitParams, req.params, res); if (!params) return;
+  const body = parse(Api.AdminApproveUploadedContractCreditLimitBody, req.body, res); if (!body) return;
+  const result = await db.transaction(async (tx) => {
+    const [identity] = await tx.select({
+      ownerType: uploadedContractFilesTable.ownerType,
+      ownerId: uploadedContractFilesTable.ownerId,
+    }).from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+    if (!identity) return { status: "not-found" as const };
+    if (identity.ownerType !== "distributor") return { status: "not-distributor" as const };
+    await lockDistributorContractSource(tx, identity.ownerId);
+    await tx.execute(sql`select id from ${uploadedContractFilesTable} where ${uploadedContractFilesTable.id} = ${params.id} for update`);
+    const [file] = await tx.select().from(uploadedContractFilesTable)
+      .where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+    if (!file || file.ownerType !== "distributor" || file.ownerId !== identity.ownerId) return { status: "changed" as const };
+    if (!file.termsConfirmedAt || !file.contractType?.trim() || file.discountPercent === null ||
+      !Number.isFinite(Number(file.discountPercent)) || Number(file.discountPercent) < 0 || Number(file.discountPercent) > 100 ||
+      !["net_days", "end_of_month", "due_on_issue"].includes(file.paymentTerm ?? "") ||
+      (file.paymentTerm === "net_days" ? !Number.isSafeInteger(file.paymentDays) || (file.paymentDays ?? 0) < 1 : file.paymentDays !== null)) {
+      return { status: "unreviewed" as const };
+    }
+    const [owner] = await tx.select({ id: wholesaleDistributorsTable.id }).from(wholesaleDistributorsTable)
+      .where(and(eq(wholesaleDistributorsTable.id, identity.ownerId), eq(wholesaleDistributorsTable.isActive, true))).limit(1);
+    if (!owner) return { status: "inactive" as const };
+    const [row] = await tx.update(uploadedContractFilesTable).set({
+      creditLimit: body.creditLimit.toFixed(2),
+      creditLimitApprovedBy: res.locals.admin.id,
+      creditLimitApprovedAt: new Date(),
+      creditLimitApprovalReason: body.reason.trim(),
+    }).where(eq(uploadedContractFilesTable.id, params.id)).returning();
+    return { status: "approved" as const, row };
+  });
+  if (result.status === "not-found") { res.status(404).json({ error: "Contract file not found" }); return; }
+  if (result.status !== "approved") {
+    const error = result.status === "not-distributor" ? "Credit limits can only be approved for distributor contracts" :
+      result.status === "unreviewed" ? "Uploaded contract terms must be reviewed before approving a credit limit" :
+        result.status === "inactive" ? "Contract owner must be an active distributor" :
+          "Contract changed while its credit limit was being approved";
+    res.status(409).json({ error });
+    return;
+  }
+  const { objectPath: _objectPath, ...publicRow } = result.row;
+  res.json(Api.AdminApproveUploadedContractCreditLimitResponse.parse({
+    ...publicRow,
+    discountPercent: publicRow.discountPercent === null ? null : Number(publicRow.discountPercent),
+    creditLimit: publicRow.creditLimit === null ? null : Number(publicRow.creditLimit),
   }));
 }));
 
@@ -990,15 +1144,23 @@ router.get("/admin/contract-files/:id/download", permit("contracts", "view"), ro
 
 router.delete("/admin/contract-files/:id", permit("contracts", "delete"), route(async (req, res) => {
   const params = parse(Api.AdminDeleteContractFileParams, req.params, res); if (!params) return;
-  const [existing] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
-  if (!existing) { res.status(404).json({ error: "Contract file not found" }); return; }
-  const [referenced] = await db.select({ id: invoicesTable.id }).from(invoicesTable)
-    .where(eq(invoicesTable.uploadedContractFileId, params.id)).limit(1);
-  if (referenced) {
-    res.status(409).json({ error: "This contract file is referenced by an invoice and cannot be deleted" }); return;
-  }
-  const [row] = await db.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).returning();
-  if (!row) { res.status(404).json({ error: "Contract file not found" }); return; }
+  const result = await db.transaction(async (tx) => {
+    const [identity] = await tx.select({ ownerType: uploadedContractFilesTable.ownerType, ownerId: uploadedContractFilesTable.ownerId })
+      .from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+    if (!identity) return { status: "not-found" as const };
+    if (identity.ownerType === "distributor") await lockDistributorContractSource(tx, identity.ownerId);
+    await tx.execute(sql`select id from ${uploadedContractFilesTable} where ${uploadedContractFilesTable.id} = ${params.id} for update`);
+    const [existing] = await tx.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).limit(1);
+    if (!existing) return { status: "not-found" as const };
+    const [referenced] = await tx.select({ id: invoicesTable.id }).from(invoicesTable)
+      .where(eq(invoicesTable.uploadedContractFileId, params.id)).limit(1);
+    if (referenced) return { status: "referenced" as const };
+    const [row] = await tx.delete(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, params.id)).returning();
+    return row ? { status: "deleted" as const, row } : { status: "not-found" as const };
+  });
+  if (result.status === "not-found") { res.status(404).json({ error: "Contract file not found" }); return; }
+  if (result.status === "referenced") { res.status(409).json({ error: "This contract file is referenced by an invoice and cannot be deleted" }); return; }
+  const row = result.row;
   if (isLocalContractPath(row.objectPath)) await localContracts.delete(row.objectPath);
   else await objectStorage.deleteObject(row.objectPath).catch(() => undefined);
   res.sendStatus(204);
@@ -2442,6 +2604,8 @@ router.post("/admin/invoices", permit("invoices", "edit"), route(async (req, res
       ...invoice,
       cancelledByName: null,
       contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+      appliedDiscountPercent: invoice.appliedDiscountPercent === null ? null : Number(invoice.appliedDiscountPercent),
+      invoiceDiscountPercent: invoice.invoiceDiscountPercent === null ? null : Number(invoice.invoiceDiscountPercent),
       vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
     }));
   } catch (error) {
@@ -2462,6 +2626,8 @@ router.post("/admin/invoices/exhibitions", permit("invoices", "edit"), route(asy
     res.status(201).json(Api.AdminCreateExhibitionInvoiceResponse.parse({
       ...invoice, cancelledByName: null, vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
       contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+      appliedDiscountPercent: invoice.appliedDiscountPercent === null ? null : Number(invoice.appliedDiscountPercent),
+      invoiceDiscountPercent: invoice.invoiceDiscountPercent === null ? null : Number(invoice.invoiceDiscountPercent),
     }));
   } catch (error) {
     if (error instanceof DistributorInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
@@ -4817,14 +4983,26 @@ router.post("/public/contracts/by-token/:token/sign", route(async (req, res) => 
   if (!safeSignaturePath(body.signaturePath)) { res.status(400).json({ error: "Signature must be a private object path" }); return; }
   const existing = await contractBySigningToken(params.token);
   if (!existing) { res.status(404).json({ error: "Signing link is invalid or expired" }); return; }
-  try { assertTransition(existing.status, "final"); } catch (error) { res.status(409).json({ error: (error as Error).message }); return; }
   const downloadToken = newContractToken();
-  const [row] = await db.update(distributorContractsTable).set({
-    status: "final", buyerSignaturePath: body.signaturePath, buyerSignedName: body.buyerSignedName.trim(),
-    buyerSignedAt: new Date(), buyerSignedIp: req.ip, buyerSignedUserAgent: req.get("user-agent") ?? null,
-    signingTokenHash: null, signingTokenExpiresAt: null,
-    downloadTokenHash: hashContractToken(downloadToken), downloadTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-  }).where(eq(distributorContractsTable.id, existing.id)).returning();
+  const outcome = await db.transaction(async (tx) => {
+    if (existing.distributorId !== null) await lockDistributorContractSource(tx, existing.distributorId);
+    await tx.execute(sql`select id from ${distributorContractsTable} where ${distributorContractsTable.id} = ${existing.id} for update`);
+    const [current] = await tx.select().from(distributorContractsTable).where(eq(distributorContractsTable.id, existing.id)).limit(1);
+    if (!current || current.signingTokenHash !== hashContractToken(params.token)) return { status: "invalid" as const };
+    try { assertTransition(current.status, "final"); } catch (error) {
+      return { status: "conflict" as const, message: (error as Error).message };
+    }
+    const [row] = await tx.update(distributorContractsTable).set({
+      status: "final", buyerSignaturePath: body.signaturePath, buyerSignedName: body.buyerSignedName.trim(),
+      buyerSignedAt: new Date(), buyerSignedIp: req.ip, buyerSignedUserAgent: req.get("user-agent") ?? null,
+      signingTokenHash: null, signingTokenExpiresAt: null,
+      downloadTokenHash: hashContractToken(downloadToken), downloadTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    }).where(eq(distributorContractsTable.id, existing.id)).returning();
+    return { status: "signed" as const, row };
+  });
+  if (outcome.status === "invalid") { res.status(404).json({ error: "Signing link is invalid or expired" }); return; }
+  if (outcome.status === "conflict") { res.status(409).json({ error: outcome.message }); return; }
+  const row = outcome.row;
   const base = process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}`;
   res.json({ ...Api.SignPublicContractResponse.parse(contractPublic(row)), downloadToken, downloadUrl: `${base}/api/public/contracts/by-download-token/${downloadToken}/pdf` });
 }));

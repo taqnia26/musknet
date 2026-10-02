@@ -7,6 +7,7 @@ import AdminRevenueAnalytics from '@/pages/admin/revenue-analytics';
 import AdminProducts from '@/pages/admin/products';
 import AdminCategories from '@/pages/admin/categories';
 import AdminOrders from '@/pages/admin/orders';
+import AdminCompanyOrders from '@/pages/admin/company-orders';
 import AdminSallaImport from '@/pages/admin/salla-import';
 import AdminCoupons from '@/pages/admin/coupons';
 import AdminCustomers from '@/pages/admin/customers';
@@ -79,6 +80,7 @@ export default function AdminRoutes() {
         <Route path="/admin/products" component={AdminProducts} />
         <Route path="/admin/categories" component={AdminCategories} />
         <Route path="/admin/orders" component={AdminOrders} />
+        <Route path="/admin/company-orders" component={AdminCompanyOrders} />
         <Route path="/admin/salla-import" component={AdminSallaImport} />
         <Route path="/admin/shipping/online" component={AdminOnlineShipping} />
         <Route path="/admin/shipping/b2b" component={AdminB2BShipping} />

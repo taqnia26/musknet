@@ -25,6 +25,7 @@ import { format } from 'date-fns';
 import { UploadContractDialog } from './components/UploadContractDialog';
 import { ConfirmUploadedContractTermsDialog } from './components/uploaded-contract-terms';
 import { downloadContractPdf, pdfDownloadError } from './download-pdf';
+import { CreditLimitApprovalDialog } from './components/CreditLimitApprovalDialog';
 
 const statusMap: Record<DistributorContractStatus, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', icon: any }> = {
   draft: { label: 'مسودة', variant: 'secondary', icon: FileText },
@@ -49,6 +50,7 @@ export default function AdminContractsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [termsFile, setTermsFile] = useState<UploadedContractFile | null>(null);
+  const [creditFile, setCreditFile] = useState<UploadedContractFile | null>(null);
   const [editingTerms, setEditingTerms] = useState(false);
   const [activeTab, setActiveTab] = useState('generated');
   const [, setLocation] = useLocation();
@@ -401,6 +403,15 @@ export default function AdminContractsList() {
                               >
                                 {file.termsConfirmedAt ? 'شروط الفوترة معتمدة' : 'بانتظار اعتماد الشروط'}
                               </Badge>
+                              {file.termsConfirmedAt && (
+                                <Badge
+                                  data-testid={`uploaded-contract-credit-status-${file.id}`}
+                                  variant={file.creditLimit === null ? 'outline' : 'secondary'}
+                                  className={`ms-1 ${file.creditLimit === null ? 'border-amber-500/40 bg-amber-500/10 text-amber-800' : 'border-transparent bg-success text-success-foreground'}`}
+                                >
+                                  {file.creditLimit === null ? 'حد الائتمان غير معتمد' : `حد الائتمان: ${Number(file.creditLimit).toLocaleString('ar-SA')} ر.س`}
+                                </Badge>
+                              )}
                             </div>
                           )}
                         </div>
@@ -424,6 +435,18 @@ export default function AdminContractsList() {
                             >
                               <CheckCircle className="h-3.5 w-3.5" />
                               اعتماد الشروط
+                            </Button>
+                          )}
+                          {file.ownerType === 'distributor' && file.termsConfirmedAt && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              data-testid={`button-approve-file-credit-${file.id}`}
+                              className="gap-1 whitespace-nowrap"
+                              onClick={() => setCreditFile(file)}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              {file.creditLimit === null ? 'اعتماد حد الائتمان' : 'تحديث الحد'}
                             </Button>
                           )}
                           <DropdownMenu>
@@ -468,6 +491,11 @@ export default function AdminContractsList() {
         editing={editingTerms}
         open={Boolean(termsFile)}
         onOpenChange={(open) => { if (!open) setTermsFile(null); }}
+      />
+      <CreditLimitApprovalDialog
+        source={creditFile ? { kind: 'uploaded', id: creditFile.id, creditLimit: creditFile.creditLimit } : null}
+        onClose={() => setCreditFile(null)}
+        onApproved={() => toast({ title: 'تم اعتماد حد الائتمان', description: 'حُفظ سجل المراجعة دون تغيير الملف الموقع.' })}
       />
     </div>
   );

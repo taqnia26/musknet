@@ -35,6 +35,16 @@ describe('guided tour definitions', () => {
     expect(superAdmin.some((step) => step.title.en === 'Owner Credentials')).toBe(true);
   });
 
+  it('shows company order guidance only to company-order viewers', () => {
+    const company = getAdminTourSteps(navStructure, { isSuperAdmin: false, permissions: ['company-orders:view'] });
+    expect(company.find((step) => step.id === 'admin-company-orders')).toMatchObject({
+      route: '/admin/company-orders',
+      title: { ar: 'طلبات الشركات', en: 'Company Orders' },
+    });
+    const individuals = getAdminTourSteps(navStructure, { isSuperAdmin: false, permissions: ['orders:view'] });
+    expect(individuals.some((step) => step.id === 'admin-company-orders')).toBe(false);
+  });
+
   it('persists completion and allows an explicit restart reset', () => {
     const storage = memoryStorage();
     expect(isTourComplete(storage, 'tour')).toBe(false);

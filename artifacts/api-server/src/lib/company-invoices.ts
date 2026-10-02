@@ -1,6 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { db, invoicesTable, invoiceItemsTable, receivablePaymentsTable, productsTable, wholesaleDistributorsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
-import { createDistributorInvoice, DistributorInvoiceConflictError, DistributorInvoiceValidationError } from "./invoices";
+import { createDistributorInvoiceInTransaction, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource } from "./invoices";
 import { createHistoricalInvoice, type HistoricalInvoiceInput } from "./historical-company-invoices";
 import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType } from "./vat";
 import { saudiCalendarDate } from "./invoice-dates";
@@ -34,6 +34,66 @@ const amount = (value: number) => value / 100;
 const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) &&
   !Number.isNaN(Date.parse(`${value}T12:00:00.000Z`)) &&
   new Date(`${value}T12:00:00.000Z`).toISOString().slice(0, 10) === value;
+
+/**
+ * Issue a current company invoice using the caller's transaction. The company
+ * lock is taken before the invoice issuer's creation/product/number locks; portal
+ * callers may take it earlier, before locking their order row.
+ */
+export async function createCurrentCompanyInvoiceInTransaction(
+  tx: any,
+  input: CompanyInvoiceInput,
+  actorId: number,
+  environment: NodeJS.ProcessEnv = process.env,
+) {
+  if (!input.creationKey || input.creationKey.trim().length < 16 || input.creationKey.length > 80 ||
+    !validDate(input.issueDate) || !validDate(input.dueDate) || input.dueDate < input.issueDate ||
+    !input.items.length || input.items.length > 100 ||
+    input.items.some((item) => item.productId === undefined || !Number.isSafeInteger(item.productId) || item.productId < 1 ||
+      !Number.isSafeInteger(item.quantity) || item.quantity < 1 ||
+      !Number.isFinite(item.unitPrice) || item.unitPrice <= 0 || cents(item.unitPrice) / 100 !== item.unitPrice)) {
+    throw new DistributorInvoiceValidationError("Current company invoices require a valid key, dates, catalog products, quantities and prices");
+  }
+  if (input.contractId !== undefined && input.uploadedContractFileId !== undefined) {
+    throw new DistributorInvoiceValidationError("Select only one contract source");
+  }
+  if (input.discountOverride && (!Number.isFinite(input.discountOverride.percent) ||
+    input.discountOverride.percent < 0 || input.discountOverride.percent > 100 ||
+    Math.round(input.discountOverride.percent * 100) !== input.discountOverride.percent * 100)) {
+    throw new DistributorInvoiceValidationError("Invoice discount must be between 0 and 100 percent with at most two decimals");
+  }
+  const todayRiyadh = saudiCalendarDate(new Date());
+  if (input.issueDate > todayRiyadh) throw new DistributorInvoiceValidationError("issueDate cannot be in the future in the Riyadh calendar");
+  if (input.collected && (!input.paymentDate || !validDate(input.paymentDate) || !input.paymentMethod)) {
+    throw new DistributorInvoiceValidationError("paymentDate and paymentMethod are required when collected is true");
+  }
+  if (!input.collected && (input.paymentDate || input.paymentMethod)) {
+    throw new DistributorInvoiceValidationError("paymentDate and paymentMethod can only be supplied when collected is true");
+  }
+  if (input.collected && input.paymentDate! > todayRiyadh) {
+    throw new DistributorInvoiceValidationError("paymentDate cannot be in the future in the Riyadh calendar");
+  }
+  await lockDistributorContractSource(tx, input.distributorId);
+  const [distributor] = await tx.select().from(wholesaleDistributorsTable)
+    .where(eq(wholesaleDistributorsTable.id, input.distributorId)).limit(1);
+  if (!distributor) throw new DistributorInvoiceValidationError("Distributor not found");
+  const countryCode = distributor.countryCode?.trim().toUpperCase();
+  if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) {
+    throw new DistributorInvoiceConflictError("Distributor countryCode must be an ISO 3166-1 alpha-2 code");
+  }
+  return createDistributorInvoiceInTransaction(tx, {
+    creationKey: input.creationKey,
+    distributorId: input.distributorId,
+    contractId: input.contractId,
+    uploadedContractFileId: input.uploadedContractFileId,
+    discountOverride: input.discountOverride,
+    issueDate: input.issueDate,
+    dueDate: input.dueDate,
+    taxTreatment: countryCode && countryCode !== "SA" ? "international" : "domestic",
+    collected: input.collected ? { paymentDate: input.paymentDate!, paymentMethod: input.paymentMethod! } : undefined,
+    items: input.items.map(({ productId, quantity, unitPrice }) => ({ productId: productId!, quantity, unitPrice })),
+  }, actorId, environment);
+}
 
 export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: number, environment: NodeJS.ProcessEnv = process.env) {
   if (!input.creationKey || input.creationKey.trim().length < 16 || input.creationKey.length > 80) {
@@ -106,19 +166,8 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
   if (!distributor) throw new DistributorInvoiceValidationError("Distributor not found");
 
   let invoice;
-  const createCurrentInvoice = () => createDistributorInvoice({
-    creationKey: input.creationKey,
-    distributorId: input.distributorId,
-    contractId: input.contractId,
-    uploadedContractFileId: input.uploadedContractFileId,
-    discountOverride: input.discountOverride,
-    issueDate: input.issueDate,
-    dueDate: input.dueDate,
-    taxTreatment: distributor.countryCode?.trim().toUpperCase() && distributor.countryCode.trim().toUpperCase() !== "SA"
-      ? "international" : "domestic",
-    collected: input.collected ? { paymentDate: input.paymentDate!, paymentMethod: input.paymentMethod! } : undefined,
-    items: input.items.map(({ productId, quantity, unitPrice }) => ({ productId: productId!, quantity, unitPrice })),
-  }, actorId, environment);
+  const createCurrentInvoice = () => db.transaction((tx) =>
+    createCurrentCompanyInvoiceInTransaction(tx, input, actorId, environment));
   if (historical && existingByKey?.historical === "no" && allCurrentProductLines && !originalInvoiceNumber) {
     // A retry of an existing current invoice after Riyadh midnight replays its
     // original issuance; all new classification is based solely on issueDate.

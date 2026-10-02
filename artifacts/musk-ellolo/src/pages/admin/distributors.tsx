@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { useGetAdminDistributorPortalAccount, getGetAdminDistributorPortalAccountQueryKey, useUpdateAdminDistributorPortalAccount, useRevokeAdminDistributorPortalSessions } from '@workspace/api-client-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { KeyRound } from 'lucide-react';
 import { useAdminListDistributors, useAdminCreateDistributor, useAdminUpdateDistributor, useAdminDisableDistributor, useGetAdminMe } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { hasPermission } from '@/lib/permissions';
@@ -73,7 +77,60 @@ const createDistributorSchema = distributorSchema.superRefine((data, ctx) => {
   }));
 });
 
+function PortalAccountForm({ distributor, status, onClose }: { distributor: { id: number; companyName: string; email?: string | null }; status: { exists: boolean; email: string | null; enabled: boolean | null }; onClose: () => void }) {
+  const { t } = useLanguage();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const [enabled, setEnabled] = useState(status.exists ? status.enabled === true : false);
+  const [email, setEmail] = useState(status.email ?? distributor.email ?? '');
+  const [password, setPassword] = useState('');
+  const update = useUpdateAdminDistributorPortalAccount();
+  const revoke = useRevokeAdminDistributorPortalSessions();
+  const err = (e: unknown) => { const c = e as { data?: { error?: string }; message?: string }; return c?.data?.error ?? c?.message ?? ''; };
+  const strong = password.length >= 12 && password.length <= 256 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
+  const tooShort = password.length > 0 && !strong;
+  const save = () => update.mutate({ companyId: distributor.id, data: { enabled, email: email.trim() || null, password: password || null } }, {
+    onSuccess: (a) => { setPassword(''); qc.setQueryData(getGetAdminDistributorPortalAccountQueryKey(distributor.id), { companyId: a.companyId, exists: true, email: a.email, enabled: a.enabled, createdAt: a.createdAt, updatedAt: a.updatedAt }); qc.invalidateQueries({ queryKey: getGetAdminDistributorPortalAccountQueryKey(distributor.id) }); toast({ title: a.enabled ? t('تم تفعيل حساب البوابة', 'Portal account active') : t('تم تعطيل حساب البوابة', 'Portal account disabled'), description: a.email }); },
+    onError: (e) => toast({ title: t('تعذر حفظ الحساب', 'Could not save account'), description: err(e), variant: 'destructive' }),
+  });
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) { setPassword(''); onClose(); } }}>
+      <DialogContent className="max-w-md" data-testid="dialog-portal-account">
+        <DialogHeader><DialogTitle>{t('وصول بوابة الموزعين', 'Distributor portal access')} - {distributor.companyName}</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between"><Label>{t('الحساب مفعّل', 'Account enabled')}</Label><Switch checked={enabled} onCheckedChange={setEnabled} data-testid="switch-portal-enabled" /></div>
+          <div className="space-y-1"><Label>{t('بريد الدخول', 'Login email')}</Label><Input dir="ltr" type="email" value={email} onChange={(e) => setEmail(e.target.value)} data-testid="input-portal-account-email" /></div>
+          <div className="space-y-1"><Label>{t('كلمة مرور جديدة (اختياري)', 'New password (optional)')}</Label><Input dir="ltr" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} data-testid="input-portal-account-password" />
+            <p className={`text-xs ${tooShort ? 'text-destructive' : 'text-muted-foreground'}`}>{t('12-256 حرفاً مع حرف صغير وكبير ورقم ورمز خاص. اتركها فارغة لإبقاء كلمة المرور الحالية.', '12-256 characters with lowercase, uppercase, digit and special character. Leave blank to keep the current password.')}</p></div>
+          <div className="flex flex-wrap justify-between gap-2">
+            <Button variant="outline" className="text-destructive" disabled={revoke.isPending} data-testid="button-revoke-portal-sessions" onClick={() => revoke.mutate({ companyId: distributor.id }, {
+              onSuccess: (r) => toast({ title: t('تم إنهاء الجلسات', 'Sessions revoked'), description: String(r.revokedSessions) }),
+              onError: (e) => toast({ title: t('تعذر إنهاء الجلسات', 'Could not revoke sessions'), description: err(e), variant: 'destructive' }),
+            })}>{t('إنهاء كل الجلسات', 'Revoke all sessions')}</Button>
+            <Button disabled={update.isPending || tooShort || !email.trim() || (!status.exists && !strong)} onClick={save} data-testid="button-save-portal-account">{update.isPending ? t('جاري الحفظ...', 'Saving...') : t('حفظ', 'Save')}</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PortalAccountDialog({ distributor, onClose }: { distributor: { id: number; companyName: string; email?: string | null }; onClose: () => void }) {
+  const { t } = useLanguage();
+  const q = useGetAdminDistributorPortalAccount(distributor.id, { query: { enabled: true, queryKey: getGetAdminDistributorPortalAccountQueryKey(distributor.id), staleTime: 0, gcTime: 0 } });
+  if (q.data) return <PortalAccountForm key={`${q.data.updatedAt}`} distributor={distributor} status={q.data} onClose={onClose} />;
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md" data-testid="dialog-portal-account">
+        <DialogHeader><DialogTitle>{t('وصول بوابة الموزعين', 'Distributor portal access')} - {distributor.companyName}</DialogTitle></DialogHeader>
+        {q.isError ? <div className="space-y-2"><p className="text-sm text-destructive">{t('تعذر تحميل حالة الحساب', 'Could not load account status')}</p><Button variant="outline" onClick={() => q.refetch()}>{t('إعادة المحاولة', 'Retry')}</Button></div> : <div className="space-y-3 animate-pulse"><div className="h-8 rounded bg-muted" /><div className="h-8 rounded bg-muted" /></div>}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function AdminDistributors() {
+  const [portalFor, setPortalFor] = useState<{ id: number; companyName: string; email?: string | null } | null>(null);
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
@@ -371,6 +428,9 @@ export default function AdminDistributors() {
                       {hasPermission(currentUser, 'distributors', 'edit') && (
                         <DropdownMenuItem onClick={() => handleEdit(distributor)} disabled={updateMutation.isPending}><Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}</DropdownMenuItem>
                       )}
+                      {hasPermission(currentUser, 'distributors', 'edit') && (
+                        <DropdownMenuItem onClick={() => setPortalFor(distributor)} data-testid={`button-portal-access-${distributor.id}`}><KeyRound className="h-4 w-4" />{t('وصول البوابة', 'Portal access')}</DropdownMenuItem>
+                      )}
                       {hasPermission(currentUser, 'distributors', 'delete') && distributor.isActive && (
                         <DropdownMenuItem onClick={() => handleDisable(distributor.id)} disabled={disableMutation.isPending} className="text-destructive focus:text-destructive"><Trash2 className="h-4 w-4" />{t('تعطيل', 'Disable')}</DropdownMenuItem>
                       )}
@@ -384,6 +444,7 @@ export default function AdminDistributors() {
           </TableBody>
         </Table>
       </div>
+      {portalFor && <PortalAccountDialog distributor={portalFor} onClose={() => setPortalFor(null)} />}
     </div>
   );
 }

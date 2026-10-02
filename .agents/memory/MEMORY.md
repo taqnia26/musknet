@@ -63,3 +63,4 @@
 - [Invoice cancellation intent](invoice-cancellation-intent.md) — simplified confirmation records consent, not a business reason, and must never become invoice deletion.
 - [Standalone individual invoices](standalone-individual-invoices.md) — the user chose direct invoice issuance, not an order followed by invoicing on payment.
 - [Financial calendar inputs](financial-calendar-inputs.md) — preserve raw date-only inputs; generated date coercion can normalize impossible days before validation.
+- [Distributor credit boundary](distributor-credit-boundary.md) — requests have no financial effect; reviewed contract limits cover company-wide debt across old contracts.

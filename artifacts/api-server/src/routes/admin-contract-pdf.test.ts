@@ -1,7 +1,10 @@
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { and, eq } from "drizzle-orm";
-import { adminPermissionsTable, adminSessionsTable, adminUserPermissionsTable, adminUsersTable, db, distributorContractsTable } from "@workspace/db";
+import { and, eq, inArray } from "drizzle-orm";
+import {
+  adminPermissionsTable, adminSessionsTable, adminUserPermissionsTable, adminUsersTable, db,
+  distributorContractsTable, uploadedContractFilesTable, wholesaleDistributorsTable,
+} from "@workspace/db";
 import app from "../app";
 import { createAdminSession, hashAdminPassword } from "../lib/admin-auth";
 import { hashContractToken } from "../lib/contracts";
@@ -11,6 +14,8 @@ let token: string;
 let contractsEditorId: number;
 let contractsEditorToken: string;
 const contractIds: number[] = [];
+const uploadedContractFileIds: number[] = [];
+const distributorIds: number[] = [];
 
 beforeAll(async () => {
   const [user] = await db.insert(adminUsersTable).values({
@@ -38,7 +43,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (uploadedContractFileIds.length) {
+    await db.delete(uploadedContractFilesTable).where(inArray(uploadedContractFilesTable.id, uploadedContractFileIds));
+  }
   for (const id of contractIds) await db.delete(distributorContractsTable).where(eq(distributorContractsTable.id, id));
+  if (distributorIds.length) await db.delete(wholesaleDistributorsTable).where(inArray(wholesaleDistributorsTable.id, distributorIds));
   if (userId) {
     await db.delete(adminSessionsTable).where(eq(adminSessionsTable.adminUserId, userId));
     await db.delete(adminUsersTable).where(eq(adminUsersTable.id, userId));
@@ -170,5 +179,125 @@ describe("administrator contract PDF download", () => {
       expect(saved.body.sellerName).toBe(id === created.body.id ? input.sellerName : "اسم محفوظ سابقاً");
     }
     await request(app).get(`/api/admin/contracts/${created.body.id}/pdf`).expect(401);
+  });
+
+  it("records credit approvals on contracts and uploaded metadata without modifying signed-file identity", async () => {
+    const [distributor] = await db.insert(wholesaleDistributorsTable).values({
+      companyName: `Credit approval test ${Date.now()}`,
+      contactName: "Credit reviewer",
+      phone: `057${String(Date.now()).slice(-7)}`,
+      isActive: true,
+    }).returning();
+    distributorIds.push(distributor.id);
+    const [contract] = await db.insert(distributorContractsTable).values({
+      contractNumber: `CREDIT-APPROVAL-${Date.now()}`,
+      distributorId: distributor.id,
+      contractType: "عقد توريد أجل المملكة العربية السعودية",
+      status: "final",
+      sellerName: "Seller",
+      sellerCrNumber: "111",
+      sellerCrDate: "01/01/2027",
+      sellerCrIssuer: "Test",
+      sellerAddress: "Test address",
+      sellerRepName: "Tester",
+      sellerRepTitle: "Manager",
+      buyerCompanyName: distributor.companyName,
+      products: [],
+      createdBy: userId,
+    }).returning();
+    contractIds.push(contract.id);
+    const [termContract] = await db.insert(distributorContractsTable).values({
+      contractNumber: `CREDIT-TERM-${Date.now()}`,
+      distributorId: distributor.id,
+      contractType: "عقد توريد أجل المملكة العربية السعودية",
+      status: "draft",
+      templateVersion: 1,
+      contractCreditLimit: "1234.50",
+      sellerName: "Seller",
+      sellerCrNumber: "111",
+      sellerCrDate: "01/01/2027",
+      sellerCrIssuer: "Test",
+      sellerAddress: "Test address",
+      sellerRepName: "Tester",
+      sellerRepTitle: "Manager",
+      buyerCompanyName: distributor.companyName,
+      products: [],
+      createdBy: userId,
+    }).returning();
+    contractIds.push(termContract.id);
+    const signedObjectPath = `/objects/uploads/contracts/files/signed-credit-${Date.now()}.pdf`;
+    const [uploaded] = await db.insert(uploadedContractFilesTable).values({
+      ownerType: "distributor",
+      ownerId: distributor.id,
+      ownerName: distributor.companyName,
+      fileName: "signed-credit.pdf",
+      objectPath: signedObjectPath,
+      mimeType: "application/pdf",
+      sizeBytes: 100,
+      contractType: "Saudi distributor agreement",
+      discountPercent: "0.00",
+      paymentTerm: "due_on_issue",
+      termsConfirmedAt: new Date(),
+      termsConfirmedBy: userId,
+      uploadedBy: userId,
+    }).returning();
+    uploadedContractFileIds.push(uploaded.id);
+    const reason = "Finance reviewed company exposure and approved the limit";
+    const approval = { creditLimit: 1234.5, reason };
+
+    const generatedResponse = await request(app).put(`/api/admin/contracts/${contract.id}/credit-limit`)
+      .set("Authorization", `Bearer ${contractsEditorToken}`)
+      .send(approval).expect(200);
+    expect(generatedResponse.body).toMatchObject({
+      creditLimit: "1234.50",
+      creditLimitApprovedBy: contractsEditorId,
+      creditLimitApprovalReason: reason,
+    });
+    expect(generatedResponse.body.creditLimitApprovedAt).toBeTruthy();
+    expect(generatedResponse.body.contractCreditLimit).toBeNull();
+
+    await request(app).put(`/api/admin/contracts/${termContract.id}/credit-limit`)
+      .set("Authorization", `Bearer ${contractsEditorToken}`)
+      .send({ ...approval, creditLimit: 1235 }).expect(409);
+    const [unapprovedTermContract] = await db.select().from(distributorContractsTable)
+      .where(eq(distributorContractsTable.id, termContract.id));
+    expect(unapprovedTermContract.contractCreditLimit).toBe("1234.50");
+    expect(unapprovedTermContract.creditLimit).toBeNull();
+    const approvedTermContract = await request(app).put(`/api/admin/contracts/${termContract.id}/credit-limit`)
+      .set("Authorization", `Bearer ${contractsEditorToken}`)
+      .send({ ...approval, creditLimit: 1234.5 }).expect(200);
+    expect(approvedTermContract.body.contractCreditLimit).toBe("1234.50");
+    expect(approvedTermContract.body.creditLimit).toBe("1234.50");
+    const editedTerm = await request(app).patch(`/api/admin/contracts/${termContract.id}`)
+      .set("Authorization", `Bearer ${contractsEditorToken}`)
+      .send({ contractCreditLimit: 1300 }).expect(200);
+    const [updatedTermContract] = await db.select().from(distributorContractsTable)
+      .where(eq(distributorContractsTable.id, termContract.id));
+    expect(updatedTermContract.contractCreditLimit).toBe("1300.00");
+    expect(updatedTermContract.creditLimit).toBeNull();
+    expect(updatedTermContract.creditLimitApprovedBy).toBeNull();
+    await db.update(distributorContractsTable).set({
+      contractCreditLimit: "1400.00",
+      updatedAt: new Date(Date.now() + 5_000),
+    }).where(eq(distributorContractsTable.id, termContract.id));
+    await request(app).post(`/api/admin/contracts/${termContract.id}/seller-sign`)
+      .set("Authorization", `Bearer ${contractsEditorToken}`)
+      .send({
+        signaturePath: `/objects/uploads/contracts/signatures/stale-${termContract.id}`,
+        expectedUpdatedAt: editedTerm.body.updatedAt,
+      }).expect(409);
+
+    const uploadedResponse = await request(app).put(`/api/admin/contract-files/${uploaded.id}/credit-limit`)
+      .set("Authorization", `Bearer ${contractsEditorToken}`)
+      .send(approval).expect(200);
+    expect(uploadedResponse.body).toMatchObject({
+      creditLimit: 1234.5,
+      creditLimitApprovedBy: contractsEditorId,
+      creditLimitApprovalReason: reason,
+    });
+    expect(uploadedResponse.body).not.toHaveProperty("objectPath");
+    expect(uploadedResponse.body.creditLimitApprovedAt).toBeTruthy();
+    const [savedFile] = await db.select().from(uploadedContractFilesTable).where(eq(uploadedContractFilesTable.id, uploaded.id));
+    expect(savedFile.objectPath).toBe(signedObjectPath);
   });
 });

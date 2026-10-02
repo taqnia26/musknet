@@ -24,6 +24,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { sellerNumberLabel } from './seller-defaults';
 import { downloadContractPdf, pdfDownloadError } from './download-pdf';
+import { CreditLimitApprovalDialog } from './components/CreditLimitApprovalDialog';
 
 const statusMap: Record<DistributorContractStatus, { label: string, variant: 'default' | 'secondary' | 'destructive' | 'outline', icon: any, color: string }> = {
   draft: { label: 'مسودة', variant: 'secondary', icon: FileText, color: 'text-muted-foreground' },
@@ -60,6 +61,7 @@ export default function AdminContractDetail() {
   const [signingUrl, setSigningUrl] = useState<string | null>(null);
   const [linkDistributorId, setLinkDistributorId] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [creditApprovalOpen, setCreditApprovalOpen] = useState(false);
 
   if (isLoading) {
     return <div className="flex h-[400px] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -144,7 +146,7 @@ export default function AdminContractDetail() {
       // 3. Sign contract with object path
       await signContract.mutateAsync({
         id,
-        data: { signaturePath: uploadData.objectPath }
+        data: { signaturePath: uploadData.objectPath, expectedUpdatedAt: contract.updatedAt } as Parameters<typeof signContract.mutateAsync>[0]['data'] & { expectedUpdatedAt: string }
       });
       
       queryClient.invalidateQueries({ queryKey: getAdminGetContractQueryKey(id) });
@@ -356,6 +358,40 @@ export default function AdminContractDetail() {
               </div>
             </CardContent>
           </Card>
+
+          {contract.status !== 'cancelled' && contract.distributorId !== null && (
+            <Card>
+              <CardHeader>
+                <CardTitle>حد الائتمان</CardTitle>
+                <CardDescription>
+                  يمكن اعتماد الحد قبل التوقيع أو بعده. يظل مستقلاً عن نص العقد، وأي تعديل للمبلغ في المسودة يلغي الاعتماد السابق.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">الحد المذكور في العقد الموقع</span>
+                  <span className="font-medium">
+                    {contract.contractCreditLimit === null ? 'لا يتضمن العقد القديم حداً موثقاً' : `${Number(contract.contractCreditLimit).toLocaleString('ar-SA')} ر.س`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">الحد المعتمد</span>
+                  <span className="font-semibold" data-testid="contract-credit-limit">
+                    {contract.creditLimit === null ? 'غير معتمد' : `${Number(contract.creditLimit).toLocaleString('ar-SA')} ر.س`}
+                  </span>
+                </div>
+                {contract.creditLimitApprovedAt && (
+                  <div className="space-y-1 border-t pt-3 text-xs text-muted-foreground">
+                    <p>اعتمده المستخدم #{contract.creditLimitApprovedBy} في {new Date(contract.creditLimitApprovedAt).toLocaleString('ar-SA')}</p>
+                    <p>{contract.creditLimitApprovalReason}</p>
+                  </div>
+                )}
+                <Button type="button" variant="outline" onClick={() => setCreditApprovalOpen(true)}>
+                  {contract.creditLimit === null ? 'اعتماد حد الائتمان' : 'تحديث الاعتماد'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -463,6 +499,18 @@ export default function AdminContractDetail() {
           )}
         </div>
       </div>
+      <CreditLimitApprovalDialog
+        source={creditApprovalOpen ? {
+          kind: 'generated',
+          id: contract.id,
+          creditLimit: contract.creditLimit === null
+            ? (contract.contractCreditLimit === null ? null : Number(contract.contractCreditLimit))
+            : Number(contract.creditLimit),
+          contractCreditLimit: contract.contractCreditLimit === null ? null : Number(contract.contractCreditLimit),
+        } : null}
+        onClose={() => setCreditApprovalOpen(false)}
+        onApproved={() => toast({ title: 'تم اعتماد حد الائتمان', description: 'تم حفظ المراجع والوقت وسبب المراجعة.' })}
+      />
     </div>
   );
 }

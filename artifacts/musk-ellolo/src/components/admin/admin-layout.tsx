@@ -71,7 +71,7 @@ export const navStructure = [
     labelEn: 'Orders', labelAr: 'الطلبات', icon: ShoppingCart,
     children: [
       { href: '/admin/orders', labelEn: 'Individual Orders', labelAr: 'طلبات الأفراد', module: 'orders' },
-      { href: '/admin/orders', labelEn: 'Company Orders', labelAr: 'طلبات الشركات', module: 'orders' },
+      { href: '/admin/company-orders', labelEn: 'Company Orders', labelAr: 'طلبات الشركات', module: 'company-orders' },
     ]
   },
   { href: '/admin/salla-import', icon: FileText, labelEn: 'Salla Import', labelAr: 'استيراد سلة', module: 'invoices', direct: true },
@@ -191,7 +191,7 @@ export const navStructure = [
 ];
 
 export const isAdminNavActive = (href: string, location: string) =>
-  location === href || (href !== '/admin' && location.startsWith(href));
+  location === href || (href !== '/admin' && location.startsWith(`${href}/`));
 
 export const visibleAdminNavChildren = (item: any, user: any) =>
   item.children?.filter((child: any) => {
@@ -375,8 +375,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
             <SheetContent side={lang === 'ar' ? 'right' : 'left'} className="w-[260px] p-0 flex flex-col admin-theme bg-sidebar border-sidebar-border">
               <div className="flex-1 overflow-y-auto px-3 py-6 scrollbar-thin">
                 <nav className="space-y-1">
-                  {navStructure.map((item, i) => (
-                    <NavItem key={i} item={item} user={user} location={location} lang={lang} setOpen={setIsOpen} />
+                  {navStructure.map((item) => (
+                    <NavItem key={getAdminNavTourKey(item)} item={item} user={user} location={location} lang={lang} setOpen={setIsOpen} />
                   ))}
                 </nav>
               </div>
@@ -516,8 +516,8 @@ export function AdminLayout({ children }: { children: ReactNode }) {
         <aside className="z-10 hidden w-[240px] shrink-0 flex-col border-e border-sidebar-border bg-sidebar lg:flex shadow-sm">
           <div className="flex-1 overflow-y-auto px-3 py-6 scrollbar-thin">
             <nav className="space-y-0.5">
-              {navStructure.map((item, i) => (
-                <NavItem key={i} item={item} user={user} location={location} lang={lang} />
+              {navStructure.map((item) => (
+                <NavItem key={getAdminNavTourKey(item)} item={item} user={user} location={location} lang={lang} />
               ))}
             </nav>
           </div>

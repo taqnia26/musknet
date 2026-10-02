@@ -35,6 +35,7 @@ import type {
   AdminCategory,
   AdminCategoryInput,
   AdminCategoryUpdate,
+  AdminCompanyOrdersPage,
   AdminCoupon,
   AdminCouponDisableInput,
   AdminCouponInput,
@@ -127,6 +128,10 @@ import type {
   CompanyInvoiceCreated,
   CompanyInvoiceInput,
   CompanyInvoiceSellerConfiguration,
+  CompanyOrder,
+  CompanyOrderDecisionInput,
+  CompanyOrderDecisionResponse,
+  CompanyOrderReview,
   ConflictResponse,
   ContractFileUploadRequest,
   ContractPreview,
@@ -139,6 +144,7 @@ import type {
   CouponLink,
   CouponResult,
   CouponValidation,
+  CreditLimitApprovalInput,
   Customer,
   DistributorCatalogSetting,
   DistributorCatalogUpdate,
@@ -147,6 +153,15 @@ import type {
   DistributorContractLinkInput,
   DistributorContractUpdate,
   DistributorInvoiceInput,
+  DistributorPortalAccount,
+  DistributorPortalAccountInput,
+  DistributorPortalAccountStatus,
+  DistributorPortalCatalog,
+  DistributorPortalLogin,
+  DistributorPortalLoginInput,
+  DistributorPortalOrderInput,
+  DistributorPortalRevokeSessionResponse,
+  DistributorPortalSession,
   Employee,
   EmployeeInput,
   EmployeeUpdate,
@@ -213,6 +228,7 @@ import type {
   LeaveRequest,
   LeaveRequestInput,
   LeaveRequestUpdate,
+  ListAdminCompanyOrdersParams,
   ListInventoryBalancesParams,
   ListProductsParams,
   ManualJournalEntryInput,
@@ -4888,6 +4904,150 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminDeleteContractMutationOptions(options));
+    }
+
+export const getAdminApproveDistributorContractCreditLimitUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contracts/${id}/credit-limit`
+}
+
+/**
+ * @summary Explicitly approve a credit limit for a generated distributor contract
+ */
+export const adminApproveDistributorContractCreditLimit = async (id: number,
+    creditLimitApprovalInput: CreditLimitApprovalInput, options?: Parameters<typeof customFetch>[1]): Promise<DistributorContract> => {
+
+  return customFetch<DistributorContract>(getAdminApproveDistributorContractCreditLimitUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(creditLimitApprovalInput)
+  }
+);}
+
+
+
+
+
+export const getAdminApproveDistributorContractCreditLimitMutationOptions = <TError = ErrorType<BadRequestResponse | NotFoundResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminApproveDistributorContractCreditLimit>>, TError,{id: number;data: BodyType<CreditLimitApprovalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminApproveDistributorContractCreditLimit>>, TError,{id: number;data: BodyType<CreditLimitApprovalInput>}, TContext> => {
+
+const mutationKey = ['adminApproveDistributorContractCreditLimit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminApproveDistributorContractCreditLimit>>, {id: number;data: BodyType<CreditLimitApprovalInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminApproveDistributorContractCreditLimit(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminApproveDistributorContractCreditLimitMutationResult = NonNullable<Awaited<ReturnType<typeof adminApproveDistributorContractCreditLimit>>>
+    export type AdminApproveDistributorContractCreditLimitMutationBody = BodyType<CreditLimitApprovalInput>
+    export type AdminApproveDistributorContractCreditLimitMutationError = ErrorType<BadRequestResponse | NotFoundResponse | Error>
+
+    /**
+ * @summary Explicitly approve a credit limit for a generated distributor contract
+ */
+export const useAdminApproveDistributorContractCreditLimit = <TError = ErrorType<BadRequestResponse | NotFoundResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminApproveDistributorContractCreditLimit>>, TError,{id: number;data: BodyType<CreditLimitApprovalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminApproveDistributorContractCreditLimit>>,
+        TError,
+        {id: number;data: BodyType<CreditLimitApprovalInput>},
+        TContext
+      > => {
+      return useMutation(getAdminApproveDistributorContractCreditLimitMutationOptions(options));
+    }
+
+export const getAdminApproveUploadedContractCreditLimitUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/contract-files/${id}/credit-limit`
+}
+
+/**
+ * @summary Explicitly approve a credit limit without changing an uploaded signed file
+ */
+export const adminApproveUploadedContractCreditLimit = async (id: number,
+    creditLimitApprovalInput: CreditLimitApprovalInput, options?: Parameters<typeof customFetch>[1]): Promise<UploadedContractFile> => {
+
+  return customFetch<UploadedContractFile>(getAdminApproveUploadedContractCreditLimitUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(creditLimitApprovalInput)
+  }
+);}
+
+
+
+
+
+export const getAdminApproveUploadedContractCreditLimitMutationOptions = <TError = ErrorType<BadRequestResponse | NotFoundResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminApproveUploadedContractCreditLimit>>, TError,{id: number;data: BodyType<CreditLimitApprovalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminApproveUploadedContractCreditLimit>>, TError,{id: number;data: BodyType<CreditLimitApprovalInput>}, TContext> => {
+
+const mutationKey = ['adminApproveUploadedContractCreditLimit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminApproveUploadedContractCreditLimit>>, {id: number;data: BodyType<CreditLimitApprovalInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminApproveUploadedContractCreditLimit(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminApproveUploadedContractCreditLimitMutationResult = NonNullable<Awaited<ReturnType<typeof adminApproveUploadedContractCreditLimit>>>
+    export type AdminApproveUploadedContractCreditLimitMutationBody = BodyType<CreditLimitApprovalInput>
+    export type AdminApproveUploadedContractCreditLimitMutationError = ErrorType<BadRequestResponse | NotFoundResponse | Error>
+
+    /**
+ * @summary Explicitly approve a credit limit without changing an uploaded signed file
+ */
+export const useAdminApproveUploadedContractCreditLimit = <TError = ErrorType<BadRequestResponse | NotFoundResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminApproveUploadedContractCreditLimit>>, TError,{id: number;data: BodyType<CreditLimitApprovalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminApproveUploadedContractCreditLimit>>,
+        TError,
+        {id: number;data: BodyType<CreditLimitApprovalInput>},
+        TContext
+      > => {
+      return useMutation(getAdminApproveUploadedContractCreditLimitMutationOptions(options));
     }
 
 export const getAdminLinkDistributorContractUrl = (id: number,) => {
@@ -20552,3 +20712,905 @@ export function useListInventoryAlerts<TData = Awaited<ReturnType<typeof listInv
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+
+
+
+
+
+
+export const getLoginDistributorPortalUrl = () => {
+
+
+
+
+  return `/api/distributor-portal/session/login`
+}
+
+export const loginDistributorPortal = async (distributorPortalLoginInput: DistributorPortalLoginInput, options?: Parameters<typeof customFetch>[1]): Promise<DistributorPortalLogin> => {
+
+  return customFetch<DistributorPortalLogin>(getLoginDistributorPortalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(distributorPortalLoginInput)
+  }
+);}
+
+
+
+
+
+export const getLoginDistributorPortalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginDistributorPortal>>, TError,{data: BodyType<DistributorPortalLoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof loginDistributorPortal>>, TError,{data: BodyType<DistributorPortalLoginInput>}, TContext> => {
+
+const mutationKey = ['loginDistributorPortal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof loginDistributorPortal>>, {data: BodyType<DistributorPortalLoginInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  loginDistributorPortal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginDistributorPortalMutationResult = NonNullable<Awaited<ReturnType<typeof loginDistributorPortal>>>
+    export type LoginDistributorPortalMutationBody = BodyType<DistributorPortalLoginInput>
+    export type LoginDistributorPortalMutationError = ErrorType<unknown>
+
+    export const useLoginDistributorPortal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof loginDistributorPortal>>, TError,{data: BodyType<DistributorPortalLoginInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof loginDistributorPortal>>,
+        TError,
+        {data: BodyType<DistributorPortalLoginInput>},
+        TContext
+      > => {
+      return useMutation(getLoginDistributorPortalMutationOptions(options));
+    }
+
+export const getGetDistributorPortalSessionUrl = () => {
+
+
+
+
+  return `/api/distributor-portal/session`
+}
+
+export const getDistributorPortalSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<DistributorPortalSession> => {
+
+  return customFetch<DistributorPortalSession>(getGetDistributorPortalSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDistributorPortalSessionQueryKey = () => {
+    return [
+    `/api/distributor-portal/session`
+    ] as const;
+    }
+
+
+export const getGetDistributorPortalSessionQueryOptions = <TData = Awaited<ReturnType<typeof getDistributorPortalSession>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDistributorPortalSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDistributorPortalSession>>> = ({ signal }) => getDistributorPortalSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDistributorPortalSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getDistributorPortalSession>>>
+export type GetDistributorPortalSessionQueryError = ErrorType<unknown>
+
+
+
+export function useGetDistributorPortalSession<TData = Awaited<ReturnType<typeof getDistributorPortalSession>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDistributorPortalSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRevokeDistributorPortalSessionUrl = () => {
+
+
+
+
+  return `/api/distributor-portal/session`
+}
+
+export const revokeDistributorPortalSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<DistributorPortalRevokeSessionResponse> => {
+
+  return customFetch<DistributorPortalRevokeSessionResponse>(getRevokeDistributorPortalSessionUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeDistributorPortalSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeDistributorPortalSession>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeDistributorPortalSession>>, TError,void, TContext> => {
+
+const mutationKey = ['revokeDistributorPortalSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeDistributorPortalSession>>, void> = () => {
+
+
+          return  revokeDistributorPortalSession(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeDistributorPortalSessionMutationResult = NonNullable<Awaited<ReturnType<typeof revokeDistributorPortalSession>>>
+
+    export type RevokeDistributorPortalSessionMutationError = ErrorType<unknown>
+
+    export const useRevokeDistributorPortalSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeDistributorPortalSession>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeDistributorPortalSession>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRevokeDistributorPortalSessionMutationOptions(options));
+    }
+
+export const getGetDistributorPortalCatalogUrl = () => {
+
+
+
+
+  return `/api/distributor-portal/catalog`
+}
+
+export const getDistributorPortalCatalog = async ( options?: Parameters<typeof customFetch>[1]): Promise<DistributorPortalCatalog> => {
+
+  return customFetch<DistributorPortalCatalog>(getGetDistributorPortalCatalogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDistributorPortalCatalogQueryKey = () => {
+    return [
+    `/api/distributor-portal/catalog`
+    ] as const;
+    }
+
+
+export const getGetDistributorPortalCatalogQueryOptions = <TData = Awaited<ReturnType<typeof getDistributorPortalCatalog>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDistributorPortalCatalogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDistributorPortalCatalog>>> = ({ signal }) => getDistributorPortalCatalog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalCatalog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDistributorPortalCatalogQueryResult = NonNullable<Awaited<ReturnType<typeof getDistributorPortalCatalog>>>
+export type GetDistributorPortalCatalogQueryError = ErrorType<unknown>
+
+
+
+export function useGetDistributorPortalCatalog<TData = Awaited<ReturnType<typeof getDistributorPortalCatalog>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalCatalog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDistributorPortalCatalogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListDistributorPortalOrdersUrl = () => {
+
+
+
+
+  return `/api/distributor-portal/orders`
+}
+
+export const listDistributorPortalOrders = async ( options?: Parameters<typeof customFetch>[1]): Promise<CompanyOrder[]> => {
+
+  return customFetch<CompanyOrder[]>(getListDistributorPortalOrdersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDistributorPortalOrdersQueryKey = () => {
+    return [
+    `/api/distributor-portal/orders`
+    ] as const;
+    }
+
+
+export const getListDistributorPortalOrdersQueryOptions = <TData = Awaited<ReturnType<typeof listDistributorPortalOrders>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDistributorPortalOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDistributorPortalOrdersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDistributorPortalOrders>>> = ({ signal }) => listDistributorPortalOrders({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDistributorPortalOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDistributorPortalOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof listDistributorPortalOrders>>>
+export type ListDistributorPortalOrdersQueryError = ErrorType<unknown>
+
+
+
+export function useListDistributorPortalOrders<TData = Awaited<ReturnType<typeof listDistributorPortalOrders>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDistributorPortalOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDistributorPortalOrdersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSubmitDistributorPortalOrderUrl = () => {
+
+
+
+
+  return `/api/distributor-portal/orders`
+}
+
+export const submitDistributorPortalOrder = async (distributorPortalOrderInput: DistributorPortalOrderInput, options?: Parameters<typeof customFetch>[1]): Promise<CompanyOrder> => {
+
+  return customFetch<CompanyOrder>(getSubmitDistributorPortalOrderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(distributorPortalOrderInput)
+  }
+);}
+
+
+
+
+
+export const getSubmitDistributorPortalOrderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitDistributorPortalOrder>>, TError,{data: BodyType<DistributorPortalOrderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitDistributorPortalOrder>>, TError,{data: BodyType<DistributorPortalOrderInput>}, TContext> => {
+
+const mutationKey = ['submitDistributorPortalOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitDistributorPortalOrder>>, {data: BodyType<DistributorPortalOrderInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitDistributorPortalOrder(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitDistributorPortalOrderMutationResult = NonNullable<Awaited<ReturnType<typeof submitDistributorPortalOrder>>>
+    export type SubmitDistributorPortalOrderMutationBody = BodyType<DistributorPortalOrderInput>
+    export type SubmitDistributorPortalOrderMutationError = ErrorType<unknown>
+
+    export const useSubmitDistributorPortalOrder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitDistributorPortalOrder>>, TError,{data: BodyType<DistributorPortalOrderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitDistributorPortalOrder>>,
+        TError,
+        {data: BodyType<DistributorPortalOrderInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitDistributorPortalOrderMutationOptions(options));
+    }
+
+export const getGetDistributorPortalOrderUrl = (orderId: number,) => {
+
+
+
+
+  return `/api/distributor-portal/orders/${orderId}`
+}
+
+export const getDistributorPortalOrder = async (orderId: number, options?: Parameters<typeof customFetch>[1]): Promise<CompanyOrder> => {
+
+  return customFetch<CompanyOrder>(getGetDistributorPortalOrderUrl(orderId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDistributorPortalOrderQueryKey = (orderId: number,) => {
+    return [
+    `/api/distributor-portal/orders/${orderId}`
+    ] as const;
+    }
+
+
+export const getGetDistributorPortalOrderQueryOptions = <TData = Awaited<ReturnType<typeof getDistributorPortalOrder>>, TError = ErrorType<unknown>>(orderId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDistributorPortalOrderQueryKey(orderId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDistributorPortalOrder>>> = ({ signal }) => getDistributorPortalOrder(orderId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orderId !== null && orderId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalOrder>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDistributorPortalOrderQueryResult = NonNullable<Awaited<ReturnType<typeof getDistributorPortalOrder>>>
+export type GetDistributorPortalOrderQueryError = ErrorType<unknown>
+
+
+
+export function useGetDistributorPortalOrder<TData = Awaited<ReturnType<typeof getDistributorPortalOrder>>, TError = ErrorType<unknown>>(
+ orderId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDistributorPortalOrder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDistributorPortalOrderQueryOptions(orderId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminCompanyOrdersUrl = (params?: ListAdminCompanyOrdersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/company-orders?${stringifiedParams}` : `/api/admin/company-orders`
+}
+
+export const listAdminCompanyOrders = async (params?: ListAdminCompanyOrdersParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminCompanyOrdersPage> => {
+
+  return customFetch<AdminCompanyOrdersPage>(getListAdminCompanyOrdersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminCompanyOrdersQueryKey = (params?: ListAdminCompanyOrdersParams,) => {
+    return [
+    `/api/admin/company-orders`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminCompanyOrdersQueryOptions = <TData = Awaited<ReturnType<typeof listAdminCompanyOrders>>, TError = ErrorType<unknown>>(params?: ListAdminCompanyOrdersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCompanyOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminCompanyOrdersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCompanyOrders>>> = ({ signal }) => listAdminCompanyOrders(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminCompanyOrders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminCompanyOrdersQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminCompanyOrders>>>
+export type ListAdminCompanyOrdersQueryError = ErrorType<unknown>
+
+
+
+export function useListAdminCompanyOrders<TData = Awaited<ReturnType<typeof listAdminCompanyOrders>>, TError = ErrorType<unknown>>(
+ params?: ListAdminCompanyOrdersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminCompanyOrders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminCompanyOrdersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdminCompanyOrderReviewUrl = (orderId: number,) => {
+
+
+
+
+  return `/api/admin/company-orders/${orderId}/review`
+}
+
+export const getAdminCompanyOrderReview = async (orderId: number, options?: Parameters<typeof customFetch>[1]): Promise<CompanyOrderReview> => {
+
+  return customFetch<CompanyOrderReview>(getGetAdminCompanyOrderReviewUrl(orderId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminCompanyOrderReviewQueryKey = (orderId: number,) => {
+    return [
+    `/api/admin/company-orders/${orderId}/review`
+    ] as const;
+    }
+
+
+export const getGetAdminCompanyOrderReviewQueryOptions = <TData = Awaited<ReturnType<typeof getAdminCompanyOrderReview>>, TError = ErrorType<unknown>>(orderId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminCompanyOrderReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminCompanyOrderReviewQueryKey(orderId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminCompanyOrderReview>>> = ({ signal }) => getAdminCompanyOrderReview(orderId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orderId !== null && orderId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminCompanyOrderReview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminCompanyOrderReviewQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminCompanyOrderReview>>>
+export type GetAdminCompanyOrderReviewQueryError = ErrorType<unknown>
+
+
+
+export function useGetAdminCompanyOrderReview<TData = Awaited<ReturnType<typeof getAdminCompanyOrderReview>>, TError = ErrorType<unknown>>(
+ orderId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminCompanyOrderReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminCompanyOrderReviewQueryOptions(orderId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDecideAdminCompanyOrderUrl = (orderId: number,) => {
+
+
+
+
+  return `/api/admin/company-orders/${orderId}/decision`
+}
+
+export const decideAdminCompanyOrder = async (orderId: number,
+    companyOrderDecisionInput: CompanyOrderDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<CompanyOrderDecisionResponse> => {
+
+  return customFetch<CompanyOrderDecisionResponse>(getDecideAdminCompanyOrderUrl(orderId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(companyOrderDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getDecideAdminCompanyOrderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideAdminCompanyOrder>>, TError,{orderId: number;data: BodyType<CompanyOrderDecisionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideAdminCompanyOrder>>, TError,{orderId: number;data: BodyType<CompanyOrderDecisionInput>}, TContext> => {
+
+const mutationKey = ['decideAdminCompanyOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideAdminCompanyOrder>>, {orderId: number;data: BodyType<CompanyOrderDecisionInput>}> = (props) => {
+          const {orderId,data} = props ?? {};
+
+          return  decideAdminCompanyOrder(orderId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideAdminCompanyOrderMutationResult = NonNullable<Awaited<ReturnType<typeof decideAdminCompanyOrder>>>
+    export type DecideAdminCompanyOrderMutationBody = BodyType<CompanyOrderDecisionInput>
+    export type DecideAdminCompanyOrderMutationError = ErrorType<unknown>
+
+    export const useDecideAdminCompanyOrder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideAdminCompanyOrder>>, TError,{orderId: number;data: BodyType<CompanyOrderDecisionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideAdminCompanyOrder>>,
+        TError,
+        {orderId: number;data: BodyType<CompanyOrderDecisionInput>},
+        TContext
+      > => {
+      return useMutation(getDecideAdminCompanyOrderMutationOptions(options));
+    }
+
+export const getGetAdminDistributorPortalAccountUrl = (companyId: number,) => {
+
+
+
+
+  return `/api/admin/distributor-portal/accounts/${companyId}`
+}
+
+export const getAdminDistributorPortalAccount = async (companyId: number, options?: Parameters<typeof customFetch>[1]): Promise<DistributorPortalAccountStatus> => {
+
+  return customFetch<DistributorPortalAccountStatus>(getGetAdminDistributorPortalAccountUrl(companyId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminDistributorPortalAccountQueryKey = (companyId: number,) => {
+    return [
+    `/api/admin/distributor-portal/accounts/${companyId}`
+    ] as const;
+    }
+
+
+export const getGetAdminDistributorPortalAccountQueryOptions = <TData = Awaited<ReturnType<typeof getAdminDistributorPortalAccount>>, TError = ErrorType<unknown>>(companyId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminDistributorPortalAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminDistributorPortalAccountQueryKey(companyId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminDistributorPortalAccount>>> = ({ signal }) => getAdminDistributorPortalAccount(companyId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: companyId !== null && companyId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminDistributorPortalAccount>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminDistributorPortalAccountQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminDistributorPortalAccount>>>
+export type GetAdminDistributorPortalAccountQueryError = ErrorType<unknown>
+
+
+
+export function useGetAdminDistributorPortalAccount<TData = Awaited<ReturnType<typeof getAdminDistributorPortalAccount>>, TError = ErrorType<unknown>>(
+ companyId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminDistributorPortalAccount>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminDistributorPortalAccountQueryOptions(companyId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminDistributorPortalAccountUrl = (companyId: number,) => {
+
+
+
+
+  return `/api/admin/distributor-portal/accounts/${companyId}`
+}
+
+export const updateAdminDistributorPortalAccount = async (companyId: number,
+    distributorPortalAccountInput: DistributorPortalAccountInput, options?: Parameters<typeof customFetch>[1]): Promise<DistributorPortalAccount> => {
+
+  return customFetch<DistributorPortalAccount>(getUpdateAdminDistributorPortalAccountUrl(companyId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(distributorPortalAccountInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminDistributorPortalAccountMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminDistributorPortalAccount>>, TError,{companyId: number;data: BodyType<DistributorPortalAccountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminDistributorPortalAccount>>, TError,{companyId: number;data: BodyType<DistributorPortalAccountInput>}, TContext> => {
+
+const mutationKey = ['updateAdminDistributorPortalAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminDistributorPortalAccount>>, {companyId: number;data: BodyType<DistributorPortalAccountInput>}> = (props) => {
+          const {companyId,data} = props ?? {};
+
+          return  updateAdminDistributorPortalAccount(companyId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminDistributorPortalAccountMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminDistributorPortalAccount>>>
+    export type UpdateAdminDistributorPortalAccountMutationBody = BodyType<DistributorPortalAccountInput>
+    export type UpdateAdminDistributorPortalAccountMutationError = ErrorType<unknown>
+
+    export const useUpdateAdminDistributorPortalAccount = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminDistributorPortalAccount>>, TError,{companyId: number;data: BodyType<DistributorPortalAccountInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminDistributorPortalAccount>>,
+        TError,
+        {companyId: number;data: BodyType<DistributorPortalAccountInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminDistributorPortalAccountMutationOptions(options));
+    }
+
+export const getRevokeAdminDistributorPortalSessionsUrl = (companyId: number,) => {
+
+
+
+
+  return `/api/admin/distributor-portal/accounts/${companyId}/revoke-sessions`
+}
+
+export const revokeAdminDistributorPortalSessions = async (companyId: number, options?: Parameters<typeof customFetch>[1]): Promise<DistributorPortalRevokeSessionResponse> => {
+
+  return customFetch<DistributorPortalRevokeSessionResponse>(getRevokeAdminDistributorPortalSessionsUrl(companyId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeAdminDistributorPortalSessionsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAdminDistributorPortalSessions>>, TError,{companyId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeAdminDistributorPortalSessions>>, TError,{companyId: number}, TContext> => {
+
+const mutationKey = ['revokeAdminDistributorPortalSessions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeAdminDistributorPortalSessions>>, {companyId: number}> = (props) => {
+          const {companyId} = props ?? {};
+
+          return  revokeAdminDistributorPortalSessions(companyId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeAdminDistributorPortalSessionsMutationResult = NonNullable<Awaited<ReturnType<typeof revokeAdminDistributorPortalSessions>>>
+
+    export type RevokeAdminDistributorPortalSessionsMutationError = ErrorType<unknown>
+
+    export const useRevokeAdminDistributorPortalSessions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAdminDistributorPortalSessions>>, TError,{companyId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeAdminDistributorPortalSessions>>,
+        TError,
+        {companyId: number},
+        TContext
+      > => {
+      return useMutation(getRevokeAdminDistributorPortalSessionsMutationOptions(options));
+    }
