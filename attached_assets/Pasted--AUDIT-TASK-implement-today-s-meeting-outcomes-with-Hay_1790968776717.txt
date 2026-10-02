@@ -1,0 +1,67 @@
+# AUDIT + TASK — implement today's meeting outcomes with Haya (orders, payment, invoice, returns/inventory)
+
+## Rules for this whole task
+
+- For every item marked **Report first**: describe the current state and any gap against the requirement, in writing, before changing anything. Several of these overlap with features already shipped earlier today (company-order approval, invoice cancellation, the discount override, backup scheduling types) — confirm what's there rather than building a second, parallel version.
+- For schema changes (section 5), show the exact migration before applying it.
+- No time estimates anywhere.
+- Do not touch: gifting-issues, ShipHero inventory sync, backup storage driver, or the overall project structure — all out of scope here.
+- Section 7 is explicitly **do not implement** — read it before starting.
+
+## 1. Orders
+
+1.1 **Report first**: the current order-number format for individual (storefront) orders and for company orders. The owner will confirm or supply the exact agreed formats before anything here changes.
+1.2 Company orders are visually highlighted/flagged in the order list, distinct from individual orders.
+1.3 Row actions on the order list: edit, update status, print, download.
+1.4 Add a fulfillment-method field with two values — توصيل (delivery) and استلام (pickup). **Report first** whether this is a new field alongside the existing chilled/regular shipping method, or replaces something already there.
+1.5 Status colors: green for delivered, red for cancelled — applied to the existing order-status values from today's work. Do not introduce new statuses.
+1.6 **Report first**: confirm whether today's company-order approval → sales → invoice-per-payment-terms flow (`distributor-portal.ts`, `company-orders.tsx`) already satisfies "company orders move to sales after approval, then become an invoice according to payment terms." If yes, nothing further here. If there's a gap, describe it before building.
+1.7 **Report first**: confirm whether today's individual-invoice feature (`individual-invoices.ts`) already covers "special/phone orders act as a normal order linked to Storage Station, go through prep and delivery, then automatically become an individual sales invoice." If yes, nothing further. If there's a gap, describe it before building.
+
+## 2. Payment
+
+2.1 Payment methods available at checkout and in admin: bank transfer and Apple Pay only. **Report first** which existing payment-method values or labels you are removing (any leftover card/Moyasar-specific or "cash" labels), so the owner can confirm nothing already recorded depends on them.
+2.2 A "send payment link" button that opens the customer's own cart so they complete payment from there. **Report first**: confirm this reuses the existing (currently disabled, pending a Moyasar test secret) payment-link work rather than building new infrastructure. If Moyasar is still not configured, say so plainly — this item may stay blocked until those credentials exist.
+2.3 After full collection, let the admin record the collection source (bank transfer reference, Apple Pay, etc.) against the payment.
+2.4 A configurable discount percentage. **Report first**: confirm whether this is the company-invoice discount-override feature shipped today, or something separate for individual/storefront orders. Do not duplicate.
+
+## 3. Invoice — screen
+
+3.1 Phone number is the primary buyer identifier; tax number is optional for individuals.
+3.2 Remove from the invoice screen: pre-discount price, target quantity, reorder threshold. **Report first** which exact current fields these map to before removing them.
+3.3 **Report first**: confirm the Saudi-vs-international address logic built earlier today already matches "domestic customers see only basic fields; country and detailed address appear only for international customers." If there's a gap, describe it before building.
+
+## 4. Invoice template (applies to both company and individual invoices)
+
+4.1 Replace any Shopify logo or branding placeholder with the company's own details. **Report first** exactly where this reference lives — likely a leftover from a starter template, worth confirming explicitly.
+4.2 Centered English wordmark at the top of the invoice.
+4.3 Move the products box up; improve font and spacing in the lower section.
+4.4 Individual invoices include shipping/delivery details.
+4.5 **Report first**: confirm today's invoice-cancellation feature already implements "cancel the invoice first, then it's archived; the accountant executes the actual refund in the accounting system." If there's a gap, describe it before building.
+
+## 5. Returns & inventory
+
+5.1 Every returned item records a condition: جديد (new), مفتوح (opened), or تالف (damaged). **Report first** the current returns/stock-movement model, then add this as a schema change — show the exact migration before applying it.
+5.2 Opened items move to a separate, named stock balance — «التستر المفتوح» (Open Tester) — distinct from regular sellable stock, reserved for later use in company/distributor shipments specifically.
+5.3 Show the item's condition next to its quantity wherever stock balances are displayed.
+5.4 A return covering more than one product opens and is edited as one single record, not split into separate per-item operations.
+5.5 Within that return record, allow selecting which of the original order's line items are being returned, in what quantity, and with what condition.
+
+## 6. Other
+
+6.1 Coupon reconciliation: the owner will paste Haya's coupon information directly into this task before anything here is touched — there is nothing to match against without it.
+6.2 Backup scheduling: **report first** whether the scheduling capability already generated today (`backupSchedule`, `backupScheduleFrequency` types) is wired up to anything functional yet. If yes, just configure a weekly schedule for Friday 02:00 Asia/Riyadh with restore available from any scheduled backup — no new engineering needed. If the scheduling UI/engine isn't wired up yet, report that gap before building it.
+6.3 Shipping: no action here. This stays blocked on the shipping partner's reply to this morning's clarification email (national address format, inventory-zero-sync mechanism) — do not resume or guess at this.
+
+## 7. Explicitly out of scope — do not implement
+
+These were raised as still undecided. Report nothing further on them beyond what's listed here; do not design or build a solution for any of them.
+
+- Company credit limits moving to a performance-based mechanism instead of the manual contract value — the manual-approval system shipped today stays exactly as is.
+- Customer/order deduplication beyond phone number (date-based or otherwise) — not decided.
+- Product categorization / stock-control problem — no agreed approach yet.
+- The gifting-issues section — deferred, do not touch.
+
+## Deliver
+
+For every "Report first" item: current state, confirmed overlap or gap, and (where relevant) the exact fields or migration you'd change — before writing code. For every other item: implementation details and files touched once done.
