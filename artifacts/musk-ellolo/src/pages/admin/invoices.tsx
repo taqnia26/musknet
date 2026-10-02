@@ -28,7 +28,7 @@ import {
   Search, QrCode, Printer, AlertCircle, Banknote, 
   MoreHorizontal, Eye, Pen, Mail, Archive 
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -639,25 +639,31 @@ function CancelCompanyInvoiceDialog({ invoice, onClose }: { invoice: AdminInvoic
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const mutation = useAdminCancelCompanyInvoice();
-  const [reason, setReason] = useState('');
+  const submitting = useRef(false);
   const [error, setError] = useState('');
-  useEffect(() => { setReason(''); setError(''); }, [invoice?.id]);
-  return <Dialog open={!!invoice} onOpenChange={open => { if (!open) onClose(); }}>
-    <DialogContent dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      <DialogHeader><DialogTitle>{t('إلغاء الفاتورة', 'Cancel invoice')} · {invoice?.invoiceNumber}</DialogTitle></DialogHeader>
-      <p className="text-sm text-muted-foreground">{t('إلغاء نهائي يعكس الذمم والإيراد والضريبة والمخزون إن خرج، ويوقف الشحنة المنتظرة. لا يمكن التراجع عنه.', 'Permanent cancellation reverses receivables, revenue, VAT and any issued stock, and stops the pending shipment. This cannot be undone.')}</p>
-      <Label htmlFor="invoice-cancellation-reason">{t('سبب الإلغاء (إلزامي)', 'Cancellation reason (required)')}</Label>
-      <textarea id="invoice-cancellation-reason" className="w-full rounded-md border p-2 bg-background" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} />
+  useEffect(() => { setError(''); }, [invoice?.id]);
+  const close = () => { if (!submitting.current) onClose(); };
+  return <Dialog open={!!invoice} onOpenChange={open => { if (!open) close(); }}>
+    <DialogContent dir={lang === 'ar' ? 'rtl' : 'ltr'} showCloseButton={false} aria-busy={mutation.isPending}
+      onEscapeKeyDown={e => { if (submitting.current) e.preventDefault(); }}
+      onInteractOutside={e => { if (submitting.current) e.preventDefault(); }}>
+      <DialogHeader>
+        <DialogTitle>{t('هل تريد إلغاء الفاتورة؟', 'Do you want to cancel the invoice?')}</DialogTitle>
+        <DialogDescription><bdi>{invoice?.invoiceNumber}</bdi></DialogDescription>
+      </DialogHeader>
       {error && <p role="alert" className="text-destructive text-sm">{error}</p>}
       <DialogFooter>
-        <Button variant="outline" onClick={onClose}>{t('تراجع', 'Back')}</Button>
-        <Button variant="destructive" disabled={reason.trim().length < 10 || mutation.isPending} onClick={() => {
-          if (!invoice) return;
-          mutation.mutate({ id: invoice.id, data: { reason: reason.trim() } }, {
+        <Button variant="outline" disabled={mutation.isPending} onClick={close}>{t('تراجع', 'Back')}</Button>
+        <Button variant="destructive" disabled={mutation.isPending} onClick={() => {
+          if (!invoice || submitting.current) return;
+          submitting.current = true;
+          setError('');
+          mutation.mutate({ id: invoice.id, data: { reason: 'إلغاء الفاتورة بتأكيد المستخدم من لوحة الإدارة' } }, {
             onSuccess: () => { queryClient.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() }); toast({ title: t('أُلغيت الفاتورة', 'Invoice cancelled') }); onClose(); },
             onError: e => setError(e instanceof Error ? e.message : t('تعذر الإلغاء', 'Cancellation failed')),
+            onSettled: () => { submitting.current = false; },
           });
-        }}>{t('تأكيد إلغاء الفاتورة', 'Confirm cancellation')}</Button>
+        }}>{t('تأكيد', 'Confirm')}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>;

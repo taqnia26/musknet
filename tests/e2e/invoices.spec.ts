@@ -189,6 +189,121 @@ test.afterAll(async () => {
   }
 });
 
+test("company invoice cancellation confirms safely without cancelling stored invoices", async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const reason = "إلغاء الفاتورة بتأكيد المستخدم من لوحة الإدارة";
+  const requests: { reason: string }[] = [];
+  let release: () => void = () => {};
+  let listRequests = 0;
+  page.on("request", request => {
+    if (request.method() === "GET" && /\/api\/admin\/invoices(?:\?|$)/.test(request.url())) listRequests++;
+  });
+  // Never forward cancellation to the server, even on assertion failure.
+  await page.route(`**/api/admin/invoices/${invoiceId}/cancel`, async route => {
+    expect(route.request().method()).toBe("POST");
+    requests.push(route.request().postDataJSON());
+    await new Promise<void>(resolve => { release = resolve; });
+    await route.fulfill(requests.length === 1
+      ? { status: 409, json: { error: "Shipment has advanced or been sent to a carrier" } }
+      : { status: 200, json: {
+          id: invoiceId, cancelledAt: new Date().toISOString(),
+          cancellationReason: reason, cancelledByAdminId: adminId,
+        } });
+  });
+  await page.goto("/admin/login");
+  await page.getByLabel(/البريد الإلكتروني|Email/).fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.getByTestId("button-login-submit").click();
+  await expect(page).toHaveURL(/\/admin(?:\/)?$/);
+  const skipTour = page.getByRole("button", { name: /تخطي|Skip/ });
+  await expect(skipTour).toBeVisible();
+  await skipTour.click();
+  await expect(skipTour).toBeHidden();
+  await page.goto("/admin/sales/companies");
+  const dialog = page.getByRole("dialog");
+  const open = async () => {
+    await page.getByTestId(`invoice-actions-${invoiceId}`).click();
+    await page.getByRole("menuitem", { name: /إلغاء الفاتورة|Cancel invoice/, exact: true }).click();
+    await expect(dialog).toBeVisible();
+  };
+  const checkDialog = async (arabic: boolean) => {
+    await expect(dialog).toHaveAttribute("dir", arabic ? "rtl" : "ltr");
+    await expect(dialog.getByRole("heading")).toHaveText(arabic ? "هل تريد إلغاء الفاتورة؟" : "Do you want to cancel the invoice?");
+    await expect(dialog).toContainText(invoiceNumber);
+    await expect(dialog.locator("input, textarea")).toHaveCount(0);
+    await expect(dialog.getByRole("button")).toHaveCount(2);
+    await expect(dialog.getByRole("button", { name: arabic ? "تراجع" : "Back", exact: true })).toBeEnabled();
+    await expect(dialog.getByRole("button", { name: arabic ? "تأكيد" : "Confirm", exact: true })).toBeEnabled();
+    await expect(dialog).not.toContainText(/إلغاء نهائي|Permanent cancellation/);
+    const box = await dialog.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+  };
+  await open();
+  await checkDialog(true);
+  await page.screenshot({ path: testInfo.outputPath("cancel-ar-desktop.png") });
+  await dialog.getByRole("button", { name: "تراجع", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await open();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await open();
+  await page.mouse.click(5, 5);
+  await expect(dialog).toBeHidden();
+  expect(requests).toHaveLength(0);
+
+  await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
+  await open();
+  await checkDialog(false);
+  await page.screenshot({ path: testInfo.outputPath("cancel-en-desktop.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await checkDialog(false);
+  await page.screenshot({ path: testInfo.outputPath("cancel-en-mobile.png") });
+  await dialog.getByRole("button", { name: "Back", exact: true }).click();
+  await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
+  await open();
+  await checkDialog(true);
+  await page.screenshot({ path: testInfo.outputPath("cancel-ar-mobile.png") });
+
+  const confirm = dialog.getByRole("button", { name: "تأكيد", exact: true });
+  const back = dialog.getByRole("button", { name: "تراجع", exact: true });
+  // Two synchronous clicks exercise the guard before React's pending render.
+  await confirm.evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await expect.poll(() => requests.length).toBe(1);
+  expect(requests[0]).toEqual({ reason });
+  expect(requests[0].reason.length).toBeGreaterThanOrEqual(10);
+  expect(requests[0].reason.length).toBeLessThanOrEqual(500);
+  await expect(confirm).toBeDisabled();
+  await expect(back).toBeDisabled();
+  await expect(dialog).toHaveAttribute("aria-busy", "true");
+  await back.evaluate((button: HTMLButtonElement) => button.click());
+  await page.keyboard.press("Escape");
+  await page.mouse.click(5, 5);
+  await expect(dialog).toBeVisible();
+  expect(requests).toHaveLength(1);
+  release();
+  await expect(dialog.getByRole("alert")).toContainText("Shipment has advanced or been sent to a carrier");
+  await expect(confirm).toBeEnabled();
+  await expect(back).toBeEnabled();
+  await expect(dialog).toHaveAttribute("aria-busy", "false");
+  const listsBeforeRetry = listRequests;
+  await confirm.click();
+  await expect.poll(() => requests.length).toBe(2);
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+  await expect(confirm).toBeDisabled();
+  expect(requests[1]).toEqual({ reason });
+  release();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByText("أُلغيت الفاتورة", { exact: true })).toBeVisible();
+  await expect.poll(() => listRequests).toBeGreaterThan(listsBeforeRetry);
+  // The mocked success and failure must leave even the disposable fixture untouched.
+  const [stored] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId));
+  expect(stored.cancelledAt).toBeNull();
+  expect(stored.cancellationReason).toBeNull();
+  expect(stored.invoiceNumber).toBe(invoiceNumber);
+});
+
 test("invoice preview, printing, editing, email drafting, and archiving remain consistent", async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto("/admin/login");
