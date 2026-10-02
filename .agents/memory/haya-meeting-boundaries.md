@@ -14,3 +14,9 @@ Phone orders are a new real-order workflow, visible to the warehouse, using the 
 **Why:** The user explicitly confirmed a new phone-order workflow, not a reuse or conversion of standalone individual invoices.
 
 **How to apply:** Delivery and invoice creation must commit atomically with replay protection. Do not resume external shipping integrations while awaiting the partner's reply. Show exact schema SQL and obtain approval before applying it.
+
+Historical order sources must remain unclassified rather than being inferred from payment methods or addresses.
+
+**Why:** The approved phone-source migration preserves historical provenance and must not accidentally change existing invoice timing.
+
+**How to apply:** Treat an unknown source with the existing non-phone invoice policy. Assign a known source explicitly only for new orders.

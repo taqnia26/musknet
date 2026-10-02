@@ -4727,6 +4727,7 @@ export const AdminListOrdersResponseItem = zod.object({
   "userId": zod.number(),
   "customerName": zod.string(),
   "orderNumber": zod.string(),
+  "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4752,6 +4753,7 @@ export const AdminListOrdersResponse = zod.array(AdminListOrdersResponseItem)
 
 export const adminCreateOrderBodyUserIdMultipleOf = 1;
 
+export const adminCreateOrderBodyOrderSourceDefault = `admin`;
 export const adminCreateOrderBodyItemsItemProductIdMultipleOf = 1;
 
 export const adminCreateOrderBodyItemsItemQuantityMultipleOf = 1;
@@ -4764,6 +4766,7 @@ export const adminCreateOrderBodyShippingCostMin = 0;
 
 export const AdminCreateOrderBody = zod.object({
   "userId": zod.number().min(1).multipleOf(adminCreateOrderBodyUserIdMultipleOf),
+  "orderSource": zod.enum(['admin', 'phone']).default(adminCreateOrderBodyOrderSourceDefault),
   "items": zod.array(zod.object({
   "productId": zod.number().min(1).multipleOf(adminCreateOrderBodyItemsItemProductIdMultipleOf),
   "quantity": zod.number().min(1).multipleOf(adminCreateOrderBodyItemsItemQuantityMultipleOf)
@@ -4793,6 +4796,7 @@ export const AdminCreateOrderResponse = zod.object({
   "userId": zod.number(),
   "customerName": zod.string(),
   "orderNumber": zod.string(),
+  "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4824,6 +4828,7 @@ export const AdminGetOrderResponse = zod.object({
   "userId": zod.number(),
   "customerName": zod.string(),
   "orderNumber": zod.string(),
+  "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4894,6 +4899,7 @@ export const AdminUpdateOrderResponse = zod.object({
   "userId": zod.number(),
   "customerName": zod.string(),
   "orderNumber": zod.string(),
+  "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),

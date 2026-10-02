@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   getAdminListInventoryQueryKey,
+  getAdminListProductsQueryKey,
   getAdminListOrdersQueryKey,
   getGetAdminShippingDashboardQueryKey,
   useAdminCreateOrder,
@@ -52,6 +53,7 @@ export function CreateOrderDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [customerId, setCustomerId] = useState('');
+  const [orderSource, setOrderSource] = useState<'admin' | 'phone'>('admin');
   const [lines, setLines] = useState<Line[]>([{ productId: '', quantity: 1 }]);
   const [address, setAddress] = useState(initialAddress);
   const [shippingMethod, setShippingMethod] = useState('admin-standard');
@@ -83,6 +85,7 @@ export function CreateOrderDialog() {
 
   const reset = () => {
     setCustomerId('');
+    setOrderSource('admin');
     setLines([{ productId: '', quantity: 1 }]);
     setAddress(initialAddress);
     setShippingMethod('admin-standard');
@@ -142,6 +145,7 @@ export function CreateOrderDialog() {
 
     const orderInput = {
       userId: Number(customerId),
+      orderSource,
       items: lines.map((line) => ({ productId: Number(line.productId), quantity: line.quantity })),
       orderAddress: {
         label: address.label,
@@ -157,7 +161,7 @@ export function CreateOrderDialog() {
       shippingMethod,
       paymentMethod,
       adminNotes: adminNotes.trim() || null,
-      ...(sendPaymentLink && paymentMethod === 'moyasar' ? { sendPaymentLink: true } : {}),
+      ...(orderSource !== 'phone' && sendPaymentLink && paymentMethod === 'moyasar' ? { sendPaymentLink: true } : {}),
     } as AdminOrderInput & { sendPaymentLink?: boolean };
     createOrder.mutate({
       data: orderInput,
@@ -165,6 +169,7 @@ export function CreateOrderDialog() {
       onSuccess: (order) => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
         queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getAdminListProductsQueryKey() });
         queryClient.invalidateQueries({ queryKey: getGetAdminShippingDashboardQueryKey() });
         if (sendPaymentLink) {
           const paymentLink = (order as typeof order & {
@@ -215,6 +220,25 @@ export function CreateOrderDialog() {
         </DialogHeader>
 
         <div className="space-y-6">
+          <div className="space-y-2">
+            <Label>{t('نوع الطلب', 'Order type')}</Label>
+            <Select value={orderSource} onValueChange={(value) => {
+              setOrderSource(value as 'admin' | 'phone');
+              setSendPaymentLink(false);
+            }}>
+              <SelectTrigger aria-label={t('نوع الطلب', 'Order type')}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">{t('طلب إداري', 'Admin order')}</SelectItem>
+                <SelectItem value="phone">{t('طلب هاتفي', 'Phone order')}</SelectItem>
+              </SelectContent>
+            </Select>
+            {orderSource === 'phone' && (
+              <p className="text-sm text-muted-foreground">
+                {t('يظهر الطلب للمستودع للمراجعة والتجهيز والتوصيل. تصدر فاتورة الأفراد تلقائياً عند «تم التوصيل» فقط، حتى عند التحصيل قبل ذلك. الشحن الخارجي غير مفعّل لهذا المسار.',
+                  'The warehouse reviews, prepares and delivers this order. Its individual invoice is issued only when delivered, even if collected earlier. External shipping is not enabled for this workflow.')}
+              </p>
+            )}
+          </div>
            <div className="space-y-2">
              <div className="flex items-center justify-between gap-2">
                <Label>{t('العميل', 'Customer')}</Label>
@@ -360,7 +384,7 @@ export function CreateOrderDialog() {
               </Select>
             </div>
           </div>
-          {paymentMethod === 'moyasar' && (
+          {paymentMethod === 'moyasar' && orderSource !== 'phone' && (
             <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
               <Checkbox
                 checked={sendPaymentLink}

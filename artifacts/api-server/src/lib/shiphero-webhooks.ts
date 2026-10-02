@@ -250,6 +250,10 @@ async function processEventRow(
     await persistProcessingResult(tx, event.id, "ignored_unrelated_order", "Saved dispatch order no longer exists.", decoded.eventAt);
     return;
   }
+  if (order.orderSource === "phone") {
+    await persistProcessingResult(tx, event.id, "ignored_phone_order", "Phone orders currently use manual warehouse fulfillment.", decoded.eventAt);
+    return;
+  }
   const [shipment] = await tx.select().from(shipmentsTable)
     .where(eq(shipmentsTable.orderId, order.id)).for("update");
   if (!shipment) {

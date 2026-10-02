@@ -786,9 +786,12 @@ describe.sequential("admin route authorization", () => {
 
     const created: number[] = [];
     try {
-      const sa = await request(app).post(url).set(auth).send(payload(address)).expect(201);
+      const sa = await request(app).post(url).set(auth).send({ ...payload(address), orderSource: "phone" }).expect(201);
       created.push(sa.body.id);
-      expect(sa.body).toMatchObject({ subtotal: 100, shippingCost: 30, tax: 16.96, total: 130 });
+      expect(sa.body).toMatchObject({ orderSource: "phone", status: "pending_review", subtotal: 100, shippingCost: 30, tax: 16.96, total: 130 });
+      const phoneList = await request(app).get(url).set(auth).query({ search: sa.body.orderNumber }).expect(200);
+      expect(phoneList.body).toEqual(expect.arrayContaining([expect.objectContaining({ id: sa.body.id, orderSource: "phone" })]));
+      expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, sa.body.id))).toHaveLength(0);
       const saDetail = await request(app).get(`${url}/${sa.body.id}`).set(auth).expect(200);
       expect(saDetail.body.orderAddress).toMatchObject({
         city: "جدة", country: "SA", nationalAddressShortCode: "JEDH1234",

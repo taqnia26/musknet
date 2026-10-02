@@ -8,6 +8,7 @@ import { reconcileHistoricalPayment } from "./historical-payment-reconciliation"
 import { INVOICE_SEQUENCE_SCOPE, nextInvoiceSequenceNumber } from "./invoice-sequence";
 import { shipheroDispatchesTable } from "@workspace/db";
 import { SHIPHERO_TRIGGER_STATUS } from "./shiphero-config";
+import { assertPhoneOrderTransition, orderInvoiceIsDue } from "./phone-order-policy";
 import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, shipmentEventsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
@@ -784,6 +785,7 @@ export async function updateOrderAndIssueInvoice(
     await tx.execute(sql`select id from ${ordersTable} where ${ordersTable.id} = ${orderId} for update`);
     const [order] = await tx.select().from(ordersTable).where(eq(ordersTable.id, orderId)).limit(1);
     if (!order) return null;
+    if (order.orderSource === "phone") assertPhoneOrderTransition(order.status, values.status);
     if (verifiedProviderInvoiceId && order.paymentStatus === "paid") {
       const [link] = await tx.select().from(orderPaymentLinksTable).where(eq(orderPaymentLinksTable.orderId, orderId));
       if (link?.providerInvoiceId !== verifiedProviderInvoiceId)
@@ -840,7 +842,7 @@ export async function updateOrderAndIssueInvoice(
     }
 
     const willBePaid = values.paymentStatus === "paid" || (values.paymentStatus === undefined && order.paymentStatus === "paid");
-    if (willBePaid) {
+    if (orderInvoiceIsDue(order, values)) {
       const [existing] = await tx.select().from(invoicesTable)
         .where(eq(invoicesTable.orderId, order.id)).limit(1);
       if (!existing) {
@@ -915,7 +917,7 @@ export async function updateOrderAndIssueInvoice(
       .where(eq(ordersTable.id, order.id)).returning();
     // Only entering preparing creates a durable job. Order creation and earlier
     // statuses never call ShipHero; the worker rechecks payment and live readiness.
-    if (statusChanged && updated.status === SHIPHERO_TRIGGER_STATUS) {
+    if (statusChanged && updated.status === SHIPHERO_TRIGGER_STATUS && updated.orderSource !== "phone") {
       await tx.insert(shipheroDispatchesTable).values({
         orderId: updated.id, orderNumber: updated.orderNumber, status: "queued",
       }).onConflictDoNothing({ target: shipheroDispatchesTable.orderId });

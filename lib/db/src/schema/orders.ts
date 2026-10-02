@@ -11,6 +11,8 @@ export const ordersTable = pgTable("storefront_orders", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => customersTable.id, { onDelete: "restrict" }),
   orderNumber: text("order_number").notNull(),
+  // NULL means an historical source was not recorded; do not infer it.
+  orderSource: text("order_source").default("storefront"),
   subtotal: doublePrecision("subtotal").notNull(),
   shippingCost: doublePrecision("shipping_cost").notNull(),
   discount: doublePrecision("discount").notNull(),
@@ -31,6 +33,7 @@ export const ordersTable = pgTable("storefront_orders", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   uniqueIndex("storefront_orders_order_number_unique").on(table.orderNumber),
+  check("storefront_orders_source_check", sql`${table.orderSource} is null or ${table.orderSource} in ('storefront', 'admin', 'phone')`),
   check("storefront_orders_status_check", sql`${table.status} in ('cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment')`),
 ]);
 

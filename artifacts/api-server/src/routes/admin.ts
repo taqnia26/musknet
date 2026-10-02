@@ -2083,6 +2083,9 @@ router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => 
 }));
 router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
+  if (body.orderSource === "phone" && body.sendPaymentLink) {
+    res.status(400).json({ error: "Phone orders start in pending review; payment-link routing awaits approval" }); return;
+  }
   if (body.sendPaymentLink && body.paymentMethod !== "moyasar") {
     res.status(400).json({ error: "Payment links require Moyasar as the payment method" }); return;
   }
@@ -2171,6 +2174,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       const [created] = await tx.insert(ordersTable).values({
         userId: body.userId,
         orderNumber,
+        orderSource: body.orderSource ?? "admin",
         subtotal,
         shippingCost,
         discount: 0,
@@ -3178,10 +3182,10 @@ router.post("/shipping/webhooks/:carrier", route(async (req, res) => {
   await db.transaction(async (tx) => {
     if (shipment.orderId) await tx.execute(sql`select id from storefront_orders where id = ${shipment.orderId} for update`);
     const [order] = shipment.orderId
-      ? await tx.select({ status: ordersTable.status, paymentStatus: ordersTable.paymentStatus })
+      ? await tx.select({ status: ordersTable.status, paymentStatus: ordersTable.paymentStatus, orderSource: ordersTable.orderSource })
           .from(ordersTable).where(eq(ordersTable.id, shipment.orderId))
       : [];
-    const shouldAdvance = (!order || order.status !== "pending_payment") &&
+    const shouldAdvance = order?.orderSource !== "phone" && (!order || order.status !== "pending_payment") &&
       canApplyCarrierShippingStatus(shipment.status, status);
     await tx.update(shipmentsTable).set({
       ...(shouldAdvance ? { status } : {}),
@@ -4050,6 +4054,7 @@ async function adjustInventory(productId: number, input: {
       const [item] = await tx.select({
         id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn, sku: productsTable.sku,
         barcode: productsTable.barcode, operationalType: productsTable.operationalType,
+        inventoryNotes: productsTable.inventoryNotes,
         unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier,
         sellable: productsTable.sellable,
         price: productsTable.price, averageCost: productsTable.averageCost, categoryId: productsTable.categoryId,
@@ -4093,6 +4098,7 @@ async function adjustInventory(productId: number, input: {
     const [updated] = await tx.update(productsTable).set({ stockQuantity, averageCost }).where(eq(productsTable.id, productId)).returning({
       id: productsTable.id, nameAr: productsTable.nameAr, nameEn: productsTable.nameEn,
       sku: productsTable.sku, barcode: productsTable.barcode, operationalType: productsTable.operationalType,
+      inventoryNotes: productsTable.inventoryNotes,
       unitOfMeasure: productsTable.unitOfMeasure, preferredSupplier: productsTable.preferredSupplier,
       sellable: productsTable.sellable, price: productsTable.price, averageCost: productsTable.averageCost,
       categoryId: productsTable.categoryId, stockQuantity: productsTable.stockQuantity,

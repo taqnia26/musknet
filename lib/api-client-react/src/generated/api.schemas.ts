@@ -2323,6 +2323,18 @@ export interface AdminCategoryUpdate {
   isActive?: boolean;
 }
 
+/**
+ * @nullable
+ */
+export type AdminOrderOrderSource = typeof AdminOrderOrderSource[keyof typeof AdminOrderOrderSource] | null;
+
+
+export const AdminOrderOrderSource = {
+  storefront: 'storefront',
+  admin: 'admin',
+  phone: 'phone',
+} as const;
+
 export type AdminOrderStatus = typeof AdminOrderStatus[keyof typeof AdminOrderStatus];
 
 
@@ -2357,6 +2369,8 @@ export interface AdminOrder {
   userId: number;
   customerName: string;
   orderNumber: string;
+  /** @nullable */
+  orderSource?: AdminOrderOrderSource;
   subtotal: number;
   shippingCost: number;
   discount: number;
@@ -2415,6 +2429,14 @@ export interface AdminOrderLineInput {
   quantity: number;
 }
 
+export type AdminOrderInputOrderSource = typeof AdminOrderInputOrderSource[keyof typeof AdminOrderInputOrderSource];
+
+
+export const AdminOrderInputOrderSource = {
+  admin: 'admin',
+  phone: 'phone',
+} as const;
+
 export type AdminOrderInputPaymentMethod = typeof AdminOrderInputPaymentMethod[keyof typeof AdminOrderInputPaymentMethod];
 
 
@@ -2446,6 +2468,7 @@ export interface AdminOrderAddress {
 export interface AdminOrderInput {
   /** @minimum 1 */
   userId: number;
+  orderSource?: AdminOrderInputOrderSource;
   /** @minItems 1 */
   items: AdminOrderLineInput[];
   orderAddress: AdminOrderAddress;

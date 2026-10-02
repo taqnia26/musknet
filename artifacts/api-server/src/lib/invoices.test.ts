@@ -13,7 +13,7 @@ import { createCompanyInvoice } from "./company-invoices";
 
 const base = 1_700_000_000 + (Date.now() % 100_000_000);
 const customerId = base;
-const orderIds = [base + 1, base + 2, base + 3, base + 4];
+const orderIds = [base + 1, base + 2, base + 3, base + 4, base + 5, base + 6];
 let distributorId: number;
 let inactiveDistributorId: number;
 let internationalDistributorId: number;
@@ -71,6 +71,7 @@ beforeAll(async () => {
   await db.insert(ordersTable).values([
     ...orderIds.slice(0, 3).map(order),
     { ...order(orderIds[3]), total: 130, address: JSON.stringify({ country: "AE" }) },
+    ...orderIds.slice(4).map((id) => ({ ...order(id), orderSource: "phone" })),
   ]);
   let [category] = await db.select({ id: categoriesTable.id }).from(categoriesTable).limit(1);
   if (!category) {
@@ -328,6 +329,66 @@ describe.sequential("atomic invoice issuance", () => {
     }
   });
 
+});
+
+describe.sequential("phone order delivery invoices", () => {
+  const environment = {
+    VAT_SELLER_LEGAL_NAME: "مؤسسة مسك اللولو للتجارة",
+    VAT_REGISTRATION_NUMBER: "300000000000003",
+  };
+
+  it("collects before delivery without an invoice, rolls back failed delivery, and issues once under concurrent delivery", async () => {
+    const id = orderIds[4];
+    await db.insert(orderItemsTable).values({
+      orderId: id, productId, productName: "Phone fixture", quantity: 1,
+      unitPrice: 100, totalPrice: 100, costSnapshot: "7.0000",
+    });
+    const [stockBefore] = await db.select({ stock: productsTable.stockQuantity }).from(productsTable).where(eq(productsTable.id, productId));
+    const collected = await updateOrderAndIssueInvoice(id, { paymentStatus: "paid" }, {}, actorId);
+    expect(collected?.paymentStatus).toBe("paid");
+    expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id))).toHaveLength(0);
+    await expect(updateOrderAndIssueInvoice(id, { status: "delivered" }, environment, actorId)).rejects.toThrow(/Phone orders/);
+    await updateOrderAndIssueInvoice(id, { status: "preparing" }, environment, actorId);
+    await updateOrderAndIssueInvoice(id, { status: "out_for_delivery" }, environment, actorId);
+    expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id))).toHaveLength(0);
+    await expect(updateOrderAndIssueInvoice(id, { status: "delivered" }, {
+      VAT_SELLER_LEGAL_NAME: environment.VAT_SELLER_LEGAL_NAME,
+    }, actorId)).rejects.toThrow(/VAT_REGISTRATION_NUMBER/);
+    const [notDelivered] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+    expect(notDelivered.status).toBe("out_for_delivery");
+    expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id))).toHaveLength(0);
+    await Promise.all([
+      updateOrderAndIssueInvoice(id, { status: "delivered" }, environment, actorId),
+      updateOrderAndIssueInvoice(id, { status: "delivered" }, environment, actorId),
+    ]);
+    const invoices = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id));
+    expect(invoices).toHaveLength(1);
+    expect(await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoices[0].id))).toHaveLength(1);
+    expect(await db.select().from(journalEntriesTable).where(and(
+      eq(journalEntriesTable.sourceType, "order"), eq(journalEntriesTable.sourceId, String(id)),
+    ))).toHaveLength(1);
+    const [stockAfter] = await db.select({ stock: productsTable.stockQuantity }).from(productsTable).where(eq(productsTable.id, productId));
+    expect(stockAfter.stock).toBe(stockBefore.stock);
+    await expect(updateOrderAndIssueInvoice(id, { status: "preparing" }, environment, actorId)).rejects.toThrow(/Phone orders/);
+  });
+
+  it("issues on unpaid delivery and reuses that invoice when payment is later collected", async () => {
+    const id = orderIds[5];
+    await db.insert(orderItemsTable).values({
+      orderId: id, productId, productName: "Unpaid phone fixture", quantity: 1,
+      unitPrice: 100, totalPrice: 100, costSnapshot: "7.0000",
+    });
+    await updateOrderAndIssueInvoice(id, { status: "preparing" }, environment, actorId);
+    await updateOrderAndIssueInvoice(id, { status: "out_for_delivery" }, environment, actorId);
+    const delivered = await updateOrderAndIssueInvoice(id, { status: "delivered" }, environment, actorId);
+    expect(delivered?.paymentStatus).toBe("pending");
+    const [first] = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id));
+    expect(first).toBeDefined();
+    await updateOrderAndIssueInvoice(id, { paymentStatus: "paid" }, environment, actorId);
+    const afterCollection = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id));
+    expect(afterCollection).toHaveLength(1);
+    expect(afterCollection[0].id).toBe(first.id);
+  });
 });
 
 describe.sequential("distributor invoice issuance", () => {

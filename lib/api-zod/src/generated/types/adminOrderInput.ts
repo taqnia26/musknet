@@ -6,12 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminOrderAddress } from './adminOrderAddress';
+import type { AdminOrderInputOrderSource } from './adminOrderInputOrderSource';
 import type { AdminOrderInputPaymentMethod } from './adminOrderInputPaymentMethod';
 import type { AdminOrderLineInput } from './adminOrderLineInput';
 
 export interface AdminOrderInput {
   /** @minimum 1 */
   userId: number;
+  orderSource?: AdminOrderInputOrderSource;
   /** @minItems 1 */
   items: AdminOrderLineInput[];
   orderAddress: AdminOrderAddress;

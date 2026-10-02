@@ -10,9 +10,14 @@ import {
   useAdminGetOrder,
   useAdminSendOrderPaymentLink,
   getAdminListOrdersQueryKey,
+  getAdminListInvoicesQueryKey,
+  getAdminListInventoryQueryKey,
+  getAdminListProductsQueryKey,
+  getGetAdminShippingDashboardQueryKey,
   getAdminGetOrderQueryKey
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
+import { canSelectOrderStatus } from '@/lib/order-status-options';
 import { Money } from '@/components/money';
 import { hasPermission } from '@/lib/permissions';
 import { getAdminToken } from '@/lib/auth-token';
@@ -81,6 +86,10 @@ export default function AdminOrders() {
       await updateMutation.mutateAsync({ id, data }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListOrdersQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getAdminListInventoryQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getAdminListProductsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAdminShippingDashboardQueryKey() });
         if (selectedOrderId === id) {
           queryClient.invalidateQueries({ queryKey: getAdminGetOrderQueryKey(id) });
         }
@@ -237,6 +246,9 @@ export default function AdminOrders() {
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{order.customerName}</span>
+                      {order.orderSource === 'phone' && (
+                        <Badge variant="outline" data-testid={`badge-phone-order-${order.id}`}>{t('طلب هاتفي', 'Phone order')}</Badge>
+                      )}
                       {['pending_review', 'pending_payment'].includes(order.status as string) && (
                         <Badge variant="secondary" data-testid={`badge-new-order-${order.id}`}>{t('جديد', 'New')}</Badge>
                       )}
@@ -250,13 +262,13 @@ export default function AdminOrders() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending_review">{t('بانتظار المراجعة', 'Pending review')}</SelectItem>
-                        <SelectItem value="preparing">{t('جاري تجهيز الطلب', 'Preparing order')}</SelectItem>
-                        <SelectItem value="out_for_delivery">{t('جاري التوصيل', 'Out for delivery')}</SelectItem>
-                        <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
-                        <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
-                        <SelectItem value="returned">{t('مسترجع', 'Returned')}</SelectItem>
-                        <SelectItem value="pending_payment">{t('بانتظار الدفع', 'Pending payment')}</SelectItem>
+                        <SelectItem disabled={!canSelectOrderStatus(order, 'pending_review')} value="pending_review">{t('بانتظار المراجعة', 'Pending review')}</SelectItem>
+                        <SelectItem disabled={!canSelectOrderStatus(order, 'preparing')} value="preparing">{t('جاري تجهيز الطلب', 'Preparing order')}</SelectItem>
+                        <SelectItem disabled={!canSelectOrderStatus(order, 'out_for_delivery')} value="out_for_delivery">{t('جاري التوصيل', 'Out for delivery')}</SelectItem>
+                        <SelectItem disabled={!canSelectOrderStatus(order, 'delivered')} value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
+                        <SelectItem disabled={!canSelectOrderStatus(order, 'cancelled')} value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
+                        <SelectItem disabled={!canSelectOrderStatus(order, 'returned')} value="returned">{t('مسترجع', 'Returned')}</SelectItem>
+                        <SelectItem disabled={!canSelectOrderStatus(order, 'pending_payment')} value="pending_payment">{t('بانتظار الدفع', 'Pending payment')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>
@@ -336,13 +348,13 @@ export default function AdminOrders() {
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="pending_review">{t('بانتظار المراجعة', 'Pending review')}</SelectItem>
-                                        <SelectItem value="preparing">{t('جاري تجهيز الطلب', 'Preparing order')}</SelectItem>
-                                        <SelectItem value="out_for_delivery">{t('جاري التوصيل', 'Out for delivery')}</SelectItem>
-                                        <SelectItem value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
-                                        <SelectItem value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
-                                        <SelectItem value="returned">{t('مسترجع', 'Returned')}</SelectItem>
-                                        <SelectItem value="pending_payment">{t('بانتظار الدفع', 'Pending payment')}</SelectItem>
+                                        <SelectItem disabled={!canSelectOrderStatus(orderDetail, 'pending_review')} value="pending_review">{t('بانتظار المراجعة', 'Pending review')}</SelectItem>
+                                        <SelectItem disabled={!canSelectOrderStatus(orderDetail, 'preparing')} value="preparing">{t('جاري تجهيز الطلب', 'Preparing order')}</SelectItem>
+                                        <SelectItem disabled={!canSelectOrderStatus(orderDetail, 'out_for_delivery')} value="out_for_delivery">{t('جاري التوصيل', 'Out for delivery')}</SelectItem>
+                                        <SelectItem disabled={!canSelectOrderStatus(orderDetail, 'delivered')} value="delivered">{t('تم التوصيل', 'Delivered')}</SelectItem>
+                                        <SelectItem disabled={!canSelectOrderStatus(orderDetail, 'cancelled')} value="cancelled">{t('ملغي', 'Cancelled')}</SelectItem>
+                                        <SelectItem disabled={!canSelectOrderStatus(orderDetail, 'returned')} value="returned">{t('مسترجع', 'Returned')}</SelectItem>
+                                        <SelectItem disabled={!canSelectOrderStatus(orderDetail, 'pending_payment')} value="pending_payment">{t('بانتظار الدفع', 'Pending payment')}</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
