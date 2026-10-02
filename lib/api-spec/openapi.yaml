@@ -2776,6 +2776,63 @@ paths:
       security: [{ adminBearerAuth: [] }]
       parameters: [{ name: id, in: path, required: true, schema: { type: number, multipleOf: 1 } }]
       responses: { "204": { description: Unused non-default location deleted } }
+  /admin/sales-returns/sources:
+    get:
+      operationId: listSalesReturnSources
+      tags: [Inventory]
+      parameters:
+        - { name: sourceType, in: query, required: true, schema: { $ref: "#/components/schemas/SalesReturnSourceType" } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: sourceId, in: query, schema: { type: number, multipleOf: 1, minimum: 1, maximum: 2147483647 } }
+      responses:
+        "200": { description: Original orders and returnable quantities, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SalesReturnSource" } } } } }
+  /admin/sales-returns:
+    get:
+      operationId: listSalesReturns
+      tags: [Inventory]
+      parameters:
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [draft, completed, cancelled] } }
+      responses:
+        "200": { description: Retained sales return records, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/SalesReturn" } } } } }
+    post:
+      operationId: createSalesReturn
+      tags: [Inventory]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturnDraftInput" } } } }
+      responses:
+        "201": { description: Draft saved without stock or financial effects, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturn" } } } }
+  /admin/sales-returns/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }
+    get:
+      operationId: getSalesReturn
+      tags: [Inventory]
+      responses:
+        "200": { description: One return with all lines, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturn" } } } }
+    put:
+      operationId: updateSalesReturn
+      tags: [Inventory]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturnDraftUpdate" } } } }
+      responses:
+        "200": { description: Edited draft without posting effects, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturn" } } } }
+  /admin/sales-returns/{id}/complete:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }
+    post:
+      operationId: completeSalesReturn
+      tags: [Inventory]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturnRevision" } } } }
+      responses:
+        "200": { description: Atomically completed or replayed return, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturn" } } } }
+  /admin/sales-returns/{id}/cancel:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: number, multipleOf: 1, minimum: 1 } }
+    post:
+      operationId: cancelSalesReturn
+      tags: [Inventory]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturnRevision" } } } }
+      responses:
+        "200": { description: Cancelled draft retained without stock effects, content: { application/json: { schema: { $ref: "#/components/schemas/SalesReturn" } } } }
   /admin/inventory/balances:
     get:
       operationId: listInventoryBalances
@@ -3447,6 +3504,87 @@ components:
         type: { type: string, enum: [warehouse, store, virtual] }
         isDefault: { type: boolean }
         active: { type: boolean }
+    SalesReturnSourceType:
+      type: string
+      enum: [individual, company]
+    SalesReturnCondition:
+      type: string
+      enum: [new, opened, damaged]
+    SalesReturnSourceItem:
+      type: object
+      required: [id, productId, productName, quantity, returnedQuantity, remainingQuantity, unitCost]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        productId: { type: number, multipleOf: 1 }
+        productName: { type: string }
+        quantity: { type: number, multipleOf: 1 }
+        returnedQuantity: { type: number, multipleOf: 1 }
+        remainingQuantity: { type: number, multipleOf: 1 }
+        unitCost: { type: [string, "null"] }
+    SalesReturnSource:
+      type: object
+      required: [sourceType, sourceId, orderNumber, customerName, eligible, blockedReason, items]
+      properties:
+        sourceType: { $ref: "#/components/schemas/SalesReturnSourceType" }
+        sourceId: { type: number, multipleOf: 1 }
+        orderNumber: { type: string }
+        customerName: { type: string }
+        eligible: { type: boolean }
+        blockedReason: { type: [string, "null"] }
+        items: { type: array, items: { $ref: "#/components/schemas/SalesReturnSourceItem" } }
+    SalesReturnLine:
+      type: object
+      required: [id, itemId, productId, productName, quantity, condition, unitCost, targetLocationId]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        itemId: { type: number, multipleOf: 1 }
+        productId: { type: number, multipleOf: 1 }
+        productName: { type: string }
+        quantity: { type: number, multipleOf: 1 }
+        condition: { $ref: "#/components/schemas/SalesReturnCondition" }
+        unitCost: { type: string }
+        targetLocationId: { type: [number, "null"], multipleOf: 1 }
+    SalesReturn:
+      type: object
+      required: [id, sourceType, sourceId, orderNumber, customerName, status, reason, createdAt, updatedAt, completedAt, lines]
+      properties:
+        id: { type: number, multipleOf: 1 }
+        sourceType: { $ref: "#/components/schemas/SalesReturnSourceType" }
+        sourceId: { type: number, multipleOf: 1 }
+        orderNumber: { type: string }
+        customerName: { type: string }
+        status: { type: string, enum: [draft, completed, cancelled] }
+        reason: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        completedAt: { type: [string, "null"], format: date-time }
+        lines: { type: array, items: { $ref: "#/components/schemas/SalesReturnLine" } }
+    SalesReturnInputLine:
+      type: object
+      additionalProperties: false
+      required: [itemId, quantity, condition]
+      properties:
+        itemId: { type: number, multipleOf: 1, minimum: 1 }
+        quantity: { type: number, multipleOf: 1, minimum: 1 }
+        condition: { $ref: "#/components/schemas/SalesReturnCondition" }
+    SalesReturnDraftInput:
+      type: object
+      additionalProperties: false
+      required: [sourceType, sourceId, lines]
+      properties:
+        sourceType: { $ref: "#/components/schemas/SalesReturnSourceType" }
+        sourceId: { type: number, multipleOf: 1, minimum: 1 }
+        reason: { type: [string, "null"], maxLength: 1000 }
+        lines: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/SalesReturnInputLine" } }
+    SalesReturnDraftUpdate:
+      allOf:
+        - { $ref: "#/components/schemas/SalesReturnDraftInput" }
+        - { $ref: "#/components/schemas/SalesReturnRevision" }
+    SalesReturnRevision:
+      type: object
+      required: [expectedUpdatedAt]
+      properties:
+        expectedUpdatedAt: { type: string, format: date-time }
     InventoryBalance:
       type: object
       required: [id, productId, locationId, available, reserved, incoming, averageCost]
@@ -3458,6 +3596,7 @@ components:
         reserved: { type: number, multipleOf: 1, minimum: 0 }
         incoming: { type: number, multipleOf: 1, minimum: 0 }
         averageCost: { type: string }
+        condition: { anyOf: [{ $ref: "#/components/schemas/SalesReturnCondition" }, { type: "null" }] }
     InventoryAgingRow:
       allOf:
         - { $ref: "#/components/schemas/InventoryBalance" }
@@ -5952,6 +6091,7 @@ components:
         id: { type: number }
         productId: { type: number }
         movementType: { type: string, enum: [increase, decrease, adjustment] }
+        condition: { anyOf: [{ $ref: "#/components/schemas/SalesReturnCondition" }, { type: "null" }] }
         quantityChange: { type: number }
         quantityBefore: { type: number }
         quantityAfter: { type: number }

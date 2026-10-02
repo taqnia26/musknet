@@ -499,8 +499,12 @@ export async function lookupInventoryBarcode(barcode: string) {
 }
 
 export async function listInventoryBalances(locationId?: number) {
-  return db.select().from(inventoryBalancesTable).where(locationId ? eq(inventoryBalancesTable.locationId, locationId) : undefined)
+  const rows = await db.select({ balance: inventoryBalancesTable, code: inventoryLocationsTable.code }).from(inventoryBalancesTable)
+    .leftJoin(inventoryLocationsTable, eq(inventoryLocationsTable.id, inventoryBalancesTable.locationId))
+    .where(locationId ? eq(inventoryBalancesTable.locationId, locationId) : undefined)
     .orderBy(desc(inventoryBalancesTable.updatedAt));
+  // Only the dedicated pool proves opened condition. Do not classify mixed/historical balances as new.
+  return rows.map(({ balance, code }) => ({ ...balance, condition: code === "B2B_USED_RETURN" ? "opened" as const : null }));
 }
 
 export async function transferInventory(input: {
@@ -694,7 +698,7 @@ export async function inventoryReconciliationReport() {
     .where(and(eq(accountingAccountsTable.code, "1140"), eq(journalEntriesTable.status, "posted")));
   const values = await inventoryValueReport();
   const operationalValue = values.reduce((n, row) => n + Number(row.value), 0);
-  const movements = await db.select({ sourceType: inventoryMovementsTable.sourceType, sourceId: inventoryMovementsTable.sourceId, eventKey: inventoryMovementsTable.eventKey }).from(inventoryMovementsTable);
+  const movements = await db.select({ sourceType: inventoryMovementsTable.sourceType, sourceId: inventoryMovementsTable.sourceId, eventKey: inventoryMovementsTable.eventKey, totalCost: inventoryMovementsTable.totalCost }).from(inventoryMovementsTable);
   const journals = await db.select({ sourceType: journalEntriesTable.sourceType, sourceId: journalEntriesTable.sourceId }).from(journalEntriesTable).where(eq(journalEntriesTable.status, "posted"));
   const journalKeys = new Set(journals.map((j) => `${j.sourceType}:${j.sourceId}`));
   const movementKeys = new Set(movements.flatMap((m) => [
@@ -702,6 +706,7 @@ export async function inventoryReconciliationReport() {
     // Older opened-tester issues used a dedicated movement type while their
     // journal used the gifting issue type.
     ...(m.sourceType === "b2b_tester_used_return" ? [`gifting_issue:${m.sourceId}`, `gifting_issue_batch:${m.sourceId}`] : []),
+    ...(m.sourceType?.startsWith("sales_return_") ? [`sales_return:${m.sourceId}`] : []),
     ...(m.sourceType === "b2b_return_new" || m.sourceType === "b2b_return_used"
       ? [m.eventKey?.startsWith("b2b:return:")
         ? `b2b_evaluation_return:${m.eventKey.slice("b2b:return:".length)}`
@@ -710,6 +715,8 @@ export async function inventoryReconciliationReport() {
   ]));
   const movementLinked = (m: typeof movements[number]) =>
     journalKeys.has(`${m.sourceType}:${m.sourceId}`) ||
+    (m.sourceType?.startsWith("sales_return_") && (journalKeys.has(`sales_return:${m.sourceId}`) ||
+      m.sourceType === "sales_return_damaged" || Number(m.totalCost) === 0)) ||
     (m.sourceType === "b2b_tester_used_return" && (journalKeys.has(`gifting_issue:${m.sourceId}`) || journalKeys.has(`gifting_issue_batch:${m.sourceId}`))) ||
     ((m.sourceType === "b2b_return_new" || m.sourceType === "b2b_return_used") && movementKeys.has(`b2b_evaluation_return:${m.eventKey?.slice("b2b:return:".length)}`));
   return { operationalValue, accountingInventoryValue: Number(account?.value ?? 0), difference: operationalValue - Number(account?.value ?? 0), unlinkedMovements: movements.filter((m) => !movementLinked(m)), unlinkedInventoryJournals: journals.filter((j) => (j.sourceType?.includes("inventory") || j.sourceType === "b2b_evaluation_return" || j.sourceType === "gifting_issue" || j.sourceType === "gifting_issue_batch") && !movementKeys.has(`${j.sourceType}:${j.sourceId}`)) };

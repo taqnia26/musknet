@@ -1,3 +1,4 @@
+import { stockConditionLabel } from '@/components/admin/inventory/sales-return-shared';
 import { useLanguage } from '@/hooks/use-language';
 import { Money } from '@/components/money';
 import { formatInteger } from '@/lib/formatters';
@@ -148,6 +149,7 @@ export default function AdminInventoryOverview() {
                 <TableRow>
                   <TableHead>{t('المنتج', 'Product')}</TableHead>
                   <TableHead className="text-end">{t('المتاح', 'Available')}</TableHead>
+                  <TableHead>{t('الحالة', 'Condition')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -160,6 +162,7 @@ export default function AdminInventoryOverview() {
                         {product?.sku && <div className="text-xs text-muted-foreground">{product.sku}</div>}
                       </TableCell>
                       <TableCell className="text-end font-semibold">{formatInteger(balance.available, lang)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground" data-testid={`text-balance-condition-${balance.id}`}>{stockConditionLabel(balance.condition, t)}</TableCell>
                     </TableRow>
                   );
                 })}

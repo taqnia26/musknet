@@ -7,16 +7,14 @@
  */
 import type { SalesReturnCondition } from './salesReturnCondition';
 
-export interface InventoryBalance {
+export interface SalesReturnLine {
   id: number;
+  itemId: number;
   productId: number;
-  locationId: number;
-  /** @minimum 0 */
-  available: number;
-  /** @minimum 0 */
-  reserved: number;
-  /** @minimum 0 */
-  incoming: number;
-  averageCost: string;
-  condition?: SalesReturnCondition | null;
+  productName: string;
+  quantity: number;
+  condition: SalesReturnCondition;
+  unitCost: string;
+  /** @nullable */
+  targetLocationId: number | null;
 }

@@ -20,3 +20,9 @@ Historical order sources must remain unclassified rather than being inferred fro
 **Why:** The approved phone-source migration preserves historical provenance and must not accidentally change existing invoice timing.
 
 **How to apply:** Treat an unknown source with the existing non-phone invoice policy. Assign a known source explicitly only for new orders.
+
+Approval of operational sales returns does not authorize expanding financial cancellation, credit-note issuance, or cash refunds. Preserve original issued sales documents while awaiting the separate financial-policy decision.
+
+**Why:** The meeting review separated the inventory-return item from the cancellation/archive policy, whose expansion remains subject to the owner's approval.
+
+**How to apply:** Treat later financial corrections as an explicitly approved scope. Never interpret approval of return storage or stock recovery as permission to refund money or cancel the entire original sale.

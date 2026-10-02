@@ -4040,7 +4040,10 @@ router.get("/admin/inventory/:id/movements", permit("inventory", "view"), route(
     .leftJoin(adminUsersTable, eq(inventoryMovementsTable.performedBy, adminUsersTable.id))
     .where(eq(inventoryMovementsTable.productId, params.id))
     .orderBy(sql`${inventoryMovementsTable.createdAt} desc`, sql`${inventoryMovementsTable.id} desc`);
-  res.json(Api.AdminListInventoryMovementsResponse.parse(movements));
+  res.json(Api.AdminListInventoryMovementsResponse.parse(movements.map((movement) => ({
+    ...movement,
+    condition: movement.sourceType?.startsWith("sales_return_") ? movement.sourceType.slice("sales_return_".length) : null,
+  }))));
 }));
 
 async function adjustInventory(productId: number, input: {

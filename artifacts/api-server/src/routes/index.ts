@@ -10,6 +10,7 @@ import influencerRouter from "./influencer";
 import whatsappRouter from "./whatsapp";
 import backupsRouter from "./backups";
 import distributorPortalRouter from "./distributor-portal";
+import salesReturnsRouter from "./sales-returns";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(ownerRouter);
 router.use(influencerRouter);
 router.use(whatsappRouter);
 router.use(distributorPortalRouter);
+router.use(salesReturnsRouter);
 
 export default router;

@@ -6,7 +6,7 @@ import { discountedGrossCents, extractVatFromGross, taxTreatmentForContractType,
 import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
 import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
 import { INVOICE_SEQUENCE_SCOPE, nextInvoiceSequenceNumber } from "./invoice-sequence";
-import { shipheroDispatchesTable } from "@workspace/db";
+import { shipheroDispatchesTable, salesReturnsTable, companyOrdersTable } from "@workspace/db";
 import { SHIPHERO_TRIGGER_STATUS } from "./shiphero-config";
 import { assertPhoneOrderTransition, orderInvoiceIsDue } from "./phone-order-policy";
 import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, shipmentEventsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
@@ -121,6 +121,10 @@ export async function cancelCompanyInvoice(invoiceId: number, reason: string, ac
     const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
     if (!invoice || invoice.distributorId === null) throw new ReceivablePaymentNotFoundError("Company invoice not found");
     if (invoice.cancelledAt) throw new DistributorInvoiceConflictError("Invoice is already cancelled");
+    const [completedReturn] = await tx.select({ id: salesReturnsTable.id }).from(salesReturnsTable)
+      .innerJoin(companyOrdersTable, eq(companyOrdersTable.id, salesReturnsTable.companyOrderId))
+      .where(and(eq(companyOrdersTable.invoiceId, invoiceId), eq(salesReturnsTable.status, "completed"))).limit(1);
+    if (completedReturn) throw new DistributorInvoiceConflictError("Invoice has completed returns; use a separate financial correction");
     const payments = await tx.select({ id: receivablePaymentsTable.id }).from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoiceId));
     if (payments.length) throw new DistributorInvoiceConflictError("Invoice with collections cannot be cancelled");
     const [shipment] = await tx.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, invoiceId)).for("update");
@@ -817,6 +821,9 @@ export async function updateOrderAndIssueInvoice(
       throw new AccountingConflictError("Use the refund workflow before marking an order returned");
     const cancelling = values.status === "cancelled" && order.status !== "cancelled";
     if (cancelling) {
+      const [completedReturn] = await tx.select({ id: salesReturnsTable.id }).from(salesReturnsTable)
+        .where(and(eq(salesReturnsTable.orderId, order.id), eq(salesReturnsTable.status, "completed"))).limit(1);
+      if (completedReturn) throw new AccountingConflictError("Order has completed returns; use a separate financial correction");
       const [dispatch] = await tx.select().from(shipheroDispatchesTable)
         .where(eq(shipheroDispatchesTable.orderId, order.id)).for("update");
       if (dispatch && ["sending", "sent", "uncertain"].includes(dispatch.status)) {

@@ -91,6 +91,7 @@ export const companyOrderItemsTable = pgTable("company_order_items", {
   totalAmount: numeric("total_amount", { precision: 14, scale: 2 }).notNull(),
 }, (table) => [
   index("company_order_items_order_idx").on(table.companyOrderId),
+  uniqueIndex("company_order_items_return_source_unique").on(table.id, table.companyOrderId, table.productId),
 ]);
 
 export const companyOrderDecisionsTable = pgTable("company_order_decisions", {

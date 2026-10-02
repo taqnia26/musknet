@@ -149,6 +149,7 @@ export const navStructure = [
       { href: '/admin/inventory/purchases', labelEn: 'Receiving', labelAr: 'الاستلام' },
       { href: '/admin/inventory/transfers', labelEn: 'Transfers', labelAr: 'التحويلات' },
       { href: '/admin/inventory/counts', labelEn: 'Cycle counts', labelAr: 'الجرد الدوري' },
+      { href: '/admin/inventory/returns', labelEn: 'Sales returns', labelAr: 'مرتجعات المبيعات' },
       { href: '/admin/inventory/movements', labelEn: 'Movement ledger', labelAr: 'سجل الحركات' },
       { href: '/admin/inventory/reports', labelEn: 'Reports', labelAr: 'التقارير' },
     ]

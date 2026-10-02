@@ -17,6 +17,7 @@ import AdminInventoryTransfers from '@/pages/admin/inventory/transfers';
 import AdminInventoryCounts from '@/pages/admin/inventory/cycle-counts';
 import AdminInventoryMovements from '@/pages/admin/inventory/movements';
 import AdminInventoryReports from '@/pages/admin/inventory/reports';
+import AdminInventoryReturns from '@/pages/admin/inventory/returns';
 import AdminInventoryPurchases from '@/pages/admin/inventory/purchases';
 import AdminNotFound from '@/pages/admin/not-found';
 import AdminDistributors from '@/pages/admin/distributors';
@@ -96,6 +97,7 @@ export default function AdminRoutes() {
         <Route path="/admin/inventory/transfers" component={AdminInventoryTransfers} />
         <Route path="/admin/inventory/counts" component={AdminInventoryCounts} />
         <Route path="/admin/inventory/movements" component={AdminInventoryMovements} />
+        <Route path="/admin/inventory/returns" component={AdminInventoryReturns} />
         <Route path="/admin/inventory/reports" component={AdminInventoryReports} />
         <Route path="/admin/inventory">
           {() => <AdminInventory titleKey="overview" />}

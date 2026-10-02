@@ -1,3 +1,4 @@
+import { stockConditionLabel } from '@/components/admin/inventory/sales-return-shared';
 import { useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { useGetInventoryMovementReport } from '@workspace/api-client-react';
@@ -66,6 +67,7 @@ export default function AdminInventoryMovements() {
                   <TableHead>{t('المنتج', 'Product ID')}</TableHead>
                   <TableHead>{t('نوع الحركة', 'Movement Type')}</TableHead>
                   <TableHead>{t('التغيير', 'Change')}</TableHead>
+                  <TableHead>{t('الحالة', 'Condition')}</TableHead>
                   <TableHead>{t('قبل / بعد', 'Before / After')}</TableHead>
                   <TableHead>{t('السبب / المصدر', 'Reason / Source')}</TableHead>
                   <TableHead>{t('بواسطة', 'By')}</TableHead>
@@ -74,19 +76,19 @@ export default function AdminInventoryMovements() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                       {t('جاري التحميل...', 'Loading...')}
                     </TableCell>
                   </TableRow>
                 ) : isError ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-destructive">
+                    <TableCell colSpan={8} className="h-32 text-center text-destructive">
                       {t('حدث خطأ أثناء تحميل البيانات.', 'An error occurred while loading data.')}
                     </TableCell>
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                       {t('لا توجد حركات مطابقة للبحث.', 'No movements found matching the search.')}
                     </TableCell>
                   </TableRow>
@@ -114,6 +116,7 @@ export default function AdminInventoryMovements() {
                       <TableCell className={`font-bold font-mono ${item.quantityChange > 0 ? 'text-success' : item.quantityChange < 0 ? 'text-destructive' : ''}`}>
                         {item.quantityChange > 0 ? '+' : ''}{item.quantityChange}
                       </TableCell>
+                      <TableCell className="text-sm text-muted-foreground" data-testid={`text-movement-condition-${item.id}`}>{stockConditionLabel(item.condition, t)}</TableCell>
                       <TableCell className="text-sm font-mono whitespace-nowrap text-muted-foreground">
                         {item.quantityBefore} <ArrowLeftRight className="inline h-3 w-3 mx-1 text-border" /> <span className="text-foreground">{item.quantityAfter}</span>
                       </TableCell>

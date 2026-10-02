@@ -7016,6 +7016,7 @@ export const AdminListInventoryMovementsResponseItem = zod.object({
   "id": zod.number(),
   "productId": zod.number(),
   "movementType": zod.enum(['increase', 'decrease', 'adjustment']),
+  "condition": zod.union([zod.enum(['new', 'opened', 'damaged']),zod.null()]).optional(),
   "quantityChange": zod.number(),
   "quantityBefore": zod.number(),
   "quantityAfter": zod.number(),
@@ -7167,6 +7168,7 @@ export const AdminAdjustInventoryResponse = zod.object({
   "id": zod.number(),
   "productId": zod.number(),
   "movementType": zod.enum(['increase', 'decrease', 'adjustment']),
+  "condition": zod.union([zod.enum(['new', 'opened', 'damaged']),zod.null()]).optional(),
   "quantityChange": zod.number(),
   "quantityBefore": zod.number(),
   "quantityAfter": zod.number(),
@@ -10344,6 +10346,391 @@ export const DeleteInventoryLocationParams = zod.object({
 export const DeleteInventoryLocationResponse = zod.void()
 
 
+export const listSalesReturnSourcesQuerySearchMax = 100;
+
+export const listSalesReturnSourcesQuerySourceIdMax = 2147483647;
+export const listSalesReturnSourcesQuerySourceIdMultipleOf = 1;
+
+
+
+export const ListSalesReturnSourcesQueryParams = zod.object({
+  "sourceType": zod.enum(['individual', 'company']),
+  "search": zod.coerce.string().max(listSalesReturnSourcesQuerySearchMax).optional(),
+  "sourceId": zod.coerce.number().min(1).max(listSalesReturnSourcesQuerySourceIdMax).multipleOf(listSalesReturnSourcesQuerySourceIdMultipleOf).optional()
+})
+
+export const listSalesReturnSourcesResponseSourceIdMultipleOf = 1;
+
+export const listSalesReturnSourcesResponseItemsItemIdMultipleOf = 1;
+
+export const listSalesReturnSourcesResponseItemsItemProductIdMultipleOf = 1;
+
+export const listSalesReturnSourcesResponseItemsItemQuantityMultipleOf = 1;
+
+export const listSalesReturnSourcesResponseItemsItemReturnedQuantityMultipleOf = 1;
+
+export const listSalesReturnSourcesResponseItemsItemRemainingQuantityMultipleOf = 1;
+
+
+
+export const ListSalesReturnSourcesResponseItem = zod.object({
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().multipleOf(listSalesReturnSourcesResponseSourceIdMultipleOf),
+  "orderNumber": zod.string(),
+  "customerName": zod.string(),
+  "eligible": zod.boolean(),
+  "blockedReason": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "id": zod.number().multipleOf(listSalesReturnSourcesResponseItemsItemIdMultipleOf),
+  "productId": zod.number().multipleOf(listSalesReturnSourcesResponseItemsItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "quantity": zod.number().multipleOf(listSalesReturnSourcesResponseItemsItemQuantityMultipleOf),
+  "returnedQuantity": zod.number().multipleOf(listSalesReturnSourcesResponseItemsItemReturnedQuantityMultipleOf),
+  "remainingQuantity": zod.number().multipleOf(listSalesReturnSourcesResponseItemsItemRemainingQuantityMultipleOf),
+  "unitCost": zod.string().nullable()
+}))
+})
+export const ListSalesReturnSourcesResponse = zod.array(ListSalesReturnSourcesResponseItem)
+
+
+export const listSalesReturnsQuerySearchMax = 100;
+
+
+
+export const ListSalesReturnsQueryParams = zod.object({
+  "search": zod.coerce.string().max(listSalesReturnsQuerySearchMax).optional(),
+  "status": zod.enum(['draft', 'completed', 'cancelled']).optional()
+})
+
+export const listSalesReturnsResponseIdMultipleOf = 1;
+
+export const listSalesReturnsResponseSourceIdMultipleOf = 1;
+
+export const listSalesReturnsResponseLinesItemIdMultipleOf = 1;
+
+export const listSalesReturnsResponseLinesItemItemIdMultipleOf = 1;
+
+export const listSalesReturnsResponseLinesItemProductIdMultipleOf = 1;
+
+export const listSalesReturnsResponseLinesItemQuantityMultipleOf = 1;
+
+export const listSalesReturnsResponseLinesItemTargetLocationIdMultipleOf = 1;
+
+
+
+export const ListSalesReturnsResponseItem = zod.object({
+  "id": zod.number().multipleOf(listSalesReturnsResponseIdMultipleOf),
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().multipleOf(listSalesReturnsResponseSourceIdMultipleOf),
+  "orderNumber": zod.string(),
+  "customerName": zod.string(),
+  "status": zod.enum(['draft', 'completed', 'cancelled']),
+  "reason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(listSalesReturnsResponseLinesItemIdMultipleOf),
+  "itemId": zod.number().multipleOf(listSalesReturnsResponseLinesItemItemIdMultipleOf),
+  "productId": zod.number().multipleOf(listSalesReturnsResponseLinesItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "quantity": zod.number().multipleOf(listSalesReturnsResponseLinesItemQuantityMultipleOf),
+  "condition": zod.enum(['new', 'opened', 'damaged']),
+  "unitCost": zod.string(),
+  "targetLocationId": zod.number().multipleOf(listSalesReturnsResponseLinesItemTargetLocationIdMultipleOf).nullable()
+}))
+})
+export const ListSalesReturnsResponse = zod.array(ListSalesReturnsResponseItem)
+
+
+export const createSalesReturnBodySourceIdMultipleOf = 1;
+
+export const createSalesReturnBodyReasonMax = 1000;
+
+export const createSalesReturnBodyLinesItemItemIdMultipleOf = 1;
+
+export const createSalesReturnBodyLinesItemQuantityMultipleOf = 1;
+
+export const createSalesReturnBodyLinesMax = 100;
+
+
+
+export const CreateSalesReturnBody = zod.object({
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().min(1).multipleOf(createSalesReturnBodySourceIdMultipleOf),
+  "reason": zod.string().max(createSalesReturnBodyReasonMax).nullish(),
+  "lines": zod.array(zod.object({
+  "itemId": zod.number().min(1).multipleOf(createSalesReturnBodyLinesItemItemIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(createSalesReturnBodyLinesItemQuantityMultipleOf),
+  "condition": zod.enum(['new', 'opened', 'damaged'])
+})).min(1).max(createSalesReturnBodyLinesMax)
+})
+
+export const createSalesReturnResponseIdMultipleOf = 1;
+
+export const createSalesReturnResponseSourceIdMultipleOf = 1;
+
+export const createSalesReturnResponseLinesItemIdMultipleOf = 1;
+
+export const createSalesReturnResponseLinesItemItemIdMultipleOf = 1;
+
+export const createSalesReturnResponseLinesItemProductIdMultipleOf = 1;
+
+export const createSalesReturnResponseLinesItemQuantityMultipleOf = 1;
+
+export const createSalesReturnResponseLinesItemTargetLocationIdMultipleOf = 1;
+
+
+
+export const CreateSalesReturnResponse = zod.object({
+  "id": zod.number().multipleOf(createSalesReturnResponseIdMultipleOf),
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().multipleOf(createSalesReturnResponseSourceIdMultipleOf),
+  "orderNumber": zod.string(),
+  "customerName": zod.string(),
+  "status": zod.enum(['draft', 'completed', 'cancelled']),
+  "reason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(createSalesReturnResponseLinesItemIdMultipleOf),
+  "itemId": zod.number().multipleOf(createSalesReturnResponseLinesItemItemIdMultipleOf),
+  "productId": zod.number().multipleOf(createSalesReturnResponseLinesItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "quantity": zod.number().multipleOf(createSalesReturnResponseLinesItemQuantityMultipleOf),
+  "condition": zod.enum(['new', 'opened', 'damaged']),
+  "unitCost": zod.string(),
+  "targetLocationId": zod.number().multipleOf(createSalesReturnResponseLinesItemTargetLocationIdMultipleOf).nullable()
+}))
+})
+
+
+export const getSalesReturnPathIdMultipleOf = 1;
+
+
+
+export const GetSalesReturnParams = zod.object({
+  "id": zod.coerce.number().min(1).multipleOf(getSalesReturnPathIdMultipleOf)
+})
+
+export const getSalesReturnResponseIdMultipleOf = 1;
+
+export const getSalesReturnResponseSourceIdMultipleOf = 1;
+
+export const getSalesReturnResponseLinesItemIdMultipleOf = 1;
+
+export const getSalesReturnResponseLinesItemItemIdMultipleOf = 1;
+
+export const getSalesReturnResponseLinesItemProductIdMultipleOf = 1;
+
+export const getSalesReturnResponseLinesItemQuantityMultipleOf = 1;
+
+export const getSalesReturnResponseLinesItemTargetLocationIdMultipleOf = 1;
+
+
+
+export const GetSalesReturnResponse = zod.object({
+  "id": zod.number().multipleOf(getSalesReturnResponseIdMultipleOf),
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().multipleOf(getSalesReturnResponseSourceIdMultipleOf),
+  "orderNumber": zod.string(),
+  "customerName": zod.string(),
+  "status": zod.enum(['draft', 'completed', 'cancelled']),
+  "reason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(getSalesReturnResponseLinesItemIdMultipleOf),
+  "itemId": zod.number().multipleOf(getSalesReturnResponseLinesItemItemIdMultipleOf),
+  "productId": zod.number().multipleOf(getSalesReturnResponseLinesItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "quantity": zod.number().multipleOf(getSalesReturnResponseLinesItemQuantityMultipleOf),
+  "condition": zod.enum(['new', 'opened', 'damaged']),
+  "unitCost": zod.string(),
+  "targetLocationId": zod.number().multipleOf(getSalesReturnResponseLinesItemTargetLocationIdMultipleOf).nullable()
+}))
+})
+
+
+export const updateSalesReturnPathIdMultipleOf = 1;
+
+
+
+export const UpdateSalesReturnParams = zod.object({
+  "id": zod.coerce.number().min(1).multipleOf(updateSalesReturnPathIdMultipleOf)
+})
+
+export const updateSalesReturnBodyOneSourceIdMultipleOf = 1;
+
+export const updateSalesReturnBodyOneReasonMax = 1000;
+
+export const updateSalesReturnBodyOneLinesItemItemIdMultipleOf = 1;
+
+export const updateSalesReturnBodyOneLinesItemQuantityMultipleOf = 1;
+
+export const updateSalesReturnBodyOneLinesMax = 100;
+
+
+
+export const UpdateSalesReturnBody = zod.object({
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().min(1).multipleOf(updateSalesReturnBodyOneSourceIdMultipleOf),
+  "reason": zod.string().max(updateSalesReturnBodyOneReasonMax).nullish(),
+  "lines": zod.array(zod.object({
+  "itemId": zod.number().min(1).multipleOf(updateSalesReturnBodyOneLinesItemItemIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(updateSalesReturnBodyOneLinesItemQuantityMultipleOf),
+  "condition": zod.enum(['new', 'opened', 'damaged'])
+})).min(1).max(updateSalesReturnBodyOneLinesMax)
+}).and(zod.object({
+  "expectedUpdatedAt": zod.coerce.date()
+}))
+
+export const updateSalesReturnResponseIdMultipleOf = 1;
+
+export const updateSalesReturnResponseSourceIdMultipleOf = 1;
+
+export const updateSalesReturnResponseLinesItemIdMultipleOf = 1;
+
+export const updateSalesReturnResponseLinesItemItemIdMultipleOf = 1;
+
+export const updateSalesReturnResponseLinesItemProductIdMultipleOf = 1;
+
+export const updateSalesReturnResponseLinesItemQuantityMultipleOf = 1;
+
+export const updateSalesReturnResponseLinesItemTargetLocationIdMultipleOf = 1;
+
+
+
+export const UpdateSalesReturnResponse = zod.object({
+  "id": zod.number().multipleOf(updateSalesReturnResponseIdMultipleOf),
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().multipleOf(updateSalesReturnResponseSourceIdMultipleOf),
+  "orderNumber": zod.string(),
+  "customerName": zod.string(),
+  "status": zod.enum(['draft', 'completed', 'cancelled']),
+  "reason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(updateSalesReturnResponseLinesItemIdMultipleOf),
+  "itemId": zod.number().multipleOf(updateSalesReturnResponseLinesItemItemIdMultipleOf),
+  "productId": zod.number().multipleOf(updateSalesReturnResponseLinesItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "quantity": zod.number().multipleOf(updateSalesReturnResponseLinesItemQuantityMultipleOf),
+  "condition": zod.enum(['new', 'opened', 'damaged']),
+  "unitCost": zod.string(),
+  "targetLocationId": zod.number().multipleOf(updateSalesReturnResponseLinesItemTargetLocationIdMultipleOf).nullable()
+}))
+})
+
+
+export const completeSalesReturnPathIdMultipleOf = 1;
+
+
+
+export const CompleteSalesReturnParams = zod.object({
+  "id": zod.coerce.number().min(1).multipleOf(completeSalesReturnPathIdMultipleOf)
+})
+
+export const CompleteSalesReturnBody = zod.object({
+  "expectedUpdatedAt": zod.coerce.date()
+})
+
+export const completeSalesReturnResponseIdMultipleOf = 1;
+
+export const completeSalesReturnResponseSourceIdMultipleOf = 1;
+
+export const completeSalesReturnResponseLinesItemIdMultipleOf = 1;
+
+export const completeSalesReturnResponseLinesItemItemIdMultipleOf = 1;
+
+export const completeSalesReturnResponseLinesItemProductIdMultipleOf = 1;
+
+export const completeSalesReturnResponseLinesItemQuantityMultipleOf = 1;
+
+export const completeSalesReturnResponseLinesItemTargetLocationIdMultipleOf = 1;
+
+
+
+export const CompleteSalesReturnResponse = zod.object({
+  "id": zod.number().multipleOf(completeSalesReturnResponseIdMultipleOf),
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().multipleOf(completeSalesReturnResponseSourceIdMultipleOf),
+  "orderNumber": zod.string(),
+  "customerName": zod.string(),
+  "status": zod.enum(['draft', 'completed', 'cancelled']),
+  "reason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(completeSalesReturnResponseLinesItemIdMultipleOf),
+  "itemId": zod.number().multipleOf(completeSalesReturnResponseLinesItemItemIdMultipleOf),
+  "productId": zod.number().multipleOf(completeSalesReturnResponseLinesItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "quantity": zod.number().multipleOf(completeSalesReturnResponseLinesItemQuantityMultipleOf),
+  "condition": zod.enum(['new', 'opened', 'damaged']),
+  "unitCost": zod.string(),
+  "targetLocationId": zod.number().multipleOf(completeSalesReturnResponseLinesItemTargetLocationIdMultipleOf).nullable()
+}))
+})
+
+
+export const cancelSalesReturnPathIdMultipleOf = 1;
+
+
+
+export const CancelSalesReturnParams = zod.object({
+  "id": zod.coerce.number().min(1).multipleOf(cancelSalesReturnPathIdMultipleOf)
+})
+
+export const CancelSalesReturnBody = zod.object({
+  "expectedUpdatedAt": zod.coerce.date()
+})
+
+export const cancelSalesReturnResponseIdMultipleOf = 1;
+
+export const cancelSalesReturnResponseSourceIdMultipleOf = 1;
+
+export const cancelSalesReturnResponseLinesItemIdMultipleOf = 1;
+
+export const cancelSalesReturnResponseLinesItemItemIdMultipleOf = 1;
+
+export const cancelSalesReturnResponseLinesItemProductIdMultipleOf = 1;
+
+export const cancelSalesReturnResponseLinesItemQuantityMultipleOf = 1;
+
+export const cancelSalesReturnResponseLinesItemTargetLocationIdMultipleOf = 1;
+
+
+
+export const CancelSalesReturnResponse = zod.object({
+  "id": zod.number().multipleOf(cancelSalesReturnResponseIdMultipleOf),
+  "sourceType": zod.enum(['individual', 'company']),
+  "sourceId": zod.number().multipleOf(cancelSalesReturnResponseSourceIdMultipleOf),
+  "orderNumber": zod.string(),
+  "customerName": zod.string(),
+  "status": zod.enum(['draft', 'completed', 'cancelled']),
+  "reason": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullable(),
+  "lines": zod.array(zod.object({
+  "id": zod.number().multipleOf(cancelSalesReturnResponseLinesItemIdMultipleOf),
+  "itemId": zod.number().multipleOf(cancelSalesReturnResponseLinesItemItemIdMultipleOf),
+  "productId": zod.number().multipleOf(cancelSalesReturnResponseLinesItemProductIdMultipleOf),
+  "productName": zod.string(),
+  "quantity": zod.number().multipleOf(cancelSalesReturnResponseLinesItemQuantityMultipleOf),
+  "condition": zod.enum(['new', 'opened', 'damaged']),
+  "unitCost": zod.string(),
+  "targetLocationId": zod.number().multipleOf(cancelSalesReturnResponseLinesItemTargetLocationIdMultipleOf).nullable()
+}))
+})
+
+
 export const listInventoryBalancesQueryLocationIdMultipleOf = 1;
 
 
@@ -10918,7 +11305,8 @@ export const GetInventoryValueReportResponseItem = zod.object({
   "available": zod.number().min(getInventoryValueReportResponseAvailableMin).multipleOf(getInventoryValueReportResponseAvailableMultipleOf),
   "reserved": zod.number().min(getInventoryValueReportResponseReservedMin).multipleOf(getInventoryValueReportResponseReservedMultipleOf),
   "incoming": zod.number().min(getInventoryValueReportResponseIncomingMin).multipleOf(getInventoryValueReportResponseIncomingMultipleOf),
-  "averageCost": zod.string()
+  "averageCost": zod.string(),
+  "condition": zod.union([zod.enum(['new', 'opened', 'damaged']),zod.null()]).optional()
 })
 export const GetInventoryValueReportResponse = zod.array(GetInventoryValueReportResponseItem)
 
@@ -10957,6 +11345,7 @@ export const GetInventoryMovementReportResponse = zod.object({
   "id": zod.number(),
   "productId": zod.number(),
   "movementType": zod.enum(['increase', 'decrease', 'adjustment']),
+  "condition": zod.union([zod.enum(['new', 'opened', 'damaged']),zod.null()]).optional(),
   "quantityChange": zod.number(),
   "quantityBefore": zod.number(),
   "quantityAfter": zod.number(),
@@ -11000,7 +11389,8 @@ export const GetInventoryAgingReportResponseItem = zod.object({
   "available": zod.number().min(getInventoryAgingReportResponseOneAvailableMin).multipleOf(getInventoryAgingReportResponseOneAvailableMultipleOf),
   "reserved": zod.number().min(getInventoryAgingReportResponseOneReservedMin).multipleOf(getInventoryAgingReportResponseOneReservedMultipleOf),
   "incoming": zod.number().min(getInventoryAgingReportResponseOneIncomingMin).multipleOf(getInventoryAgingReportResponseOneIncomingMultipleOf),
-  "averageCost": zod.string()
+  "averageCost": zod.string(),
+  "condition": zod.union([zod.enum(['new', 'opened', 'damaged']),zod.null()]).optional()
 }).and(zod.object({
   "updatedAt": zod.coerce.date(),
   "ageDays": zod.number().min(getInventoryAgingReportResponseTwoAgeDaysMin).multipleOf(getInventoryAgingReportResponseTwoAgeDaysMultipleOf)

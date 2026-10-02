@@ -459,6 +459,112 @@ export interface InventoryLocationUpdate {
   active: boolean;
 }
 
+export type SalesReturnSourceType = typeof SalesReturnSourceType[keyof typeof SalesReturnSourceType];
+
+
+export const SalesReturnSourceType = {
+  individual: 'individual',
+  company: 'company',
+} as const;
+
+export type SalesReturnCondition = typeof SalesReturnCondition[keyof typeof SalesReturnCondition];
+
+
+export const SalesReturnCondition = {
+  new: 'new',
+  opened: 'opened',
+  damaged: 'damaged',
+} as const;
+
+export interface SalesReturnSourceItem {
+  id: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  returnedQuantity: number;
+  remainingQuantity: number;
+  /** @nullable */
+  unitCost: string | null;
+}
+
+export interface SalesReturnSource {
+  sourceType: SalesReturnSourceType;
+  sourceId: number;
+  orderNumber: string;
+  customerName: string;
+  eligible: boolean;
+  /** @nullable */
+  blockedReason: string | null;
+  items: SalesReturnSourceItem[];
+}
+
+export interface SalesReturnLine {
+  id: number;
+  itemId: number;
+  productId: number;
+  productName: string;
+  quantity: number;
+  condition: SalesReturnCondition;
+  unitCost: string;
+  /** @nullable */
+  targetLocationId: number | null;
+}
+
+export type SalesReturnStatus = typeof SalesReturnStatus[keyof typeof SalesReturnStatus];
+
+
+export const SalesReturnStatus = {
+  draft: 'draft',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface SalesReturn {
+  id: number;
+  sourceType: SalesReturnSourceType;
+  sourceId: number;
+  orderNumber: string;
+  customerName: string;
+  status: SalesReturnStatus;
+  /** @nullable */
+  reason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  completedAt: string | null;
+  lines: SalesReturnLine[];
+}
+
+export interface SalesReturnInputLine {
+  /** @minimum 1 */
+  itemId: number;
+  /** @minimum 1 */
+  quantity: number;
+  condition: SalesReturnCondition;
+}
+
+export interface SalesReturnDraftInput {
+  sourceType: SalesReturnSourceType;
+  /** @minimum 1 */
+  sourceId: number;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  reason?: string | null;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  lines: SalesReturnInputLine[];
+}
+
+export interface SalesReturnRevision {
+  expectedUpdatedAt: string;
+}
+
+export type SalesReturnDraftUpdate = SalesReturnDraftInput & SalesReturnRevision;
+
 export interface InventoryBalance {
   id: number;
   productId: number;
@@ -470,6 +576,7 @@ export interface InventoryBalance {
   /** @minimum 0 */
   incoming: number;
   averageCost: string;
+  condition?: SalesReturnCondition | null;
 }
 
 export type InventoryAgingRow = InventoryBalance & {
@@ -665,6 +772,7 @@ export interface AdminInventoryMovement {
   id: number;
   productId: number;
   movementType: AdminInventoryMovementMovementType;
+  condition?: SalesReturnCondition | null;
   quantityChange: number;
   quantityBefore: number;
   quantityAfter: number;
@@ -6936,6 +7044,36 @@ export const InfluencerDashboardRangeDays = {
 export type CaptureInfluencerReferralParams = {
 ref: string;
 };
+
+export type ListSalesReturnSourcesParams = {
+sourceType: SalesReturnSourceType;
+/**
+ * @maxLength 100
+ */
+search?: string;
+/**
+ * @minimum 1
+ * @maximum 2147483647
+ */
+sourceId?: number;
+};
+
+export type ListSalesReturnsParams = {
+/**
+ * @maxLength 100
+ */
+search?: string;
+status?: ListSalesReturnsStatus;
+};
+
+export type ListSalesReturnsStatus = typeof ListSalesReturnsStatus[keyof typeof ListSalesReturnsStatus];
+
+
+export const ListSalesReturnsStatus = {
+  draft: 'draft',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
 
 export type ListInventoryBalancesParams = {
 locationId?: number;

@@ -6,11 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminInventoryMovementMovementType } from './adminInventoryMovementMovementType';
+import type { SalesReturnCondition } from './salesReturnCondition';
 
 export interface AdminInventoryMovement {
   id: number;
   productId: number;
   movementType: AdminInventoryMovementMovementType;
+  condition?: SalesReturnCondition | null;
   quantityChange: number;
   quantityBefore: number;
   quantityAfter: number;

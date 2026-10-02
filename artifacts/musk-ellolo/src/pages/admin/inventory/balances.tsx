@@ -1,3 +1,4 @@
+import { stockConditionLabel } from '@/components/admin/inventory/sales-return-shared';
 import { useState } from 'react';
 import { useLanguage } from '@/hooks/use-language';
 import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
@@ -339,6 +340,7 @@ export function RowActions({
                   <TableHead>{t('التاريخ', 'Date')}</TableHead>
                   <TableHead>{t('النوع', 'Type')}</TableHead>
                   <TableHead>{t('المقدار', 'Delta')}</TableHead>
+                  <TableHead>{t('الحالة', 'Condition')}</TableHead>
                   <TableHead>{t('الرصيد قبل/بعد', 'Before/After')}</TableHead>
                   <TableHead>{t('السبب', 'Reason')}</TableHead>
                   <TableHead>{t('بواسطة', 'Performer')}</TableHead>
@@ -346,9 +348,9 @@ export function RowActions({
               </TableHeader>
               <TableBody>
                 {movementsLoading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-6">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-6">{t('جاري التحميل...', 'Loading...')}</TableCell></TableRow>
                 ) : !movements?.length ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-6">{t('لا توجد حركات', 'No movements')}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-6">{t('لا توجد حركات', 'No movements')}</TableCell></TableRow>
                 ) : (
                   movements.map(m => (
                     <TableRow key={m.id}>
@@ -361,6 +363,7 @@ export function RowActions({
                       <TableCell dir="ltr" className={m.quantityChange > 0 ? "text-green-600" : m.quantityChange < 0 ? "text-red-600" : ""}>
                         {m.quantityChange > 0 ? '+' : ''}{m.quantityChange}
                       </TableCell>
+                      <TableCell>{stockConditionLabel(m.condition, t)}</TableCell>
                       <TableCell dir="ltr">{m.quantityBefore} &rarr; {m.quantityAfter}</TableCell>
                       <TableCell>{m.reason}</TableCell>
                       <TableCell>{m.performerName || m.sourceType || '-'}</TableCell>
@@ -606,7 +609,10 @@ export default function AdminInventoryBalances() {
                     <TableCell className="font-mono text-sm">{item.sku || '-'}</TableCell>
                    <TableCell className="font-mono text-sm">{item.barcode || item.sku || '-'}</TableCell>
                    <TableCell>{item.operationalType} · {item.unitOfMeasure}{!item.sellable && <Badge variant="outline" className="ms-1">{t('غير قابل للبيع', 'Non-sellable')}</Badge>}</TableCell>
-                    <TableCell className="font-bold">{item.stockQuantity}</TableCell>
+                    <TableCell className="font-bold">
+                      {item.stockQuantity}
+                      <span className="block text-xs font-normal text-muted-foreground">{stockConditionLabel(null, t)}</span>
+                    </TableCell>
                     <TableCell>{item.reorderPoint}</TableCell>
                     <TableCell><Money value={item.price} lang={lang} /></TableCell>
                     <TableCell>
