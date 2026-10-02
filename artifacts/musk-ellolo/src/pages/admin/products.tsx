@@ -36,8 +36,8 @@ import {
 import { useLanguage } from '@/hooks/use-language';
 import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import { productScreenPayload } from '@/lib/product-screen-payload';
 import { hasPermission } from '@/lib/permissions';
-import { quantityInputClass } from '@/lib/quantity-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -102,9 +102,6 @@ const productSchema = z.object({
   seoTitleAr: z.string().nullable().optional(),
   seoDescriptionAr: z.string().nullable().optional(),
   categoryId: z.coerce.number().min(1, 'Required / مطلوب'),
-  stockQuantity: z.coerce.number().int().min(0).default(0),
-  reorderPoint: z.coerce.number().int().min(0).default(5),
-  targetStockQuantity: z.coerce.number().int().min(0).default(20),
 }).superRefine((value, context) => {
   if (!value.sellable) return;
   for (const key of ['displayNameAr', 'displayNameEn', 'invoiceNameAr', 'invoiceNameEn', 'slug'] as const) {
@@ -154,9 +151,6 @@ const emptyProduct: ProductFormValues = {
   seoTitleAr: '',
   seoDescriptionAr: '',
   categoryId: 0,
-  stockQuantity: 0,
-  reorderPoint: 5,
-  targetStockQuantity: 20,
 };
 
 function ProductRow({
@@ -498,7 +492,7 @@ export default function AdminProducts() {
     
     const { tagsString, ...apiData } = processedData;
 
-    const request = { ...apiData, images: productImages };
+    const payload = productScreenPayload({ ...apiData, images: productImages });
     const options = {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getAdminListProductsQueryKey() });
@@ -511,13 +505,12 @@ export default function AdminProducts() {
     };
 
     if (editingId) {
-       const { stockQuantity: openingStock, sellable: storefrontVisibility, isActive: activeStatus, ...updates } = request;
-      void openingStock;
+       const { sellable: storefrontVisibility, isActive: activeStatus, ...updates } = payload.update;
        void storefrontVisibility;
        void activeStatus;
       updateMutation.mutate({ id: editingId, data: updates }, options);
     } else {
-      createMutation.mutate({ data: request }, options);
+      createMutation.mutate({ data: payload.create }, options);
     }
   };
 
@@ -572,9 +565,6 @@ export default function AdminProducts() {
       seoTitleAr: product.seoTitleAr || '',
       seoDescriptionAr: product.seoDescriptionAr || '',
       categoryId: product.categoryId,
-      stockQuantity: product.stockQuantity,
-      reorderPoint: product.reorderPoint,
-      targetStockQuantity: product.targetStockQuantity,
     });
     setIsDialogOpen(true);
   };
@@ -880,17 +870,6 @@ export default function AdminProducts() {
                       )} />
                     </div>
 
-                    <div className="grid gap-5 sm:grid-cols-3">
-                      {!editingId && <FormField control={form.control} name="stockQuantity" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الكمية الافتتاحية', 'Opening stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" inputMode="numeric" {...field} dir="ltr" className={quantityInputClass} /></FormControl><FormMessage /></FormItem>
-                      )} />}
-                      <FormField control={form.control} name="reorderPoint" render={({ field }) => (
-                        <FormItem><FormLabel>{t('حد إعادة الطلب', 'Reorder point')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" className={quantityInputClass} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                      <FormField control={form.control} name="targetStockQuantity" render={({ field }) => (
-                        <FormItem><FormLabel>{t('الكمية المستهدفة', 'Target stock')}</FormLabel><FormControl><Input type="number" min="0" step="1" {...field} dir="ltr" className={quantityInputClass} /></FormControl><FormMessage /></FormItem>
-                      )} />
-                    </div>
                     <FormField control={form.control} name="inventoryNotes" render={({ field }) => (
                       <FormItem><FormLabel>{t('ملاحظات الصنف', 'Item notes')}</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                     )} />
