@@ -181,6 +181,7 @@ import type {
   HistoricalInvoiceCreated,
   HistoricalInvoiceReview,
   HomeContent,
+  IndividualInvoiceInput,
   Influencer,
   InfluencerAuth,
   InfluencerDashboard,
@@ -9258,6 +9259,77 @@ export const useAdminCreateExhibitionInvoice = <TError = ErrorType<BadRequestRes
         TContext
       > => {
       return useMutation(getAdminCreateExhibitionInvoiceMutationOptions(options));
+    }
+
+export const getAdminCreateIndividualInvoiceUrl = () => {
+
+
+
+
+  return `/api/admin/invoices/individuals`
+}
+
+/**
+ * @summary Issue a standalone individual sales invoice without an order or shipment
+ */
+export const adminCreateIndividualInvoice = async (individualInvoiceInput: IndividualInvoiceInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoice> => {
+
+  return customFetch<AdminInvoice>(getAdminCreateIndividualInvoiceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(individualInvoiceInput)
+  }
+);}
+
+
+
+
+
+export const getAdminCreateIndividualInvoiceMutationOptions = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateIndividualInvoice>>, TError,{data: BodyType<IndividualInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateIndividualInvoice>>, TError,{data: BodyType<IndividualInvoiceInput>}, TContext> => {
+
+const mutationKey = ['adminCreateIndividualInvoice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateIndividualInvoice>>, {data: BodyType<IndividualInvoiceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminCreateIndividualInvoice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateIndividualInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateIndividualInvoice>>>
+    export type AdminCreateIndividualInvoiceMutationBody = BodyType<IndividualInvoiceInput>
+    export type AdminCreateIndividualInvoiceMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>
+
+    /**
+ * @summary Issue a standalone individual sales invoice without an order or shipment
+ */
+export const useAdminCreateIndividualInvoice = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateIndividualInvoice>>, TError,{data: BodyType<IndividualInvoiceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateIndividualInvoice>>,
+        TError,
+        {data: BodyType<IndividualInvoiceInput>},
+        TContext
+      > => {
+      return useMutation(getAdminCreateIndividualInvoiceMutationOptions(options));
     }
 
 export const getAdminDownloadInvoicePdfUrl = (id: number,

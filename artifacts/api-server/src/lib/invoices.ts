@@ -656,7 +656,9 @@ export async function createReceivablePayment(
   return db.transaction(async (tx) => {
     await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${invoiceId} for update`);
     const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
-    if (!invoice || invoice.distributorId === null) throw new ReceivablePaymentNotFoundError("Company invoice not found");
+    if (!invoice || (invoice.distributorId === null && !invoice.individual)) {
+      throw new ReceivablePaymentNotFoundError("Receivable company or individual invoice not found");
+    }
     if (invoice.cancelledAt) throw new DistributorInvoiceConflictError("Cancelled invoices cannot receive collections");
     const [afterLock] = await tx.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.paymentKey, input.paymentKey)).limit(1);
     if (afterLock) {
@@ -666,6 +668,7 @@ export async function createReceivablePayment(
       return afterLock;
     }
     if (invoice.historical === "yes") {
+      if (invoice.distributorId === null) throw new DistributorInvoiceConflictError("Historical payment reconciliation requires a company invoice");
       const conflicts = await reconcileHistoricalPayment(invoice.distributorId, {
         paymentDate: dateOnly(input.paymentDate), amount: input.amount, reference: input.reference,
       }, tx);

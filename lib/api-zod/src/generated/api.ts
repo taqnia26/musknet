@@ -4733,16 +4733,18 @@ export const adminListInvoicesQueryReceivableStatusDefault = `all`;
 
 export const AdminListInvoicesQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
-  "channel": zod.enum(['all', 'companies', 'online', 'exhibitions']).default(adminListInvoicesQueryChannelDefault),
+  "channel": zod.enum(['all', 'companies', 'online', 'exhibitions']).default(adminListInvoicesQueryChannelDefault).describe('The online channel includes order-based online sales and standalone individual invoices; companies and exhibitions remain separate.'),
   "receivableStatus": zod.enum(['all', 'open', 'overdue', 'paid']).default(adminListInvoicesQueryReceivableStatusDefault)
 })
 
+export const adminListInvoicesResponseIndividualDefault = false;
 export const adminListInvoicesResponseCancelledByAdminIdMultipleOf = 1;
 
 
 
 export const AdminListInvoicesResponseItem = zod.object({
   "id": zod.number(),
+  "individual": zod.boolean().default(adminListInvoicesResponseIndividualDefault).describe('True for a standalone individual invoice; absent on legacy responses means false.'),
   "cancelledAt": zod.coerce.date().nullable(),
   "cancellationReason": zod.string().nullable(),
   "cancelledByAdminId": zod.number().multipleOf(adminListInvoicesResponseCancelledByAdminIdMultipleOf).nullable(),
@@ -4852,12 +4854,14 @@ export const AdminCreateDistributorInvoiceBody = zod.object({
 })).min(1).max(adminCreateDistributorInvoiceBodyItemsMax)
 })
 
+export const adminCreateDistributorInvoiceResponseIndividualDefault = false;
 export const adminCreateDistributorInvoiceResponseCancelledByAdminIdMultipleOf = 1;
 
 
 
 export const AdminCreateDistributorInvoiceResponse = zod.object({
   "id": zod.number(),
+  "individual": zod.boolean().default(adminCreateDistributorInvoiceResponseIndividualDefault).describe('True for a standalone individual invoice; absent on legacy responses means false.'),
   "cancelledAt": zod.coerce.date().nullable(),
   "cancellationReason": zod.string().nullable(),
   "cancelledByAdminId": zod.number().multipleOf(adminCreateDistributorInvoiceResponseCancelledByAdminIdMultipleOf).nullable(),
@@ -5244,15 +5248,141 @@ export const AdminCreateExhibitionInvoiceBody = zod.object({
 })).min(1).max(adminCreateExhibitionInvoiceBodyItemsMax)
 })
 
+export const adminCreateExhibitionInvoiceResponseIndividualDefault = false;
 export const adminCreateExhibitionInvoiceResponseCancelledByAdminIdMultipleOf = 1;
 
 
 
 export const AdminCreateExhibitionInvoiceResponse = zod.object({
   "id": zod.number(),
+  "individual": zod.boolean().default(adminCreateExhibitionInvoiceResponseIndividualDefault).describe('True for a standalone individual invoice; absent on legacy responses means false.'),
   "cancelledAt": zod.coerce.date().nullable(),
   "cancellationReason": zod.string().nullable(),
   "cancelledByAdminId": zod.number().multipleOf(adminCreateExhibitionInvoiceResponseCancelledByAdminIdMultipleOf).nullable(),
+  "cancelledByName": zod.string().nullable(),
+  "historical": zod.enum(['yes', 'no']),
+  "orderId": zod.number().nullable(),
+  "orderNumber": zod.string().nullable(),
+  "distributorId": zod.number().nullable(),
+  "distributorName": zod.string().nullable(),
+  "contractId": zod.number().nullable(),
+  "uploadedContractFileId": zod.number().nullable(),
+  "contractNumber": zod.string().nullable(),
+  "contractType": zod.string().nullable(),
+  "contractDiscountPercent": zod.number().nullable(),
+  "appliedDiscountPercent": zod.number().nullish().describe('Rate actually applied to a company invoice; null for legacy and non-company invoices.'),
+  "invoiceDiscountPercent": zod.number().nullish(),
+  "discountOverrideReason": zod.string().nullish(),
+  "discountOverrideByAdminId": zod.number().nullish(),
+  "discountOverrideAt": zod.coerce.date().nullish(),
+  "discountOverrideOutsideContractPeriod": zod.boolean().nullish().describe('Server-derived on an exceptional company invoice: true when the selected source was outside its period on the issue date; null when there is no exception.'),
+  "paymentDays": zod.number().nullable(),
+  "paymentTerm": zod.union([zod.literal('net_days'),zod.literal('end_of_month'),zod.literal('due_on_issue'),zod.literal(null)]).nullable(),
+  "taxTreatment": zod.union([zod.literal('domestic'),zod.literal('international'),zod.literal(null)]).nullable(),
+  "vatRate": zod.number().nullable(),
+  "exhibitionId": zod.number().nullable(),
+  "exhibitionName": zod.string().nullable(),
+  "sequenceNumber": zod.number(),
+  "invoiceNumber": zod.string(),
+  "originalInvoiceNumber": zod.string().nullable(),
+  "sellerName": zod.string(),
+  "issueDatetime": zod.coerce.date(),
+  "dueDate": zod.coerce.date().nullable(),
+  "sellerVatNumber": zod.string(),
+  "buyerName": zod.string().nullable(),
+  "buyerTaxNumber": zod.string().nullable(),
+  "buyerCommercialRegistrationNumber": zod.string().nullable(),
+  "buyerAddress": zod.string().nullable(),
+  "subtotal": zod.number(),
+  "discountAmount": zod.number(),
+  "shippingAmount": zod.number().optional(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number(),
+  "paidAmount": zod.number(),
+  "outstandingAmount": zod.number(),
+  "paymentStatus": zod.enum(['unpaid', 'partial', 'paid']),
+  "payments": zod.array(zod.object({
+  "id": zod.number(),
+  "invoiceId": zod.number(),
+  "paymentDate": zod.coerce.date(),
+  "amount": zod.number(),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer']),
+  "reference": zod.string().nullable(),
+  "createdBy": zod.number(),
+  "createdAt": zod.coerce.date()
+})),
+  "qrCodeData": zod.string(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "productId": zod.number().nullable(),
+  "productName": zod.string(),
+  "productNameEn": zod.string().nullable(),
+  "sku": zod.string().nullable(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number(),
+  "subtotal": zod.number(),
+  "vatAmount": zod.number(),
+  "totalAmount": zod.number()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Issue a standalone individual sales invoice without an order or shipment
+ */
+export const adminCreateIndividualInvoiceBodyCreationKeyMin = 16;
+export const adminCreateIndividualInvoiceBodyCreationKeyMax = 200;
+
+export const adminCreateIndividualInvoiceBodyBuyerNameMax = 250;
+
+export const adminCreateIndividualInvoiceBodyBuyerAddressMax = 1000;
+
+export const adminCreateIndividualInvoiceBodyBuyerTaxNumberRegExp = new RegExp('^[0-9]{15}$');
+export const adminCreateIndividualInvoiceBodyIssueDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const adminCreateIndividualInvoiceBodyDueDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const adminCreateIndividualInvoiceBodyCollectedPaymentDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+export const adminCreateIndividualInvoiceBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminCreateIndividualInvoiceBodyItemsItemQuantityMax = 100000;
+export const adminCreateIndividualInvoiceBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminCreateIndividualInvoiceBodyItemsItemUnitPriceExclusiveMin = 0;
+export const adminCreateIndividualInvoiceBodyItemsItemUnitPriceMax = 100000000;
+
+export const adminCreateIndividualInvoiceBodyItemsMax = 100;
+
+
+
+export const AdminCreateIndividualInvoiceBody = zod.object({
+  "creationKey": zod.string().min(adminCreateIndividualInvoiceBodyCreationKeyMin).max(adminCreateIndividualInvoiceBodyCreationKeyMax),
+  "buyerName": zod.string().min(1).max(adminCreateIndividualInvoiceBodyBuyerNameMax),
+  "buyerAddress": zod.string().max(adminCreateIndividualInvoiceBodyBuyerAddressMax).nullable(),
+  "buyerTaxNumber": zod.string().regex(adminCreateIndividualInvoiceBodyBuyerTaxNumberRegExp).nullable(),
+  "issueDate": zod.string().regex(adminCreateIndividualInvoiceBodyIssueDateRegExp),
+  "dueDate": zod.string().regex(adminCreateIndividualInvoiceBodyDueDateRegExp).optional(),
+  "collected": zod.object({
+  "paymentDate": zod.string().regex(adminCreateIndividualInvoiceBodyCollectedPaymentDateRegExp),
+  "paymentMethod": zod.enum(['cash', 'bank_transfer'])
+}).optional(),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminCreateIndividualInvoiceBodyItemsItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).max(adminCreateIndividualInvoiceBodyItemsItemQuantityMax).multipleOf(adminCreateIndividualInvoiceBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().gt(adminCreateIndividualInvoiceBodyItemsItemUnitPriceExclusiveMin).max(adminCreateIndividualInvoiceBodyItemsItemUnitPriceMax)
+})).min(1).max(adminCreateIndividualInvoiceBodyItemsMax)
+})
+
+export const adminCreateIndividualInvoiceResponseIndividualDefault = false;
+export const adminCreateIndividualInvoiceResponseCancelledByAdminIdMultipleOf = 1;
+
+
+
+export const AdminCreateIndividualInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "individual": zod.boolean().default(adminCreateIndividualInvoiceResponseIndividualDefault).describe('True for a standalone individual invoice; absent on legacy responses means false.'),
+  "cancelledAt": zod.coerce.date().nullable(),
+  "cancellationReason": zod.string().nullable(),
+  "cancelledByAdminId": zod.number().multipleOf(adminCreateIndividualInvoiceResponseCancelledByAdminIdMultipleOf).nullable(),
   "cancelledByName": zod.string().nullable(),
   "historical": zod.enum(['yes', 'no']),
   "orderId": zod.number().nullable(),

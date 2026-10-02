@@ -86,6 +86,7 @@ import { hashOwnerPassword } from "../lib/owner-auth";
 import { cancelCompanyInvoice, createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
 import { createHistoricalInvoice, reconcileHistoricalInvoice } from "../lib/historical-company-invoices";
 import { createCompanyInvoice } from "../lib/company-invoices";
+import { createIndividualInvoice, IndividualInvoiceConflictError, IndividualInvoiceValidationError } from "../lib/individual-invoices";
 import {
   AccountingConflictError,
   AccountingNotFoundError,
@@ -2244,6 +2245,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     taxTreatment: invoicesTable.taxTreatment,
     vatRate: invoicesTable.vatRate,
     exhibitionId: invoicesTable.exhibitionId,
+    individual: invoicesTable.individual,
     exhibitionName: exhibitionsTable.name,
     sequenceNumber: invoicesTable.sequenceNumber,
     invoiceNumber: invoicesTable.invoiceNumber,
@@ -2271,7 +2273,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
       query.channel === "companies"
         ? and(isNotNull(invoicesTable.distributorId), isNull(invoicesTable.exhibitionId))
         : query.channel === "online"
-          ? and(isNull(invoicesTable.distributorId), isNull(invoicesTable.exhibitionId), isNotNull(invoicesTable.orderId))
+          ? and(isNull(invoicesTable.distributorId), isNull(invoicesTable.exhibitionId), or(isNotNull(invoicesTable.orderId), eq(invoicesTable.individual, true)))
           : query.channel === "exhibitions" ? isNotNull(invoicesTable.exhibitionId) : undefined,
       search ? or(
         ilike(invoicesTable.invoiceNumber, `%${search}%`),
@@ -2464,6 +2466,28 @@ router.post("/admin/invoices/exhibitions", permit("invoices", "edit"), route(asy
   } catch (error) {
     if (error instanceof DistributorInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
     if (error instanceof DistributorInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
+    throw error;
+  }
+}));
+
+router.post("/admin/invoices/individuals", permit("invoices", "edit"), route(async (req, res) => {
+  const body = parse(Api.AdminCreateIndividualInvoiceBody, req.body, res); if (!body) return;
+  try {
+    const invoice = await createIndividualInvoice({
+      ...body,
+      issueDate: isoDate(body.issueDate),
+      dueDate: body.dueDate ? isoDate(body.dueDate) : undefined,
+      collected: body.collected ? { ...body.collected, paymentDate: isoDate(body.collected.paymentDate) } : undefined,
+    }, res.locals.admin.id);
+    res.status(201).json(Api.AdminCreateIndividualInvoiceResponse.parse({
+      ...invoice,
+      cancelledByName: null,
+      contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
+      vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
+    }));
+  } catch (error) {
+    if (error instanceof IndividualInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
+    if (error instanceof IndividualInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
     throw error;
   }
 }));

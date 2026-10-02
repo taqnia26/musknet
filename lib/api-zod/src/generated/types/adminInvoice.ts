@@ -14,6 +14,8 @@ import type { ReceivablePayment } from './receivablePayment';
 
 export interface AdminInvoice {
   id: number;
+  /** True for a standalone individual invoice; absent on legacy responses means false. */
+  individual?: boolean;
   /** @nullable */
   cancelledAt: Date | null;
   /** @nullable */

@@ -39,6 +39,7 @@ import {
 import { format } from 'date-fns';
 import { hasPermission } from '@/lib/permissions';
 import { CreateCompanyInvoiceDialog } from '@/components/admin/create-company-invoice-dialog';
+import { CreateIndividualInvoiceDialog } from '@/components/admin/create-individual-invoice-dialog';
 import { CreateExhibitionInvoiceDialog } from '@/components/admin/create-exhibition-invoice-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatRiyadhBusinessDate } from '@/lib/riyadh-business-date';
@@ -798,10 +799,11 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{channel === 'online' ? t('فواتير الأفراد', 'Individual Invoices') : t('فواتير الشركات', 'Company Invoices')}</h1>
           <p className="text-muted-foreground mt-1">{channel === 'online'
-            ? t('عرض فواتير الطلبات المدفوعة عبر الموقع الإلكتروني فقط', 'Online order invoices only')
+            ? t('الفواتير المباشرة اليدوية وفواتير طلبات الموقع المدفوعة', 'Manual direct invoices and paid website invoices')
             : t('إدارة فواتير الشركات والموزعين فقط', 'Manage distributor invoices only')}</p>
         </div>
         {channel === 'companies' && hasPermission(currentUser, 'invoices', 'edit') && <CreateCompanyInvoiceDialog />}
+        {channel === 'online' && hasPermission(currentUser, 'invoices', 'edit') && <CreateIndividualInvoiceDialog onCreated={invoice => { setSearch(''); setReceivableStatus('all'); setPrintOnPreviewOpen(false); setPreviewInvoice(invoice); }} />}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">

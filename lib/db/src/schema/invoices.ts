@@ -30,6 +30,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   taxTreatment: text("tax_treatment"),
   vatRate: numeric("vat_rate", { precision: 5, scale: 2 }),
   exhibitionId: integer("exhibition_id").references(() => exhibitionsTable.id, { onDelete: "restrict" }),
+  individual: boolean("individual").notNull().default(false),
   creationKey: text("creation_key"),
   historical: text("historical").notNull().default("no"),
   historicalCreationFingerprint: text("historical_creation_fingerprint"),
@@ -56,7 +57,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   archivedByAdminId: integer("archived_by_admin_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
-  check("invoice_single_channel", sql`(case when ${table.orderId} is not null then 1 else 0 end + case when ${table.distributorId} is not null then 1 else 0 end + case when ${table.exhibitionId} is not null then 1 else 0 end) = 1`),
+  check("invoice_single_channel", sql`(case when ${table.orderId} is not null then 1 else 0 end + case when ${table.distributorId} is not null then 1 else 0 end + case when ${table.exhibitionId} is not null then 1 else 0 end + case when ${table.individual} then 1 else 0 end) = 1`),
   check("invoice_single_contract_source", sql`not (${table.contractId} is not null and ${table.uploadedContractFileId} is not null)`),
   uniqueIndex("invoices_order_id_unique").on(table.orderId),
   uniqueIndex("invoices_sequence_number_unique").on(table.sequenceNumber),

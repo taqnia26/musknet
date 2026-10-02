@@ -61,3 +61,5 @@
 - [Scoped Drizzle provisioning](scoped-drizzle-enums.md) — table filters do not isolate enum/schema diffs; inspect additive dev SQL for feature-only provisioning.
 - [Backup recovery boundaries](backup-recovery-boundaries.md) — preserve external facts and issued-number high-water marks; signed uploads and uncertain commits need separate safeguards.
 - [Invoice cancellation intent](invoice-cancellation-intent.md) — simplified confirmation records consent, not a business reason, and must never become invoice deletion.
+- [Standalone individual invoices](standalone-individual-invoices.md) — the user chose direct invoice issuance, not an order followed by invoicing on payment.
+- [Financial calendar inputs](financial-calendar-inputs.md) — preserve raw date-only inputs; generated date coercion can normalize impossible days before validation.

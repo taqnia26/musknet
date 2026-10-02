@@ -1349,6 +1349,7 @@ paths:
         - name: channel
           in: query
           required: false
+          description: The online channel includes order-based online sales and standalone individual invoices; companies and exhibitions remain separate.
           schema: { type: string, enum: [all, companies, online, exhibitions], default: all }
         - name: receivableStatus
           in: query
@@ -1432,6 +1433,18 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Allocation or stock conflict, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/invoices/individuals:
+    post:
+      operationId: adminCreateIndividualInvoice
+      summary: Issue a standalone individual sales invoice without an order or shipment
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/IndividualInvoiceInput" } } } }
+      responses:
+        "201": { description: Individual invoice, content: { application/json: { schema: { $ref: "#/components/schemas/AdminInvoice" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { description: Product stock or creation key conflict, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/invoices/{id}/pdf/{language}:
     get:
       operationId: adminDownloadInvoicePdf
@@ -4902,6 +4915,7 @@ components:
       required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, originalInvoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt, cancelledAt, cancellationReason, cancelledByAdminId, cancelledByName]
       properties:
         id: { type: number }
+        individual: { type: boolean, default: false, description: "True for a standalone individual invoice; absent on legacy responses means false." }
         cancelledAt: { type: [string, "null"], format: date-time }
         cancellationReason: { type: [string, "null"] }
         cancelledByAdminId: { type: [number, "null"], multipleOf: 1 }
@@ -4951,6 +4965,34 @@ components:
         qrCodeData: { type: string }
         items: { type: array, items: { $ref: "#/components/schemas/AdminInvoiceItem" } }
         createdAt: { type: string, format: date-time }
+    IndividualInvoiceInput:
+      type: object
+      required: [creationKey, buyerName, buyerAddress, buyerTaxNumber, issueDate, items]
+      properties:
+        creationKey: { type: string, minLength: 16, maxLength: 200 }
+        buyerName: { type: string, minLength: 1, maxLength: 250 }
+        buyerAddress: { type: ["string", "null"], maxLength: 1000 }
+        buyerTaxNumber: { type: ["string", "null"], pattern: '^[0-9]{15}$' }
+        issueDate: { type: string, pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' }
+        dueDate: { type: string, pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' }
+        collected:
+          type: object
+          required: [paymentDate, paymentMethod]
+          properties:
+            paymentDate: { type: string, pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' }
+            paymentMethod: { type: string, enum: [cash, bank_transfer] }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: "#/components/schemas/InvoiceSaleItemInput" }
+    InvoiceSaleItemInput:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId: { type: number, multipleOf: 1, minimum: 1 }
+        quantity: { type: number, multipleOf: 1, minimum: 1, maximum: 100000 }
+        unitPrice: { type: number, exclusiveMinimum: 0, maximum: 100000000 }
     AdminInvoiceItem:
       type: object
       required: [id, productId, productName, productNameEn, sku, quantity, unitPrice, subtotal, vatAmount, totalAmount]

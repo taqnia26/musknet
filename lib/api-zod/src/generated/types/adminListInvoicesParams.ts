@@ -11,6 +11,9 @@ import type { AdminSearchParameter } from './adminSearchParameter';
 
 export type AdminListInvoicesParams = {
 search?: AdminSearchParameter;
+/**
+ * The online channel includes order-based online sales and standalone individual invoices; companies and exhibitions remain separate.
+ */
 channel?: AdminListInvoicesChannel;
 receivableStatus?: AdminListInvoicesReceivableStatus;
 };

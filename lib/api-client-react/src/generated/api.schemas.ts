@@ -2608,6 +2608,8 @@ export interface AdminInvoiceItem {
 
 export interface AdminInvoice {
   id: number;
+  /** True for a standalone individual invoice; absent on legacy responses means false. */
+  individual?: boolean;
   /** @nullable */
   cancelledAt: string | null;
   /** @nullable */
@@ -2694,6 +2696,68 @@ export interface AdminInvoice {
   qrCodeData: string;
   items: AdminInvoiceItem[];
   createdAt: string;
+}
+
+export type IndividualInvoiceInputCollectedPaymentMethod = typeof IndividualInvoiceInputCollectedPaymentMethod[keyof typeof IndividualInvoiceInputCollectedPaymentMethod];
+
+
+export const IndividualInvoiceInputCollectedPaymentMethod = {
+  cash: 'cash',
+  bank_transfer: 'bank_transfer',
+} as const;
+
+export type IndividualInvoiceInputCollected = {
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  paymentDate: string;
+  paymentMethod: IndividualInvoiceInputCollectedPaymentMethod;
+};
+
+export interface InvoiceSaleItemInput {
+  /** @minimum 1 */
+  productId: number;
+  /**
+     * @minimum 1
+     * @maximum 100000
+     */
+  quantity: number;
+  /**
+     * @maximum 100000000
+     * @exclusiveMinimum 0
+     */
+  unitPrice: number;
+}
+
+export interface IndividualInvoiceInput {
+  /**
+     * @minLength 16
+     * @maxLength 200
+     */
+  creationKey: string;
+  /**
+     * @minLength 1
+     * @maxLength 250
+     */
+  buyerName: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  buyerAddress: string | null;
+  /**
+     * @nullable
+     * @pattern ^[0-9]{15}$
+     */
+  buyerTaxNumber: string | null;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  issueDate: string;
+  /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
+  dueDate?: string;
+  collected?: IndividualInvoiceInputCollected;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  items: InvoiceSaleItemInput[];
 }
 
 export interface HistoricalInvoiceReview {
@@ -6307,6 +6371,9 @@ search?: string;
 
 export type AdminListInvoicesParams = {
 search?: AdminSearchParameter;
+/**
+ * The online channel includes order-based online sales and standalone individual invoices; companies and exhibitions remain separate.
+ */
 channel?: AdminListInvoicesChannel;
 receivableStatus?: AdminListInvoicesReceivableStatus;
 };
