@@ -4847,7 +4847,13 @@ export const adminCreateOrderBodyItemsItemProductIdMultipleOf = 1;
 export const adminCreateOrderBodyItemsItemQuantityMultipleOf = 1;
 
 
-
+export const adminCreateOrderBodyOrderAddressLabelDefault = `\u0627\u0644\u0645\u0646\u0632\u0644`;
+export const adminCreateOrderBodyOrderAddressCityDefault = ``;
+export const adminCreateOrderBodyOrderAddressDistrictDefault = ``;
+export const adminCreateOrderBodyOrderAddressStreetDefault = ``;
+export const adminCreateOrderBodyOrderAddressBuildingNoDefault = ``;
+export const adminCreateOrderBodyOrderAddressAdditionalInfoDefault = null;
+export const adminCreateOrderBodyOrderAddressIsDefaultDefault = false;
 export const adminCreateOrderBodyShippingCostMin = 0;
 
 export const adminCreateOrderBodyCouponCodeMax = 100;
@@ -4869,17 +4875,17 @@ export const AdminCreateOrderBody = zod.object({
   "quantity": zod.number().min(1).multipleOf(adminCreateOrderBodyItemsItemQuantityMultipleOf)
 })).min(1),
   "orderAddress": zod.object({
-  "label": zod.string(),
-  "city": zod.string(),
+  "label": zod.string().default(adminCreateOrderBodyOrderAddressLabelDefault),
+  "city": zod.string().default(adminCreateOrderBodyOrderAddressCityDefault),
   "country": zod.string().nullish(),
   "nationalAddressShortCode": zod.string().nullish(),
   "postalCode": zod.string().nullish(),
   "additionalNumber": zod.string().nullish(),
-  "district": zod.string(),
-  "street": zod.string(),
-  "buildingNo": zod.string(),
-  "additionalInfo": zod.string().nullable(),
-  "isDefault": zod.boolean()
+  "district": zod.string().default(adminCreateOrderBodyOrderAddressDistrictDefault),
+  "street": zod.string().default(adminCreateOrderBodyOrderAddressStreetDefault),
+  "buildingNo": zod.string().default(adminCreateOrderBodyOrderAddressBuildingNoDefault),
+  "additionalInfo": zod.string().nullish().default(adminCreateOrderBodyOrderAddressAdditionalInfoDefault),
+  "isDefault": zod.boolean().default(adminCreateOrderBodyOrderAddressIsDefaultDefault)
 }),
   "shippingMethod": zod.string().min(1),
   "paymentMethod": zod.enum(['cash', 'bank-transfer', 'moyasar']),
@@ -6932,7 +6938,7 @@ export const AdminListCustomersResponse = zod.array(AdminListCustomersResponseIt
 export const adminCreateCustomerBodyPhoneMin = 8;
 
 export const adminCreateCustomerBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
-
+export const adminCreateCustomerBodyProfileAddressCityDefault = ``;
 
 export const AdminCreateCustomerBody = zod.object({
   "name": zod.string().min(1),
@@ -6940,7 +6946,7 @@ export const AdminCreateCustomerBody = zod.object({
   "email": zod.string().regex(adminCreateCustomerBodyEmailRegExp),
   "profileAddress": zod.object({
   "country": zod.string(),
-  "city": zod.string(),
+  "city": zod.string().default(adminCreateCustomerBodyProfileAddressCityDefault),
   "nationalAddressShortCode": zod.string().nullish(),
   "district": zod.string().nullish(),
   "street": zod.string().nullish(),
@@ -7404,7 +7410,7 @@ export const AdminCreateDistributorBody = zod.object({
   "contactName": zod.string().min(1),
   "email": zod.string().regex(adminCreateDistributorBodyEmailRegExp),
   "phone": zod.string().min(1).regex(adminCreateDistributorBodyPhoneRegExp),
-  "city": zod.string().nullable(),
+  "city": zod.string().nullish(),
   "countryCode": zod.string().regex(adminCreateDistributorBodyCountryCodeRegExp).nullable(),
   "address": zod.string().nullish(),
   "nationalAddressShortCode": zod.string().nullish(),

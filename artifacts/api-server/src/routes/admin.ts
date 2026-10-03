@@ -4321,7 +4321,7 @@ router.post("/admin/distributors", permit("distributors", "edit"), route(async (
     commercialRegistrationNumber: body.commercialRegistrationNumber!.trim(),
     city: location.city, countryCode: location.country,
     address: location.country === "SA"
-      ? [location.district, location.street, location.buildingNo, location.postalCode, location.additionalNumber].join(", ")
+      ? location.additionalInfo || [location.district, location.street, location.buildingNo, location.postalCode, location.additionalNumber].filter(Boolean).join(", ") || null
       : location.additionalInfo,
     nationalAddressShortCode: location.nationalAddressShortCode,
     district: location.district, street: location.street, buildingNo: location.buildingNo,
@@ -4332,6 +4332,20 @@ router.post("/admin/distributors", permit("distributors", "edit"), route(async (
 router.patch("/admin/distributors/:id", permit("distributors", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateDistributorParams, req.params, res);
   const body = parse(Api.AdminUpdateDistributorBody.partial(), req.body, res); if (!params || !body) return;
+  const [previous] = await db.select().from(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, params.id)).limit(1);
+  if (!previous) { res.status(404).json({ error: "Distributor not found" }); return; }
+  const addressKeys = ["countryCode", "city", "address", "nationalAddressShortCode", "district", "street", "buildingNo", "postalCode", "additionalNumber"] as const;
+  if (addressKeys.some((key) => body[key] !== undefined && body[key] !== previous[key])) {
+    const next = { ...previous, ...body };
+    try {
+      normalizeIntakeAddress({
+        country: next.countryCode ?? "", city: next.city,
+        nationalAddressShortCode: next.nationalAddressShortCode, district: next.district,
+        street: next.street, buildingNo: next.buildingNo, postalCode: next.postalCode,
+        additionalNumber: next.additionalNumber, additionalInfo: next.address,
+      });
+    } catch (error) { res.status(400).json({ error: (error as Error).message }); return; }
+  }
   const [row] = await db.update(wholesaleDistributorsTable).set({
     ...body, ...(body.countryCode !== undefined ? { countryCode: body.countryCode?.toUpperCase() ?? null } : {}),
   }).where(eq(wholesaleDistributorsTable.id, params.id)).returning();

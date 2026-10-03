@@ -5,7 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminOrderAddress } from './adminOrderAddress';
+import type { AdminOrderAddressInput } from './adminOrderAddressInput';
 import type { AdminOrderInputOrderSource } from './adminOrderInputOrderSource';
 import type { AdminOrderInputPaymentMethod } from './adminOrderInputPaymentMethod';
 import type { AdminOrderLineInput } from './adminOrderLineInput';
@@ -19,7 +19,7 @@ export interface AdminOrderInput {
   fulfillmentMethod?: OrderFulfillmentMethod;
   /** @minItems 1 */
   items: AdminOrderLineInput[];
-  orderAddress: AdminOrderAddress;
+  orderAddress: AdminOrderAddressInput;
   /** @minLength 1 */
   shippingMethod: string;
   paymentMethod: AdminOrderInputPaymentMethod;

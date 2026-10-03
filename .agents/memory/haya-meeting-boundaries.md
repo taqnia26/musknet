@@ -1,6 +1,6 @@
 ---
 name: Meeting outcome scope boundaries
-description: Confirmed boundaries for product fields, phone invoices, returns, deferred payments, and customer cart links.
+description: Confirmed boundaries for product fields, phone invoices, returns, deferred payments, cart links, and Saudi address intake.
 ---
 
 Remove target quantity, reorder threshold, and opening quantity only from the product add/edit screen. Preserve stored inventory and thresholds, and keep compare-at price. This item must not change invoice screens or templates.
@@ -68,3 +68,9 @@ The customer link destination is «سلة العميل داخل المتجر», 
 **Why:** The user explicitly chose the cart option after being told it is not payment of an existing administrative order.
 
 **How to apply:** Open the authenticated customer's current cart. Do not copy an existing administrative or phone order into it, create a duplicate order, or treat opening the link as approval to activate payments.
+
+Inside Saudi Arabia, request only the national address short code on administrative/phone orders and individual/distributor profile intake. Preserve existing hidden address details and international requirements; this does not extend to customer checkout or change the external carrier contract.
+
+**Why:** The user wrote «بالسعودية فقط العنوان الوطني المخصر» and «كلهم» for the three listed administrative screens, overriding the narrower screen selection.
+
+**How to apply:** Do not invent a city or clear stored geography just because its controls are hidden. Without a recorded city, require explicit delivery charges rather than silently choosing the Riyadh/other-city tariff. Preserve the fixed pickup fee and charges on existing orders.

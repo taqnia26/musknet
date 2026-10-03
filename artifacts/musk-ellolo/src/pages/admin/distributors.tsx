@@ -199,7 +199,11 @@ export default function AdminDistributors() {
       } : {}),
     };
     if (editingId) {
-      updateMutation.mutate({ id: editingId, data: payload }, {
+      const updatePayload: Partial<typeof payload> = { ...payload };
+      for (const key of ['city', 'address', 'district', 'street', 'buildingNo', 'postalCode', 'additionalNumber', 'nationalAddressShortCode', 'countryCode'] as const) {
+        if (!form.formState.dirtyFields[key]) delete updatePayload[key];
+      }
+      updateMutation.mutate({ id: editingId, data: updatePayload }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getAdminListDistributorsQueryKey() });
           setIsDialogOpen(false);
@@ -310,7 +314,11 @@ export default function AdminDistributors() {
                       <select
                         className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                         value={field.value || ''}
-                        onChange={field.onChange}
+                        onChange={(event) => {
+                          field.onChange(event);
+                          for (const key of ['city', 'address', 'nationalAddressShortCode', 'district', 'street', 'buildingNo', 'postalCode', 'additionalNumber'] as const)
+                            form.setValue(key, '', { shouldDirty: true, shouldValidate: true });
+                        }}
                       >
                         <option value="">{t('غير محددة', 'Unspecified')}</option>
                         <optgroup label={t('دول مجلس التعاون الخليجي', 'Gulf Cooperation Council')}>
@@ -335,16 +343,11 @@ export default function AdminDistributors() {
                   )} />
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField control={form.control} name="city" render={({ field }) => (
-                    <FormItem><FormLabel>{t('المدينة', 'City')}</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
-                  )} />
                   <FormField control={form.control} name="taxNumber" render={({ field }) => (
                     <FormItem><FormLabel>{t('الرقم الضريبي', 'Tax Number')}</FormLabel><FormControl><Input {...field} value={field.value || ''} dir="ltr" /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
-                {editingId ? <FormField control={form.control} name="address" render={({ field }) => (
-                  <FormItem><FormLabel>{t('العنوان', 'Address')}</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
-                )} /> : <IntakeAddressFields id="distributor-address" value={{
+                <IntakeAddressFields id="distributor-address" hideCountryControls={Boolean(editingId)} value={{
                   country: form.watch('countryCode'), city: form.watch('city') ?? '',
                   nationalAddressShortCode: form.watch('nationalAddressShortCode') ?? '',
                   district: form.watch('district') ?? '', street: form.watch('street') ?? '',
@@ -352,14 +355,14 @@ export default function AdminDistributors() {
                   additionalNumber: form.watch('additionalNumber') ?? '', additionalInfo: form.watch('address') ?? '',
                 }} onChange={(key: IntakeAddressField, next) => form.setValue(
                   key === 'country' ? 'countryCode' : key === 'additionalInfo' ? 'address' : key, next,
-                  { shouldValidate: true },
+                  { shouldValidate: true, shouldDirty: true },
                 )} errors={{
                   country: form.formState.errors.countryCode?.message, city: form.formState.errors.city?.message,
                   nationalAddressShortCode: form.formState.errors.nationalAddressShortCode?.message,
                   district: form.formState.errors.district?.message, street: form.formState.errors.street?.message,
                   buildingNo: form.formState.errors.buildingNo?.message, postalCode: form.formState.errors.postalCode?.message,
                   additionalNumber: form.formState.errors.additionalNumber?.message, additionalInfo: form.formState.errors.address?.message,
-                }} />}
+                }} />
                 {editingId && form.watch('nationalAddressShortCode') && <p className="rounded-md border p-3 text-sm">
                   {t('الرمز المختصر للعنوان الوطني', 'National address short code')}: {form.watch('nationalAddressShortCode')}
                   {' — '}{[form.watch('district'), form.watch('street'), form.watch('buildingNo'),

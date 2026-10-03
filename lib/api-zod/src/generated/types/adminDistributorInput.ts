@@ -19,7 +19,7 @@ export interface AdminDistributorInput {
      */
   phone: string;
   /** @nullable */
-  city: string | null;
+  city?: string | null;
   /**
      * @nullable
      * @pattern ^[A-Za-z]{2}$

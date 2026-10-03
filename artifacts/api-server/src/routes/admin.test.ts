@@ -400,8 +400,7 @@ describe.sequential("admin route authorization", () => {
       { ...payload, phone: "9665ABC123" },
       { ...payload, email: "invalid" },
       { ...payload, email: "" },
-      { ...payload, profileAddress: { ...intakeSaudi, postalCode: "" } },
-      { ...payload, profileAddress: { ...intakeSaudi, additionalInfo: "mixed branch" } },
+      { ...payload, profileAddress: { ...intakeSaudi, nationalAddressShortCode: "" } },
       { ...payload, profileAddress: { ...intakeInternational, district: "mixed" } },
       { ...payload, profileAddress: { ...intakeInternational, country: "XX" } },
       { ...payload, phoneVerified: true },
@@ -462,8 +461,8 @@ describe.sequential("admin route authorization", () => {
     await request(app).post("/api/admin/distributors").send(saudi).expect(401);
     await request(app).post("/api/admin/distributors").set("Authorization", `Bearer ${viewerToken}`).send(saudi).expect(403);
     for (const invalid of [
-      { ...saudi, postalCode: "" }, { ...saudi, email: "not-an-email" },
-      { ...saudi, taxNumber: "" }, { ...saudi, address: "mixed" },
+      { ...saudi, nationalAddressShortCode: "" }, { ...saudi, email: "not-an-email" },
+      { ...saudi, taxNumber: "" },
       { ...international, nationalAddressShortCode: "RYDH1234" }, { ...international, address: "" },
     ]) await request(app).post("/api/admin/distributors").set(auth).send(invalid).expect(400);
     for (const payload of [saudi, international]) {
@@ -480,6 +479,35 @@ describe.sequential("admin route authorization", () => {
         await request(app).patch(`/api/admin/distributors/${result.body.id}`).set(auth)
           .send({ phone: "+966 50 123 4567" }).expect(200);
       } finally { await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, result.body.id)); }
+    }
+  });
+
+  it("creates Saudi customer and distributor profiles with only a short code, retaining legacy details on edit", async () => {
+    const auth = { Authorization: `Bearer ${superToken}` };
+    const created = await request(app).post("/api/admin/customers").set(auth).send({
+      name: "Short address customer", phone: `9665${String(Date.now()).slice(-8)}`,
+      email: "short-address@example.com", profileAddress: { country: "SA", nationalAddressShortCode: "RYDH1234" },
+    }).expect(201);
+    try {
+      expect(created.body.profileAddress).toMatchObject({ city: "", nationalAddressShortCode: "RYDH1234", district: "", street: "", buildingNo: "", postalCode: null, additionalNumber: null });
+      const read = await request(app).get(`/api/admin/customers/${created.body.id}`).set(auth).expect(200);
+      expect(read.body.profileAddress).toMatchObject(created.body.profileAddress);
+    } finally { await db.delete(customersTable).where(eq(customersTable.id, created.body.id)); }
+    const company = { companyName: "Short address company", contactName: "Contact", phone: "966501234567",
+      email: "short-company@example.com", taxNumber: "300012345678901", commercialRegistrationNumber: "1010123456",
+      countryCode: "SA", nationalAddressShortCode: "RYDH1234" };
+    const short = await request(app).post("/api/admin/distributors").set(auth).send(company).expect(201);
+    const legacy = await request(app).post("/api/admin/distributors").set(auth).send({ ...company, ...intakeSaudi }).expect(201);
+    try {
+      expect(short.body).toMatchObject({ city: "", address: null, nationalAddressShortCode: "RYDH1234", postalCode: null });
+      await request(app).patch(`/api/admin/distributors/${short.body.id}`).set(auth).send({ nationalAddressShortCode: "" }).expect(400);
+      const changed = await request(app).patch(`/api/admin/distributors/${legacy.body.id}`).set(auth).send({ companyName: "Updated company", nationalAddressShortCode: "JEDH5678" }).expect(200);
+      expect(changed.body).toMatchObject({ city: intakeSaudi.city, district: intakeSaudi.district, street: intakeSaudi.street,
+        buildingNo: intakeSaudi.buildingNo, postalCode: intakeSaudi.postalCode, additionalNumber: intakeSaudi.additionalNumber,
+        nationalAddressShortCode: "JEDH5678" });
+      expect(changed.body.address).toBe(legacy.body.address);
+    } finally {
+      for (const id of [short.body.id, legacy.body.id]) await db.delete(wholesaleDistributorsTable).where(eq(wholesaleDistributorsTable.id, id));
     }
   });
 
@@ -826,6 +854,20 @@ describe.sequential("admin route authorization", () => {
       });
       const old = await request(app).get(`${url}/${orderId}`).set(auth).expect(200);
       expect(old.body.orderAddress).toMatchObject({ country: null, nationalAddressShortCode: null, district: "Olaya" });
+      const shortAddress = { country: "SA", nationalAddressShortCode: "RYDH1234" };
+      const shortInput = { userId: customerId, items: [{ productId, quantity: 1 }], orderAddress: shortAddress,
+        shippingMethod: "admin-standard", paymentMethod: "cash", orderSource: "phone", fulfillmentMethod: "delivery" };
+      await request(app).post(url).set(auth).send(shortInput).expect(400);
+      const shortOrder = await request(app).post(url).set(auth).send({ ...shortInput, shippingCost: 27 }).expect(201);
+      created.push(shortOrder.body.id);
+      expect(shortOrder.body).toMatchObject({ shippingCost: 27, total: 127, orderSource: "phone" });
+      expect((await request(app).get(`${url}/${shortOrder.body.id}`).set(auth).expect(200)).body.orderAddress)
+        .toMatchObject({ city: "", nationalAddressShortCode: "RYDH1234", district: "", street: "", buildingNo: "" });
+      expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, shortOrder.body.id))).toHaveLength(0);
+      const shortPickup = await request(app).post(url).set(auth).send({ ...shortInput, fulfillmentMethod: "pickup" }).expect(201);
+      created.push(shortPickup.body.id);
+      expect(shortPickup.body).toMatchObject({ shippingCost: 25, total: 125 });
+      expect(await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, shortPickup.body.id))).toHaveLength(0);
     } finally {
       for (const id of created) {
         await db.delete(ordersTable).where(eq(ordersTable.id, id));

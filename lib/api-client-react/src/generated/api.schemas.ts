@@ -2655,9 +2655,9 @@ export const AdminOrderInputPaymentMethod = {
   moyasar: 'moyasar',
 } as const;
 
-export interface AdminOrderAddress {
-  label: string;
-  city: string;
+export interface AdminOrderAddressInput {
+  label?: string;
+  city?: string;
   /** @nullable */
   country?: string | null;
   /** @nullable */
@@ -2666,12 +2666,12 @@ export interface AdminOrderAddress {
   postalCode?: string | null;
   /** @nullable */
   additionalNumber?: string | null;
-  district: string;
-  street: string;
-  buildingNo: string;
+  district?: string;
+  street?: string;
+  buildingNo?: string;
   /** @nullable */
-  additionalInfo: string | null;
-  isDefault: boolean;
+  additionalInfo?: string | null;
+  isDefault?: boolean;
 }
 
 export interface AdminOrderInput {
@@ -2681,7 +2681,7 @@ export interface AdminOrderInput {
   fulfillmentMethod?: OrderFulfillmentMethod;
   /** @minItems 1 */
   items: AdminOrderLineInput[];
-  orderAddress: AdminOrderAddress;
+  orderAddress: AdminOrderAddressInput;
   /** @minLength 1 */
   shippingMethod: string;
   paymentMethod: AdminOrderInputPaymentMethod;
@@ -3641,6 +3641,25 @@ export interface ReceivablePaymentInput {
   reference?: string | null;
 }
 
+export interface AdminOrderAddress {
+  label: string;
+  city: string;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  nationalAddressShortCode?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  district: string;
+  street: string;
+  buildingNo: string;
+  /** @nullable */
+  additionalInfo: string | null;
+  isDefault: boolean;
+}
+
 export interface AdminOrderCustomer {
   name: string;
   phone: string;
@@ -4432,7 +4451,7 @@ export interface AdminCustomer {
 
 export interface AdminProfileAddressInput {
   country: string;
-  city: string;
+  city?: string;
   /** @nullable */
   nationalAddressShortCode?: string | null;
   /** @nullable */
@@ -4814,7 +4833,7 @@ export interface AdminDistributorInput {
      */
   phone: string;
   /** @nullable */
-  city: string | null;
+  city?: string | null;
   /**
      * @nullable
      * @pattern ^[A-Za-z]{2}$

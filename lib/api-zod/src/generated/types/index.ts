@@ -107,6 +107,7 @@ export * from './adminListSallaInvoicesParams';
 export * from './adminLoginInput';
 export * from './adminOrder';
 export * from './adminOrderAddress';
+export * from './adminOrderAddressInput';
 export * from './adminOrderCoupon';
 export * from './adminOrderCouponDiscountType';
 export * from './adminOrderCustomer';
