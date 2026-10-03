@@ -86,3 +86,9 @@ Order documents include a non-tax order summary before and after invoicing, and 
 **Why:** The user chose «ملخص الطلب والفاتورة عند صدورها» rather than restricting all documents to the issued invoice.
 
 **How to apply:** Label the summary clearly as not a tax invoice or payment receipt. Printing and downloading must never issue an invoice, collect payment, or advance the order.
+
+The requested order editor covers all editable order fields, not only status changes.
+
+**Why:** The user specified «السماح بالتعديل يكون على كل البنود افتحلي التعديل فيها».
+
+**How to apply:** Include products, quantities, prices, discounts, fulfillment/address and notes in the editor. Preserve existing issued-document, collection, shipping, identity, tax and audit protections; this instruction does not authorize silently rewriting posted financial history or linked customer accounts.
