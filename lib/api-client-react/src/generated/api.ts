@@ -145,6 +145,7 @@ import type {
   CouponLink,
   CouponResult,
   CouponValidation,
+  CreateOrder503,
   CreditLimitApprovalInput,
   Customer,
   DistributorCatalogSetting,
@@ -3207,7 +3208,7 @@ export const createOrder = async (orderInput: OrderInput, options?: Parameters<t
 
 
 
-export const getCreateOrderMutationOptions = <TError = ErrorType<BadRequestResponse>,
+export const getCreateOrderMutationOptions = <TError = ErrorType<BadRequestResponse | CreateOrder503>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrder>>, TError,{data: BodyType<OrderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createOrder>>, TError,{data: BodyType<OrderInput>}, TContext> => {
 
@@ -3236,12 +3237,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateOrderMutationResult = NonNullable<Awaited<ReturnType<typeof createOrder>>>
     export type CreateOrderMutationBody = BodyType<OrderInput>
-    export type CreateOrderMutationError = ErrorType<BadRequestResponse>
+    export type CreateOrderMutationError = ErrorType<BadRequestResponse | CreateOrder503>
 
     /**
  * @summary Create an order from the current cart
  */
-export const useCreateOrder = <TError = ErrorType<BadRequestResponse>,
+export const useCreateOrder = <TError = ErrorType<BadRequestResponse | CreateOrder503>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrder>>, TError,{data: BodyType<OrderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createOrder>>,

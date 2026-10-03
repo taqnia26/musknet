@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { preparedCheckoutPaymentMethods } from "../lib/prepared-payment-methods";
 import {
   AddCartItemBody,
   AddCartItemResponse,
@@ -320,6 +321,10 @@ router.post("/orders", asyncRoute(async (req, res) => {
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (!preparedCheckoutPaymentMethods.some((method) => method.id === parsed.data.paymentMethod && method.available)) {
+    res.status(503).json({ error: "خانات طرق الدفع مجهزة فقط؛ إتمام الشراء غير مفعّل حتى استكمال الربط" });
     return;
   }
   const order = await createOrderForUser(user.id, {

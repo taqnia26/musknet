@@ -2116,6 +2116,9 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
   if (body.sendPaymentLink && (!process.env.MOYASAR_SECRET_KEY || !process.env.MOYASAR_CALLBACK_URL)) {
     res.status(503).json({ error: "Moyasar payment links are not configured" }); return;
   }
+  if (body.paymentMethod === "moyasar") {
+    res.status(503).json({ error: "خانات الدفع الإلكتروني مجهزة فقط؛ مويسر لم يُفعّل بعد" }); return;
+  }
   const suppliedCountry = body.orderAddress.country?.trim() || null;
   const country = suppliedCountry?.toUpperCase() ?? null;
   const domestic = country === null || country === "SA";

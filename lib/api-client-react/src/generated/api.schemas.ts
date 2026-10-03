@@ -1089,9 +1089,11 @@ export type PaymentMethodId = typeof PaymentMethodId[keyof typeof PaymentMethodI
 
 
 export const PaymentMethodId = {
-  moyasar: 'moyasar',
+  apple_pay: 'apple_pay',
   tabby: 'tabby',
   tamara: 'tamara',
+  'bank-transfer': 'bank-transfer',
+  cash: 'cash',
 } as const;
 
 export interface PaymentMethod {
@@ -1124,8 +1126,11 @@ export type OrderInputPaymentMethod = typeof OrderInputPaymentMethod[keyof typeo
 
 export const OrderInputPaymentMethod = {
   moyasar: 'moyasar',
+  apple_pay: 'apple_pay',
   tabby: 'tabby',
   tamara: 'tamara',
+  'bank-transfer': 'bank-transfer',
+  cash: 'cash',
 } as const;
 
 export interface AddressInput {
@@ -6865,6 +6870,10 @@ export const ListProductsSort = {
   price_desc: 'price_desc',
   newest: 'newest',
 } as const;
+
+export type CreateOrder503 = {
+  error: string;
+};
 
 export type AdminListContractsParams = {
 search?: AdminSearchParameter;

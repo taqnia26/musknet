@@ -1,6 +1,6 @@
 ---
 name: Meeting outcome scope boundaries
-description: Confirmed distinction between product-field removal, new phone orders, and existing direct invoices.
+description: Confirmed boundaries for product fields, phone invoices, returns, and deferred payment activation.
 ---
 
 Remove target quantity, reorder threshold, and opening quantity only from the product add/edit screen. Preserve stored inventory and thresholds, and keep compare-at price. This item must not change invoice screens or templates.
@@ -56,3 +56,9 @@ The approved new-payment list is «ابل باي وتابي وتمارا وتح�
 **Why:** The user's explicit comment listed all five, overriding the same form's narrower bank-transfer-and-Apple-Pay selection.
 
 **How to apply:** Preserve historical payment identifiers and records. The list is a product requirement, not proof of provider activation or authorization to create live payments.
+
+Payment provider accounts are not activated. The user's scope is «جهز الخانات بس لحد مانربط مع ميسر».
+
+**Why:** The user explicitly deferred provider connection and requested fields only.
+
+**How to apply:** Do not request credentials or enable live payment as part of preparing these fields. Adding credentials alone must not activate checkout; provider setup and verification require a separate approved step.

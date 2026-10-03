@@ -1,4 +1,4 @@
-import { getGetCurrentUserQueryKey, useGetCart, useGetCheckoutQuote, useCreateOrder, useGetCurrentUser, useValidateCoupon } from '@workspace/api-client-react';
+import { getGetCurrentUserQueryKey, useGetCart, useGetCheckoutQuote, useCreateOrder, useGetCurrentUser, useValidateCoupon, type PaymentMethod } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ export default function Checkout() {
   const [couponCode, setCouponCode] = useState('');
   const [activeCoupon, setActiveCoupon] = useState<string | null>(null);
   const [shippingMethod, setShippingMethod] = useState<'regular' | 'refrigerated'>('regular');
-  const [paymentMethod, setPaymentMethod] = useState<'moyasar' | 'tabby' | 'tamara'>('moyasar');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod['id'] | null>(null);
 
   const validateCoupon = useValidateCoupon();
   const createOrder = useCreateOrder();
@@ -78,6 +78,18 @@ export default function Checkout() {
     && quoteVariables?.data.couponCode === activeCoupon
     && quote?.subtotal === cart?.subtotal
     && !isLoadingQuote;
+  const selectedPaymentAvailable = paymentMethod !== null
+    && Boolean(quote?.paymentMethods.some(method => method.id === paymentMethod && method.available));
+  useEffect(() => {
+    if (quote && !selectedPaymentAvailable) setPaymentMethod(null);
+  }, [quote, selectedPaymentAvailable]);
+  const paymentLabel = (method: PaymentMethod) => {
+    if (method.id === 'tabby') return t('تابي', 'Tabby');
+    if (method.id === 'tamara') return t('تمارا', 'Tamara');
+    if (method.id === 'bank-transfer') return t('التحويل البنكي', 'Bank transfer');
+    if (method.id === 'cash') return t('الدفع عند الاستلام', 'Cash on delivery');
+    return 'Apple Pay';
+  };
 
   useEffect(() => {
     if (!isLoadingCart && !isLoadingUser && isUserError && cart && cart.items.length > 0) {
@@ -107,7 +119,7 @@ export default function Checkout() {
   };
 
   const onSubmit = (data: AddressFormValues) => {
-    if (!quote || !quoteIsCurrent) return;
+    if (!quote || !quoteIsCurrent || !paymentMethod || !selectedPaymentAvailable) return;
     
     createOrder.mutate({
       data: {
@@ -222,13 +234,14 @@ export default function Checkout() {
                     {t('طريقة الدفع', 'Payment Method')}
                   </h2>
                   <div className="space-y-3">
+                    <p role="status" data-testid="prepared-checkout-payments" className="text-sm text-muted-foreground">{t('خانات طرق الدفع مجهزة فقط حالياً. إتمام الشراء غير مفعّل حتى استكمال الربط.', 'Payment options are prepared only. Checkout is not enabled until setup is complete.')}</p>
                     {quote?.paymentMethods?.map(method => (
                       <label key={method.id} className={`flex min-w-0 items-center justify-between gap-3 rounded-xl border p-4 cursor-pointer transition-colors ${!method.available ? 'opacity-50 cursor-not-allowed' : ''} ${paymentMethod === method.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}>
                         <div className="flex min-w-0 items-center gap-3">
-                          <input type="radio" name="paymentMethod" value={method.id} checked={paymentMethod === method.id} onChange={(e) => setPaymentMethod(e.target.value as any)} disabled={!method.available} className="w-4 h-4 text-primary" />
+                          <input type="radio" name="paymentMethod" value={method.id} checked={paymentMethod === method.id} onChange={() => { if (method.available) setPaymentMethod(method.id); }} disabled={!method.available} className="w-4 h-4 text-primary" />
                           <div>
-                            <p className="font-bold text-sm">{method.name}</p>
-                            {method.description && <p className="break-words text-xs text-muted-foreground">{method.description}</p>}
+                            <p className="font-bold text-sm">{paymentLabel(method)}</p>
+                            <p className="break-words text-xs text-muted-foreground">{t('خانة مجهزة — غير مفعّلة حالياً', 'Prepared option — not enabled yet')}</p>
                           </div>
                         </div>
                       </label>
@@ -236,7 +249,7 @@ export default function Checkout() {
                   </div>
                 </section>
 
-                <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-full" disabled={createOrder.isPending || !quoteIsCurrent}>
+                <Button type="submit" size="lg" className="w-full h-14 text-lg rounded-full" disabled={createOrder.isPending || !quoteIsCurrent || !selectedPaymentAvailable}>
                   {createOrder.isPending ? t('جاري التنفيذ...', 'Processing...') : t('تأكيد الطلب والدفع', 'Confirm Order & Pay')}
                 </Button>
               </form>

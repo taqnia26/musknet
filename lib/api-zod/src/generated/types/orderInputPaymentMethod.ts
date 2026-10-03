@@ -11,6 +11,9 @@ export type OrderInputPaymentMethod = typeof OrderInputPaymentMethod[keyof typeo
 
 export const OrderInputPaymentMethod = {
   moyasar: 'moyasar',
+  apple_pay: 'apple_pay',
   tabby: 'tabby',
   tamara: 'tamara',
+  'bank-transfer': 'bank-transfer',
+  cash: 'cash',
 } as const;

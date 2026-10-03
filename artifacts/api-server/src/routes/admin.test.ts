@@ -854,6 +854,7 @@ describe.sequential("admin route authorization", () => {
     try {
       await db.update(productsTable).set({ price: 200 }).where(eq(productsTable.id, productId));
       const quoteUrl = "/api/admin/orders/discount-quote";
+      await request(app).post("/api/admin/orders").set(auth).send({ ...payload, paymentMethod: "moyasar" }).expect(503);
       await request(app).post(quoteUrl).send({ productSubtotal: 200 }).expect(401);
       await request(app).post(quoteUrl).set(shopper).send({ productSubtotal: 200 }).expect(401);
       expect((await request(app).post(quoteUrl).set(auth).send({ productSubtotal: 200, couponCode: coupon.code, manualDiscountPercent: 10 }).expect(200)).body)
@@ -865,7 +866,7 @@ describe.sequential("admin route authorization", () => {
       await request(app).post("/api/checkout/quote").set(shopper).send({ discountOverride: payload.discountOverride }).expect(400);
       await request(app).post("/api/orders").set(shopper).send({ discountOverride: payload.discountOverride }).expect(400);
       for (const orderSource of ["admin", "phone"]) {
-        const response = await request(app).post("/api/admin/orders").set(auth).send({ ...payload, orderSource }).expect(201);
+        const response = await request(app).post("/api/admin/orders").set(auth).send({ ...payload, orderSource, paymentMethod: orderSource === "admin" ? "bank-transfer" : "cash" }).expect(201);
         ids.push(response.body.id);
         expect(response.body).toMatchObject({
           subtotal: 200, couponDiscountAmount: 20, manualDiscountPercent: 10, manualDiscountAmount: 18,

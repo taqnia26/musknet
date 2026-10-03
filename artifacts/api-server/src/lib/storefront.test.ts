@@ -248,6 +248,25 @@ describe.sequential("persistent storefront carts and orders", () => {
     expect(shipment).toMatchObject({ serviceMethod: method, collectedCost: price });
   });
 
+  it("shows five prepared payment fields and prevents unconfigured checkout without consuming the cart", async () => {
+    const owner = await createUser("prepared-payments");
+    await addToCart(owner.id, 1, 1);
+    const authorization = `Bearer ${issueToken(owner.id)}`;
+    const quote = (await request(app).post("/api/checkout/quote").set("Authorization", authorization)
+      .send({ city: "Riyadh", shippingMethod: "regular" }).expect(200)).body;
+    expect(quote.paymentMethods.map((method: { id: string }) => method.id))
+      .toEqual(["apple_pay", "tabby", "tamara", "bank-transfer", "cash"]);
+    expect(quote.paymentMethods.every((method: { available: boolean }) => !method.available)).toBe(true);
+    const address = { label: "Home", city: "Riyadh", district: "Center", street: "Main", buildingNo: "1", isDefault: false };
+    const cartBefore = await getCartForUser(owner.id);
+    for (const paymentMethod of ["apple_pay", "tabby", "tamara", "bank-transfer", "cash", "moyasar"]) {
+      await request(app).post("/api/orders").set("Authorization", authorization)
+        .send({ address, shippingMethod: "regular", paymentMethod }).expect(503);
+    }
+    expect(await db.select().from(ordersTable).where(eq(ordersTable.userId, owner.id))).toHaveLength(0);
+    expect(await getCartForUser(owner.id)).toEqual(cartBefore);
+  });
+
   it("rejects unsupported shipping before consuming a cart", async () => {
     const owner = await createUser("invalid");
     await addToCart(owner.id, 1, 1);

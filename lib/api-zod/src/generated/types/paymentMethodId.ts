@@ -10,7 +10,9 @@ export type PaymentMethodId = typeof PaymentMethodId[keyof typeof PaymentMethodI
 
 
 export const PaymentMethodId = {
-  moyasar: 'moyasar',
+  apple_pay: 'apple_pay',
   tabby: 'tabby',
   tamara: 'tamara',
+  'bank-transfer': 'bank-transfer',
+  cash: 'cash',
 } as const;

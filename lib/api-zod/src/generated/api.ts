@@ -1427,7 +1427,7 @@ export const GetCheckoutQuoteResponse = zod.object({
   "estimatedDays": zod.string()
 })),
   "paymentMethods": zod.array(zod.object({
-  "id": zod.enum(['moyasar', 'tabby', 'tamara']),
+  "id": zod.enum(['apple_pay', 'tabby', 'tamara', 'bank-transfer', 'cash']),
   "name": zod.string(),
   "description": zod.string(),
   "available": zod.boolean()
@@ -1475,7 +1475,7 @@ export const CreateOrderBody = zod.object({
   "isDefault": zod.boolean().optional()
 }),
   "shippingMethod": zod.enum(['refrigerated', 'regular']),
-  "paymentMethod": zod.enum(['moyasar', 'tabby', 'tamara']),
+  "paymentMethod": zod.enum(['moyasar', 'apple_pay', 'tabby', 'tamara', 'bank-transfer', 'cash']),
   "couponCode": zod.string().nullish()
 })
 

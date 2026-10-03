@@ -541,6 +541,15 @@ paths:
                 $ref: "#/components/schemas/Order"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Payment fields are prepared only; checkout has not been activated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error: { type: string }
 
   /payments/moyasar/callback:
     post:
@@ -4104,7 +4113,7 @@ components:
       properties:
         id:
           type: string
-          enum: [moyasar, tabby, tamara]
+          enum: [apple_pay, tabby, tamara, bank-transfer, cash]
         name:
           type: string
         description:
@@ -4122,7 +4131,7 @@ components:
           enum: [refrigerated, regular]
         paymentMethod:
           type: string
-          enum: [moyasar, tabby, tamara]
+          enum: [moyasar, apple_pay, tabby, tamara, bank-transfer, cash]
         couponCode:
           type: ["string", "null"]
     Order:

@@ -1,4 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { preparedCheckoutPaymentMethods } from "./prepared-payment-methods";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   addressesTable,
@@ -805,11 +806,7 @@ export async function getQuote(userId: number, _city: string, shippingMethod: st
     tax,
     total: Math.round((net + shippingCost) * 100) / 100,
     shippingMethods: individualShippingMethods,
-    paymentMethods: [
-      { id: "moyasar", name: "مدى، فيزا، Apple Pay", description: "دفع آمن عبر Moyasar", available: true },
-      { id: "tabby", name: "تابي", description: "قسّمها على 4 دفعات", available: true },
-      { id: "tamara", name: "تمارا", description: "ادفع لاحقاً بكل سهولة", available: true },
-    ],
+    paymentMethods: preparedCheckoutPaymentMethods.map((method) => ({ ...method })),
   };
 }
 

@@ -415,16 +415,20 @@ export function CreateOrderDialog() {
             <div className="space-y-2">
               <Label>{t('طريقة الدفع', 'Payment method')}</Label>
               <Select value={paymentMethod} onValueChange={(value) => {
-                setPaymentMethod(value as AdminOrderInputPaymentMethod);
-                if (value !== 'moyasar') setSendPaymentLink(false);
+                if (value !== 'cash' && value !== 'bank-transfer') return;
+                setPaymentMethod(value);
+                setSendPaymentLink(false);
               }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cash">{t('نقدي', 'Cash')}</SelectItem>
+                  <SelectItem value="cash">{t('الدفع عند الاستلام', 'Cash on delivery')}</SelectItem>
                   <SelectItem value="bank-transfer">{t('تحويل بنكي', 'Bank transfer')}</SelectItem>
-                  <SelectItem value="moyasar">{t('ميسر', 'Moyasar')}</SelectItem>
+                  <SelectItem value="apple_pay" disabled>{t('Apple Pay — غير مفعّل', 'Apple Pay — not enabled')}</SelectItem>
+                  <SelectItem value="tabby" disabled>{t('تابي — غير مفعّل', 'Tabby — not enabled')}</SelectItem>
+                  <SelectItem value="tamara" disabled>{t('تمارا — غير مفعّل', 'Tamara — not enabled')}</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground" data-testid="prepared-order-payments">{t('خانات الدفع الإلكتروني مجهزة فقط حتى الربط. إنشاء الطلب لا يعني تسجيل تحصيل.', 'Online payment fields are prepared only until setup. Creating an order does not record a collection.')}</p>
             </div>
           </div>
           {paymentMethod === 'moyasar' && orderSource !== 'phone' && (
