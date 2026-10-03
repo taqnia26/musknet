@@ -258,7 +258,7 @@ export default function AdminOrders() {
                         <Badge variant="outline" data-testid={`badge-phone-order-${order.id}`}>{t('طلب هاتفي', 'Phone order')}</Badge>
                       )}
                       {['pending_review', 'pending_payment'].includes(order.status as string) && (
-                        <Badge variant="secondary" data-testid={`badge-new-order-${order.id}`}>{t('جديد', 'New')}</Badge>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800" data-testid={`badge-new-order-${order.id}`}>{t('جديد', 'New')}</Badge>
                       )}
                     </div>
                   </TableCell>
