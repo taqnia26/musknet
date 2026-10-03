@@ -8,10 +8,12 @@ const sa = { country: 'SA', city: 'Riyadh', nationalAddressShortCode: 'RYDH1234'
 const international = { ...emptyIntakeAddress(), country: 'AE', city: 'Dubai', additionalInfo: 'Office 5, Marina Tower' };
 
 describe('manual intake address controls', () => {
-  it('requires each Saudi field and clears international details when switching country', () => {
+  it('requires only the Saudi short code and retains existing hidden fields', () => {
     expect(intakeAddressSchema.safeParse(sa).success).toBe(true);
-    for (const key of ['city', 'nationalAddressShortCode', 'district', 'street', 'buildingNo', 'postalCode', 'additionalNumber'] as const)
-      expect(intakeAddressSchema.safeParse({ ...sa, [key]: '' }).success).toBe(false);
+    expect(intakeAddressSchema.safeParse({ ...emptyIntakeAddress(), nationalAddressShortCode: 'RYDH1234' }).success).toBe(true);
+    expect(intakeAddressSchema.safeParse({ ...sa, nationalAddressShortCode: '' }).success).toBe(false);
+    expect(intakeAddressPayload(sa)).toMatchObject({ city: 'Riyadh', district: 'Olaya', street: 'King Road', buildingNo: '24', postalCode: '12345', additionalNumber: '6789' });
+    expect(intakeAddressPayload({ ...sa, additionalInfo: 'Existing note' }).additionalInfo).toBe('Existing note');
     expect(intakeAddressPayload(sa).additionalInfo).toBeNull();
     expect(switchIntakeCountry('SA')).toEqual(emptyIntakeAddress());
   });

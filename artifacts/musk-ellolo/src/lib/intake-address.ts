@@ -16,7 +16,7 @@ export const intakeAddressSchema = z.object({
   postalCode: z.string(), additionalNumber: z.string(), additionalInfo: z.string(),
 }).superRefine((address, ctx) => {
   const required: IntakeAddressField[] = address.country === 'SA'
-    ? ['city', 'nationalAddressShortCode', 'district', 'street', 'buildingNo', 'postalCode', 'additionalNumber']
+    ? ['nationalAddressShortCode']
     : ['city', 'additionalInfo'];
   const region = /^[A-Z]{2}$/.test(address.country)
     ? new Intl.DisplayNames(['en'], { type: 'region' }).of(address.country) : undefined;
@@ -30,6 +30,6 @@ export const intakeAddressSchema = z.object({
 export function intakeAddressPayload(address: IntakeAddressValues) {
   const trimmed = Object.fromEntries(Object.entries(address).map(([key, value]) => [key, value.trim()])) as IntakeAddressValues;
   return trimmed.country === 'SA'
-    ? { ...trimmed, additionalInfo: null }
+    ? { ...trimmed, additionalInfo: trimmed.additionalInfo || null }
     : { ...trimmed, nationalAddressShortCode: null, district: null, street: null, buildingNo: null, postalCode: null, additionalNumber: null };
 }

@@ -42,7 +42,7 @@ type Line = { productId: string; quantity: number };
 const initialAddress = {
   label: 'المنزل',
   country: 'SA',
-  city: 'الرياض',
+  city: '',
   nationalAddressShortCode: '',
   district: '',
   street: '',
@@ -60,6 +60,7 @@ export function CreateOrderDialog() {
   const [lines, setLines] = useState<Line[]>([{ productId: '', quantity: 1 }]);
   const [address, setAddress] = useState(initialAddress);
   const [shippingMethod, setShippingMethod] = useState('admin-standard');
+  const [shippingCost, setShippingCost] = useState('');
   const [discountForm, setDiscountForm] = useState(emptySaleDiscount);
   const [fulfillmentMethod, setFulfillmentMethod] = useState<'delivery' | 'pickup'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<AdminOrderInputPaymentMethod>('cash');
@@ -102,6 +103,7 @@ export function CreateOrderDialog() {
     setLines([{ productId: '', quantity: 1 }]);
     setAddress(initialAddress);
     setShippingMethod('admin-standard');
+    setShippingCost('');
     setFulfillmentMethod('delivery');
     setDiscountForm(emptySaleDiscount);
     setPaymentMethod('cash');
@@ -146,10 +148,15 @@ export function CreateOrderDialog() {
       setError(t('اختر العميل والمنتجات والكميات أولاً', 'Select a customer, products, and quantities first'));
       return;
     }
-    if (!address.country.trim() || !address.city.trim() ||
+    if (!address.country.trim() ||
       (address.country === 'SA' ? !address.nationalAddressShortCode.trim() :
-        !address.district.trim() || !address.street.trim() || !address.buildingNo.trim())) {
+        !address.city.trim() || !address.district.trim() || !address.street.trim() || !address.buildingNo.trim())) {
       setError(t('أكمل عنوان الشحن', 'Complete the shipping address'));
+      return;
+    }
+    const needsExplicitDeliveryCost = address.country === 'SA' && !address.city.trim() && fulfillmentMethod === 'delivery';
+    if (needsExplicitDeliveryCost && (!shippingCost.trim() || !Number.isFinite(Number(shippingCost)) || Number(shippingCost) < 0)) {
+      setError(t('حدد رسوم التوصيل؛ لا نستنتج المدينة من العنوان المختصر', 'Enter delivery charges; the city is not inferred from the short code'));
       return;
     }
     const productIds = lines.map((line) => line.productId);
@@ -184,6 +191,7 @@ export function CreateOrderDialog() {
       shippingMethod,
       fulfillmentMethod,
       paymentMethod,
+      ...(needsExplicitDeliveryCost ? { shippingCost: Number(shippingCost) } : {}),
       adminNotes: adminNotes.trim() || null,
       ...saleDiscountPayload(discountForm),
       ...(orderSource !== 'phone' && sendPaymentLink && paymentMethod === 'moyasar' ? { sendPaymentLink: true } : {}),
@@ -367,10 +375,9 @@ export function CreateOrderDialog() {
                </div>
              )}
              {([
-               ['city', t('المدينة *', 'City *')],
                ...(address.country === 'SA'
                  ? [['nationalAddressShortCode', t('الرمز المختصر للعنوان الوطني *', 'National address short code *')]]
-                 : [['district', t('الحي *', 'District *')], ['street', t('الشارع *', 'Street *')], ['buildingNo', t('رقم المبنى *', 'Building number *')]]),
+                 : [['city', t('المدينة *', 'City *')], ['district', t('الحي *', 'District *')], ['street', t('الشارع *', 'Street *')], ['buildingNo', t('رقم المبنى *', 'Building number *')]]),
              ] as Array<[keyof typeof initialAddress, string]>).map(([field, label]) => (
               <div key={field} className="space-y-2">
                 <Label htmlFor={`order-${field}`}>{label}</Label>
@@ -431,6 +438,11 @@ export function CreateOrderDialog() {
               <p className="text-xs text-muted-foreground" data-testid="prepared-order-payments">{t('خانات الدفع الإلكتروني مجهزة فقط حتى الربط. إنشاء الطلب لا يعني تسجيل تحصيل.', 'Online payment fields are prepared only until setup. Creating an order does not record a collection.')}</p>
             </div>
           </div>
+          {address.country === 'SA' && !address.city.trim() && fulfillmentMethod === 'delivery' && <div className="space-y-2">
+            <Label htmlFor="order-delivery-charge">{t('رسوم التوصيل (شاملة الضريبة) *', 'Delivery charges (VAT included) *')}</Label>
+            <Input id="order-delivery-charge" data-testid="order-delivery-charge" type="number" min={0} step="0.01" value={shippingCost} onChange={(event) => setShippingCost(event.target.value)} />
+            <p className="text-xs text-muted-foreground">{t('لا يتم تخمين المدينة أو رسومها من العنوان الوطني المختصر.', 'The city and its delivery charge are not inferred from the national address short code.')}</p>
+          </div>}
           {paymentMethod === 'moyasar' && orderSource !== 'phone' && (
             <label className="flex items-start gap-3 rounded-md border p-3 text-sm">
               <Checkbox

@@ -1,6 +1,6 @@
 export type IntakeAddress = {
   country: string;
-  city: string;
+  city?: string | null;
   nationalAddressShortCode?: string | null;
   district?: string | null;
   street?: string | null;
@@ -15,8 +15,8 @@ export function normalizeIntakeAddress(input: IntakeAddress) {
   const region = /^[A-Z]{2}$/.test(country)
     ? new Intl.DisplayNames(["en"], { type: "region" }).of(country) : undefined;
   if (!region || region === country || region === "Unknown Region") throw new Error("Choose a valid country");
-  const city = input.city.trim();
-  if (!city) throw new Error("City is required");
+  const city = input.city?.trim() || "";
+  if (country !== "SA" && !city) throw new Error("City is required");
   const fields = {
     nationalAddressShortCode: input.nationalAddressShortCode?.trim() || null,
     district: input.district?.trim() || null,
@@ -27,9 +27,7 @@ export function normalizeIntakeAddress(input: IntakeAddress) {
     additionalInfo: input.additionalInfo?.trim() || null,
   };
   if (country === "SA") {
-    if (Object.entries(fields).some(([key, value]) => key !== "additionalInfo" && !value))
-      throw new Error("Saudi address requires short code, district, street, building number, postal code and additional number");
-    if (fields.additionalInfo) throw new Error("Detailed international address cannot be combined with Saudi address");
+    if (!fields.nationalAddressShortCode) throw new Error("Saudi address requires national address short code");
   } else {
     if (!fields.additionalInfo) throw new Error("Detailed address is required outside Saudi Arabia");
     if (Object.entries(fields).some(([key, value]) => key !== "additionalInfo" && value))

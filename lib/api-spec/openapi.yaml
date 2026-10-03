@@ -5221,7 +5221,7 @@ components:
           type: array
           minItems: 1
           items: { $ref: "#/components/schemas/AdminOrderLineInput" }
-        orderAddress: { $ref: "#/components/schemas/AdminOrderAddress" }
+        orderAddress: { $ref: "#/components/schemas/AdminOrderAddressInput" }
         shippingMethod: { type: string, minLength: 1 }
         paymentMethod: { type: string, enum: [cash, bank-transfer, moyasar] }
         shippingCost: { type: number, minimum: 0 }
@@ -5689,6 +5689,20 @@ components:
         reference: { type: [string, "null"] }
         createdBy: { type: number }
         createdAt: { type: string, format: date-time }
+    AdminOrderAddressInput:
+      type: object
+      properties:
+        label: { type: string, default: "المنزل" }
+        city: { type: string, default: "" }
+        country: { type: [string, "null"] }
+        nationalAddressShortCode: { type: [string, "null"] }
+        postalCode: { type: [string, "null"] }
+        additionalNumber: { type: [string, "null"] }
+        district: { type: string, default: "" }
+        street: { type: string, default: "" }
+        buildingNo: { type: string, default: "" }
+        additionalInfo: { type: [string, "null"], default: null }
+        isDefault: { type: boolean, default: false }
     AdminOrderAddress:
       type: object
       required: [label, city, district, street, buildingNo, additionalInfo, isDefault]
@@ -6113,10 +6127,10 @@ components:
         additionalInfo: { type: [string, "null"] }
     AdminProfileAddressInput:
       type: object
-      required: [country, city]
+      required: [country]
       properties:
         country: { type: string }
-        city: { type: string }
+        city: { type: string, default: "" }
         nationalAddressShortCode: { type: [string, "null"] }
         district: { type: [string, "null"] }
         street: { type: [string, "null"] }
@@ -6313,7 +6327,7 @@ components:
         updatedAt: { type: string, format: date-time }
     AdminDistributorInput:
       type: object
-      required: [companyName, contactName, phone, email, city, countryCode, taxNumber, commercialRegistrationNumber]
+      required: [companyName, contactName, phone, email, countryCode, taxNumber, commercialRegistrationNumber]
       properties:
         companyName: { type: string, minLength: 1 }
         contactName: { type: string, minLength: 1 }

@@ -2138,12 +2138,15 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       return;
     }
   }
-  if (!city || (saudiAddress ? !shortCode : !district || !street || !buildingNo) ||
+  if ((saudiAddress ? !shortCode : !city || !district || !street || !buildingNo) ||
       (country !== null && !domestic && shortCode)) {
     res.status(400).json({ error: saudiAddress
-      ? "City and national address short code are required for Saudi Arabia"
+      ? "National address short code is required for Saudi Arabia"
       : "City, district, street, and building number are required for international addresses; short code is only for Saudi Arabia" });
     return;
+  }
+  if (saudiAddress && !city && fulfillmentMethod === "delivery" && body.shippingCost === undefined) {
+    res.status(400).json({ error: "حدّد رسوم التوصيل صراحةً؛ لا يمكن استنتاج المدينة من العنوان المختصر" }); return;
   }
   const cleanedAddress = {
     ...body.orderAddress, city, country,

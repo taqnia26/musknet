@@ -5,11 +5,6 @@ import { switchIntakeCountry, type IntakeAddressField, type IntakeAddressValues 
 
 const saFields: Array<[IntakeAddressField, string, string]> = [
   ['nationalAddressShortCode', 'الرمز المختصر للعنوان الوطني', 'National address short code'],
-  ['district', 'الحي', 'District'],
-  ['street', 'الشارع', 'Street'],
-  ['buildingNo', 'رقم المبنى', 'Building number'],
-  ['postalCode', 'الرمز البريدي', 'Postal code'],
-  ['additionalNumber', 'الرقم الإضافي', 'Additional number'],
 ];
 
 export function IntakeAddressFields({ value, onChange, errors, id }: {
@@ -40,7 +35,7 @@ export function IntakeAddressFields({ value, onChange, errors, id }: {
       </select>
     </div>
     {value.country !== 'SA' && field('country', 'رمز الدولة ISO-2', 'Country ISO-2 code')}
-    {field('city', 'المدينة', 'City')}
+    {value.country !== 'SA' && field('city', 'المدينة', 'City')}
     {value.country === 'SA' ? saFields.map(([key, ar, en]) => field(key, ar, en))
       : <div className="sm:col-span-2">{field('additionalInfo', 'العنوان التفصيلي', 'Detailed address')}</div>}
   </div>;
