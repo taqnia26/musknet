@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SaleDiscountFields, emptySaleDiscount, saleDiscountPayload, useSaleDiscountPreview, validateSaleDiscount } from '@/components/admin/sale-discount-fields';
 import { sortProductsForSelection } from '@/lib/product-sort';
+import { IndividualInvoiceAddress, emptyInvoiceAddress, formatInvoiceAddress } from './individual-invoice-address';
 
 type Line = { productId: string; quantity: number; unitPrice: number };
 const emptyLine = (): Line => ({ productId: '', quantity: 1, unitPrice: 0 });
@@ -36,8 +37,8 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
   const [open, setOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
-  const [buyerAddress, setBuyerAddress] = useState('');
-  const [buyerTaxNumber, setBuyerTaxNumber] = useState('');
+  const [address, setAddress] = useState(emptyInvoiceAddress);
+  const buyerAddress = formatInvoiceAddress(address, lang);
   const [issueDate, setIssueDate] = useState(saudiToday);
   const [dueDate, setDueDate] = useState('');
   const [collected, setCollected] = useState(false);
@@ -72,7 +73,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
   const discountPreview = useSaleDiscountPreview(quoteDiscount.mutateAsync, totals.gross, discountForm, open);
   const reset = () => {
     setDiscountForm(emptySaleDiscount);
-    setBuyerName(''); setBuyerPhone(''); setBuyerAddress(''); setBuyerTaxNumber(''); setIssueDate(saudiToday()); setDueDate('');
+    setBuyerName(''); setBuyerPhone(''); setAddress(emptyInvoiceAddress()); setIssueDate(saudiToday()); setDueDate('');
     setCollected(false); setPaymentDate(saudiToday()); setPaymentMethod('cash'); setLines([emptyLine()]);
     setErrors([]); setServerError(''); setKey(crypto.randomUUID()); failedSig.current = null; ambiguousSig.current = null; setAmbiguous(false);
   };
@@ -84,11 +85,12 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
     if (dp) e.push(dp);
     const today = saudiToday();
     if (!buyerName.trim()) e.push(t('اسم المشتري مطلوب', 'Buyer name is required'));
-    if (buyerPhone.length > 40 || !/^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$/.test(buyerPhone.trim()))
-      e.push(t('جوال المشتري مطلوب: من 8 إلى 15 رقماً مع رمز الدولة عند الحاجة', 'Buyer phone is required: 8–15 digits, including the country code when needed'));
+    if (buyerPhone.trim() && (buyerPhone.length > 40 || !/^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$/.test(buyerPhone.trim())))
+      e.push(t('الجوال يجب أن يحتوي 8 إلى 15 رقماً', 'Phone must contain 8–15 digits'));
     if (buyerName.trim().length > 250) e.push(t('اسم المشتري لا يتجاوز 250 حرفاً', 'Buyer name must be at most 250 characters'));
     if (buyerAddress.trim().length > 1000) e.push(t('العنوان لا يتجاوز 1000 حرف', 'Address must be at most 1000 characters'));
-    if (buyerTaxNumber.trim() && !/^[0-9]{15}$/.test(buyerTaxNumber.trim())) e.push(t('الرقم الضريبي يجب أن يتكون من 15 رقماً', 'VAT number must be exactly 15 digits'));
+    if (address.country === 'SA' && address.shortCode.trim() && !/^[A-Z]{4}[0-9]{4}$/.test(address.shortCode.trim()))
+      e.push(t('العنوان المختصر يتكون من أربعة أحرف ثم أربعة أرقام', 'Short address must have four letters followed by four digits'));
     if (!validDate(issueDate) || issueDate > today) e.push(t('تاريخ الإصدار يجب أن يكون تاريخاً صحيحاً وغير مستقبلي', 'Issue date must be a valid, non-future date'));
     if (dueDate && (!validDate(dueDate) || (validDate(issueDate) && dueDate < issueDate))) e.push(t('تاريخ الاستحقاق يجب أن يكون صحيحاً وليس قبل الإصدار', 'Due date must be valid and not before the issue date'));
     if (collected && (!validDate(paymentDate) || paymentDate > today || (validDate(issueDate) && paymentDate < issueDate))) e.push(t('تاريخ التحصيل يجب أن يكون بين تاريخ الإصدار واليوم', 'Payment date must be between the issue date and today'));
@@ -112,9 +114,9 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
     if (e.length) return;
     const data = {
       buyerName: buyerName.trim(),
-      buyerPhone: buyerPhone.trim(),
+      buyerPhone: buyerPhone.trim() || null,
       buyerAddress: buyerAddress.trim() || null,
-      buyerTaxNumber: buyerTaxNumber.trim() || null,
+      buyerTaxNumber: null,
       issueDate,
       ...(dueDate ? { dueDate } : {}),
       ...(collected ? { collected: { paymentDate, paymentMethod } } : {}),
@@ -173,9 +175,8 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
       <fieldset disabled={pending} className="space-y-5 min-w-0">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2"><Label htmlFor="individual-invoice-buyer">{t('اسم المشتري', 'Buyer name')}</Label><Input id="individual-invoice-buyer" required maxLength={250} value={buyerName} onChange={e => setBuyerName(e.target.value)} /></div>
-          <div className="space-y-2"><Label htmlFor="individual-invoice-phone">{t('جوال المشتري', 'Buyer phone')} *</Label><Input id="individual-invoice-phone" data-testid="individual-invoice-phone" type="tel" dir="ltr" required maxLength={40} value={buyerPhone} onChange={e => setBuyerPhone(e.target.value.replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))))} /><p className="text-xs text-muted-foreground">{t('يحفظ في الفاتورة فقط، دون إنشاء حساب أو ربطه بعميل.', 'Saved on this invoice only; no customer account is created or linked.')}</p></div>
-          <div className="space-y-2"><Label htmlFor="individual-invoice-vat">{t('الرقم الضريبي (اختياري)', 'VAT number (optional)')}</Label><Input id="individual-invoice-vat" inputMode="numeric" maxLength={15} aria-invalid={!!buyerTaxNumber.trim() && !/^[0-9]{15}$/.test(buyerTaxNumber.trim())} value={buyerTaxNumber} onChange={e => setBuyerTaxNumber(e.target.value)} /></div>
-          <div className="space-y-2 sm:col-span-2"><Label htmlFor="individual-invoice-address">{t('عنوان المشتري (اختياري)', 'Buyer address (optional)')}</Label><Input id="individual-invoice-address" maxLength={1000} value={buyerAddress} onChange={e => setBuyerAddress(e.target.value)} /></div>
+          <div className="space-y-2"><Label htmlFor="individual-invoice-phone">{t('جوال المشتري (اختياري)', 'Buyer phone (optional)')}</Label><Input id="individual-invoice-phone" data-testid="individual-invoice-phone" type="tel" dir="ltr" maxLength={40} value={buyerPhone} onChange={e => setBuyerPhone(e.target.value.replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))))} /><p className="text-xs text-muted-foreground">{t('يحفظ في الفاتورة فقط، دون إنشاء حساب أو ربطه بعميل.', 'Saved on this invoice only; no customer account is created or linked.')}</p></div>
+          <IndividualInvoiceAddress value={address} onChange={setAddress} />
           <div className="space-y-2"><Label htmlFor="individual-invoice-issue">{t('تاريخ الإصدار', 'Issue date')}</Label><Input id="individual-invoice-issue" type="date" max={saudiToday()} value={issueDate} onChange={e => setIssueDate(e.target.value)} /></div>
           <div className="space-y-2"><Label htmlFor="individual-invoice-due">{t('تاريخ الاستحقاق (اختياري)', 'Due date (optional)')}</Label><Input id="individual-invoice-due" type="date" min={issueDate} value={dueDate} onChange={e => setDueDate(e.target.value)} /></div>
         </div>

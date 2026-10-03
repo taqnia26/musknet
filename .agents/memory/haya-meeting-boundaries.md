@@ -73,6 +73,12 @@ Inside Saudi Arabia, request only the national address short code on administrat
 
 **Why:** The user wrote «بالسعودية فقط العنوان الوطني المخصر» and «كلهم» for the three listed administrative screens, overriding the narrower screen selection.
 
+For the standalone individual invoice form, replace buyer VAT-number entry with an **optional** mobile number. Replace the free-text address with country selection and city; infer the country from an identifiable city, allow manual correction, show only the national short code for Saudi addresses and address details for other countries.
+
+**Why:** The user explicitly requested this layout and optional phone on the pictured direct-individual-invoice form.
+
+**How to apply:** Do not impose the order/customer-account phone requirement on standalone invoices, or infer tax exemption from the buyer's address alone. Do not change the separate invoice-design editor as part of this form request.
+
 **How to apply:** Do not invent a city or clear stored geography just because its controls are hidden. Without a recorded city, require explicit delivery charges rather than silently choosing the Riyadh/other-city tariff. Preserve the fixed pickup fee and charges on existing orders.
 
 Cancellation covers company invoices and standalone direct individual invoices, with automatic archival only after successful cancellation. It does not expand cancellation of storefront/phone order invoices.

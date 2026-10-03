@@ -27,11 +27,11 @@ export interface IndividualInvoiceInput {
      */
   buyerName: string;
   /**
-     * @minLength 8
      * @maxLength 40
-     * @pattern ^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$
+     * @nullable
+     * @pattern ^(?:\s*|(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+)$
      */
-  buyerPhone: string;
+  buyerPhone?: string | null;
   /**
      * @maxLength 1000
      * @nullable

@@ -5487,13 +5487,13 @@ components:
         createdAt: { type: string, format: date-time }
     IndividualInvoiceInput:
       type: object
-      required: [creationKey, buyerName, buyerPhone, buyerAddress, buyerTaxNumber, issueDate, items]
+      required: [creationKey, buyerName, buyerAddress, buyerTaxNumber, issueDate, items]
       properties:
         creationKey: { type: string, minLength: 16, maxLength: 200 }
         couponCode: { type: [string, "null"], maxLength: 100 }
         discountOverride: { $ref: "#/components/schemas/ManualSaleDiscountInput" }
         buyerName: { type: string, minLength: 1, maxLength: 250 }
-        buyerPhone: { type: string, minLength: 8, maxLength: 40, pattern: '^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$' }
+        buyerPhone: { type: [string, "null"], maxLength: 40, pattern: '^(?:\s*|(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+)$' }
         buyerAddress: { type: ["string", "null"], maxLength: 1000 }
         buyerTaxNumber: { type: ["string", "null"], pattern: '^[0-9]{15}$' }
         issueDate: { type: string, pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' }

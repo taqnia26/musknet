@@ -25,7 +25,7 @@ export class IndividualInvoiceConflictError extends Error {}
 type IndividualInvoiceInput = {
   creationKey: string;
   buyerName: string;
-  buyerPhone: string;
+  buyerPhone?: string | null;
   buyerAddress: string | null;
   buyerTaxNumber: string | null;
   issueDate: string;
@@ -46,7 +46,7 @@ function normalizedInput(input: IndividualInvoiceInput): IndividualInvoiceInput 
   return {
     creationKey: input.creationKey.trim(),
     buyerName: input.buyerName.trim(),
-    buyerPhone: input.buyerPhone.trim(),
+    buyerPhone: input.buyerPhone?.trim() || null,
     buyerAddress: input.buyerAddress?.trim() || null,
     buyerTaxNumber: input.buyerTaxNumber?.trim() || null,
     issueDate: input.issueDate,
@@ -59,8 +59,8 @@ function normalizedInput(input: IndividualInvoiceInput): IndividualInvoiceInput 
 }
 
 function validateInput(input: IndividualInvoiceInput) {
-  if (typeof input.buyerPhone !== "string" || input.buyerPhone.length > 40 ||
-      !/^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$/.test(input.buyerPhone.trim())) {
+  if (input.buyerPhone != null && (typeof input.buyerPhone !== "string" || input.buyerPhone.length > 40 ||
+      (input.buyerPhone.trim() !== "" && !/^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$/.test(input.buyerPhone.trim())))) {
     throw new IndividualInvoiceValidationError("Buyer phone must contain 8–15 digits, with an optional + prefix and separators");
   }
   validateManualDiscount(input.discountOverride);

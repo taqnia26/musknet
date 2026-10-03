@@ -39,6 +39,19 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
       contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
     })));
 
+  it("accepts omitted, null and empty optional phones and preserves the address snapshot", async () => {
+    for (const [index, buyerPhone] of [undefined, null, ""].entries()) {
+      const input = Api.AdminCreateIndividualInvoiceBody.parse({
+        creationKey: `${base}-optional-phone-${index}`, buyerName: "Optional phone",
+        buyerPhone, buyerAddress: "السعودية — الرياض — ABCD1234", buyerTaxNumber: null,
+        issueDate: today, items: [{ productId, quantity: 1, unitPrice: 115 }],
+      });
+      const invoice = await createIndividualInvoice(input, actorId, environment);
+      expect(invoice.buyerPhone).toBeNull();
+      expect(invoice.buyerAddress).toBe(input.buyerAddress);
+    }
+  });
+
   beforeAll(async () => {
     if (!databaseUrl || !expectedDatabase || !clusterDirectory) {
       throw new Error("The isolated individual-invoice PostgreSQL runner must provide database and cluster identity.");
@@ -224,7 +237,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     expect(firstContractResponse.buyerPhone).toBe(input.buyerPhone);
     await expect(createIndividualInvoice({ ...input, buyerPhone: "+966 50 999 9999" }, actorId, environment))
       .rejects.toThrow(/different invoice details/);
-    for (const buyerPhone of ["", "123", "invalid-phone", "1234567890123456"]) {
+    for (const buyerPhone of ["123", "invalid-phone", "1234567890123456"]) {
       await expect(createIndividualInvoice({ ...input, buyerPhone }, actorId, environment)).rejects.toThrow(/phone/);
     }
     expect(firstContractResponse).toMatchObject({
