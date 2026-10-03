@@ -32,3 +32,9 @@ Keep order numbering as L-123 for individual and phone orders, and CO-00000123 f
 **Why:** The owner explicitly chose to preserve these existing formats rather than distinguish phone orders with a new prefix.
 
 **How to apply:** Preserve this numbering policy when extending order creation; phone-order identification remains separate from its number.
+
+Delivery to the customer versus pickup from the business site must be a separate order choice from regular versus refrigerated shipping. Keep both distinctions; do not replace shipping type with fulfillment method.
+
+**Why:** The owner explicitly approved adding the independent delivery/pickup choice while retaining regular/refrigerated shipping.
+
+**How to apply:** Keep fulfillment metadata distinct from shipping-service data. Obtain the outstanding fee and availability decisions rather than assuming free pickup or silently enabling it in every interface.
