@@ -98,6 +98,8 @@ export interface AdminInvoice {
   /** @nullable */
   buyerName: string | null;
   /** @nullable */
+  buyerPhone?: string | null;
+  /** @nullable */
   buyerTaxNumber: string | null;
   /** @nullable */
   buyerCommercialRegistrationNumber: string | null;

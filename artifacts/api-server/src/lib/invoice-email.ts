@@ -15,6 +15,7 @@ type InvoiceForEmail = {
   sellerName: string;
   sellerVatNumber: string;
   buyerName: string | null;
+  buyerPhone?: string | null;
   buyerAddress: string | null;
   buyerTaxNumber: string | null;
   buyerCommercialRegistrationNumber: string | null;
@@ -185,6 +186,7 @@ export async function createInvoicePdf(invoice: InvoiceForEmail, language: Invoi
   if (invoice.buyerAddress) document.text(invoice.buyerAddress, 310, 216, { width: 243, height: 35 });
   const buyerMeta = [invoice.buyerTaxNumber && `VAT: ${invoice.buyerTaxNumber}`, invoice.buyerCommercialRegistrationNumber && `CR: ${invoice.buyerCommercialRegistrationNumber}`].filter(Boolean).join("  |  ");
   if (buyerMeta) document.text(buyerMeta, 310, 265, { width: 243, height: 30 });
+  if (invoice.buyerPhone) document.text(`Phone: ${invoice.buyerPhone}`, 310, 296, { width: 243, height: 12 });
   if (invoice.orderNumber) document.text(`Order No.: ${invoice.orderNumber}`, 310, 310, { width: 243 });
   if (invoice.contractNumber) document.text(
     `${invoice.historical === "yes" ? "Contract reference (not proof of past validity)" : "Contract reference"}: ${invoice.contractNumber}`,

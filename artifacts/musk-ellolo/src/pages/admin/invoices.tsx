@@ -116,6 +116,7 @@ function InvoiceTemplate({
         <div data-testid="invoice-buyer" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-buyer min-w-0">
           <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('بيانات العميل', 'Customer Details')}</h3>
           <p className="font-semibold text-lg text-[#292728]">{invoice.buyerName || invoice.distributorName || '-'}</p>
+          {invoice.buyerPhone && <p className="text-xs sm:text-sm text-gray-600 mt-2">{t('الجوال', 'Phone')}: <span dir="ltr" className="inline-block">{invoice.buyerPhone}</span></p>}
           {invoice.buyerAddress && <p className="text-xs sm:text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{invoice.buyerAddress}</p>}
           {invoice.buyerTaxNumber && <p className="text-xs sm:text-sm text-gray-600 mt-2">{t('الرقم الضريبي', 'VAT')}: <span className="font-mono text-gray-900">{invoice.buyerTaxNumber}</span></p>}
           {invoice.buyerCommercialRegistrationNumber && <p className="text-xs sm:text-sm text-gray-600 mt-1">{t('السجل التجاري', 'CR')}: <span className="font-mono text-gray-900">{invoice.buyerCommercialRegistrationNumber}</span></p>}

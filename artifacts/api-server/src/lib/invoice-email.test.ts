@@ -7,6 +7,7 @@ const baseInvoice = {
   sellerName: "Musk Ellolo",
   sellerVatNumber: "300000000000003",
   buyerName: "Buyer",
+  buyerPhone: "+966 50 123 4567",
   buyerAddress: "Riyadh",
   buyerTaxNumber: "310000000000003",
   buyerCommercialRegistrationNumber: "12345",

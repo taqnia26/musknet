@@ -43,6 +43,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   dueDate: date("due_date", { mode: "string" }),
   sellerVatNumber: text("seller_vat_number").notNull(),
   buyerName: text("buyer_name"),
+  buyerPhone: text("buyer_phone"),
   buyerTaxNumber: text("buyer_tax_number"),
   buyerCommercialRegistrationNumber: text("buyer_commercial_registration_number"),
   buyerAddress: text("buyer_address"),

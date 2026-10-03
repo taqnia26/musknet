@@ -5195,6 +5195,7 @@ export const AdminListInvoicesResponseItem = zod.object({
   "dueDate": zod.coerce.date().nullable(),
   "sellerVatNumber": zod.string(),
   "buyerName": zod.string().nullable(),
+  "buyerPhone": zod.string().nullish(),
   "buyerTaxNumber": zod.string().nullable(),
   "buyerCommercialRegistrationNumber": zod.string().nullable(),
   "buyerAddress": zod.string().nullable(),
@@ -5318,6 +5319,7 @@ export const AdminCreateDistributorInvoiceResponse = zod.object({
   "dueDate": zod.coerce.date().nullable(),
   "sellerVatNumber": zod.string(),
   "buyerName": zod.string().nullable(),
+  "buyerPhone": zod.string().nullish(),
   "buyerTaxNumber": zod.string().nullable(),
   "buyerCommercialRegistrationNumber": zod.string().nullable(),
   "buyerAddress": zod.string().nullable(),
@@ -5718,6 +5720,7 @@ export const AdminCreateExhibitionInvoiceResponse = zod.object({
   "dueDate": zod.coerce.date().nullable(),
   "sellerVatNumber": zod.string(),
   "buyerName": zod.string().nullable(),
+  "buyerPhone": zod.string().nullish(),
   "buyerTaxNumber": zod.string().nullable(),
   "buyerCommercialRegistrationNumber": zod.string().nullable(),
   "buyerAddress": zod.string().nullable(),
@@ -5772,6 +5775,11 @@ export const adminCreateIndividualInvoiceBodyDiscountOverrideReasonMax = 500;
 
 export const adminCreateIndividualInvoiceBodyBuyerNameMax = 250;
 
+export const adminCreateIndividualInvoiceBodyBuyerPhoneMin = 8;
+export const adminCreateIndividualInvoiceBodyBuyerPhoneMax = 40;
+
+
+export const adminCreateIndividualInvoiceBodyBuyerPhoneRegExp = new RegExp('^(?=(?:\\D*\\d){8,15}\\D*$)\\+?[\\d ().-]+$');
 export const adminCreateIndividualInvoiceBodyBuyerAddressMax = 1000;
 
 export const adminCreateIndividualInvoiceBodyBuyerTaxNumberRegExp = new RegExp('^[0-9]{15}$');
@@ -5798,6 +5806,7 @@ export const AdminCreateIndividualInvoiceBody = zod.object({
   "reason": zod.string().max(adminCreateIndividualInvoiceBodyDiscountOverrideReasonMax).optional()
 }).optional(),
   "buyerName": zod.string().min(1).max(adminCreateIndividualInvoiceBodyBuyerNameMax),
+  "buyerPhone": zod.string().min(adminCreateIndividualInvoiceBodyBuyerPhoneMin).max(adminCreateIndividualInvoiceBodyBuyerPhoneMax).regex(adminCreateIndividualInvoiceBodyBuyerPhoneRegExp),
   "buyerAddress": zod.string().max(adminCreateIndividualInvoiceBodyBuyerAddressMax).nullable(),
   "buyerTaxNumber": zod.string().regex(adminCreateIndividualInvoiceBodyBuyerTaxNumberRegExp).nullable(),
   "issueDate": zod.string().regex(adminCreateIndividualInvoiceBodyIssueDateRegExp),
@@ -5861,6 +5870,7 @@ export const AdminCreateIndividualInvoiceResponse = zod.object({
   "dueDate": zod.coerce.date().nullable(),
   "sellerVatNumber": zod.string(),
   "buyerName": zod.string().nullable(),
+  "buyerPhone": zod.string().nullish(),
   "buyerTaxNumber": zod.string().nullable(),
   "buyerCommercialRegistrationNumber": zod.string().nullable(),
   "buyerAddress": zod.string().nullable(),

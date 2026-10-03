@@ -118,7 +118,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
       code: `${base}-DISCOUNT`.toUpperCase(), discountType: "percentage", discountValue: 10, usageLimit: 1,
     }).returning();
     const input = {
-      creationKey: `${base}-discount-key`, buyerName: "مشتري بخصم", buyerAddress: null, buyerTaxNumber: null,
+      creationKey: `${base}-discount-key`, buyerName: "مشتري بخصم", buyerPhone: "+966 50 123 4567", buyerAddress: null, buyerTaxNumber: null,
       issueDate: today, items: [{ productId, quantity: 1, unitPrice: 115 }],
       couponCode: coupon.code, discountOverride: { percent: 10, reason: "خصم موثق للمنتجات بعد الكوبون" },
     };
@@ -143,6 +143,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     const input = {
       creationKey: `${base}-unpaid-creation-key`,
       buyerName: "مشتري مباشر",
+      buyerPhone: "+966 50 123 4567",
       buyerAddress: null,
       buyerTaxNumber: null,
       issueDate: today,
@@ -150,6 +151,12 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     };
     const first = await createIndividualInvoice(input, actorId, environment);
     const firstContractResponse = parseInvoiceResponse(first);
+    expect(firstContractResponse.buyerPhone).toBe(input.buyerPhone);
+    await expect(createIndividualInvoice({ ...input, buyerPhone: "+966 50 999 9999" }, actorId, environment))
+      .rejects.toThrow(/different invoice details/);
+    for (const buyerPhone of ["", "123", "invalid-phone", "1234567890123456"]) {
+      await expect(createIndividualInvoice({ ...input, buyerPhone }, actorId, environment)).rejects.toThrow(/phone/);
+    }
     expect(firstContractResponse).toMatchObject({
       individual: true,
       orderId: null,
@@ -250,6 +257,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     const collected = await createIndividualInvoice({
       creationKey: `${base}-collected-creation-key`,
       buyerName: "مشتري دفع عند الإصدار",
+      buyerPhone: "0501234567",
       buyerAddress: "الرياض",
       buyerTaxNumber: "310000000000003",
       issueDate,
@@ -316,6 +324,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     const common = {
       creationKey: `${base}-invalid-calendar-date`,
       buyerName: "تاريخ غير صالح",
+      buyerPhone: "0501234567",
       buyerAddress: null,
       buyerTaxNumber: null,
       issueDate: today,
@@ -347,6 +356,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     await expect(createIndividualInvoice({
       creationKey,
       buyerName: "مخزون غير كاف",
+      buyerPhone: "0501234567",
       buyerAddress: null,
       buyerTaxNumber: null,
       issueDate: today,
@@ -376,6 +386,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     const input = {
       creationKey,
       buyerName: "إنشاء متزامن",
+      buyerPhone: "0501234567",
       buyerAddress: null,
       buyerTaxNumber: null,
       issueDate: today,

@@ -2963,6 +2963,8 @@ export interface AdminInvoice {
   /** @nullable */
   buyerName: string | null;
   /** @nullable */
+  buyerPhone?: string | null;
+  /** @nullable */
   buyerTaxNumber: string | null;
   /** @nullable */
   buyerCommercialRegistrationNumber: string | null;
@@ -3028,6 +3030,12 @@ export interface IndividualInvoiceInput {
      * @maxLength 250
      */
   buyerName: string;
+  /**
+     * @minLength 8
+     * @maxLength 40
+     * @pattern ^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$
+     */
+  buyerPhone: string;
   /**
      * @maxLength 1000
      * @nullable

@@ -25,6 +25,7 @@ export class IndividualInvoiceConflictError extends Error {}
 type IndividualInvoiceInput = {
   creationKey: string;
   buyerName: string;
+  buyerPhone: string;
   buyerAddress: string | null;
   buyerTaxNumber: string | null;
   issueDate: string;
@@ -45,6 +46,7 @@ function normalizedInput(input: IndividualInvoiceInput): IndividualInvoiceInput 
   return {
     creationKey: input.creationKey.trim(),
     buyerName: input.buyerName.trim(),
+    buyerPhone: input.buyerPhone.trim(),
     buyerAddress: input.buyerAddress?.trim() || null,
     buyerTaxNumber: input.buyerTaxNumber?.trim() || null,
     issueDate: input.issueDate,
@@ -57,6 +59,10 @@ function normalizedInput(input: IndividualInvoiceInput): IndividualInvoiceInput 
 }
 
 function validateInput(input: IndividualInvoiceInput) {
+  if (typeof input.buyerPhone !== "string" || input.buyerPhone.length > 40 ||
+      !/^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$/.test(input.buyerPhone.trim())) {
+    throw new IndividualInvoiceValidationError("Buyer phone must contain 8–15 digits, with an optional + prefix and separators");
+  }
   validateManualDiscount(input.discountOverride);
   if (typeof input.creationKey !== "string" || input.creationKey.trim().length < 16 || input.creationKey.length > 200) {
     throw new IndividualInvoiceValidationError("A creation key between 16 and 200 characters is required");
@@ -212,6 +218,7 @@ export async function createIndividualInvoice(
       issueDatetime,
       dueDate: input.dueDate ?? null,
       buyerName: input.buyerName,
+      buyerPhone: input.buyerPhone,
       buyerAddress: input.buyerAddress,
       buyerTaxNumber: input.buyerTaxNumber,
       subtotal,
