@@ -50,3 +50,9 @@ Do not add fulfillment changes to the generic saved-order status edit.
 **Why:** Switching delivery/pickup also changes charges and can conflict with an issued invoice; the approved addition is a creation choice, not a silent financial recalculation.
 
 **How to apply:** A future fulfillment-edit request needs an explicit workflow that protects recorded charges, issued documents, and advanced shipments.
+
+The approved new-payment list is «ابل باي وتابي وتمارا وتحويل بنكي والدفع عند الاستلام».
+
+**Why:** The user's explicit comment listed all five, overriding the same form's narrower bank-transfer-and-Apple-Pay selection.
+
+**How to apply:** Preserve historical payment identifiers and records. The list is a product requirement, not proof of provider activation or authorization to create live payments.
