@@ -13,4 +13,10 @@ The approved manual-percentage discount scope includes companies, new standalone
 
 **Why:** The owner chose «الشركات وفاتورة الفرد والطلب الإداري/الهاتفي الجديد».
 
-**How to apply:** Preserve the existing company exception rather than duplicating it. This scope does not authorize manual customer-checkout discounts or changes to issued documents; scope approval alone does not decide the discount base or coupon-combination policy.
+**How to apply:** Preserve the existing company exception rather than duplicating it. This scope does not authorize manual customer-checkout discounts or changes to issued documents.
+
+For the new individual/admin/phone discounts, apply the coupon first, then the manual percentage to the remaining product sale value only. Neither delivery nor pickup charges are discounted.
+
+**Why:** The owner chose «المنتجات فقط» and «نعم، الكوبون أولًا ثم الخصم اليدوي». Pickup remains the separately approved final 25 SAR charge.
+
+**How to apply:** Keep coupon and manual amounts distinct, preserve coupon validity/usage rules and the creation-time audit, and compute VAT and financial postings from the discounted sale without changing inventory cost.
