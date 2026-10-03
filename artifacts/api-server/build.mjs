@@ -3,7 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, mkdir, copyFile, cp } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -13,6 +14,17 @@ const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
+  // Runtime resources belong to this API's build output, not a sibling app.
+  const assetsDir = path.resolve(distDir, "invoice-assets");
+  await mkdir(assetsDir, { recursive: true });
+  for (const file of ["invoice-logo-black.png", "musk-ellolo-mark-black.png", "saudi-riyal-symbol.svg", "amiri-regular.ttf", "amiri-OFL.txt", "en-US-58c84d4f8c.woff2"]) {
+    await copyFile(path.resolve(artifactDir, "../musk-ellolo/public/site-assets", file), path.resolve(assetsDir, file));
+  }
+  const browserDir = path.resolve(artifactDir, ".cache/invoice-browser");
+  execFileSync(process.execPath, [path.resolve(artifactDir, "node_modules/playwright/cli.js"), "install", "chromium", "--only-shell"], {
+    env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: browserDir }, stdio: "inherit",
+  });
+  await cp(browserDir, path.resolve(distDir, "invoice-browser"), { recursive: true });
 
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
@@ -99,6 +111,8 @@ async function buildAll() {
       "zeromq",
       "zeromq-prebuilt",
       "playwright",
+      "react",
+      "react-dom",
       "puppeteer",
       "puppeteer-core",
       "electron",

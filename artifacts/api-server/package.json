@@ -13,6 +13,8 @@
     "test": "vitest run --maxWorkers=1"
   },
   "dependencies": {
+    "@workspace/invoice-document": "workspace:*",
+    "playwright": "^1.62.1",
     "@replit/connectors-sdk": "^0.4.1",
     "@swc/helpers": "^0.5.17",
     "@whiskeysockets/baileys": "7.0.0-rc14",

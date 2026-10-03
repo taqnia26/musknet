@@ -15,6 +15,8 @@ import { createProductionPlansRouter } from "./production-plans";
 import { createAnnualAgendaRouter } from "./annual-agenda";
 import { createSallaInvoiceRouter } from "./salla-invoices";
 import { createShipHeroAdminRouter } from "./shiphero-admin";
+import { createInvoiceDesignRouter } from "./invoice-design";
+import { localInvoiceDocument } from "../lib/invoice-document-data";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
 import { ADMIN_PICKUP_FEE_SAR, adminFulfillmentOptions } from "../lib/order-fulfillment";
@@ -201,6 +203,7 @@ router.use(createProductionPlansRouter(permit));
 router.use(createAnnualAgendaRouter(permit));
 router.use(createSallaInvoiceRouter(permit));
 router.use(createShipHeroAdminRouter(permit));
+router.use(createInvoiceDesignRouter(permit));
 
 function permitExhibitionInvoiceRead(_req: Request, res: Response, next: NextFunction) {
   (async () => {
@@ -2629,54 +2632,9 @@ router.post("/admin/invoices/company", permit("invoices", "edit"), route(async (
 
 router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), route(async (req, res) => {
   const params = parse(Api.AdminDownloadInvoicePdfParams, req.params, res); if (!params) return;
-  const [invoice] = await db.select({
-    id: invoicesTable.id,
-    historical: invoicesTable.historical,
-    invoiceNumber: invoicesTable.invoiceNumber,
-    originalInvoiceNumber: invoicesTable.originalInvoiceNumber,
-    orderNumber: ordersTable.orderNumber,
-    sellerName: invoicesTable.sellerName,
-    sellerVatNumber: invoicesTable.sellerVatNumber,
-    taxTreatment: invoicesTable.taxTreatment,
-    vatRate: invoicesTable.vatRate,
-    contractDiscountPercent: invoicesTable.contractDiscountPercent,
-    contractNumber: invoicesTable.contractNumber,
-    invoiceDiscountPercent: invoicesTable.invoiceDiscountPercent,
-    discountOverrideReason: invoicesTable.discountOverrideReason,
-    buyerName: invoicesTable.buyerName,
-    buyerPhone: invoicesTable.buyerPhone,
-    buyerAddress: invoicesTable.buyerAddress,
-    buyerTaxNumber: invoicesTable.buyerTaxNumber,
-    buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
-    issueDatetime: invoicesTable.issueDatetime,
-    dueDate: invoicesTable.dueDate,
-    subtotal: invoicesTable.subtotal,
-    ...invoiceDiscountProjection,
-    discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
-    shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
-    vatAmount: invoicesTable.vatAmount,
-    totalAmount: invoicesTable.totalAmount,
-    qrCodeData: invoicesTable.qrCodeData,
-  }).from(invoicesTable)
-    .leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
-    .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt), isNull(invoicesTable.cancelledAt)))
-    .limit(1);
+  const invoice = await localInvoiceDocument(params.id);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
-  const items = await db.select().from(invoiceItemsTable)
-    .where(eq(invoiceItemsTable.invoiceId, invoice.id)).orderBy(invoiceItemsTable.id);
-  const payments = await db.select({ amount: receivablePaymentsTable.amount })
-    .from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoice.id));
-  const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
-  const pdf = await createInvoicePdf({
-    ...invoice,
-    shippingDetails: (await invoiceShippingDetails([invoice.id])).get(invoice.id) ?? null,
-    vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
-    contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
-    invoiceDiscountPercent: invoice.invoiceDiscountPercent === null ? null : Number(invoice.invoiceDiscountPercent),
-    items,
-    paidAmount,
-    outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100),
-  }, params.language);
+  const pdf = await createInvoicePdf(invoice, params.language);
   const safeInvoiceNumber = invoice.invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "-");
   res.type("application/pdf")
     .setHeader("Cache-Control", "no-store")
@@ -2854,46 +2812,20 @@ router.get("/admin/invoices/:id/email-deliveries", permit("invoices", "view"), r
 router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminSendInvoiceEmailParams, req.params, res);
   const body = parse(Api.AdminSendInvoiceEmailBody, req.body, res); if (!params || !body) return;
-  const [invoice] = await db.select({
-    id: invoicesTable.id, historical: invoicesTable.historical, invoiceNumber: invoicesTable.invoiceNumber, originalInvoiceNumber: invoicesTable.originalInvoiceNumber, orderNumber: ordersTable.orderNumber,
-    sellerName: invoicesTable.sellerName, sellerVatNumber: invoicesTable.sellerVatNumber,
-     taxTreatment: invoicesTable.taxTreatment, vatRate: invoicesTable.vatRate,
-     contractDiscountPercent: invoicesTable.contractDiscountPercent,
-     contractNumber: invoicesTable.contractNumber,
-     invoiceDiscountPercent: invoicesTable.invoiceDiscountPercent,
-     discountOverrideReason: invoicesTable.discountOverrideReason,
-    buyerName: invoicesTable.buyerName, buyerPhone: invoicesTable.buyerPhone, buyerAddress: invoicesTable.buyerAddress,
-    buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
-    issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
-    ...invoiceDiscountProjection,
-    discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
-    shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
-    vatAmount: invoicesTable.vatAmount, totalAmount: invoicesTable.totalAmount, qrCodeData: invoicesTable.qrCodeData,
-  }).from(invoicesTable).leftJoin(ordersTable, eq(invoicesTable.orderId, ordersTable.id))
-    .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt), isNull(invoicesTable.cancelledAt))).limit(1);
+  const invoice = await localInvoiceDocument(params.id);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
-  const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id)).orderBy(invoiceItemsTable.id);
-  const payments = await db.select().from(receivablePaymentsTable).where(eq(receivablePaymentsTable.invoiceId, invoice.id));
-  const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
-   const emailInvoice = {
-     ...invoice,
-     vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
-     contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
-     invoiceDiscountPercent: invoice.invoiceDiscountPercent === null ? null : Number(invoice.invoiceDiscountPercent),
-     items, paidAmount, outstandingAmount: Math.max(0, Math.round((invoice.totalAmount - paidAmount) * 100) / 100),
-   };
   try {
-     const pdf = await createInvoicePdf(emailInvoice, body.language ?? "ar");
-    const providerMessageId = await sendInvoiceEmail({ recipient: body.recipient, invoice: emailInvoice, pdf });
+    const pdf = await createInvoicePdf(invoice, body.language ?? "ar");
+    const providerMessageId = await sendInvoiceEmail({ recipient: body.recipient, invoice, pdf });
     const [delivery] = await db.insert(invoiceEmailDeliveriesTable).values({
-      invoiceId: invoice.id, recipient: body.recipient.toLowerCase(), status: "sent", providerMessageId,
+      invoiceId: params.id, recipient: body.recipient.toLowerCase(), status: "sent", providerMessageId,
       sentByAdminId: res.locals.admin.id,
     }).returning();
     res.status(201).json(Api.AdminSendInvoiceEmailResponse.parse({ ...delivery, sentByName: res.locals.admin.name }));
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 500) : "Email delivery failed";
     const [delivery] = await db.insert(invoiceEmailDeliveriesTable).values({
-      invoiceId: invoice.id, recipient: body.recipient.toLowerCase(), status: "failed", errorMessage: message,
+      invoiceId: params.id, recipient: body.recipient.toLowerCase(), status: "failed", errorMessage: message,
       sentByAdminId: res.locals.admin.id,
     }).returning();
     res.status(502).json({ error: message, deliveryId: delivery.id });

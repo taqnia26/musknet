@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { createInvoicePdf, getInvoiceTotalRows, invoiceBusinessIssueDate, invoiceItemName, invoiceMoneyLabel } from "./invoice-email";
+import { closeInvoiceBrowser } from "./invoice-browser-pdf";
+vi.mock("./invoice-design",async()=>{
+  const { createTemplate }=await import("@workspace/invoice-document/core");
+  return {publishedInvoiceDesign:async()=>({revision:0,design:createTemplate()})};
+});
+afterAll(closeInvoiceBrowser);
 
 const baseInvoice = {
   invoiceNumber: "TEST-100",
@@ -149,9 +155,13 @@ describe("invoice PDF formatting", () => {
     const contents = pdf.toString("latin1");
     expect(contents.startsWith("%PDF-")).toBe(true);
     expect((contents.match(/\/Subtype \/Image/g) ?? []).length).toBeGreaterThanOrEqual(3);
-    expect(contents).toContain("/Width 700");
-    expect(contents).toContain("/Height 145");
-    expect(contents).toContain("/MediaBox [0 0 595.28 841.89]");
+    // Chromium may resample source images to their displayed size.
+    expect(contents).toMatch(/\/Width \d+/);
+    expect(contents).toMatch(/\/Height \d+/);
+    // Chromium rounds physical A4 to its device grid rather than PDFKit's decimals.
+    const media=contents.match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/)!;
+    expect(Math.abs(Number(media[1])-595.28)).toBeLessThan(1);
+    expect(Math.abs(Number(media[2])-841.89)).toBeLessThan(1);
     expect(pdf.length).toBeGreaterThan(2000);
   });
 });

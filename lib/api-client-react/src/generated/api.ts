@@ -228,6 +228,9 @@ import type {
   InventoryTransfer,
   InventoryTransferInput,
   InventoryValuationRow,
+  InvoiceDesignReset,
+  InvoiceDesignState,
+  InvoiceDesignUpdate,
   InvoiceEmailDelivery,
   InvoiceEmailInput,
   JournalEntry,
@@ -295,6 +298,7 @@ import type {
   ProductionReorderAlert,
   ProfileUpdate,
   PublicContractSignatureInput,
+  PublishedInvoiceDesign,
   Purchase,
   PurchaseInput,
   PurchaseInvoiceUploadInput,
@@ -369,6 +373,343 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getAdminGetInvoiceDesignUrl = () => {
+
+
+
+
+  return `/api/admin/finance/invoice-design`
+}
+
+export const adminGetInvoiceDesign = async ( options?: Parameters<typeof customFetch>[1]): Promise<InvoiceDesignState> => {
+
+  return customFetch<InvoiceDesignState>(getAdminGetInvoiceDesignUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetInvoiceDesignQueryKey = () => {
+    return [
+    `/api/admin/finance/invoice-design`
+    ] as const;
+    }
+
+
+export const getAdminGetInvoiceDesignQueryOptions = <TData = Awaited<ReturnType<typeof adminGetInvoiceDesign>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetInvoiceDesign>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetInvoiceDesignQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetInvoiceDesign>>> = ({ signal }) => adminGetInvoiceDesign({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetInvoiceDesign>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetInvoiceDesignQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetInvoiceDesign>>>
+export type AdminGetInvoiceDesignQueryError = ErrorType<unknown>
+
+
+
+export function useAdminGetInvoiceDesign<TData = Awaited<ReturnType<typeof adminGetInvoiceDesign>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetInvoiceDesign>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetInvoiceDesignQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminSaveInvoiceDesignUrl = () => {
+
+
+
+
+  return `/api/admin/finance/invoice-design`
+}
+
+export const adminSaveInvoiceDesign = async (invoiceDesignUpdate: InvoiceDesignUpdate, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceDesignState> => {
+
+  return customFetch<InvoiceDesignState>(getAdminSaveInvoiceDesignUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invoiceDesignUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminSaveInvoiceDesignMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSaveInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSaveInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignUpdate>}, TContext> => {
+
+const mutationKey = ['adminSaveInvoiceDesign'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSaveInvoiceDesign>>, {data: BodyType<InvoiceDesignUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminSaveInvoiceDesign(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSaveInvoiceDesignMutationResult = NonNullable<Awaited<ReturnType<typeof adminSaveInvoiceDesign>>>
+    export type AdminSaveInvoiceDesignMutationBody = BodyType<InvoiceDesignUpdate>
+    export type AdminSaveInvoiceDesignMutationError = ErrorType<void>
+
+    export const useAdminSaveInvoiceDesign = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSaveInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSaveInvoiceDesign>>,
+        TError,
+        {data: BodyType<InvoiceDesignUpdate>},
+        TContext
+      > => {
+      return useMutation(getAdminSaveInvoiceDesignMutationOptions(options));
+    }
+
+export const getAdminPublishInvoiceDesignUrl = () => {
+
+
+
+
+  return `/api/admin/finance/invoice-design/publish`
+}
+
+export const adminPublishInvoiceDesign = async (invoiceDesignUpdate: InvoiceDesignUpdate, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceDesignState> => {
+
+  return customFetch<InvoiceDesignState>(getAdminPublishInvoiceDesignUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invoiceDesignUpdate)
+  }
+);}
+
+
+
+
+
+export const getAdminPublishInvoiceDesignMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPublishInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminPublishInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignUpdate>}, TContext> => {
+
+const mutationKey = ['adminPublishInvoiceDesign'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminPublishInvoiceDesign>>, {data: BodyType<InvoiceDesignUpdate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminPublishInvoiceDesign(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminPublishInvoiceDesignMutationResult = NonNullable<Awaited<ReturnType<typeof adminPublishInvoiceDesign>>>
+    export type AdminPublishInvoiceDesignMutationBody = BodyType<InvoiceDesignUpdate>
+    export type AdminPublishInvoiceDesignMutationError = ErrorType<void>
+
+    export const useAdminPublishInvoiceDesign = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminPublishInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminPublishInvoiceDesign>>,
+        TError,
+        {data: BodyType<InvoiceDesignUpdate>},
+        TContext
+      > => {
+      return useMutation(getAdminPublishInvoiceDesignMutationOptions(options));
+    }
+
+export const getAdminResetInvoiceDesignUrl = () => {
+
+
+
+
+  return `/api/admin/finance/invoice-design/reset`
+}
+
+export const adminResetInvoiceDesign = async (invoiceDesignReset: InvoiceDesignReset, options?: Parameters<typeof customFetch>[1]): Promise<InvoiceDesignState> => {
+
+  return customFetch<InvoiceDesignState>(getAdminResetInvoiceDesignUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invoiceDesignReset)
+  }
+);}
+
+
+
+
+
+export const getAdminResetInvoiceDesignMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminResetInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignReset>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminResetInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignReset>}, TContext> => {
+
+const mutationKey = ['adminResetInvoiceDesign'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminResetInvoiceDesign>>, {data: BodyType<InvoiceDesignReset>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminResetInvoiceDesign(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminResetInvoiceDesignMutationResult = NonNullable<Awaited<ReturnType<typeof adminResetInvoiceDesign>>>
+    export type AdminResetInvoiceDesignMutationBody = BodyType<InvoiceDesignReset>
+    export type AdminResetInvoiceDesignMutationError = ErrorType<void>
+
+    export const useAdminResetInvoiceDesign = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminResetInvoiceDesign>>, TError,{data: BodyType<InvoiceDesignReset>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminResetInvoiceDesign>>,
+        TError,
+        {data: BodyType<InvoiceDesignReset>},
+        TContext
+      > => {
+      return useMutation(getAdminResetInvoiceDesignMutationOptions(options));
+    }
+
+export const getAdminGetPublishedInvoiceDesignUrl = () => {
+
+
+
+
+  return `/api/admin/invoices/design`
+}
+
+export const adminGetPublishedInvoiceDesign = async ( options?: Parameters<typeof customFetch>[1]): Promise<PublishedInvoiceDesign> => {
+
+  return customFetch<PublishedInvoiceDesign>(getAdminGetPublishedInvoiceDesignUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetPublishedInvoiceDesignQueryKey = () => {
+    return [
+    `/api/admin/invoices/design`
+    ] as const;
+    }
+
+
+export const getAdminGetPublishedInvoiceDesignQueryOptions = <TData = Awaited<ReturnType<typeof adminGetPublishedInvoiceDesign>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetPublishedInvoiceDesign>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetPublishedInvoiceDesignQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetPublishedInvoiceDesign>>> = ({ signal }) => adminGetPublishedInvoiceDesign({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetPublishedInvoiceDesign>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetPublishedInvoiceDesignQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetPublishedInvoiceDesign>>>
+export type AdminGetPublishedInvoiceDesignQueryError = ErrorType<unknown>
+
+
+
+export function useAdminGetPublishedInvoiceDesign<TData = Awaited<ReturnType<typeof adminGetPublishedInvoiceDesign>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetPublishedInvoiceDesign>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetPublishedInvoiceDesignQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getUnlockAdminBackupsUrl = () => {
 

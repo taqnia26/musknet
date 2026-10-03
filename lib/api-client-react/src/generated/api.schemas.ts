@@ -5,6 +5,192 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+export type InvoiceDesignElementKind = typeof InvoiceDesignElementKind[keyof typeof InvoiceDesignElementKind];
+
+
+export const InvoiceDesignElementKind = {
+  logo: 'logo',
+  title: 'title',
+  seller: 'seller',
+  buyer: 'buyer',
+  info: 'info',
+  table: 'table',
+  totals: 'totals',
+  notes: 'notes',
+  qr: 'qr',
+  footer: 'footer',
+  text: 'text',
+  divider: 'divider',
+} as const;
+
+export type InvoiceDesignElementFont = typeof InvoiceDesignElementFont[keyof typeof InvoiceDesignElementFont];
+
+
+export const InvoiceDesignElementFont = {
+  Amiri: 'Amiri',
+  Ping: 'Ping',
+} as const;
+
+export type InvoiceDesignElementFontWeight = typeof InvoiceDesignElementFontWeight[keyof typeof InvoiceDesignElementFontWeight];
+
+
+export const InvoiceDesignElementFontWeight = {
+  normal: 'normal',
+  bold: 'bold',
+} as const;
+
+export type InvoiceDesignElementAlign = typeof InvoiceDesignElementAlign[keyof typeof InvoiceDesignElementAlign];
+
+
+export const InvoiceDesignElementAlign = {
+  start: 'start',
+  center: 'center',
+  end: 'end',
+} as const;
+
+export interface InvoiceDesignElement {
+  /** @pattern ^[a-z][a-z0-9-]{0,39}$ */
+  id: string;
+  kind: InvoiceDesignElementKind;
+  /**
+     * @minimum 8
+     * @maximum 202
+     */
+  x: number;
+  /**
+     * @minimum 8
+     * @maximum 289
+     */
+  y: number;
+  /**
+     * @minimum 2
+     * @maximum 194
+     */
+  width: number;
+  /**
+     * @minimum 0.3
+     * @maximum 180
+     */
+  height: number;
+  font: InvoiceDesignElementFont;
+  /**
+     * @minimum 9
+     * @maximum 24
+     */
+  fontSize: number;
+  fontWeight: InvoiceDesignElementFontWeight;
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  color: string;
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  background: string;
+  align: InvoiceDesignElementAlign;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  borderWidth: number;
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  borderColor: string;
+  /**
+     * @minimum 0
+     * @maximum 4
+     */
+  padding: number;
+  /**
+     * @minimum 1.2
+     * @maximum 1.8
+     */
+  lineHeight: number;
+  /** @maxLength 400 */
+  text?: string;
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  heading?: string;
+}
+
+export interface InvoiceDesignColumns {
+  /**
+     * @minimum 35
+     * @maximum 65
+     */
+  product: number;
+  /**
+     * @minimum 10
+     * @maximum 20
+     */
+  quantity: number;
+  /**
+     * @minimum 12
+     * @maximum 30
+     */
+  unitPrice: number;
+  /**
+     * @minimum 12
+     * @maximum 30
+     */
+  total: number;
+}
+
+export type InvoiceDesignVersion = typeof InvoiceDesignVersion[keyof typeof InvoiceDesignVersion];
+
+
+export const InvoiceDesignVersion = {
+  NUMBER_1: 1,
+} as const;
+
+export type InvoiceDesignTemplate = typeof InvoiceDesignTemplate[keyof typeof InvoiceDesignTemplate];
+
+
+export const InvoiceDesignTemplate = {
+  reference: 'reference',
+  formal: 'formal',
+  modern: 'modern',
+} as const;
+
+export interface InvoiceDesign {
+  version: InvoiceDesignVersion;
+  template: InvoiceDesignTemplate;
+  /**
+     * @minItems 10
+     * @maxItems 24
+     */
+  elements: InvoiceDesignElement[];
+  columns: InvoiceDesignColumns;
+}
+
+export interface InvoiceDesignUpdate {
+  /** @minimum 0 */
+  revision: number;
+  design: InvoiceDesign;
+}
+
+export interface InvoiceDesignReset {
+  /** @minimum 0 */
+  revision: number;
+}
+
+export interface InvoiceDesignState {
+  revision: number;
+  draft: InvoiceDesign;
+  published: InvoiceDesign;
+  /** @nullable */
+  updatedBy: number | null;
+  /** @nullable */
+  updatedAt: string | null;
+  /** @nullable */
+  publishedBy: number | null;
+  /** @nullable */
+  publishedAt: string | null;
+  sampleQr: string;
+}
+
+export interface PublishedInvoiceDesign {
+  revision: number;
+  design: InvoiceDesign;
+}
+
 export interface BackupAccessInput {
   /**
      * @minLength 1

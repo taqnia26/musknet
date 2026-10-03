@@ -8,6 +8,945 @@
 import * as zod from 'zod';
 
 
+export const adminGetInvoiceDesignResponseRevisionMultipleOf = 1;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminGetInvoiceDesignResponseDraftElementsItemXMin = 8;
+export const adminGetInvoiceDesignResponseDraftElementsItemXMax = 202;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemYMin = 8;
+export const adminGetInvoiceDesignResponseDraftElementsItemYMax = 289;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemWidthMin = 2;
+export const adminGetInvoiceDesignResponseDraftElementsItemWidthMax = 194;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemHeightMin = 0.3;
+export const adminGetInvoiceDesignResponseDraftElementsItemHeightMax = 180;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemFontSizeMin = 9;
+export const adminGetInvoiceDesignResponseDraftElementsItemFontSizeMax = 24;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetInvoiceDesignResponseDraftElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetInvoiceDesignResponseDraftElementsItemBorderWidthMin = 0;
+export const adminGetInvoiceDesignResponseDraftElementsItemBorderWidthMax = 1;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetInvoiceDesignResponseDraftElementsItemPaddingMin = 0;
+export const adminGetInvoiceDesignResponseDraftElementsItemPaddingMax = 4;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemLineHeightMin = 1.2;
+export const adminGetInvoiceDesignResponseDraftElementsItemLineHeightMax = 1.8;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemTextMax = 400;
+
+export const adminGetInvoiceDesignResponseDraftElementsItemHeadingMax = 60;
+
+export const adminGetInvoiceDesignResponseDraftElementsMin = 10;
+export const adminGetInvoiceDesignResponseDraftElementsMax = 24;
+
+export const adminGetInvoiceDesignResponseDraftColumnsProductMin = 35;
+export const adminGetInvoiceDesignResponseDraftColumnsProductMax = 65;
+
+export const adminGetInvoiceDesignResponseDraftColumnsQuantityMin = 10;
+export const adminGetInvoiceDesignResponseDraftColumnsQuantityMax = 20;
+
+export const adminGetInvoiceDesignResponseDraftColumnsUnitPriceMin = 12;
+export const adminGetInvoiceDesignResponseDraftColumnsUnitPriceMax = 30;
+
+export const adminGetInvoiceDesignResponseDraftColumnsTotalMin = 12;
+export const adminGetInvoiceDesignResponseDraftColumnsTotalMax = 30;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminGetInvoiceDesignResponsePublishedElementsItemXMin = 8;
+export const adminGetInvoiceDesignResponsePublishedElementsItemXMax = 202;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemYMin = 8;
+export const adminGetInvoiceDesignResponsePublishedElementsItemYMax = 289;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemWidthMin = 2;
+export const adminGetInvoiceDesignResponsePublishedElementsItemWidthMax = 194;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemHeightMin = 0.3;
+export const adminGetInvoiceDesignResponsePublishedElementsItemHeightMax = 180;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemFontSizeMin = 9;
+export const adminGetInvoiceDesignResponsePublishedElementsItemFontSizeMax = 24;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetInvoiceDesignResponsePublishedElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetInvoiceDesignResponsePublishedElementsItemBorderWidthMin = 0;
+export const adminGetInvoiceDesignResponsePublishedElementsItemBorderWidthMax = 1;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetInvoiceDesignResponsePublishedElementsItemPaddingMin = 0;
+export const adminGetInvoiceDesignResponsePublishedElementsItemPaddingMax = 4;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemLineHeightMin = 1.2;
+export const adminGetInvoiceDesignResponsePublishedElementsItemLineHeightMax = 1.8;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemTextMax = 400;
+
+export const adminGetInvoiceDesignResponsePublishedElementsItemHeadingMax = 60;
+
+export const adminGetInvoiceDesignResponsePublishedElementsMin = 10;
+export const adminGetInvoiceDesignResponsePublishedElementsMax = 24;
+
+export const adminGetInvoiceDesignResponsePublishedColumnsProductMin = 35;
+export const adminGetInvoiceDesignResponsePublishedColumnsProductMax = 65;
+
+export const adminGetInvoiceDesignResponsePublishedColumnsQuantityMin = 10;
+export const adminGetInvoiceDesignResponsePublishedColumnsQuantityMax = 20;
+
+export const adminGetInvoiceDesignResponsePublishedColumnsUnitPriceMin = 12;
+export const adminGetInvoiceDesignResponsePublishedColumnsUnitPriceMax = 30;
+
+export const adminGetInvoiceDesignResponsePublishedColumnsTotalMin = 12;
+export const adminGetInvoiceDesignResponsePublishedColumnsTotalMax = 30;
+
+
+
+export const AdminGetInvoiceDesignResponse = zod.object({
+  "revision": zod.number().multipleOf(adminGetInvoiceDesignResponseRevisionMultipleOf),
+  "draft": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminGetInvoiceDesignResponseDraftElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminGetInvoiceDesignResponseDraftElementsItemXMin).max(adminGetInvoiceDesignResponseDraftElementsItemXMax),
+  "y": zod.number().min(adminGetInvoiceDesignResponseDraftElementsItemYMin).max(adminGetInvoiceDesignResponseDraftElementsItemYMax),
+  "width": zod.number().min(adminGetInvoiceDesignResponseDraftElementsItemWidthMin).max(adminGetInvoiceDesignResponseDraftElementsItemWidthMax),
+  "height": zod.number().min(adminGetInvoiceDesignResponseDraftElementsItemHeightMin).max(adminGetInvoiceDesignResponseDraftElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminGetInvoiceDesignResponseDraftElementsItemFontSizeMin).max(adminGetInvoiceDesignResponseDraftElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminGetInvoiceDesignResponseDraftElementsItemColorRegExp),
+  "background": zod.string().regex(adminGetInvoiceDesignResponseDraftElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminGetInvoiceDesignResponseDraftElementsItemBorderWidthMin).max(adminGetInvoiceDesignResponseDraftElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminGetInvoiceDesignResponseDraftElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminGetInvoiceDesignResponseDraftElementsItemPaddingMin).max(adminGetInvoiceDesignResponseDraftElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminGetInvoiceDesignResponseDraftElementsItemLineHeightMin).max(adminGetInvoiceDesignResponseDraftElementsItemLineHeightMax),
+  "text": zod.string().max(adminGetInvoiceDesignResponseDraftElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminGetInvoiceDesignResponseDraftElementsItemHeadingMax).optional()
+})).min(adminGetInvoiceDesignResponseDraftElementsMin).max(adminGetInvoiceDesignResponseDraftElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminGetInvoiceDesignResponseDraftColumnsProductMin).max(adminGetInvoiceDesignResponseDraftColumnsProductMax),
+  "quantity": zod.number().min(adminGetInvoiceDesignResponseDraftColumnsQuantityMin).max(adminGetInvoiceDesignResponseDraftColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminGetInvoiceDesignResponseDraftColumnsUnitPriceMin).max(adminGetInvoiceDesignResponseDraftColumnsUnitPriceMax),
+  "total": zod.number().min(adminGetInvoiceDesignResponseDraftColumnsTotalMin).max(adminGetInvoiceDesignResponseDraftColumnsTotalMax)
+})
+}),
+  "published": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminGetInvoiceDesignResponsePublishedElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminGetInvoiceDesignResponsePublishedElementsItemXMin).max(adminGetInvoiceDesignResponsePublishedElementsItemXMax),
+  "y": zod.number().min(adminGetInvoiceDesignResponsePublishedElementsItemYMin).max(adminGetInvoiceDesignResponsePublishedElementsItemYMax),
+  "width": zod.number().min(adminGetInvoiceDesignResponsePublishedElementsItemWidthMin).max(adminGetInvoiceDesignResponsePublishedElementsItemWidthMax),
+  "height": zod.number().min(adminGetInvoiceDesignResponsePublishedElementsItemHeightMin).max(adminGetInvoiceDesignResponsePublishedElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminGetInvoiceDesignResponsePublishedElementsItemFontSizeMin).max(adminGetInvoiceDesignResponsePublishedElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminGetInvoiceDesignResponsePublishedElementsItemColorRegExp),
+  "background": zod.string().regex(adminGetInvoiceDesignResponsePublishedElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminGetInvoiceDesignResponsePublishedElementsItemBorderWidthMin).max(adminGetInvoiceDesignResponsePublishedElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminGetInvoiceDesignResponsePublishedElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminGetInvoiceDesignResponsePublishedElementsItemPaddingMin).max(adminGetInvoiceDesignResponsePublishedElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminGetInvoiceDesignResponsePublishedElementsItemLineHeightMin).max(adminGetInvoiceDesignResponsePublishedElementsItemLineHeightMax),
+  "text": zod.string().max(adminGetInvoiceDesignResponsePublishedElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminGetInvoiceDesignResponsePublishedElementsItemHeadingMax).optional()
+})).min(adminGetInvoiceDesignResponsePublishedElementsMin).max(adminGetInvoiceDesignResponsePublishedElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminGetInvoiceDesignResponsePublishedColumnsProductMin).max(adminGetInvoiceDesignResponsePublishedColumnsProductMax),
+  "quantity": zod.number().min(adminGetInvoiceDesignResponsePublishedColumnsQuantityMin).max(adminGetInvoiceDesignResponsePublishedColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminGetInvoiceDesignResponsePublishedColumnsUnitPriceMin).max(adminGetInvoiceDesignResponsePublishedColumnsUnitPriceMax),
+  "total": zod.number().min(adminGetInvoiceDesignResponsePublishedColumnsTotalMin).max(adminGetInvoiceDesignResponsePublishedColumnsTotalMax)
+})
+}),
+  "updatedBy": zod.number().nullable(),
+  "updatedAt": zod.string().nullable(),
+  "publishedBy": zod.number().nullable(),
+  "publishedAt": zod.string().nullable(),
+  "sampleQr": zod.string()
+})
+
+
+export const adminSaveInvoiceDesignBodyRevisionMin = 0;
+export const adminSaveInvoiceDesignBodyRevisionMultipleOf = 1;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminSaveInvoiceDesignBodyDesignElementsItemXMin = 8;
+export const adminSaveInvoiceDesignBodyDesignElementsItemXMax = 202;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemYMin = 8;
+export const adminSaveInvoiceDesignBodyDesignElementsItemYMax = 289;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemWidthMin = 2;
+export const adminSaveInvoiceDesignBodyDesignElementsItemWidthMax = 194;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemHeightMin = 0.3;
+export const adminSaveInvoiceDesignBodyDesignElementsItemHeightMax = 180;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemFontSizeMin = 9;
+export const adminSaveInvoiceDesignBodyDesignElementsItemFontSizeMax = 24;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignBodyDesignElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignBodyDesignElementsItemBorderWidthMin = 0;
+export const adminSaveInvoiceDesignBodyDesignElementsItemBorderWidthMax = 1;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignBodyDesignElementsItemPaddingMin = 0;
+export const adminSaveInvoiceDesignBodyDesignElementsItemPaddingMax = 4;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemLineHeightMin = 1.2;
+export const adminSaveInvoiceDesignBodyDesignElementsItemLineHeightMax = 1.8;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemTextMax = 400;
+
+export const adminSaveInvoiceDesignBodyDesignElementsItemHeadingMax = 60;
+
+export const adminSaveInvoiceDesignBodyDesignElementsMin = 10;
+export const adminSaveInvoiceDesignBodyDesignElementsMax = 24;
+
+export const adminSaveInvoiceDesignBodyDesignColumnsProductMin = 35;
+export const adminSaveInvoiceDesignBodyDesignColumnsProductMax = 65;
+
+export const adminSaveInvoiceDesignBodyDesignColumnsQuantityMin = 10;
+export const adminSaveInvoiceDesignBodyDesignColumnsQuantityMax = 20;
+
+export const adminSaveInvoiceDesignBodyDesignColumnsUnitPriceMin = 12;
+export const adminSaveInvoiceDesignBodyDesignColumnsUnitPriceMax = 30;
+
+export const adminSaveInvoiceDesignBodyDesignColumnsTotalMin = 12;
+export const adminSaveInvoiceDesignBodyDesignColumnsTotalMax = 30;
+
+
+
+export const AdminSaveInvoiceDesignBody = zod.object({
+  "revision": zod.number().min(adminSaveInvoiceDesignBodyRevisionMin).multipleOf(adminSaveInvoiceDesignBodyRevisionMultipleOf),
+  "design": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminSaveInvoiceDesignBodyDesignElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminSaveInvoiceDesignBodyDesignElementsItemXMin).max(adminSaveInvoiceDesignBodyDesignElementsItemXMax),
+  "y": zod.number().min(adminSaveInvoiceDesignBodyDesignElementsItemYMin).max(adminSaveInvoiceDesignBodyDesignElementsItemYMax),
+  "width": zod.number().min(adminSaveInvoiceDesignBodyDesignElementsItemWidthMin).max(adminSaveInvoiceDesignBodyDesignElementsItemWidthMax),
+  "height": zod.number().min(adminSaveInvoiceDesignBodyDesignElementsItemHeightMin).max(adminSaveInvoiceDesignBodyDesignElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminSaveInvoiceDesignBodyDesignElementsItemFontSizeMin).max(adminSaveInvoiceDesignBodyDesignElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminSaveInvoiceDesignBodyDesignElementsItemColorRegExp),
+  "background": zod.string().regex(adminSaveInvoiceDesignBodyDesignElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminSaveInvoiceDesignBodyDesignElementsItemBorderWidthMin).max(adminSaveInvoiceDesignBodyDesignElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminSaveInvoiceDesignBodyDesignElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminSaveInvoiceDesignBodyDesignElementsItemPaddingMin).max(adminSaveInvoiceDesignBodyDesignElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminSaveInvoiceDesignBodyDesignElementsItemLineHeightMin).max(adminSaveInvoiceDesignBodyDesignElementsItemLineHeightMax),
+  "text": zod.string().max(adminSaveInvoiceDesignBodyDesignElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminSaveInvoiceDesignBodyDesignElementsItemHeadingMax).optional()
+})).min(adminSaveInvoiceDesignBodyDesignElementsMin).max(adminSaveInvoiceDesignBodyDesignElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminSaveInvoiceDesignBodyDesignColumnsProductMin).max(adminSaveInvoiceDesignBodyDesignColumnsProductMax),
+  "quantity": zod.number().min(adminSaveInvoiceDesignBodyDesignColumnsQuantityMin).max(adminSaveInvoiceDesignBodyDesignColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminSaveInvoiceDesignBodyDesignColumnsUnitPriceMin).max(adminSaveInvoiceDesignBodyDesignColumnsUnitPriceMax),
+  "total": zod.number().min(adminSaveInvoiceDesignBodyDesignColumnsTotalMin).max(adminSaveInvoiceDesignBodyDesignColumnsTotalMax)
+})
+})
+})
+
+export const adminSaveInvoiceDesignResponseRevisionMultipleOf = 1;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminSaveInvoiceDesignResponseDraftElementsItemXMin = 8;
+export const adminSaveInvoiceDesignResponseDraftElementsItemXMax = 202;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemYMin = 8;
+export const adminSaveInvoiceDesignResponseDraftElementsItemYMax = 289;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemWidthMin = 2;
+export const adminSaveInvoiceDesignResponseDraftElementsItemWidthMax = 194;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemHeightMin = 0.3;
+export const adminSaveInvoiceDesignResponseDraftElementsItemHeightMax = 180;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemFontSizeMin = 9;
+export const adminSaveInvoiceDesignResponseDraftElementsItemFontSizeMax = 24;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignResponseDraftElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignResponseDraftElementsItemBorderWidthMin = 0;
+export const adminSaveInvoiceDesignResponseDraftElementsItemBorderWidthMax = 1;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignResponseDraftElementsItemPaddingMin = 0;
+export const adminSaveInvoiceDesignResponseDraftElementsItemPaddingMax = 4;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemLineHeightMin = 1.2;
+export const adminSaveInvoiceDesignResponseDraftElementsItemLineHeightMax = 1.8;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemTextMax = 400;
+
+export const adminSaveInvoiceDesignResponseDraftElementsItemHeadingMax = 60;
+
+export const adminSaveInvoiceDesignResponseDraftElementsMin = 10;
+export const adminSaveInvoiceDesignResponseDraftElementsMax = 24;
+
+export const adminSaveInvoiceDesignResponseDraftColumnsProductMin = 35;
+export const adminSaveInvoiceDesignResponseDraftColumnsProductMax = 65;
+
+export const adminSaveInvoiceDesignResponseDraftColumnsQuantityMin = 10;
+export const adminSaveInvoiceDesignResponseDraftColumnsQuantityMax = 20;
+
+export const adminSaveInvoiceDesignResponseDraftColumnsUnitPriceMin = 12;
+export const adminSaveInvoiceDesignResponseDraftColumnsUnitPriceMax = 30;
+
+export const adminSaveInvoiceDesignResponseDraftColumnsTotalMin = 12;
+export const adminSaveInvoiceDesignResponseDraftColumnsTotalMax = 30;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminSaveInvoiceDesignResponsePublishedElementsItemXMin = 8;
+export const adminSaveInvoiceDesignResponsePublishedElementsItemXMax = 202;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemYMin = 8;
+export const adminSaveInvoiceDesignResponsePublishedElementsItemYMax = 289;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemWidthMin = 2;
+export const adminSaveInvoiceDesignResponsePublishedElementsItemWidthMax = 194;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemHeightMin = 0.3;
+export const adminSaveInvoiceDesignResponsePublishedElementsItemHeightMax = 180;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemFontSizeMin = 9;
+export const adminSaveInvoiceDesignResponsePublishedElementsItemFontSizeMax = 24;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignResponsePublishedElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignResponsePublishedElementsItemBorderWidthMin = 0;
+export const adminSaveInvoiceDesignResponsePublishedElementsItemBorderWidthMax = 1;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminSaveInvoiceDesignResponsePublishedElementsItemPaddingMin = 0;
+export const adminSaveInvoiceDesignResponsePublishedElementsItemPaddingMax = 4;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemLineHeightMin = 1.2;
+export const adminSaveInvoiceDesignResponsePublishedElementsItemLineHeightMax = 1.8;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemTextMax = 400;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsItemHeadingMax = 60;
+
+export const adminSaveInvoiceDesignResponsePublishedElementsMin = 10;
+export const adminSaveInvoiceDesignResponsePublishedElementsMax = 24;
+
+export const adminSaveInvoiceDesignResponsePublishedColumnsProductMin = 35;
+export const adminSaveInvoiceDesignResponsePublishedColumnsProductMax = 65;
+
+export const adminSaveInvoiceDesignResponsePublishedColumnsQuantityMin = 10;
+export const adminSaveInvoiceDesignResponsePublishedColumnsQuantityMax = 20;
+
+export const adminSaveInvoiceDesignResponsePublishedColumnsUnitPriceMin = 12;
+export const adminSaveInvoiceDesignResponsePublishedColumnsUnitPriceMax = 30;
+
+export const adminSaveInvoiceDesignResponsePublishedColumnsTotalMin = 12;
+export const adminSaveInvoiceDesignResponsePublishedColumnsTotalMax = 30;
+
+
+
+export const AdminSaveInvoiceDesignResponse = zod.object({
+  "revision": zod.number().multipleOf(adminSaveInvoiceDesignResponseRevisionMultipleOf),
+  "draft": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminSaveInvoiceDesignResponseDraftElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminSaveInvoiceDesignResponseDraftElementsItemXMin).max(adminSaveInvoiceDesignResponseDraftElementsItemXMax),
+  "y": zod.number().min(adminSaveInvoiceDesignResponseDraftElementsItemYMin).max(adminSaveInvoiceDesignResponseDraftElementsItemYMax),
+  "width": zod.number().min(adminSaveInvoiceDesignResponseDraftElementsItemWidthMin).max(adminSaveInvoiceDesignResponseDraftElementsItemWidthMax),
+  "height": zod.number().min(adminSaveInvoiceDesignResponseDraftElementsItemHeightMin).max(adminSaveInvoiceDesignResponseDraftElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminSaveInvoiceDesignResponseDraftElementsItemFontSizeMin).max(adminSaveInvoiceDesignResponseDraftElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminSaveInvoiceDesignResponseDraftElementsItemColorRegExp),
+  "background": zod.string().regex(adminSaveInvoiceDesignResponseDraftElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminSaveInvoiceDesignResponseDraftElementsItemBorderWidthMin).max(adminSaveInvoiceDesignResponseDraftElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminSaveInvoiceDesignResponseDraftElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminSaveInvoiceDesignResponseDraftElementsItemPaddingMin).max(adminSaveInvoiceDesignResponseDraftElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminSaveInvoiceDesignResponseDraftElementsItemLineHeightMin).max(adminSaveInvoiceDesignResponseDraftElementsItemLineHeightMax),
+  "text": zod.string().max(adminSaveInvoiceDesignResponseDraftElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminSaveInvoiceDesignResponseDraftElementsItemHeadingMax).optional()
+})).min(adminSaveInvoiceDesignResponseDraftElementsMin).max(adminSaveInvoiceDesignResponseDraftElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminSaveInvoiceDesignResponseDraftColumnsProductMin).max(adminSaveInvoiceDesignResponseDraftColumnsProductMax),
+  "quantity": zod.number().min(adminSaveInvoiceDesignResponseDraftColumnsQuantityMin).max(adminSaveInvoiceDesignResponseDraftColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminSaveInvoiceDesignResponseDraftColumnsUnitPriceMin).max(adminSaveInvoiceDesignResponseDraftColumnsUnitPriceMax),
+  "total": zod.number().min(adminSaveInvoiceDesignResponseDraftColumnsTotalMin).max(adminSaveInvoiceDesignResponseDraftColumnsTotalMax)
+})
+}),
+  "published": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminSaveInvoiceDesignResponsePublishedElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminSaveInvoiceDesignResponsePublishedElementsItemXMin).max(adminSaveInvoiceDesignResponsePublishedElementsItemXMax),
+  "y": zod.number().min(adminSaveInvoiceDesignResponsePublishedElementsItemYMin).max(adminSaveInvoiceDesignResponsePublishedElementsItemYMax),
+  "width": zod.number().min(adminSaveInvoiceDesignResponsePublishedElementsItemWidthMin).max(adminSaveInvoiceDesignResponsePublishedElementsItemWidthMax),
+  "height": zod.number().min(adminSaveInvoiceDesignResponsePublishedElementsItemHeightMin).max(adminSaveInvoiceDesignResponsePublishedElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminSaveInvoiceDesignResponsePublishedElementsItemFontSizeMin).max(adminSaveInvoiceDesignResponsePublishedElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminSaveInvoiceDesignResponsePublishedElementsItemColorRegExp),
+  "background": zod.string().regex(adminSaveInvoiceDesignResponsePublishedElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminSaveInvoiceDesignResponsePublishedElementsItemBorderWidthMin).max(adminSaveInvoiceDesignResponsePublishedElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminSaveInvoiceDesignResponsePublishedElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminSaveInvoiceDesignResponsePublishedElementsItemPaddingMin).max(adminSaveInvoiceDesignResponsePublishedElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminSaveInvoiceDesignResponsePublishedElementsItemLineHeightMin).max(adminSaveInvoiceDesignResponsePublishedElementsItemLineHeightMax),
+  "text": zod.string().max(adminSaveInvoiceDesignResponsePublishedElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminSaveInvoiceDesignResponsePublishedElementsItemHeadingMax).optional()
+})).min(adminSaveInvoiceDesignResponsePublishedElementsMin).max(adminSaveInvoiceDesignResponsePublishedElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminSaveInvoiceDesignResponsePublishedColumnsProductMin).max(adminSaveInvoiceDesignResponsePublishedColumnsProductMax),
+  "quantity": zod.number().min(adminSaveInvoiceDesignResponsePublishedColumnsQuantityMin).max(adminSaveInvoiceDesignResponsePublishedColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminSaveInvoiceDesignResponsePublishedColumnsUnitPriceMin).max(adminSaveInvoiceDesignResponsePublishedColumnsUnitPriceMax),
+  "total": zod.number().min(adminSaveInvoiceDesignResponsePublishedColumnsTotalMin).max(adminSaveInvoiceDesignResponsePublishedColumnsTotalMax)
+})
+}),
+  "updatedBy": zod.number().nullable(),
+  "updatedAt": zod.string().nullable(),
+  "publishedBy": zod.number().nullable(),
+  "publishedAt": zod.string().nullable(),
+  "sampleQr": zod.string()
+})
+
+
+export const adminPublishInvoiceDesignBodyRevisionMin = 0;
+export const adminPublishInvoiceDesignBodyRevisionMultipleOf = 1;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminPublishInvoiceDesignBodyDesignElementsItemXMin = 8;
+export const adminPublishInvoiceDesignBodyDesignElementsItemXMax = 202;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemYMin = 8;
+export const adminPublishInvoiceDesignBodyDesignElementsItemYMax = 289;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemWidthMin = 2;
+export const adminPublishInvoiceDesignBodyDesignElementsItemWidthMax = 194;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemHeightMin = 0.3;
+export const adminPublishInvoiceDesignBodyDesignElementsItemHeightMax = 180;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemFontSizeMin = 9;
+export const adminPublishInvoiceDesignBodyDesignElementsItemFontSizeMax = 24;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignBodyDesignElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignBodyDesignElementsItemBorderWidthMin = 0;
+export const adminPublishInvoiceDesignBodyDesignElementsItemBorderWidthMax = 1;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignBodyDesignElementsItemPaddingMin = 0;
+export const adminPublishInvoiceDesignBodyDesignElementsItemPaddingMax = 4;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemLineHeightMin = 1.2;
+export const adminPublishInvoiceDesignBodyDesignElementsItemLineHeightMax = 1.8;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemTextMax = 400;
+
+export const adminPublishInvoiceDesignBodyDesignElementsItemHeadingMax = 60;
+
+export const adminPublishInvoiceDesignBodyDesignElementsMin = 10;
+export const adminPublishInvoiceDesignBodyDesignElementsMax = 24;
+
+export const adminPublishInvoiceDesignBodyDesignColumnsProductMin = 35;
+export const adminPublishInvoiceDesignBodyDesignColumnsProductMax = 65;
+
+export const adminPublishInvoiceDesignBodyDesignColumnsQuantityMin = 10;
+export const adminPublishInvoiceDesignBodyDesignColumnsQuantityMax = 20;
+
+export const adminPublishInvoiceDesignBodyDesignColumnsUnitPriceMin = 12;
+export const adminPublishInvoiceDesignBodyDesignColumnsUnitPriceMax = 30;
+
+export const adminPublishInvoiceDesignBodyDesignColumnsTotalMin = 12;
+export const adminPublishInvoiceDesignBodyDesignColumnsTotalMax = 30;
+
+
+
+export const AdminPublishInvoiceDesignBody = zod.object({
+  "revision": zod.number().min(adminPublishInvoiceDesignBodyRevisionMin).multipleOf(adminPublishInvoiceDesignBodyRevisionMultipleOf),
+  "design": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminPublishInvoiceDesignBodyDesignElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminPublishInvoiceDesignBodyDesignElementsItemXMin).max(adminPublishInvoiceDesignBodyDesignElementsItemXMax),
+  "y": zod.number().min(adminPublishInvoiceDesignBodyDesignElementsItemYMin).max(adminPublishInvoiceDesignBodyDesignElementsItemYMax),
+  "width": zod.number().min(adminPublishInvoiceDesignBodyDesignElementsItemWidthMin).max(adminPublishInvoiceDesignBodyDesignElementsItemWidthMax),
+  "height": zod.number().min(adminPublishInvoiceDesignBodyDesignElementsItemHeightMin).max(adminPublishInvoiceDesignBodyDesignElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminPublishInvoiceDesignBodyDesignElementsItemFontSizeMin).max(adminPublishInvoiceDesignBodyDesignElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminPublishInvoiceDesignBodyDesignElementsItemColorRegExp),
+  "background": zod.string().regex(adminPublishInvoiceDesignBodyDesignElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminPublishInvoiceDesignBodyDesignElementsItemBorderWidthMin).max(adminPublishInvoiceDesignBodyDesignElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminPublishInvoiceDesignBodyDesignElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminPublishInvoiceDesignBodyDesignElementsItemPaddingMin).max(adminPublishInvoiceDesignBodyDesignElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminPublishInvoiceDesignBodyDesignElementsItemLineHeightMin).max(adminPublishInvoiceDesignBodyDesignElementsItemLineHeightMax),
+  "text": zod.string().max(adminPublishInvoiceDesignBodyDesignElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminPublishInvoiceDesignBodyDesignElementsItemHeadingMax).optional()
+})).min(adminPublishInvoiceDesignBodyDesignElementsMin).max(adminPublishInvoiceDesignBodyDesignElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminPublishInvoiceDesignBodyDesignColumnsProductMin).max(adminPublishInvoiceDesignBodyDesignColumnsProductMax),
+  "quantity": zod.number().min(adminPublishInvoiceDesignBodyDesignColumnsQuantityMin).max(adminPublishInvoiceDesignBodyDesignColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminPublishInvoiceDesignBodyDesignColumnsUnitPriceMin).max(adminPublishInvoiceDesignBodyDesignColumnsUnitPriceMax),
+  "total": zod.number().min(adminPublishInvoiceDesignBodyDesignColumnsTotalMin).max(adminPublishInvoiceDesignBodyDesignColumnsTotalMax)
+})
+})
+})
+
+export const adminPublishInvoiceDesignResponseRevisionMultipleOf = 1;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminPublishInvoiceDesignResponseDraftElementsItemXMin = 8;
+export const adminPublishInvoiceDesignResponseDraftElementsItemXMax = 202;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemYMin = 8;
+export const adminPublishInvoiceDesignResponseDraftElementsItemYMax = 289;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemWidthMin = 2;
+export const adminPublishInvoiceDesignResponseDraftElementsItemWidthMax = 194;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemHeightMin = 0.3;
+export const adminPublishInvoiceDesignResponseDraftElementsItemHeightMax = 180;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemFontSizeMin = 9;
+export const adminPublishInvoiceDesignResponseDraftElementsItemFontSizeMax = 24;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignResponseDraftElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignResponseDraftElementsItemBorderWidthMin = 0;
+export const adminPublishInvoiceDesignResponseDraftElementsItemBorderWidthMax = 1;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignResponseDraftElementsItemPaddingMin = 0;
+export const adminPublishInvoiceDesignResponseDraftElementsItemPaddingMax = 4;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemLineHeightMin = 1.2;
+export const adminPublishInvoiceDesignResponseDraftElementsItemLineHeightMax = 1.8;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemTextMax = 400;
+
+export const adminPublishInvoiceDesignResponseDraftElementsItemHeadingMax = 60;
+
+export const adminPublishInvoiceDesignResponseDraftElementsMin = 10;
+export const adminPublishInvoiceDesignResponseDraftElementsMax = 24;
+
+export const adminPublishInvoiceDesignResponseDraftColumnsProductMin = 35;
+export const adminPublishInvoiceDesignResponseDraftColumnsProductMax = 65;
+
+export const adminPublishInvoiceDesignResponseDraftColumnsQuantityMin = 10;
+export const adminPublishInvoiceDesignResponseDraftColumnsQuantityMax = 20;
+
+export const adminPublishInvoiceDesignResponseDraftColumnsUnitPriceMin = 12;
+export const adminPublishInvoiceDesignResponseDraftColumnsUnitPriceMax = 30;
+
+export const adminPublishInvoiceDesignResponseDraftColumnsTotalMin = 12;
+export const adminPublishInvoiceDesignResponseDraftColumnsTotalMax = 30;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminPublishInvoiceDesignResponsePublishedElementsItemXMin = 8;
+export const adminPublishInvoiceDesignResponsePublishedElementsItemXMax = 202;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemYMin = 8;
+export const adminPublishInvoiceDesignResponsePublishedElementsItemYMax = 289;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemWidthMin = 2;
+export const adminPublishInvoiceDesignResponsePublishedElementsItemWidthMax = 194;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemHeightMin = 0.3;
+export const adminPublishInvoiceDesignResponsePublishedElementsItemHeightMax = 180;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemFontSizeMin = 9;
+export const adminPublishInvoiceDesignResponsePublishedElementsItemFontSizeMax = 24;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignResponsePublishedElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignResponsePublishedElementsItemBorderWidthMin = 0;
+export const adminPublishInvoiceDesignResponsePublishedElementsItemBorderWidthMax = 1;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminPublishInvoiceDesignResponsePublishedElementsItemPaddingMin = 0;
+export const adminPublishInvoiceDesignResponsePublishedElementsItemPaddingMax = 4;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemLineHeightMin = 1.2;
+export const adminPublishInvoiceDesignResponsePublishedElementsItemLineHeightMax = 1.8;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemTextMax = 400;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsItemHeadingMax = 60;
+
+export const adminPublishInvoiceDesignResponsePublishedElementsMin = 10;
+export const adminPublishInvoiceDesignResponsePublishedElementsMax = 24;
+
+export const adminPublishInvoiceDesignResponsePublishedColumnsProductMin = 35;
+export const adminPublishInvoiceDesignResponsePublishedColumnsProductMax = 65;
+
+export const adminPublishInvoiceDesignResponsePublishedColumnsQuantityMin = 10;
+export const adminPublishInvoiceDesignResponsePublishedColumnsQuantityMax = 20;
+
+export const adminPublishInvoiceDesignResponsePublishedColumnsUnitPriceMin = 12;
+export const adminPublishInvoiceDesignResponsePublishedColumnsUnitPriceMax = 30;
+
+export const adminPublishInvoiceDesignResponsePublishedColumnsTotalMin = 12;
+export const adminPublishInvoiceDesignResponsePublishedColumnsTotalMax = 30;
+
+
+
+export const AdminPublishInvoiceDesignResponse = zod.object({
+  "revision": zod.number().multipleOf(adminPublishInvoiceDesignResponseRevisionMultipleOf),
+  "draft": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminPublishInvoiceDesignResponseDraftElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminPublishInvoiceDesignResponseDraftElementsItemXMin).max(adminPublishInvoiceDesignResponseDraftElementsItemXMax),
+  "y": zod.number().min(adminPublishInvoiceDesignResponseDraftElementsItemYMin).max(adminPublishInvoiceDesignResponseDraftElementsItemYMax),
+  "width": zod.number().min(adminPublishInvoiceDesignResponseDraftElementsItemWidthMin).max(adminPublishInvoiceDesignResponseDraftElementsItemWidthMax),
+  "height": zod.number().min(adminPublishInvoiceDesignResponseDraftElementsItemHeightMin).max(adminPublishInvoiceDesignResponseDraftElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminPublishInvoiceDesignResponseDraftElementsItemFontSizeMin).max(adminPublishInvoiceDesignResponseDraftElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminPublishInvoiceDesignResponseDraftElementsItemColorRegExp),
+  "background": zod.string().regex(adminPublishInvoiceDesignResponseDraftElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminPublishInvoiceDesignResponseDraftElementsItemBorderWidthMin).max(adminPublishInvoiceDesignResponseDraftElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminPublishInvoiceDesignResponseDraftElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminPublishInvoiceDesignResponseDraftElementsItemPaddingMin).max(adminPublishInvoiceDesignResponseDraftElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminPublishInvoiceDesignResponseDraftElementsItemLineHeightMin).max(adminPublishInvoiceDesignResponseDraftElementsItemLineHeightMax),
+  "text": zod.string().max(adminPublishInvoiceDesignResponseDraftElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminPublishInvoiceDesignResponseDraftElementsItemHeadingMax).optional()
+})).min(adminPublishInvoiceDesignResponseDraftElementsMin).max(adminPublishInvoiceDesignResponseDraftElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminPublishInvoiceDesignResponseDraftColumnsProductMin).max(adminPublishInvoiceDesignResponseDraftColumnsProductMax),
+  "quantity": zod.number().min(adminPublishInvoiceDesignResponseDraftColumnsQuantityMin).max(adminPublishInvoiceDesignResponseDraftColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminPublishInvoiceDesignResponseDraftColumnsUnitPriceMin).max(adminPublishInvoiceDesignResponseDraftColumnsUnitPriceMax),
+  "total": zod.number().min(adminPublishInvoiceDesignResponseDraftColumnsTotalMin).max(adminPublishInvoiceDesignResponseDraftColumnsTotalMax)
+})
+}),
+  "published": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminPublishInvoiceDesignResponsePublishedElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminPublishInvoiceDesignResponsePublishedElementsItemXMin).max(adminPublishInvoiceDesignResponsePublishedElementsItemXMax),
+  "y": zod.number().min(adminPublishInvoiceDesignResponsePublishedElementsItemYMin).max(adminPublishInvoiceDesignResponsePublishedElementsItemYMax),
+  "width": zod.number().min(adminPublishInvoiceDesignResponsePublishedElementsItemWidthMin).max(adminPublishInvoiceDesignResponsePublishedElementsItemWidthMax),
+  "height": zod.number().min(adminPublishInvoiceDesignResponsePublishedElementsItemHeightMin).max(adminPublishInvoiceDesignResponsePublishedElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminPublishInvoiceDesignResponsePublishedElementsItemFontSizeMin).max(adminPublishInvoiceDesignResponsePublishedElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminPublishInvoiceDesignResponsePublishedElementsItemColorRegExp),
+  "background": zod.string().regex(adminPublishInvoiceDesignResponsePublishedElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminPublishInvoiceDesignResponsePublishedElementsItemBorderWidthMin).max(adminPublishInvoiceDesignResponsePublishedElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminPublishInvoiceDesignResponsePublishedElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminPublishInvoiceDesignResponsePublishedElementsItemPaddingMin).max(adminPublishInvoiceDesignResponsePublishedElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminPublishInvoiceDesignResponsePublishedElementsItemLineHeightMin).max(adminPublishInvoiceDesignResponsePublishedElementsItemLineHeightMax),
+  "text": zod.string().max(adminPublishInvoiceDesignResponsePublishedElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminPublishInvoiceDesignResponsePublishedElementsItemHeadingMax).optional()
+})).min(adminPublishInvoiceDesignResponsePublishedElementsMin).max(adminPublishInvoiceDesignResponsePublishedElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminPublishInvoiceDesignResponsePublishedColumnsProductMin).max(adminPublishInvoiceDesignResponsePublishedColumnsProductMax),
+  "quantity": zod.number().min(adminPublishInvoiceDesignResponsePublishedColumnsQuantityMin).max(adminPublishInvoiceDesignResponsePublishedColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminPublishInvoiceDesignResponsePublishedColumnsUnitPriceMin).max(adminPublishInvoiceDesignResponsePublishedColumnsUnitPriceMax),
+  "total": zod.number().min(adminPublishInvoiceDesignResponsePublishedColumnsTotalMin).max(adminPublishInvoiceDesignResponsePublishedColumnsTotalMax)
+})
+}),
+  "updatedBy": zod.number().nullable(),
+  "updatedAt": zod.string().nullable(),
+  "publishedBy": zod.number().nullable(),
+  "publishedAt": zod.string().nullable(),
+  "sampleQr": zod.string()
+})
+
+
+export const adminResetInvoiceDesignBodyRevisionMin = 0;
+export const adminResetInvoiceDesignBodyRevisionMultipleOf = 1;
+
+
+
+export const AdminResetInvoiceDesignBody = zod.object({
+  "revision": zod.number().min(adminResetInvoiceDesignBodyRevisionMin).multipleOf(adminResetInvoiceDesignBodyRevisionMultipleOf)
+})
+
+export const adminResetInvoiceDesignResponseRevisionMultipleOf = 1;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminResetInvoiceDesignResponseDraftElementsItemXMin = 8;
+export const adminResetInvoiceDesignResponseDraftElementsItemXMax = 202;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemYMin = 8;
+export const adminResetInvoiceDesignResponseDraftElementsItemYMax = 289;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemWidthMin = 2;
+export const adminResetInvoiceDesignResponseDraftElementsItemWidthMax = 194;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemHeightMin = 0.3;
+export const adminResetInvoiceDesignResponseDraftElementsItemHeightMax = 180;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemFontSizeMin = 9;
+export const adminResetInvoiceDesignResponseDraftElementsItemFontSizeMax = 24;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminResetInvoiceDesignResponseDraftElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminResetInvoiceDesignResponseDraftElementsItemBorderWidthMin = 0;
+export const adminResetInvoiceDesignResponseDraftElementsItemBorderWidthMax = 1;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminResetInvoiceDesignResponseDraftElementsItemPaddingMin = 0;
+export const adminResetInvoiceDesignResponseDraftElementsItemPaddingMax = 4;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemLineHeightMin = 1.2;
+export const adminResetInvoiceDesignResponseDraftElementsItemLineHeightMax = 1.8;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemTextMax = 400;
+
+export const adminResetInvoiceDesignResponseDraftElementsItemHeadingMax = 60;
+
+export const adminResetInvoiceDesignResponseDraftElementsMin = 10;
+export const adminResetInvoiceDesignResponseDraftElementsMax = 24;
+
+export const adminResetInvoiceDesignResponseDraftColumnsProductMin = 35;
+export const adminResetInvoiceDesignResponseDraftColumnsProductMax = 65;
+
+export const adminResetInvoiceDesignResponseDraftColumnsQuantityMin = 10;
+export const adminResetInvoiceDesignResponseDraftColumnsQuantityMax = 20;
+
+export const adminResetInvoiceDesignResponseDraftColumnsUnitPriceMin = 12;
+export const adminResetInvoiceDesignResponseDraftColumnsUnitPriceMax = 30;
+
+export const adminResetInvoiceDesignResponseDraftColumnsTotalMin = 12;
+export const adminResetInvoiceDesignResponseDraftColumnsTotalMax = 30;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminResetInvoiceDesignResponsePublishedElementsItemXMin = 8;
+export const adminResetInvoiceDesignResponsePublishedElementsItemXMax = 202;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemYMin = 8;
+export const adminResetInvoiceDesignResponsePublishedElementsItemYMax = 289;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemWidthMin = 2;
+export const adminResetInvoiceDesignResponsePublishedElementsItemWidthMax = 194;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemHeightMin = 0.3;
+export const adminResetInvoiceDesignResponsePublishedElementsItemHeightMax = 180;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemFontSizeMin = 9;
+export const adminResetInvoiceDesignResponsePublishedElementsItemFontSizeMax = 24;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminResetInvoiceDesignResponsePublishedElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminResetInvoiceDesignResponsePublishedElementsItemBorderWidthMin = 0;
+export const adminResetInvoiceDesignResponsePublishedElementsItemBorderWidthMax = 1;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminResetInvoiceDesignResponsePublishedElementsItemPaddingMin = 0;
+export const adminResetInvoiceDesignResponsePublishedElementsItemPaddingMax = 4;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemLineHeightMin = 1.2;
+export const adminResetInvoiceDesignResponsePublishedElementsItemLineHeightMax = 1.8;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemTextMax = 400;
+
+export const adminResetInvoiceDesignResponsePublishedElementsItemHeadingMax = 60;
+
+export const adminResetInvoiceDesignResponsePublishedElementsMin = 10;
+export const adminResetInvoiceDesignResponsePublishedElementsMax = 24;
+
+export const adminResetInvoiceDesignResponsePublishedColumnsProductMin = 35;
+export const adminResetInvoiceDesignResponsePublishedColumnsProductMax = 65;
+
+export const adminResetInvoiceDesignResponsePublishedColumnsQuantityMin = 10;
+export const adminResetInvoiceDesignResponsePublishedColumnsQuantityMax = 20;
+
+export const adminResetInvoiceDesignResponsePublishedColumnsUnitPriceMin = 12;
+export const adminResetInvoiceDesignResponsePublishedColumnsUnitPriceMax = 30;
+
+export const adminResetInvoiceDesignResponsePublishedColumnsTotalMin = 12;
+export const adminResetInvoiceDesignResponsePublishedColumnsTotalMax = 30;
+
+
+
+export const AdminResetInvoiceDesignResponse = zod.object({
+  "revision": zod.number().multipleOf(adminResetInvoiceDesignResponseRevisionMultipleOf),
+  "draft": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminResetInvoiceDesignResponseDraftElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminResetInvoiceDesignResponseDraftElementsItemXMin).max(adminResetInvoiceDesignResponseDraftElementsItemXMax),
+  "y": zod.number().min(adminResetInvoiceDesignResponseDraftElementsItemYMin).max(adminResetInvoiceDesignResponseDraftElementsItemYMax),
+  "width": zod.number().min(adminResetInvoiceDesignResponseDraftElementsItemWidthMin).max(adminResetInvoiceDesignResponseDraftElementsItemWidthMax),
+  "height": zod.number().min(adminResetInvoiceDesignResponseDraftElementsItemHeightMin).max(adminResetInvoiceDesignResponseDraftElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminResetInvoiceDesignResponseDraftElementsItemFontSizeMin).max(adminResetInvoiceDesignResponseDraftElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminResetInvoiceDesignResponseDraftElementsItemColorRegExp),
+  "background": zod.string().regex(adminResetInvoiceDesignResponseDraftElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminResetInvoiceDesignResponseDraftElementsItemBorderWidthMin).max(adminResetInvoiceDesignResponseDraftElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminResetInvoiceDesignResponseDraftElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminResetInvoiceDesignResponseDraftElementsItemPaddingMin).max(adminResetInvoiceDesignResponseDraftElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminResetInvoiceDesignResponseDraftElementsItemLineHeightMin).max(adminResetInvoiceDesignResponseDraftElementsItemLineHeightMax),
+  "text": zod.string().max(adminResetInvoiceDesignResponseDraftElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminResetInvoiceDesignResponseDraftElementsItemHeadingMax).optional()
+})).min(adminResetInvoiceDesignResponseDraftElementsMin).max(adminResetInvoiceDesignResponseDraftElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminResetInvoiceDesignResponseDraftColumnsProductMin).max(adminResetInvoiceDesignResponseDraftColumnsProductMax),
+  "quantity": zod.number().min(adminResetInvoiceDesignResponseDraftColumnsQuantityMin).max(adminResetInvoiceDesignResponseDraftColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminResetInvoiceDesignResponseDraftColumnsUnitPriceMin).max(adminResetInvoiceDesignResponseDraftColumnsUnitPriceMax),
+  "total": zod.number().min(adminResetInvoiceDesignResponseDraftColumnsTotalMin).max(adminResetInvoiceDesignResponseDraftColumnsTotalMax)
+})
+}),
+  "published": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminResetInvoiceDesignResponsePublishedElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminResetInvoiceDesignResponsePublishedElementsItemXMin).max(adminResetInvoiceDesignResponsePublishedElementsItemXMax),
+  "y": zod.number().min(adminResetInvoiceDesignResponsePublishedElementsItemYMin).max(adminResetInvoiceDesignResponsePublishedElementsItemYMax),
+  "width": zod.number().min(adminResetInvoiceDesignResponsePublishedElementsItemWidthMin).max(adminResetInvoiceDesignResponsePublishedElementsItemWidthMax),
+  "height": zod.number().min(adminResetInvoiceDesignResponsePublishedElementsItemHeightMin).max(adminResetInvoiceDesignResponsePublishedElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminResetInvoiceDesignResponsePublishedElementsItemFontSizeMin).max(adminResetInvoiceDesignResponsePublishedElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminResetInvoiceDesignResponsePublishedElementsItemColorRegExp),
+  "background": zod.string().regex(adminResetInvoiceDesignResponsePublishedElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminResetInvoiceDesignResponsePublishedElementsItemBorderWidthMin).max(adminResetInvoiceDesignResponsePublishedElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminResetInvoiceDesignResponsePublishedElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminResetInvoiceDesignResponsePublishedElementsItemPaddingMin).max(adminResetInvoiceDesignResponsePublishedElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminResetInvoiceDesignResponsePublishedElementsItemLineHeightMin).max(adminResetInvoiceDesignResponsePublishedElementsItemLineHeightMax),
+  "text": zod.string().max(adminResetInvoiceDesignResponsePublishedElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminResetInvoiceDesignResponsePublishedElementsItemHeadingMax).optional()
+})).min(adminResetInvoiceDesignResponsePublishedElementsMin).max(adminResetInvoiceDesignResponsePublishedElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminResetInvoiceDesignResponsePublishedColumnsProductMin).max(adminResetInvoiceDesignResponsePublishedColumnsProductMax),
+  "quantity": zod.number().min(adminResetInvoiceDesignResponsePublishedColumnsQuantityMin).max(adminResetInvoiceDesignResponsePublishedColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminResetInvoiceDesignResponsePublishedColumnsUnitPriceMin).max(adminResetInvoiceDesignResponsePublishedColumnsUnitPriceMax),
+  "total": zod.number().min(adminResetInvoiceDesignResponsePublishedColumnsTotalMin).max(adminResetInvoiceDesignResponsePublishedColumnsTotalMax)
+})
+}),
+  "updatedBy": zod.number().nullable(),
+  "updatedAt": zod.string().nullable(),
+  "publishedBy": zod.number().nullable(),
+  "publishedAt": zod.string().nullable(),
+  "sampleQr": zod.string()
+})
+
+
+export const adminGetPublishedInvoiceDesignResponseRevisionMultipleOf = 1;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemIdRegExp = new RegExp('^[a-z][a-z0-9-]{0,39}$');
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemXMin = 8;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemXMax = 202;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemYMin = 8;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemYMax = 289;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemWidthMin = 2;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemWidthMax = 194;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemHeightMin = 0.3;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemHeightMax = 180;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemFontSizeMin = 9;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemFontSizeMax = 24;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemBackgroundRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemBorderWidthMin = 0;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemBorderWidthMax = 1;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemBorderColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemPaddingMin = 0;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemPaddingMax = 4;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemLineHeightMin = 1.2;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemLineHeightMax = 1.8;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemTextMax = 400;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsItemHeadingMax = 60;
+
+export const adminGetPublishedInvoiceDesignResponseDesignElementsMin = 10;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsMax = 24;
+
+export const adminGetPublishedInvoiceDesignResponseDesignColumnsProductMin = 35;
+export const adminGetPublishedInvoiceDesignResponseDesignColumnsProductMax = 65;
+
+export const adminGetPublishedInvoiceDesignResponseDesignColumnsQuantityMin = 10;
+export const adminGetPublishedInvoiceDesignResponseDesignColumnsQuantityMax = 20;
+
+export const adminGetPublishedInvoiceDesignResponseDesignColumnsUnitPriceMin = 12;
+export const adminGetPublishedInvoiceDesignResponseDesignColumnsUnitPriceMax = 30;
+
+export const adminGetPublishedInvoiceDesignResponseDesignColumnsTotalMin = 12;
+export const adminGetPublishedInvoiceDesignResponseDesignColumnsTotalMax = 30;
+
+
+
+export const AdminGetPublishedInvoiceDesignResponse = zod.object({
+  "revision": zod.number().multipleOf(adminGetPublishedInvoiceDesignResponseRevisionMultipleOf),
+  "design": zod.object({
+  "version": zod.literal(1),
+  "template": zod.enum(['reference', 'formal', 'modern']),
+  "elements": zod.array(zod.object({
+  "id": zod.string().regex(adminGetPublishedInvoiceDesignResponseDesignElementsItemIdRegExp),
+  "kind": zod.enum(['logo', 'title', 'seller', 'buyer', 'info', 'table', 'totals', 'notes', 'qr', 'footer', 'text', 'divider']),
+  "x": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignElementsItemXMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemXMax),
+  "y": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignElementsItemYMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemYMax),
+  "width": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignElementsItemWidthMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemWidthMax),
+  "height": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignElementsItemHeightMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemHeightMax),
+  "font": zod.enum(['Amiri', 'Ping']),
+  "fontSize": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignElementsItemFontSizeMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemFontSizeMax),
+  "fontWeight": zod.enum(['normal', 'bold']),
+  "color": zod.string().regex(adminGetPublishedInvoiceDesignResponseDesignElementsItemColorRegExp),
+  "background": zod.string().regex(adminGetPublishedInvoiceDesignResponseDesignElementsItemBackgroundRegExp),
+  "align": zod.enum(['start', 'center', 'end']),
+  "borderWidth": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignElementsItemBorderWidthMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemBorderWidthMax),
+  "borderColor": zod.string().regex(adminGetPublishedInvoiceDesignResponseDesignElementsItemBorderColorRegExp),
+  "padding": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignElementsItemPaddingMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemPaddingMax),
+  "lineHeight": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignElementsItemLineHeightMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemLineHeightMax),
+  "text": zod.string().max(adminGetPublishedInvoiceDesignResponseDesignElementsItemTextMax).optional(),
+  "heading": zod.string().min(1).max(adminGetPublishedInvoiceDesignResponseDesignElementsItemHeadingMax).optional()
+})).min(adminGetPublishedInvoiceDesignResponseDesignElementsMin).max(adminGetPublishedInvoiceDesignResponseDesignElementsMax),
+  "columns": zod.object({
+  "product": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignColumnsProductMin).max(adminGetPublishedInvoiceDesignResponseDesignColumnsProductMax),
+  "quantity": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignColumnsQuantityMin).max(adminGetPublishedInvoiceDesignResponseDesignColumnsQuantityMax),
+  "unitPrice": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignColumnsUnitPriceMin).max(adminGetPublishedInvoiceDesignResponseDesignColumnsUnitPriceMax),
+  "total": zod.number().min(adminGetPublishedInvoiceDesignResponseDesignColumnsTotalMin).max(adminGetPublishedInvoiceDesignResponseDesignColumnsTotalMax)
+})
+})
+})
+
+
 export const unlockAdminBackupsBodyPasswordMax = 256;
 
 

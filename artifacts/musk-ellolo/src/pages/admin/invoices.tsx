@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
-  Search, QrCode, Printer, AlertCircle, Banknote, 
+  Search, Printer, AlertCircle, Banknote,
   MoreHorizontal, Eye, Pen, Mail, Archive 
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -43,280 +43,7 @@ import { CreateIndividualInvoiceDialog } from '@/components/admin/create-individ
 import { CreateExhibitionInvoiceDialog } from '@/components/admin/create-exhibition-invoice-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { formatRiyadhBusinessDate } from '@/lib/riyadh-business-date';
-
-function InvoiceTemplate({
-  invoice,
-  qrUrl,
-  onQrLoad,
-}: {
-  invoice: AdminInvoice;
-  qrUrl: string | null;
-  onQrLoad?: () => void;
-}) {
-  const { t, lang } = useLanguage();
-  const knownSaleSnapshot = (invoice.couponDiscountAmount !== null && invoice.couponDiscountAmount !== undefined)
-    || (invoice.manualDiscountAmount !== null && invoice.manualDiscountAmount !== undefined);
-  const saleShipping = invoice.shippingAmount ?? 0;
-  const saleProductsGross = Math.round((invoice.totalAmount - saleShipping + invoice.discountAmount) * 100) / 100;
-  const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-  const usesContractTerms = Boolean(invoice.contractId || invoice.uploadedContractFileId);
-  const internationalDistributor = invoice.distributorId != null && invoice.taxTreatment === 'international' && invoice.vatAmount === 0;
-  const contractDisplayName = invoice.contractNumber || (invoice.uploadedContractFileId
-    ? t(`ملف عقد #${invoice.uploadedContractFileId}`, `Contract file #${invoice.uploadedContractFileId}`)
-    : '-');
-  const paymentTermsDescription = invoice.paymentTerm === 'due_on_issue'
-    ? t('نقداً / يوم الإصدار', 'Due on issue')
-    : invoice.paymentTerm === 'end_of_month'
-      ? t('نهاية الشهر الميلادي', 'End of month')
-      : invoice.paymentDays !== null && invoice.paymentDays !== undefined
-        ? t(`${invoice.paymentDays} يوم`, `${invoice.paymentDays} days`)
-        : null;
-  const originalInvoiceNumber = invoice.originalInvoiceNumber;
-  const inclusiveOrderSnapshot = Boolean(invoice.orderNumber) &&
-    Math.round(invoice.subtotal * 100) + Math.round(invoice.vatAmount * 100) === Math.round(invoice.totalAmount * 100);
-  const vatLabel = invoice.vatAmount > 0
-    ? invoice.vatRate !== null && invoice.vatRate !== undefined && invoice.vatRate > 0
-      ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
-      : t('ضريبة القيمة المضافة (مبلغ تاريخي)', 'VAT (historical amount)')
-    : invoice.taxTreatment === 'international'
-      ? t('ضريبة القيمة المضافة (دولي - 0%)', 'VAT (International — 0%)')
-      : invoice.vatRate !== null && invoice.vatRate !== undefined
-        ? t(`ضريبة القيمة المضافة (${invoice.vatRate}%)`, `VAT (${invoice.vatRate}%)`)
-        : t('ضريبة القيمة المضافة (15%)', 'VAT (15%)');
-  return (
-    <div id="invoice-print-area" data-testid="invoice-template" className="invoice-sheet bg-white text-[#292728] p-6 sm:p-10 rounded-md shadow-sm border border-stone-200 font-sans mx-auto max-w-4xl relative" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      {invoice.cancelledAt && <div className="border border-red-500 text-red-700 p-3 mb-4 font-bold" role="status">
-        {t('فاتورة ملغاة', 'Cancelled invoice')} · {invoice.cancellationReason}
-        <span className="block text-sm font-normal">{invoice.cancelledByName ?? `#${invoice.cancelledByAdminId}`} · {format(new Date(invoice.cancelledAt), 'yyyy-MM-dd HH:mm')}</span>
-      </div>}
-      <style>{`
-        @media print {
-          body, html { height: auto !important; overflow: visible !important; background: #fff !important; }
-          body > #root { display: none !important; }
-          body * { visibility: hidden !important; }
-          [data-radix-portal], [role="dialog"], [data-radix-portal] > div {
-            position: static !important; transform: none !important; translate: none !important; overflow: visible !important;
-            max-height: none !important; height: auto !important; display: block !important; inset: auto !important;
-          }
-          [role="dialog"] { width: 100% !important; max-width: none !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }
-          #invoice-print-area, #invoice-print-area * { visibility: visible !important; }
-          #invoice-print-area {
-            position: relative !important; left: auto !important; top: auto !important; width: 100% !important; max-width: none !important;
-            margin: 0 !important; padding: 4mm !important; border: none !important; box-shadow: none !important; border-radius: 0 !important;
-            overflow: visible !important;
-            -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
-          }
-          .print-hide { display: none !important; }
-          @page { size: A4 portrait; margin: 15mm; }
-        }
-      `}</style>
-      
-      {/* Customer on the physical right, seller on the left, with the mark centered. */}
-      <div dir="rtl" className="invoice-heading grid gap-5 sm:gap-6 items-start mb-6">
-        <div data-testid="invoice-buyer" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-heading-buyer min-w-0">
-          <h3 className="text-xs font-semibold text-stone-500 mb-3">{t('بيانات العميل', 'Customer Details')}</h3>
-          <p className="font-semibold text-lg text-[#292728]">{invoice.buyerName || invoice.distributorName || '-'}</p>
-          {invoice.buyerPhone && <p className="text-xs sm:text-sm text-gray-600 mt-2">{t('الجوال', 'Phone')}: <span dir="ltr" className="inline-block">{invoice.buyerPhone}</span></p>}
-          {invoice.buyerAddress && <p className="text-xs sm:text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{invoice.buyerAddress}</p>}
-          {invoice.shippingDetails && <div className="mt-3 border-t pt-2 text-xs text-gray-600"><p className="font-semibold">{t('بيانات الشحنة الحالية (ملحق تشغيلي)', 'Current shipment (operational attachment)')}</p><p className="whitespace-pre-wrap">{invoice.shippingDetails}</p></div>}
-          {invoice.buyerTaxNumber && <p className="text-xs sm:text-sm text-gray-600 mt-2">{t('الرقم الضريبي', 'VAT')}: <span className="font-mono text-gray-900">{invoice.buyerTaxNumber}</span></p>}
-          {invoice.buyerCommercialRegistrationNumber && <p className="text-xs sm:text-sm text-gray-600 mt-1">{t('السجل التجاري', 'CR')}: <span className="font-mono text-gray-900">{invoice.buyerCommercialRegistrationNumber}</span></p>}
-          {invoice.orderNumber && <p className="mt-3 text-xs text-stone-500">{t('رقم الطلب', 'Order No.')}: <span className="font-mono text-stone-700">{invoice.orderNumber}</span></p>}
-        </div>
-        <div className="invoice-heading-logo flex flex-col items-center text-center">
-          <div className="flex h-20 items-center justify-center">
-            <img src={`${import.meta.env.BASE_URL}site-assets/invoice-logo-black.png`} alt="Musk Ellolo" data-testid="invoice-logo-black" className="invoice-logo-black h-auto w-48 sm:w-56 object-contain" />
-            <img src={`${import.meta.env.BASE_URL}site-assets/invoice-logo-white.png`} alt="Musk Ellolo" data-testid="invoice-logo-white" className="invoice-logo-white h-auto w-48 sm:w-56 object-contain" />
-          </div>
-          <h1 data-testid="invoice-title" className="mt-2 text-xl font-semibold tracking-wide text-[#292728]">{invoice.historical === 'yes' ? t('تسجيل فاتورة سابقة', 'Historical Invoice Record') : t('فاتورة ضريبية', 'Tax Invoice')}</h1>
-          {invoice.historical === 'yes' && <p className="text-xs text-stone-600">{t('سجل داخلي لفاتورة سابقة؛ ليس إصداراً ضريبياً جديداً أو اعتماد ZATCA', 'Internal prior record; not a new tax issuance or ZATCA certification')}</p>}
-        </div>
-        <div className="invoice-heading-seller min-w-0">
-          <div data-testid="invoice-seller" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="min-w-0">
-            <p className="invoice-seller-name font-semibold text-[#292728]">{invoice.sellerName}</p>
-            <p className="mt-2 text-xs text-stone-500">{t('السعودية، الرياض، حي السليمانية', 'Saudi Arabia, Riyadh, Al Sulimaniyah')}</p>
-            <p className="mt-2 text-xs text-stone-500">{t('الرقم الضريبي', 'VAT Number')}: <span className="font-mono text-stone-700">{invoice.sellerVatNumber}</span></p>
-          </div>
-          <div data-testid="invoice-info-card" dir={lang === 'ar' ? 'rtl' : 'ltr'} className="invoice-info-card mt-5 rounded-md border border-stone-200 bg-stone-100 p-4">
-            <dl className="space-y-3 text-sm">
-              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{invoice.historical === 'yes' ? t('المرجع الداخلي', 'Internal reference') : t('رقم الفاتورة', 'Invoice No.')}</dt><dd dir="ltr" className="font-mono font-semibold text-[#292728]">{invoice.invoiceNumber}</dd></div>
-              {invoice.historical === 'yes' && originalInvoiceNumber && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('رقم الفاتورة الأصلية', 'Original invoice number')}</dt><dd dir="ltr" className="font-mono">{originalInvoiceNumber}</dd></div>}
-              {invoice.exhibitionName && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('المعرض', 'Exhibition')}</dt><dd>{invoice.exhibitionName}</dd></div>}
-              {usesContractTerms && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{invoice.historical === 'yes' ? t('مرجع العقد (لا يثبت سريانه حينها)', 'Contract reference (not proof of past validity)') : invoice.uploadedContractFileId ? t('ملف العقد', 'Contract file') : t('العقد', 'Contract')}</dt><dd className="text-end">{contractDisplayName}{invoice.contractType ? ` · ${invoice.contractType}` : ''}</dd></div>}
-              {usesContractTerms && paymentTermsDescription && <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('شروط السداد', 'Payment terms')}</dt><dd>{paymentTermsDescription}</dd></div>}
-              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الإصدار', 'Issue Date')}</dt><dd className="font-medium text-[#292728]">{formatRiyadhBusinessDate(invoice.issueDatetime)}</dd></div>
-              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('تاريخ الاستحقاق', 'Due Date')}</dt><dd className="font-medium text-[#292728]">{invoice.dueDate ? invoice.dueDate.slice(0, 10) : '-'}</dd></div>
-              <div className="flex items-baseline justify-between gap-3"><dt className="text-stone-600">{t('حالة التحصيل', 'Collection status')}</dt><dd className="font-medium">{invoice.paymentStatus === 'paid' ? t('تم التحصيل', 'Collected') : invoice.paymentStatus === 'partial' ? t('تحصيل جزئي', 'Partially collected') : t('غير محصلة', 'Not collected')}</dd></div>
-            </dl>
-          </div>
-        </div>
-      </div>
-
-      {/* Items Table */}
-      <div data-testid="invoice-items" className="invoice-items rounded-xl overflow-x-auto border border-gray-200 mb-6">
-        <table className="w-full text-xs sm:text-sm">
-           <thead data-testid="invoice-table-head" className="bg-gray-50">
-            <tr>
-              <th className="text-start py-3 px-4 sm:px-6 font-bold text-gray-900">{t('المنتج', 'Product')}</th>
-              <th className="text-center py-3 px-3 sm:px-4 font-bold text-gray-900">{t('الكمية', 'Qty')}</th>
-              <th className="text-end py-3 px-3 sm:px-4 font-bold text-gray-900">{t('سعر الوحدة', 'Unit Price')}</th>
-            </tr>
-          </thead>
-           <tbody data-testid="invoice-table-body" className="divide-y divide-gray-100 bg-white">
-            {invoice.items.length > 0 ? (
-              invoice.items.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="py-3 px-4 sm:px-6 font-medium text-gray-900">{lang === 'en' ? item.productNameEn ?? item.productName : item.productName}</td>
-                  <td className="py-3 px-3 sm:px-4 text-center text-gray-600">{item.quantity}</td>
-                  <td className="py-3 px-3 sm:px-4 text-end text-gray-600 font-mono"><Money value={item.unitPrice} lang={lang} fractionDigits={2} /></td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={3} className="py-8 text-center text-gray-500">{t('لا توجد منتجات', 'No items')}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Totals & QR */}
-      <div data-testid="invoice-summary" className="invoice-summary flex flex-col sm:flex-row justify-between sm:items-end gap-6">
-         {invoice.historical !== 'yes' && !invoice.cancelledAt && <div data-testid="invoice-qr-surface" className="invoice-qr-surface w-28 h-28 sm:w-32 sm:h-32 bg-white rounded-xl p-2 border border-gray-200 flex items-center justify-center shadow-sm shrink-0">
-          {qrUrl ? (
-            <img src={qrUrl} alt="ZATCA QR" data-testid="invoice-qr" onLoad={onQrLoad} className="w-full h-full object-contain" />
-          ) : (
-            <div className="animate-pulse w-full h-full bg-gray-100 rounded-lg"></div>
-          )}
-        </div>}
-        <div className="w-full sm:w-80 space-y-4">
-          {knownSaleSnapshot ? (
-            <>
-              <div data-testid="invoice-sale-products-gross" className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('إجمالي المنتجات قبل الخصم (شامل الضريبة)', 'Products gross before discounts (VAT included)')}</span>
-                <span className="font-mono"><Money value={saleProductsGross} lang={lang} fractionDigits={2} /></span>
-              </div>
-              {invoice.couponDiscountAmount !== null && invoice.couponDiscountAmount !== undefined && <div data-testid="invoice-coupon-discount" className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('خصم الكوبون', 'Coupon discount')}{invoice.couponCode ? ` (${invoice.couponCode})` : ''}</span>
-                <span className="font-mono"><Money value={-invoice.couponDiscountAmount} lang={lang} fractionDigits={2} /></span>
-              </div>}
-              {invoice.manualDiscountAmount !== null && invoice.manualDiscountAmount !== undefined && <div data-testid="invoice-manual-discount" className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('خصم يدوي', 'Manual discount')}{invoice.manualDiscountPercent !== null && invoice.manualDiscountPercent !== undefined ? ` (${invoice.manualDiscountPercent}%)` : ''}</span>
-                <span className="font-mono"><Money value={-invoice.manualDiscountAmount} lang={lang} fractionDigits={2} /></span>
-              </div>}
-              {saleShipping > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('الشحن / رسوم الاستلام (دون خصم)', 'Shipping / pickup fee (not discounted)')}</span>
-                <span className="font-mono"><Money value={saleShipping} lang={lang} fractionDigits={2} /></span>
-              </div>}
-              <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('صافي المجموع الفرعي بعد الخصم', 'Net subtotal after discounts')}</span>
-                <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
-              </div>
-              <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{vatLabel}</span>
-                <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
-              </div>
-            </>
-          ) : invoice.historical === 'yes' ? (
-            <>
-              <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('صافي المبلغ الأصلي', 'Original net')}</span><span><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span></div>
-              <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm"><span>{invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined
-                ? t(`خصم استثنائي للتسجيل (${invoice.invoiceDiscountPercent}%)`, `Prior-record discount override (${invoice.invoiceDiscountPercent}%)`)
-                : invoice.contractDiscountPercent !== null && invoice.contractDiscountPercent !== undefined
-                  ? t(`الخصم المحتسب من مرجع العقد (${invoice.contractDiscountPercent}%)`, `Discount calculated from contract reference (${invoice.contractDiscountPercent}%)`)
-                  : t('الخصم الأصلي (ضمن الصافي)', 'Original discount (already reflected)')}</span><span><Money value={invoice.discountAmount} lang={lang} fractionDigits={2} /></span></div>
-              <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('الضريبة الأصلية', 'Original VAT')}</span><span><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span></div>
-            </>
-          ) : usesContractTerms ? (
-            <>
-              <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{internationalDistributor ? t('الإجمالي قبل الخصم', 'Gross before discount') : t('الإجمالي قبل الخصم (شامل الضريبة)', 'Gross before discount (VAT included)')}</span>
-                <span className="font-mono"><Money value={grossBeforeDiscount} lang={lang} fractionDigits={2} /></span>
-              </div>
-              <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined
-                  ? t(`خصم استثنائي لهذه الفاتورة (${invoice.invoiceDiscountPercent}%)`, `Invoice-only discount override (${invoice.invoiceDiscountPercent}%)`)
-                  : t(`خصم العقد (${invoice.contractDiscountPercent ?? 0}%)`, `Contract discount (${invoice.contractDiscountPercent ?? 0}%)`)}</span>
-                <span className="font-mono"><Money value={-(invoice.discountAmount ?? 0)} lang={lang} fractionDigits={2} /></span>
-              </div>
-              {!internationalDistributor && <>
-                <div className="flex justify-between text-gray-600 px-2 text-sm">
-                  <span>{t('صافي المجموع الفرعي بعد الخصم', 'Net subtotal after discount')}</span>
-                  <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
-                </div>
-                <div className="flex justify-between text-gray-600 px-2 text-sm">
-                  <span>{vatLabel}</span>
-                  <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
-                </div>
-              </>}
-              {(invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('الشحن', 'Shipping')}</span>
-                <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
-              </div>}
-            </>
-          ) : (
-            <>
-              {internationalDistributor ? (
-                <div className="flex justify-between text-gray-600 px-2 text-sm">
-                  <span>{t('الإجمالي قبل الخصم', 'Gross before discount')}</span>
-                  <span className="font-mono"><Money value={grossBeforeDiscount} lang={lang} fractionDigits={2} /></span>
-                </div>
-              ) : <>
-                <div className="flex justify-between text-gray-600 px-2 text-sm">
-                  <span>{t('المجموع الفرعي', 'Subtotal')}</span>
-                  <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
-                </div>
-                <div className="flex justify-between text-gray-600 px-2 text-sm">
-                  <span>{vatLabel}</span>
-                  <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
-                </div>
-              </>}
-              {!inclusiveOrderSnapshot && (invoice.shippingAmount ?? 0) > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('الشحن', 'Shipping')}</span>
-                <span className="font-mono"><Money value={invoice.shippingAmount!} lang={lang} fractionDigits={2} /></span>
-              </div>}
-              {(!inclusiveOrderSnapshot || internationalDistributor) && <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm">
-                <span>{t('الخصم', 'Discount')}</span>
-                 <span className="font-mono"><Money value={-(invoice.discountAmount ?? 0)} lang={lang} fractionDigits={2} /></span>
-              </div>}
-            </>
-          )}
-          {invoice.discountOverrideReason && <div data-testid="invoice-discount-override" className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-stone-800 break-words">
-            <strong>{knownSaleSnapshot && !usesContractTerms ? t('سبب الخصم اليدوي', 'Manual discount reason') : t('استثناء خصم لهذه الفاتورة فقط؛ العقد لم يتغير.', 'Discount override for this invoice only; contract unchanged.')}</strong>
-            <p>{t('السبب', 'Reason')}: {invoice.discountOverrideReason}</p>
-            <p>{t('سُجل بواسطة المستخدم', 'Recorded by user')} #{invoice.discountOverrideByAdminId} · {invoice.discountOverrideAt ? new Date(invoice.discountOverrideAt).toLocaleString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Riyadh' }) : '-'}</p>
-          </div>}
-           {invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount && (
-            <div className="pt-2 space-y-2 px-2 text-xs sm:text-sm">
-              <div className="flex justify-between text-stone-600 font-medium">
-                <span>{t('المبلغ المدفوع', 'Amount Paid')}</span>
-                <span className="font-mono"><Money value={invoice.paidAmount} lang={lang} fractionDigits={2} /></span>
-              </div>
-               {invoice.outstandingAmount > 0 && invoice.outstandingAmount < invoice.totalAmount && (
-                 <div className="flex justify-between text-stone-700 font-semibold">
-                   <span>{t('الرصيد المستحق', 'Amount Due')}</span>
-                   <span className="font-mono"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></span>
-                 </div>
-               )}
-            </div>
-          )}
-          <div data-testid="invoice-collection-summary" className="space-y-2 rounded-md border border-stone-200 p-3 text-xs sm:text-sm">
-            <div className="flex justify-between font-medium"><span>{t('حالة التحصيل', 'Collection status')}</span><span>{invoice.paymentStatus === 'paid' ? t('تم التحصيل بالكامل', 'Collected in full') : invoice.paymentStatus === 'partial' ? t('تحصيل جزئي', 'Partially collected') : t('غير محصلة', 'Not collected')}</span></div>
-            <div className="flex justify-between text-stone-600"><span>{t('المحصل', 'Collected')}</span><span className="font-mono"><Money value={invoice.paidAmount} lang={lang} fractionDigits={2} /></span></div>
-            <div className="flex justify-between text-stone-600"><span>{t('المتبقي للتحصيل', 'Remaining to collect')}</span><span className="font-mono"><Money value={invoice.outstandingAmount} lang={lang} fractionDigits={2} /></span></div>
-          </div>
-           <div data-testid="invoice-total-card" className="flex justify-between font-semibold text-base sm:text-lg p-3 sm:p-4 bg-stone-100 rounded-md border border-stone-200">
-              <span className="text-[#292728]">{internationalDistributor && (invoice.shippingAmount ?? 0) === 0 ? t('الإجمالي بعد الخصم', 'Total after discount') : t('الإجمالي', 'Total')}</span>
-             <span className="font-mono text-[#292728]"><Money value={invoice.totalAmount} lang={lang} fractionDigits={2} /></span>
-           </div>
-        </div>
-      </div>
-      <footer className="invoice-footer" data-testid="invoice-footer">
-        <img src={`${import.meta.env.BASE_URL}site-assets/invoice-footer.jpg?v=logo-site-only`} alt={t('شعار مسك اللولو الصغير وموقع muskellolo.com', 'Musk Ellolo small logo and muskellolo.com')} className="w-full h-auto" />
-      </footer>
-    </div>
-  );
-}
+import { SharedInvoicePreview } from '@/components/admin/shared-invoice-preview';
 
 export function InvoicePreviewDialog({ 
   invoice, 
@@ -332,6 +59,11 @@ export function InvoicePreviewDialog({
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
+  const documentRef = useRef<HTMLIFrameElement>(null);
+  const [documentReady, setDocumentReady] = useState(false);
+  const printDocument = () => {
+    if (documentReady) documentRef.current?.contentWindow?.print();
+  };
   
   const { data: qrBlob } = useAdminGetInvoiceQr(
     invoice?.id ?? 0,
@@ -350,23 +82,24 @@ export function InvoicePreviewDialog({
   useEffect(() => {
     hasPrinted.current = false;
     setQrReady(false);
+    setDocumentReady(false);
   }, [invoice?.id, open, printOnReady]);
 
   useEffect(() => {
-    if (!qrBlob || !(qrBlob instanceof Blob)) return undefined;
+    if (!qrBlob || !(qrBlob instanceof Blob)) {setQrUrl(null);return undefined;}
     const url = URL.createObjectURL(qrBlob);
     setQrUrl(url);
     return () => {
       URL.revokeObjectURL(url);
     };
-  }, [qrBlob]);
+  }, [qrBlob,invoice?.id]);
 
   useEffect(() => {
-    if (!open || !printOnReady || (invoice?.historical !== 'yes' && !invoice?.cancelledAt && !qrReady) || hasPrinted.current) return;
+    if (!open || !printOnReady || !documentReady || (invoice?.historical !== 'yes' && !invoice?.cancelledAt && !qrReady) || hasPrinted.current) return;
     hasPrinted.current = true;
-    const timer = window.setTimeout(() => window.print(), 0);
+    const timer = window.setTimeout(() => documentRef.current?.contentWindow?.print(), 0);
     return () => window.clearTimeout(timer);
-  }, [open, printOnReady, qrReady, invoice?.historical, invoice?.cancelledAt]);
+  }, [open, printOnReady, qrReady, documentReady, invoice?.historical, invoice?.cancelledAt]);
 
   const downloadPdf = async () => {
     if (!invoice || invoice.cancelledAt || downloading) return;
@@ -397,7 +130,7 @@ export function InvoicePreviewDialog({
              <Button onClick={downloadPdf} variant="outline" size="sm" disabled={downloading || !invoice || !!invoice.cancelledAt}>
                {downloading ? t('جارٍ التنزيل...', 'Downloading...') : t('تنزيل PDF', 'Download PDF')}
              </Button>
-            <Button onClick={() => window.print()} variant="outline" size="sm" className="gap-2">
+            <Button onClick={printDocument} disabled={!documentReady||(invoice?.historical!=='yes'&&!invoice?.cancelledAt&&!qrReady)} variant="outline" size="sm" className="gap-2">
               <Printer className="w-4 h-4" />
               {t('طباعة', 'Print')}
             </Button>
@@ -405,7 +138,10 @@ export function InvoicePreviewDialog({
           </div>
         </div>
         <div className="p-4 sm:p-8 overflow-y-auto flex-1 print:p-0 print:overflow-visible print:block">
-          {invoice && <InvoiceTemplate invoice={invoice} qrUrl={qrUrl} onQrLoad={() => setQrReady(true)} />}
+          {invoice && <SharedInvoicePreview invoice={invoice} qrUrl={qrUrl} documentRef={documentRef} onReady={(ready) => {
+            setDocumentReady(ready);
+            setQrReady(ready&&!!qrUrl);
+          }} />}
         </div>
       </DialogContent>
     </Dialog>

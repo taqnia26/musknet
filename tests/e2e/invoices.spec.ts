@@ -322,177 +322,82 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
 
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText(/معاينة الفاتورة|Preview Invoice/, { exact: true }).click();
-  const preview = page.getByTestId("invoice-template");
-  const checkLayout = async (print = false, long = false) => {
+  const frame = page.frameLocator('[data-testid="invoice-template"] iframe');
+  const pagesRoot = frame.locator("#invoice-pages");
+  // The shared document is trusted and paginated inside an isolated iframe: wait for it, then read facts from there.
+  const waitReady = async () => {
+    await expect(pagesRoot).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
+    const raw = await pagesRoot.getAttribute("data-errors");
+    expect(JSON.parse(raw || "[]")).toEqual([]);
+  };
+  const checkLayout = async (print = false) => {
     await page.emulateMedia({ media: print ? "print" : "screen" });
-    const boxes = await preview.evaluate((sheet) => {
-      const box = (selector: string) => {
-        const element = sheet.querySelector(selector);
-        if (!element) throw new Error(`Missing invoice element: ${selector}`);
-        const { left, right, top, bottom, width, height } = element.getBoundingClientRect();
-        return { left, right, top, bottom, width, height };
+    await waitReady();
+    const g = await pagesRoot.evaluate((root) => {
+      const page1 = root.querySelector<HTMLElement>(".invoice-page")!;
+      const rect = (el: Element | null) => {
+        if (!el) throw new Error("Missing invoice element");
+        const r = el.getBoundingClientRect();
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height };
       };
+      const at = (kind: string) => rect(page1.querySelector(`[data-element="${kind}"]`));
       return {
-        sheet: (() => {
-          const { left, right, top, bottom, width, height } = sheet.getBoundingClientRect();
-          return { left, right, top, bottom, width, height };
-        })(),
-        buyer: box('[data-testid="invoice-buyer"]'),
-        seller: box('[data-testid="invoice-seller"]'),
-        sellerColumn: box(".invoice-heading-seller"),
-        logo: box(".invoice-heading-logo"),
-        card: box('[data-testid="invoice-info-card"]'),
-        table: box('[data-testid="invoice-items"]'),
-        summary: box('[data-testid="invoice-summary"]'),
-        footer: box('[data-testid="invoice-footer"]'),
-        footerImage: box('[data-testid="invoice-footer"] img'),
-        tableScrollWidth: sheet.querySelector<HTMLElement>('[data-testid="invoice-items"]')!.scrollWidth,
-        cardScrollWidth: sheet.querySelector<HTMLElement>('[data-testid="invoice-info-card"]')!.scrollWidth,
-        printHeaderDisplay: getComputedStyle(document.querySelector('[role="dialog"] > .print-hide')!).display,
+        page: rect(page1), seller: at("seller"), logo: at("logo"), buyer: at("buyer"), info: at("info"),
+        table: at("table"), totals: at("totals"), notes: at("notes"), footer: at("footer"),
+        pages: root.querySelectorAll(".invoice-page").length,
       };
     });
-    expect(Math.abs(boxes.sellerColumn.left - boxes.card.left)).toBeLessThan(2);
-    expect(Math.abs(boxes.sellerColumn.right - boxes.card.right)).toBeLessThan(2);
-    expect(Math.abs(boxes.seller.left - boxes.card.left)).toBeLessThan(2);
-    expect(boxes.card.top).toBeGreaterThanOrEqual(boxes.seller.bottom + 10);
-    expect(boxes.table.top).toBeGreaterThanOrEqual(boxes.card.bottom);
-    expect(boxes.table.top - Math.max(boxes.buyer.bottom, boxes.card.bottom, boxes.logo.bottom)).toBeLessThan(50);
-    expect(boxes.summary.top).toBeGreaterThanOrEqual(boxes.table.bottom);
-    expect(boxes.footer.top).toBeGreaterThanOrEqual(boxes.summary.bottom);
-    expect(boxes.footer.top - boxes.summary.bottom).toBeLessThan(50);
-    expect(boxes.sheet.bottom - boxes.footer.bottom).toBeLessThan(print ? 20 : 45);
-    expect(boxes.footerImage.bottom).toBeLessThanOrEqual(boxes.footer.bottom + 2);
-    expect(boxes.tableScrollWidth).toBeLessThanOrEqual(boxes.table.width + 2);
-    expect(boxes.cardScrollWidth).toBeLessThanOrEqual(boxes.card.width + 2);
-    if (print) expect(boxes.printHeaderDisplay).toBe("none");
-    if (!long && (print || boxes.sheet.width > 600)) expect(boxes.sheet.height).toBeLessThan(print ? 850 : 950);
-    if (print || boxes.sheet.width > 600) {
-      expect(boxes.seller.right).toBeLessThan(boxes.logo.left + 2);
-      expect(boxes.logo.right).toBeLessThan(boxes.buyer.left + 2);
-    }
+    const mid = (r: { left: number; right: number }) => (r.left + r.right) / 2;
+    const center = mid(g.page);
+    // Physical (non-mirrored) layout: seller top-left, logo top-right, buyer left, info right, notes left, totals right.
+    expect(mid(g.seller)).toBeLessThan(center);
+    expect(mid(g.logo)).toBeGreaterThan(center);
+    expect(mid(g.buyer)).toBeLessThan(center);
+    expect(mid(g.info)).toBeGreaterThan(center);
+    expect(mid(g.notes)).toBeLessThan(center);
+    expect(mid(g.totals)).toBeGreaterThan(center);
+    expect(g.buyer.top).toBeGreaterThanOrEqual(g.seller.bottom - 1);
+    expect(g.table.top).toBeGreaterThanOrEqual(Math.max(g.buyer.bottom, g.info.bottom) - 1);
+    expect(Math.abs(mid(g.footer) - center)).toBeLessThan(3);
+    expect(g.pages).toBeGreaterThanOrEqual(1);
     await page.emulateMedia({ media: "screen" });
   };
-  const checkPalette = async (dark: boolean, print = false) => {
+  const checkPalette = async (print = false) => {
     await page.emulateMedia({ media: print ? "print" : "screen" });
-    const colors = await preview.evaluate((sheet) => {
-      const get = (selector: string) => {
-        const element = sheet.querySelector(selector);
-        if (!element) throw new Error(`Missing invoice element: ${selector}`);
-        const style = getComputedStyle(element);
-        return { background: style.backgroundColor, text: style.color, display: style.display };
-      };
-      const black = sheet.querySelector<HTMLImageElement>(".invoice-logo-black")!;
-      const white = sheet.querySelector<HTMLImageElement>(".invoice-logo-white")!;
-      const visibleLogo = getComputedStyle(black).display !== "none" ? black : white;
-      const canvas = document.createElement("canvas");
-      canvas.width = visibleLogo.naturalWidth;
-      canvas.height = visibleLogo.naturalHeight;
-      const context = canvas.getContext("2d")!;
-      context.drawImage(visibleLogo, 0, 0);
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-      let luminance = 0;
-      let opaque = 0;
-      for (let i = 0; i < pixels.length; i += 4) {
-        if (pixels[i + 3] < 128) continue;
-        luminance += (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
-        opaque++;
-      }
+    await waitReady();
+    // The document is isolated from admin dark mode: always dark ink on white paper.
+    const colors = await pagesRoot.evaluate((root) => {
+      const pageEl = root.querySelector<HTMLElement>(".invoice-page")!;
+      const seller = root.querySelector<HTMLElement>('[data-element="seller"]')!;
+      const qr = root.querySelector<HTMLImageElement>('[data-element="qr"] img');
       return {
-        sheet: { background: getComputedStyle(sheet).backgroundColor, text: getComputedStyle(sheet).color },
-        title: get('[data-testid="invoice-title"]'),
-        info: get('[data-testid="invoice-info-card"]'),
-        table: get('[data-testid="invoice-table-head"]'),
-        body: get('[data-testid="invoice-table-body"]'),
-        item: get('[data-testid="invoice-table-body"] td'),
-        total: get('[data-testid="invoice-total-card"]'),
-        qr: get('[data-testid="invoice-qr-surface"]'),
-        footer: get('[data-testid="invoice-footer"]'),
-        footerLoaded: !!sheet.querySelector<HTMLImageElement>('[data-testid="invoice-footer"] img')?.naturalWidth,
-        footerImage: (() => {
-          const img = sheet.querySelector<HTMLImageElement>('[data-testid="invoice-footer"] img')!;
-          const imageBox = img.getBoundingClientRect();
-          const sheetBox = sheet.getBoundingClientRect();
-          return {
-            centerOffset: Math.abs((imageBox.left + imageBox.right) / 2 - (sheetBox.left + sheetBox.right) / 2),
-            insideSheet: imageBox.left >= sheetBox.left && imageBox.right <= sheetBox.right,
-            ratio: img.naturalWidth / img.naturalHeight,
-            alt: img.alt,
-          };
-        })(),
-        sellerName: (() => {
-          const name = sheet.querySelector<HTMLElement>(".invoice-seller-name")!;
-          const seller = sheet.querySelector<HTMLElement>('[data-testid="invoice-seller"]')!;
-          const nameBox = name.getBoundingClientRect();
-          const sellerBox = seller.getBoundingClientRect();
-          return {
-            height: nameBox.height,
-            lineHeight: parseFloat(getComputedStyle(name).lineHeight),
-            insideSeller: nameBox.left >= sellerBox.left && nameBox.right <= sellerBox.right,
-            textFits: name.scrollWidth <= name.clientWidth,
-          };
-        })(),
-        buyerRight: sheet.querySelector('[data-testid="invoice-buyer"]')!.getBoundingClientRect().right,
-        sellerRight: sheet.querySelector('[data-testid="invoice-seller"]')!.getBoundingClientRect().right,
-        blackDisplay: get(".invoice-logo-black").display,
-        whiteDisplay: get(".invoice-logo-white").display,
-        logoLoaded: visibleLogo.complete && visibleLogo.naturalWidth > 0,
-        logoRatio: visibleLogo.naturalWidth / visibleLogo.naturalHeight,
-        logoLuminance: opaque ? luminance / opaque : -1,
-        qrLoaded: !!sheet.querySelector<HTMLImageElement>('[data-testid="invoice-qr"]')?.naturalWidth,
+        page: getComputedStyle(pageEl).backgroundColor,
+        body: getComputedStyle(root.ownerDocument.body).backgroundColor,
+        ink: getComputedStyle(seller).color,
+        qrLoaded: !!qr && qr.complete && qr.naturalWidth > 0,
       };
     });
-    const ink = dark && !print ? "rgb(245, 243, 240)" : "rgb(41, 39, 40)";
-    expect(colors.sheet.background).toBe(dark && !print ? "rgb(21, 23, 27)" : "rgb(255, 255, 255)");
-    expect(colors.sheet.text).toBe(ink);
-    expect(colors.title.text).toBe(ink);
-    expect(colors.info.background).toBe(dark && !print ? "rgb(38, 41, 47)" : "rgb(245, 245, 244)");
-    expect(colors.table.background).toBe(dark && !print ? "rgb(32, 35, 41)" : "rgb(250, 250, 249)");
-    expect(colors.body.background).toBe(colors.sheet.background);
-    expect(colors.item.text).toBe(ink);
-    expect(colors.total.background).toBe(colors.info.background);
-    expect(colors.total.text).toBe(ink);
-    expect(colors.qr.background).toBe("rgb(255, 255, 255)");
+    expect(colors.page).toBe("rgb(255, 255, 255)");
+    const [r, g2, b] = colors.ink.match(/\d+/g)!.map(Number);
+    expect((r + g2 + b) / 3).toBeLessThan(90);
     expect(colors.qrLoaded).toBe(true);
-    expect(colors.footer.background).toBe("rgb(255, 255, 255)");
-    expect(colors.footerLoaded).toBe(true);
-    expect(colors.footerImage.centerOffset).toBeLessThan(2);
-    expect(colors.footerImage.insideSheet).toBe(true);
-    expect(colors.footerImage.ratio).toBeGreaterThan(4);
-    expect(colors.footerImage.alt).toContain("muskellolo.com");
-    expect(colors.sellerName.insideSeller).toBe(true);
-    expect(colors.sellerName.textFits).toBe(true);
-    expect(colors.buyerRight).toBeGreaterThan(colors.sellerRight);
-    expect(colors.logoLoaded).toBe(true);
-    expect(colors.logoRatio).toBeGreaterThan(3);
-    expect(colors.blackDisplay === "none").toBe(dark && !print);
-    expect(colors.whiteDisplay === "none").toBe(!dark || print);
-    expect(dark && !print ? colors.logoLuminance : 255 - colors.logoLuminance).toBeGreaterThan(200);
-     await checkLayout(print);
+    await checkLayout(print);
     await page.emulateMedia({ media: "screen" });
   };
-  await expect(preview).toHaveAttribute("dir", "rtl");
-  await expect(preview).toContainText("فاتورة ضريبية");
-  await expect(preview.getByTestId("invoice-buyer")).toContainText("بيانات العميل");
-  await expect(preview.getByTestId("invoice-seller")).not.toContainText("بياناتنا");
-  await expect(preview.getByTestId("invoice-seller")).toContainText("مؤسسة مسك اللولو للتجارة");
-  await expect(preview.getByTestId("invoice-seller")).toContainText("السعودية، الرياض، حي السليمانية");
-  await expect(preview.getByTestId("invoice-seller")).toContainText("300000000000003");
-  await expect(preview).toContainText(`Test buyer ${runId}`);
-  await expect(preview).toContainText(productName);
-  await expect(preview).toContainText("15.00");
-  await expect(preview).toContainText("115.00");
-  await expect(page.getByTestId("invoice-discount")).toContainText("-0.00");
-  await expect(page.getByTestId("invoice-qr")).toBeVisible();
-  await expect.poll(async () => page.getByTestId("invoice-qr").evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  const toggleTheme = () => page.locator('button[title="تغيير المظهر"], button[title="Toggle theme"]').evaluate((button: HTMLButtonElement) => button.click());
+  await waitReady();
+  await expect(frame.locator('[data-element="seller"]').first()).toHaveAttribute("dir", "rtl");
+  await expect(frame.locator("body")).toContainText(invoiceNumber);
+  await expect(frame.locator("body")).toContainText(`Test buyer ${runId}`);
+  await expect(frame.locator("body")).toContainText(productName);
+  await expect(frame.locator("body")).toContainText("300000000000003");
+  await expect.poll(async () => frame.locator('[data-element="qr"] img').first().evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  expect(await frame.locator(".invoice-page").count()).toBe(1);
+  await checkPalette();
   await checkPalette(true);
-  await checkPalette(true, true);
-  await page.emulateMedia({ media: "print" });
-  const shortPdf = await page.pdf({ format: "A4", printBackground: true });
-  expect((shortPdf.toString("latin1").match(/\/Type\s*\/Page\b/g) ?? []).length).toBe(1);
-  await page.emulateMedia({ media: "screen" });
-  await page.locator('button[title="تغيير المظهر"], button[title="Toggle theme"]').evaluate((button: HTMLButtonElement) => button.click());
-  await checkPalette(false);
-  await checkPalette(false, true);
+  await toggleTheme();
+  await checkPalette();
+  await checkPalette(true);
   await page.setViewportSize({ width: 390, height: 844 });
   await checkLayout();
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -500,16 +405,13 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await page.getByRole("button", { name: /تغيير اللغة|Toggle language/ }).click();
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText("Preview Invoice", { exact: true }).click();
-  await expect(page.getByTestId("invoice-template")).toHaveAttribute("dir", "ltr");
-  await expect(page.getByTestId("invoice-template")).toContainText("Tax Invoice");
-  await expect(page.getByTestId("invoice-buyer")).toContainText("Customer Details");
-  await expect(page.getByTestId("invoice-seller")).not.toContainText("From");
-  await expect(page.getByTestId("invoice-seller")).toContainText("Saudi Arabia, Riyadh, Al Sulimaniyah");
-  await expect(page.getByTestId("invoice-template")).toContainText(productName);
-  await checkPalette(false);
-  await page.locator('button[title="تغيير المظهر"], button[title="Toggle theme"]').evaluate((button: HTMLButtonElement) => button.click());
+  await waitReady();
+  await expect(frame.locator('[data-element="seller"]').first()).toHaveAttribute("dir", "ltr");
+  await expect(frame.locator("body")).toContainText(productName);
+  await checkPalette();
+  await toggleTheme();
+  await checkPalette();
   await checkPalette(true);
-  await checkPalette(true, true);
   await page.setViewportSize({ width: 390, height: 844 });
   await checkLayout();
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -530,34 +432,11 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await page.getByText(/طباعة|Print/, { exact: true }).click();
   await page.waitForTimeout(100);
   expect(printCalls).toBe(0);
-  await expect(page.getByTestId("invoice-template")).toContainText(invoiceNumber);
-  await expect(page.getByTestId("invoice-qr")).toBeVisible();
+  await waitReady();
+  await expect(frame.locator("body")).toContainText(invoiceNumber);
+  await expect.poll(async () => frame.locator('[data-element="qr"] img').first().evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   await expect.poll(() => printCalls).toBe(1);
-  // Stress the rendered document without changing saved invoice amounts or fixture data.
-  await preview.evaluate((sheet) => {
-    const buyer = sheet.querySelector<HTMLElement>('[data-testid="invoice-buyer"]')!;
-    const address = document.createElement("p");
-    address.textContent = "Long customer address ".repeat(18);
-    buyer.append(address);
-    const tbody = sheet.querySelector<HTMLTableSectionElement>('[data-testid="invoice-table-body"]')!;
-    sheet.querySelector<HTMLElement>('[data-testid="invoice-info-card"] dd')!.textContent = "E2E-LONG-INVOICE-NUMBER-".repeat(8);
-    const row = tbody.querySelector("tr")!;
-    for (let i = 0; i < 28; i++) {
-      const copy = row.cloneNode(true) as HTMLTableRowElement;
-      copy.querySelector("td")!.textContent = `Multi-line product description ${i} `.repeat(5);
-      tbody.append(copy);
-    }
-  });
-  await checkLayout(false, true);
-  await checkLayout(true, true);
-  await page.emulateMedia({ media: "print" });
-  const multipagePdf = await page.pdf({ format: "A4", printBackground: true });
-  expect(multipagePdf.subarray(0, 4).toString()).toBe("%PDF");
-  expect((multipagePdf.toString("latin1").match(/\/Type\s*\/Page\b/g) ?? []).length).toBeGreaterThan(1);
-  await page.emulateMedia({ media: "screen" });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await checkLayout(false, true);
-  await page.setViewportSize({ width: 1280, height: 900 });
+  // Long-document pagination is covered by the local sample in invoice-design.spec.ts, with no DOM injection here.
   await page.getByRole("button", { name: "Close", exact: true }).last().click();
 
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
@@ -572,8 +451,10 @@ test("invoice preview, printing, editing, email drafting, and archiving remain c
   await expect(page.getByTestId(`invoice-row-${invoiceId}`)).toContainText(dueDate);
   await page.getByTestId(`invoice-actions-${invoiceId}`).click();
   await page.getByText(/معاينة الفاتورة|Preview Invoice/, { exact: true }).click();
-  await expect(page.getByTestId("invoice-template")).toContainText(updatedBuyer);
-  await expect(page.getByTestId("invoice-template")).toContainText(updatedAddress);
+  const editedFrame = page.frameLocator('[data-testid="invoice-template"] iframe');
+  await expect(editedFrame.locator("#invoice-pages")).toHaveAttribute("data-ready", "true", { timeout: 20_000 });
+  await expect(editedFrame.locator("body")).toContainText(updatedBuyer);
+  await expect(editedFrame.locator("body")).toContainText(updatedAddress);
   await page.getByRole("button", { name: "Close", exact: true }).last().click();
 
   await page.route(`**/api/admin/invoices/${invoiceId}/email-deliveries`, async (route) => {

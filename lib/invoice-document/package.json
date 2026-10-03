@@ -1,0 +1,10 @@
+{
+  "name": "@workspace/invoice-document",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts", "./core": "./src/core.ts" },
+  "dependencies": { "zod": "catalog:" },
+  "devDependencies": { "@types/react": "catalog:", "typescript": "~5.9.3", "react": "catalog:" },
+  "peerDependencies": { "react": "catalog:" }
+}

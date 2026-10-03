@@ -49,6 +49,16 @@ Arabic-first luxury fragrance storefront for Musk Ellolo, with a public product 
 
 _Populate as you build — sharp edges, "always run X before Y" rules._
 
+### Local invoice presentation
+
+- Finance → **تصميم الفاتورة** controls one global visual design. Draft saves do not affect preview, print, PDF downloads or new email attachments; explicit publication does. Issued invoice facts, numbers, accounting and previously sent files are not rewritten.
+- `@workspace/invoice-document` owns the document model, templates, trusted HTML/CSS and A4 pagination. The React preview is isolated in an iframe; its own window prints the document. The API produces PDF from the same document in an isolated browser context, with embedded local Arabic fonts and no network resources.
+- The API build packages its local invoice assets and Chromium headless shell. PDF workers are limited to two concurrent contexts, six queued requests, a 20-second queue timeout and a 30-second document deadline. Missing resources and unsafe layouts fail explicitly.
+- `lib/db/sql/invoice-design-settings.sql` is an additive, singleton-settings migration. It was approved and applied **only to development**.
+- The workspace already includes separate order-editing functionality requiring nullable `admin_edit_snapshot` columns on both order tables and `order_edit_audits` with its constraints/indexes. A base-schema upgrade must first run `lib/db/sql/order-editing-prerequisites.sql`, then `lib/db/sql/invoice-design-settings.sql`. The prerequisites SQL is supplied for review and tested only in a disposable cluster; it has **not** been approved or applied to the project/production database by this task. Before any rollout, inspect the intended database and obtain explicit approval for both applicable scripts. Do not substitute a broad schema push or silently migrate production.
+- `src/lib/invoice-rollout.postgres.test.ts` verifies that this complete additive upgrade works twice on a base-schema disposable database, and that ordinary ORM order reads and order-edit/cancellation audit dependencies resolve afterward.
+- Safe invoice verification: `sh scripts/run-individual-invoice-postgres.sh src/lib/invoice-rollout.postgres.test.ts src/routes/invoice-design.postgres.test.ts src/lib/invoice-document.test.ts src/lib/invoice-email.test.ts src/lib/individual-invoices.postgres.test.ts src/lib/invoices.test.ts src/lib/sale-discounts.test.ts`. This provisions an isolated disposable PostgreSQL cluster, runs suites serially and mocks all email delivery; it never connects to workspace or production business data.
+
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

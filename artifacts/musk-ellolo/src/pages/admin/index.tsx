@@ -35,6 +35,7 @@ import AdminProductionFunding from '@/pages/admin/production-funding';
 import AdminB2bAgenda from '@/pages/admin/b2b-agenda';
 import AdminExhibitions from '@/pages/admin/exhibitions';
 import AdminInvoices, { AdminOnlineInvoices, AdminExhibitionInvoices } from '@/pages/admin/invoices';
+import AdminInvoiceDesign from '@/pages/admin/invoice-design';
 import AdminChatbot from '@/pages/admin/chatbot';
 import AdminWhatsAppInbox from '@/pages/admin/whatsapp-inbox';
 import { AdminWhatsAppSettings, AdminWhatsAppTemplates } from '@/pages/admin/whatsapp-placeholders';
@@ -116,6 +117,7 @@ export default function AdminRoutes() {
         <Route path="/admin/production/plans" component={AdminProductionPlans} />
         <Route path="/admin/b2b/agenda" component={AdminB2bAgenda} />
         <Route path="/admin/finance/expenses" component={AdminFinance} />
+        <Route path="/admin/finance/invoice-design" component={AdminInvoiceDesign} />
         <Route path="/admin/finance/purchases" component={AdminPurchases} />
         <Route path="/admin/finance/reports" component={AdminFinance} />
         <Route path="/admin/wallet-billing" component={AdminWalletBilling} />

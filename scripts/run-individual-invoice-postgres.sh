@@ -77,9 +77,13 @@ NODE
 psql "$database_url" -v ON_ERROR_STOP=1 -f "$cluster_root/schema.sql" >/dev/null
 DATABASE_URL="$database_url" pnpm --filter @workspace/db run accounting:integrity
 DATABASE_URL="$database_url" pnpm --filter @workspace/db run individual-invoices:install
+# Legacy invoice suites need a seeded actor. This exists only in the disposable cluster.
+psql "$database_url" -v ON_ERROR_STOP=1 -c \
+  "INSERT INTO admin_users(id,email,name,password_hash,is_super_admin) VALUES(1000,'isolated-actor@test.invalid','Isolated invoice test actor','test-only',true);" >/dev/null
 echo "==> Running standalone individual-invoice PostgreSQL integration tests"
+if [ "$#" -eq 0 ]; then set -- src/lib/individual-invoices.postgres.test.ts; fi
 DATABASE_URL="$database_url" \
 INDIVIDUAL_INVOICE_POSTGRES_E2E=true \
 INDIVIDUAL_INVOICE_E2E_DATABASE="$database_name" \
 INDIVIDUAL_INVOICE_E2E_CLUSTER_DIR="$data_directory" \
-  pnpm --filter @workspace/api-server exec vitest run "${1:-src/lib/individual-invoices.postgres.test.ts}" --maxWorkers=1
+  pnpm --filter @workspace/api-server exec vitest run "$@" --maxWorkers=1 --fileParallelism=false

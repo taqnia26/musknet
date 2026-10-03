@@ -161,6 +161,7 @@ export const navStructure = [
       { href: '/admin/finance/purchases', labelEn: 'Purchases', labelAr: 'المشتريات', module: 'finance' },
       { href: '/admin/finance/production-funding', labelEn: 'Production Funding', labelAr: 'تأمين الإنتاج', module: 'finance' },
       { href: '/admin/finance/reports', labelEn: 'Reports', labelAr: 'التقارير', module: 'finance' },
+      { href: '/admin/finance/invoice-design', labelEn: 'Invoice design', labelAr: 'تصميم الفاتورة', module: 'finance' },
       { href: '/admin/accounting/accounts', labelEn: 'Accounting', labelAr: 'المحاسبة', module: 'accounting' },
       { href: '/admin/accounting/journal-entries', labelEn: 'Journal entries', labelAr: 'القيود اليومية', module: 'accounting' },
       { href: '/admin/accounting/trial-balance', labelEn: 'Trial balance', labelAr: 'ميزان المراجعة', module: 'accounting' },

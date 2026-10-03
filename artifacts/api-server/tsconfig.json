@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "lib": ["es2022", "dom"],
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
     "outDir": "dist",
@@ -9,6 +10,9 @@
   },
   "include": ["src"],
   "references": [
+    {
+      "path": "../../lib/invoice-document"
+    },
     {
       "path": "../../lib/db"
     },
