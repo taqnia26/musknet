@@ -2789,6 +2789,10 @@ export interface AdminInvoiceCancellation {
   cancelledAt: string;
   cancellationReason: string;
   cancelledByAdminId: number;
+  /** @nullable */
+  archivedAt?: string | null;
+  /** @nullable */
+  archivedByAdminId?: number | null;
 }
 
 /**

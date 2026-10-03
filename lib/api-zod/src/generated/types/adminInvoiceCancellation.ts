@@ -11,4 +11,8 @@ export interface AdminInvoiceCancellation {
   cancelledAt: Date;
   cancellationReason: string;
   cancelledByAdminId: number;
+  /** @nullable */
+  archivedAt?: Date | null;
+  /** @nullable */
+  archivedByAdminId?: number | null;
 }

@@ -1206,6 +1206,8 @@ describe.sequential("distributor invoice issuance", () => {
     const [stored] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
     expect(stored).toMatchObject({ cancellationReason: "Incorrect company purchase order", cancelledByAdminId: actorId, invoiceNumber: invoice.invoiceNumber });
     expect(stored.cancelledAt).toBeInstanceOf(Date);
+    expect(stored.archivedAt).toBeInstanceOf(Date);
+    expect(stored.archivedByAdminId).toBe(actorId);
     expect((await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, shipment.id)))[0].status).toBe("cancelled");
     const reversals = await db.select().from(journalEntriesTable).where(inArray(journalEntriesTable.reversalOfEntryId, [sale.id, cogs.id]));
     expect(reversals).toHaveLength(2);

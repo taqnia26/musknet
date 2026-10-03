@@ -682,7 +682,7 @@ function CancelCompanyInvoiceDialog({ invoice, onClose }: { invoice: AdminInvoic
       onInteractOutside={e => { if (submitting.current) e.preventDefault(); }}>
       <DialogHeader>
         <DialogTitle>{t('هل تريد إلغاء الفاتورة؟', 'Do you want to cancel the invoice?')}</DialogTitle>
-        <DialogDescription><bdi>{invoice?.invoiceNumber}</bdi></DialogDescription>
+        <DialogDescription><bdi>{invoice?.invoiceNumber}</bdi> — {t('ستُعكس القيود والمخزون وتُؤرشف الفاتورة تلقائياً، دون حذف أصلها أو رد أموال.', 'Accounting and inventory will be reversed and the invoice automatically archived, without deleting the original or refunding money.')}</DialogDescription>
       </DialogHeader>
       {error && <p role="alert" className="text-destructive text-sm">{error}</p>}
       <DialogFooter>
@@ -692,7 +692,7 @@ function CancelCompanyInvoiceDialog({ invoice, onClose }: { invoice: AdminInvoic
           submitting.current = true;
           setError('');
           mutation.mutate({ id: invoice.id, data: { reason: 'إلغاء الفاتورة بتأكيد المستخدم من لوحة الإدارة' } }, {
-            onSuccess: () => { queryClient.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() }); toast({ title: t('أُلغيت الفاتورة', 'Invoice cancelled') }); onClose(); },
+            onSuccess: () => { void queryClient.invalidateQueries(); toast({ title: t('أُلغيت الفاتورة وأُرشفت', 'Invoice cancelled and archived') }); onClose(); },
             onError: e => setError(e instanceof Error ? e.message : t('تعذر الإلغاء', 'Cancellation failed')),
             onSettled: () => { submitting.current = false; },
           });
@@ -961,10 +961,10 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
                             )}
                           </>
                         )}
-                        {channel === 'companies' && !invoice.cancelledAt && invoice.paidAmount === 0 && hasPermission(currentUser, 'invoices', 'delete') &&
+                        {(channel === 'companies' || invoice.individual) && !invoice.cancelledAt && invoice.paidAmount === 0 && hasPermission(currentUser, 'invoices', 'delete') &&
                           <DropdownMenuItem className="text-destructive" onClick={() => setCancelInvoice(invoice)}>{t('إلغاء الفاتورة', 'Cancel invoice')}</DropdownMenuItem>}
 
-                        {hasPermission(currentUser, 'invoices', 'delete') && (
+                        {(!invoice.distributorId && !invoice.individual || !!invoice.cancelledAt) && hasPermission(currentUser, 'invoices', 'delete') && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onClick={() => setArchiveInvoice(invoice)}>

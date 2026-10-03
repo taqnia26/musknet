@@ -100,7 +100,7 @@ import {
   verifyAdminPassword,
 } from "../lib/admin-auth";
 import { hashOwnerPassword } from "../lib/owner-auth";
-import { cancelCompanyInvoice, createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
+import { cancelSalesInvoice, createDistributorInvoice, createExhibitionInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, postFulfillmentCogs, ReceivablePaymentNotFoundError, updateOrderAndIssueInvoice } from "../lib/invoices";
 import { createHistoricalInvoice, reconcileHistoricalInvoice } from "../lib/historical-company-invoices";
 import { createCompanyInvoice } from "../lib/company-invoices";
 import { createIndividualInvoice, IndividualInvoiceConflictError, IndividualInvoiceValidationError } from "../lib/individual-invoices";
@@ -2764,8 +2764,14 @@ router.delete("/admin/invoices/:id", permit("invoices", "delete"), route(async (
   const [archived] = await db.update(invoicesTable).set({
     archivedAt: new Date(),
     archivedByAdminId: res.locals.admin.id,
-  }).where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).returning({ id: invoicesTable.id });
-  if (!archived) { res.status(404).json({ error: "Invoice not found" }); return; }
+  }).where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt),
+    sql`((${invoicesTable.distributorId} is null and ${invoicesTable.individual} = false) or ${invoicesTable.cancelledAt} is not null)`
+  )).returning({ id: invoicesTable.id });
+  if (!archived) {
+    const [available] = await db.select({ id: invoicesTable.id }).from(invoicesTable)
+      .where(and(eq(invoicesTable.id, params.id), isNull(invoicesTable.archivedAt))).limit(1);
+    res.status(available ? 409 : 404).json({ error: available ? "يجب إلغاء فاتورة الشركة أو الفرد المباشرة قبل أرشفتها" : "Invoice not found" }); return;
+  }
   res.sendStatus(204);
 }));
 
@@ -2776,10 +2782,11 @@ router.post("/admin/invoices/:id/cancel", permit("invoices", "delete"), route(as
     res.status(400).json({ error: "A valid invoice and cancellation reason (10–500 characters) are required" }); return;
   }
   try {
-    const cancelled = await cancelCompanyInvoice(id, reason, res.locals.admin.id);
+    const cancelled = await cancelSalesInvoice(id, reason, res.locals.admin.id);
     res.json(Api.AdminCancelCompanyInvoiceResponse.parse({
       id: cancelled.id, cancelledAt: cancelled.cancelledAt, cancellationReason: cancelled.cancellationReason,
       cancelledByAdminId: cancelled.cancelledByAdminId,
+      archivedAt: cancelled.archivedAt, archivedByAdminId: cancelled.archivedByAdminId,
     }));
   } catch (error) {
     if (error instanceof ReceivablePaymentNotFoundError) { res.status(404).json({ error: error.message }); return; }

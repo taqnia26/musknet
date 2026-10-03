@@ -10,7 +10,7 @@ import * as Api from "@workspace/api-zod";
 import {
   createIndividualInvoice, IndividualInvoiceConflictError, IndividualInvoiceValidationError,
 } from "./individual-invoices";
-import { createReceivablePayment } from "./invoices";
+import { cancelSalesInvoice, createReceivablePayment } from "./invoices";
 import { addCalendarDays, saudiCalendarDate } from "./invoice-dates";
 
 const runIntegration = process.env.INDIVIDUAL_INVOICE_POSTGRES_E2E === "true";
@@ -139,7 +139,77 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     await expect(createIndividualInvoice({ ...input, discountOverride: { ...input.discountOverride, percent: 20 } }, actorId, environment)).rejects.toBeInstanceOf(IndividualInvoiceConflictError);
   });
 
+  it("atomically cancels and archives an unpaid individual invoice once without losing original facts", async () => {
+    const [before] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    const request = {
+      creationKey: `${base}-cancel-once`, buyerName: "Cancellation test", buyerPhone: "0501234567",
+      buyerAddress: null, buyerTaxNumber: null, issueDate: today,
+      items: [{ productId, quantity: 1, unitPrice: 115 }],
+    };
+    const invoice = await createIndividualInvoice(request, actorId, environment);
+    const journals = await db.select().from(journalEntriesTable).where(and(
+      inArray(journalEntriesTable.sourceType, ["individual_invoice", "individual_invoice_cogs"]),
+      eq(journalEntriesTable.sourceId, String(invoice.id)),
+    ));
+    const outcomes = await Promise.allSettled([
+      cancelSalesInvoice(invoice.id, "Confirmed cancellation by administrator", actorId),
+      cancelSalesInvoice(invoice.id, "Confirmed cancellation by administrator", actorId),
+    ]);
+    expect(outcomes.filter(outcome => outcome.status === "fulfilled")).toHaveLength(1);
+    expect(outcomes.filter(outcome => outcome.status === "rejected")).toHaveLength(1);
+    const [stored] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+    expect(stored).toMatchObject({ invoiceNumber: invoice.invoiceNumber, buyerPhone: invoice.buyerPhone,
+      totalAmount: invoice.totalAmount, cancelledByAdminId: actorId, archivedByAdminId: actorId });
+    expect(stored.cancelledAt).toBeInstanceOf(Date);
+    expect(stored.archivedAt).toBeInstanceOf(Date);
+    await expect(createIndividualInvoice(request, actorId, environment)).rejects.toThrow(/Cancelled invoice/);
+    const [after] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    expect(after.stockQuantity).toBe(before.stockQuantity);
+    const reversals = await db.select().from(journalEntriesTable).where(inArray(journalEntriesTable.reversalOfEntryId, journals.map(journal => journal.id)));
+    expect(reversals).toHaveLength(journals.length);
+    expect(await db.select().from(inventoryMovementsTable).where(and(
+      eq(inventoryMovementsTable.sourceType, "individual_invoice_cancellation"), eq(inventoryMovementsTable.sourceId, String(invoice.id)),
+    ))).toHaveLength(1);
+    await expect(createReceivablePayment(invoice.id, {
+      paymentKey: `${base}-cancelled-payment`, amount: 1, paymentMethod: "cash", paymentDate: today,
+    }, actorId)).rejects.toThrow(/Cancelled invoices/);
+  });
+
+  it("blocks cancellation after partial collection and rolls back all effects when archival fails", async () => {
+    const input = {
+      creationKey: `${base}-cancel-paid`, buyerName: "Cancellation safety", buyerPhone: "0501234567",
+      buyerAddress: null, buyerTaxNumber: null, issueDate: today,
+      items: [{ productId, quantity: 1, unitPrice: 115 }],
+    };
+    const paid = await createIndividualInvoice(input, actorId, environment);
+    await createReceivablePayment(paid.id, { paymentKey: `${base}-partial-before-cancel`, amount: 1, paymentMethod: "cash", paymentDate: today }, actorId);
+    await expect(cancelSalesInvoice(paid.id, "Confirmed cancellation by administrator", actorId)).rejects.toThrow(/collections/);
+    const unpaid = await createIndividualInvoice({ ...input, creationKey: `${base}-cancel-rollback` }, actorId, environment);
+    const originalJournals = await db.select().from(journalEntriesTable).where(and(
+      inArray(journalEntriesTable.sourceType, ["individual_invoice", "individual_invoice_cogs"]),
+      eq(journalEntriesTable.sourceId, String(unpaid.id)),
+    ));
+    const [before] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    await testPool.query(`CREATE FUNCTION reject_test_archive() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'test archive failure'; END $$;
+      CREATE TRIGGER reject_test_archive BEFORE UPDATE ON tax_invoices FOR EACH ROW
+      WHEN (NEW.archived_at IS NOT NULL) EXECUTE FUNCTION reject_test_archive();`);
+    try {
+      await expect(cancelSalesInvoice(unpaid.id, "Confirmed cancellation by administrator", actorId)).rejects.toThrow();
+      const [stored] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, unpaid.id));
+      expect(stored.cancelledAt).toBeNull();
+      expect(stored.archivedAt).toBeNull();
+      expect(await db.select().from(journalEntriesTable).where(inArray(journalEntriesTable.reversalOfEntryId, originalJournals.map(entry => entry.id)))).toHaveLength(0);
+      expect(await db.select().from(operationEventsTable).where(eq(operationEventsTable.eventKey, `individual-invoice-cancellation:${unpaid.id}`))).toHaveLength(0);
+      expect((await db.select().from(productsTable).where(eq(productsTable.id, productId)))[0].stockQuantity).toBe(before.stockQuantity);
+      expect(await db.select().from(inventoryMovementsTable).where(and(
+        eq(inventoryMovementsTable.sourceType, "individual_invoice_cancellation"), eq(inventoryMovementsTable.sourceId, String(unpaid.id)),
+      ))).toHaveLength(0);
+    } finally { await testPool.query("DROP TRIGGER reject_test_archive ON tax_invoices; DROP FUNCTION reject_test_archive();"); }
+  });
+
   it("issues unpaid invoices once, replays current payment status, and rejects a conflicting key", async () => {
+    const [initialStock] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
     const input = {
       creationKey: `${base}-unpaid-creation-key`,
       buyerName: "مشتري مباشر",
@@ -195,17 +265,17 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     expect(orderCount.value).toBe(ordersBefore);
     expect(await db.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, first.id))).toHaveLength(0);
     const [stock] = await db.select({ quantity: productsTable.stockQuantity }).from(productsTable).where(eq(productsTable.id, productId));
-    expect(stock.quantity).toBe(10);
+    expect(stock.quantity).toBe(initialStock.stockQuantity - 2);
     const [balance] = await db.select({ available: inventoryBalancesTable.available }).from(inventoryBalancesTable)
       .where(eq(inventoryBalancesTable.productId, productId));
-    expect(balance.available).toBe(10);
+    expect(balance.available).toBe(initialStock.stockQuantity - 2);
     const movements = await db.select().from(inventoryMovementsTable).where(and(
       eq(inventoryMovementsTable.sourceType, "individual_invoice"),
       eq(inventoryMovementsTable.sourceId, String(first.id)),
     ));
     expect(movements).toHaveLength(1);
     expect(movements[0]).toMatchObject({
-      quantityChange: -2, quantityBefore: 12, quantityAfter: 10, totalCost: "8.0000",
+      quantityChange: -2, quantityBefore: initialStock.stockQuantity, quantityAfter: initialStock.stockQuantity - 2, totalCost: "8.0000",
     });
     const journals = await db.select().from(journalEntriesTable).where(and(
       inArray(journalEntriesTable.sourceType, ["individual_invoice", "individual_invoice_cogs"]),

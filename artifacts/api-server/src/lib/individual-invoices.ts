@@ -149,6 +149,7 @@ export async function createIndividualInvoice(
       .where(eq(invoicesTable.creationKey, input.creationKey)).limit(1);
     if (previous) {
       if (!previous.individual) throw new IndividualInvoiceConflictError("Creation key is already used by another invoice channel");
+      if (previous.cancelledAt) throw new IndividualInvoiceConflictError("Cancelled invoice cannot be reissued");
       const [event] = await tx.select().from(operationEventsTable)
         .where(eq(operationEventsTable.eventKey, `individual-invoice:${previous.id}`)).limit(1);
       const recordedRequest = (event?.payload as { request?: unknown } | undefined)?.request;

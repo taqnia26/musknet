@@ -109,6 +109,10 @@ export class ReceivablePaymentNotFoundError extends Error {}
 
 /** Void the issued document while retaining its number and original ledger entries. */
 export async function cancelCompanyInvoice(invoiceId: number, reason: string, actorId: number) {
+  return cancelSalesInvoice(invoiceId, reason, actorId, "company");
+}
+
+export async function cancelSalesInvoice(invoiceId: number, reason: string, actorId: number, scope: "company" | "eligible" = "eligible") {
   const explanation = reason.trim();
   if (explanation.length < 10 || explanation.length > 500) throw new DistributorInvoiceValidationError("A cancellation reason of 10–500 characters is required");
   await ensureStandardAccountingChart();
@@ -120,7 +124,9 @@ export async function cancelCompanyInvoice(invoiceId: number, reason: string, ac
     }
     await tx.execute(sql`select id from ${invoicesTable} where ${invoicesTable.id} = ${invoiceId} for update`);
     const [invoice] = await tx.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId)).limit(1);
-    if (!invoice || invoice.distributorId === null) throw new ReceivablePaymentNotFoundError("Company invoice not found");
+    const standalone = !!invoice?.individual && invoice.orderId === null && invoice.distributorId === null && invoice.exhibitionId === null && invoice.historical !== "yes";
+    if (!invoice || (invoice.distributorId === null && !(scope === "eligible" && standalone)))
+      throw new ReceivablePaymentNotFoundError("Eligible company or standalone individual invoice not found");
     if (invoice.cancelledAt) throw new DistributorInvoiceConflictError("Invoice is already cancelled");
     const [completedReturn] = await tx.select({ id: salesReturnsTable.id }).from(salesReturnsTable)
       .innerJoin(companyOrdersTable, eq(companyOrdersTable.id, salesReturnsTable.companyOrderId))
@@ -133,7 +139,10 @@ export async function cancelCompanyInvoice(invoiceId: number, reason: string, ac
     if (shipment && (shipment.status !== "pending" || shipment.trackingNumber || shipment.carrierShipmentId || shipment.labelUrl ||
       shipment.integrationStatus !== "not_requested" || shipment.integrationAttempts || shipment.shippedAt || events.length))
       throw new DistributorInvoiceConflictError("Shipment has advanced or been sent to a carrier");
-    const sourceTypes = invoice.historical === "yes" ? ["historical_company_invoice"] : ["distributor_invoice", "distributor_invoice_cogs"];
+    const movementSource = standalone ? "individual_invoice" : "distributor_invoice";
+    const cancellationSource = `${movementSource}_cancellation`;
+    const cancellationKey = standalone ? "individual-invoice-cancellation" : "distributor-invoice-cancellation";
+    const sourceTypes = invoice.historical === "yes" ? ["historical_company_invoice"] : [movementSource, `${movementSource}_cogs`];
     const journals = await tx.select().from(journalEntriesTable).where(and(
       sql`${journalEntriesTable.sourceType} in (${sql.join(sourceTypes.map(type => sql`${type}`), sql`, `)})`,
       eq(journalEntriesTable.sourceId, String(invoiceId)),
@@ -141,13 +150,17 @@ export async function cancelCompanyInvoice(invoiceId: number, reason: string, ac
     if (!journals.some(entry => entry.sourceType === sourceTypes[0]) || journals.some(entry => entry.status !== "posted"))
       throw new DistributorInvoiceConflictError("Invoice journals require accounting review before cancellation");
     const movements = await tx.select().from(inventoryMovementsTable).where(and(
-      eq(inventoryMovementsTable.sourceType, "distributor_invoice"), eq(inventoryMovementsTable.sourceId, String(invoiceId)),
+      eq(inventoryMovementsTable.sourceType, movementSource), eq(inventoryMovementsTable.sourceId, String(invoiceId)),
     )).orderBy(inventoryMovementsTable.productId);
     const items = await tx.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoiceId));
     if (invoice.historical === "yes" ? movements.length > 0 : (items.some(item =>
       !movements.some(m => m.productId === item.productId && m.quantityChange === -item.quantity)) || movements.length !== items.length))
       throw new DistributorInvoiceConflictError("Invoice stock movements require reconciliation before cancellation");
-    if (movements.some(movement => Number(movement.totalCost) > 0) && !journals.some(entry => entry.sourceType === "distributor_invoice_cogs"))
+    if (movements.some(movement => movement.unitCost === null || movement.totalCost === null ||
+      !Number.isFinite(Number(movement.unitCost)) || !Number.isFinite(Number(movement.totalCost)) ||
+      Number(movement.unitCost) < 0 || Number(movement.totalCost) < 0))
+      throw new DistributorInvoiceConflictError("Original inventory cost must be documented before cancellation");
+    if (movements.some(movement => Number(movement.totalCost) > 0) && !journals.some(entry => entry.sourceType === `${movementSource}_cogs`))
       throw new DistributorInvoiceConflictError("Invoice COGS journal requires accounting review before cancellation");
     for (const id of [...new Set(movements.map(m => m.productId))].sort((a, b) => a - b))
       await tx.execute(sql`select id from ${productsTable} where ${productsTable.id} = ${id} for update`);
@@ -163,19 +176,20 @@ export async function cancelCompanyInvoice(invoiceId: number, reason: string, ac
       await tx.insert(inventoryMovementsTable).values({
         productId: product.id, movementType: "increase", quantityChange: quantity, quantityBefore: product.stockQuantity,
         quantityAfter: after, unitCost: movement.unitCost, totalCost: movement.totalCost,
-        reason: `Cancellation ${invoice.invoiceNumber}: ${explanation}`, sourceType: "distributor_invoice_cancellation",
-        sourceId: String(invoiceId), eventKey: `distributor-invoice-cancellation:${invoiceId}:${product.id}`, performedBy: actorId,
+        reason: `Cancellation ${invoice.invoiceNumber}: ${explanation}`, sourceType: cancellationSource,
+        sourceId: String(invoiceId), eventKey: `${cancellationKey}:${invoiceId}:${product.id}`, performedBy: actorId,
       });
     }
     for (const entry of journals) await reverseJournalEntry(entry.id, actorId, `Cancel ${invoice.invoiceNumber}: ${explanation}`, today, tx);
     await tx.insert(operationEventsTable).values({
-      eventKey: `distributor-invoice-cancellation:${invoiceId}`, kind: "sale_fulfillment", status: "posted",
-      sourceType: "distributor_invoice_cancellation", sourceId: String(invoiceId), actorId,
+      eventKey: `${cancellationKey}:${invoiceId}`, kind: "sale_fulfillment", status: "posted",
+      sourceType: cancellationSource, sourceId: String(invoiceId), actorId,
       payload: { reason: explanation, journalIds: journals.map(entry => entry.id) },
     });
     if (shipment) await tx.update(shipmentsTable).set({ status: "cancelled" }).where(eq(shipmentsTable.id, shipment.id));
     const [cancelled] = await tx.update(invoicesTable).set({
       cancelledAt: new Date(), cancelledByAdminId: actorId, cancellationReason: explanation,
+      archivedAt: new Date(), archivedByAdminId: actorId,
     }).where(eq(invoicesTable.id, invoiceId)).returning();
     return cancelled;
   });

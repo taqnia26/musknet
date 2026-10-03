@@ -1578,12 +1578,13 @@ paths:
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       responses:
         "204": { description: Invoice archived }
+        "409": { $ref: "#/components/responses/Conflict" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
   /admin/invoices/{id}/cancel:
     post:
       operationId: adminCancelCompanyInvoice
-      summary: Permanently cancel an uncollected, unshipped company invoice
+      summary: Cancel and automatically archive an uncollected, unshipped company or standalone individual invoice
       tags: [admin]
       security: [{ adminBearerAuth: [] }]
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
@@ -5315,6 +5316,8 @@ components:
         cancelledAt: { type: string, format: date-time }
         cancellationReason: { type: string }
         cancelledByAdminId: { type: number, multipleOf: 1 }
+        archivedAt: { type: [string, "null"], format: date-time }
+        archivedByAdminId: { type: [number, "null"] }
     AdminInvoice:
       type: object
       required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, originalInvoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt, cancelledAt, cancellationReason, cancelledByAdminId, cancelledByName]

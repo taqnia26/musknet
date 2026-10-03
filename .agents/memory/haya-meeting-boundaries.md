@@ -74,3 +74,9 @@ Inside Saudi Arabia, request only the national address short code on administrat
 **Why:** The user wrote «بالسعودية فقط العنوان الوطني المخصر» and «كلهم» for the three listed administrative screens, overriding the narrower screen selection.
 
 **How to apply:** Do not invent a city or clear stored geography just because its controls are hidden. Without a recorded city, require explicit delivery charges rather than silently choosing the Riyadh/other-city tariff. Preserve the fixed pickup fee and charges on existing orders.
+
+Cancellation covers company invoices and standalone direct individual invoices, with automatic archival only after successful cancellation. It does not expand cancellation of storefront/phone order invoices.
+
+**Why:** The user chose «الشركات والفواتير المباشرة للأفراد» and «تلقائياً بعد الإلغاء», with the collection/shipping safeguards and no-refund boundary explicitly preserved.
+
+**How to apply:** Keep reversal and archival atomic and preserve the original invoice, number, and actor/time audit. Block any collected invoice, advanced shipment, or stock already recovered by a completed return; never use archival as a shortcut around cancellation checks. Do not backfill old cancellations.

@@ -5959,7 +5959,7 @@ export const AdminArchiveInvoiceResponse = zod.void()
 
 
 /**
- * @summary Permanently cancel an uncollected, unshipped company invoice
+ * @summary Cancel and automatically archive an uncollected, unshipped company or standalone individual invoice
  */
 export const AdminCancelCompanyInvoiceParams = zod.object({
   "id": zod.coerce.number()
@@ -5984,7 +5984,9 @@ export const AdminCancelCompanyInvoiceResponse = zod.object({
   "id": zod.number().multipleOf(adminCancelCompanyInvoiceResponseIdMultipleOf),
   "cancelledAt": zod.coerce.date(),
   "cancellationReason": zod.string(),
-  "cancelledByAdminId": zod.number().multipleOf(adminCancelCompanyInvoiceResponseCancelledByAdminIdMultipleOf)
+  "cancelledByAdminId": zod.number().multipleOf(adminCancelCompanyInvoiceResponseCancelledByAdminIdMultipleOf),
+  "archivedAt": zod.coerce.date().nullish(),
+  "archivedByAdminId": zod.number().nullish()
 })
 
 

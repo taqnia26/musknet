@@ -9958,7 +9958,7 @@ export const adminArchiveInvoice = async (id: number, options?: Parameters<typeo
 
 
 
-export const getAdminArchiveInvoiceMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+export const getAdminArchiveInvoiceMutationOptions = <TError = ErrorType<ForbiddenResponse | NotFoundResponse | ConflictResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminArchiveInvoice>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof adminArchiveInvoice>>, TError,{id: number}, TContext> => {
 
@@ -9987,12 +9987,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AdminArchiveInvoiceMutationResult = NonNullable<Awaited<ReturnType<typeof adminArchiveInvoice>>>
 
-    export type AdminArchiveInvoiceMutationError = ErrorType<ForbiddenResponse | NotFoundResponse>
+    export type AdminArchiveInvoiceMutationError = ErrorType<ForbiddenResponse | NotFoundResponse | ConflictResponse>
 
     /**
  * @summary Archive an invoice without deleting its accounting history
  */
-export const useAdminArchiveInvoice = <TError = ErrorType<ForbiddenResponse | NotFoundResponse>,
+export const useAdminArchiveInvoice = <TError = ErrorType<ForbiddenResponse | NotFoundResponse | ConflictResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminArchiveInvoice>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof adminArchiveInvoice>>,
@@ -10012,7 +10012,7 @@ export const getAdminCancelCompanyInvoiceUrl = (id: number,) => {
 }
 
 /**
- * @summary Permanently cancel an uncollected, unshipped company invoice
+ * @summary Cancel and automatically archive an uncollected, unshipped company or standalone individual invoice
  */
 export const adminCancelCompanyInvoice = async (id: number,
     companyInvoiceCancellationInput: CompanyInvoiceCancellationInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminInvoiceCancellation> => {
@@ -10062,7 +10062,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type AdminCancelCompanyInvoiceMutationError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>
 
     /**
- * @summary Permanently cancel an uncollected, unshipped company invoice
+ * @summary Cancel and automatically archive an uncollected, unshipped company or standalone individual invoice
  */
 export const useAdminCancelCompanyInvoice = <TError = ErrorType<BadRequestResponse | ForbiddenResponse | NotFoundResponse | ConflictResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCancelCompanyInvoice>>, TError,{id: number;data: BodyType<CompanyInvoiceCancellationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
