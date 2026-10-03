@@ -1173,6 +1173,60 @@ export const VerifyOtpResponse = zod.object({
 })
 
 
+export const adminQuoteOrderDiscountBodyProductSubtotalMin = 0;
+
+export const adminQuoteOrderDiscountBodyCouponCodeMax = 100;
+
+export const adminQuoteOrderDiscountBodyManualDiscountPercentMin = 0;
+export const adminQuoteOrderDiscountBodyManualDiscountPercentMax = 100;
+export const adminQuoteOrderDiscountBodyManualDiscountPercentMultipleOf = 0.01;
+
+
+
+export const AdminQuoteOrderDiscountBody = zod.object({
+  "productSubtotal": zod.number().min(adminQuoteOrderDiscountBodyProductSubtotalMin),
+  "couponCode": zod.string().max(adminQuoteOrderDiscountBodyCouponCodeMax).nullish(),
+  "manualDiscountPercent": zod.number().min(adminQuoteOrderDiscountBodyManualDiscountPercentMin).max(adminQuoteOrderDiscountBodyManualDiscountPercentMax).multipleOf(adminQuoteOrderDiscountBodyManualDiscountPercentMultipleOf).optional()
+})
+
+export const AdminQuoteOrderDiscountResponse = zod.object({
+  "productSubtotal": zod.number(),
+  "couponCode": zod.string().nullable(),
+  "couponDiscountAmount": zod.number(),
+  "manualDiscountPercent": zod.number(),
+  "manualDiscountAmount": zod.number(),
+  "discountAmount": zod.number(),
+  "productsTotal": zod.number()
+})
+
+
+export const adminQuoteIndividualInvoiceDiscountBodyProductSubtotalMin = 0;
+
+export const adminQuoteIndividualInvoiceDiscountBodyCouponCodeMax = 100;
+
+export const adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMin = 0;
+export const adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMax = 100;
+export const adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMultipleOf = 0.01;
+
+
+
+export const AdminQuoteIndividualInvoiceDiscountBody = zod.object({
+  "productSubtotal": zod.number().min(adminQuoteIndividualInvoiceDiscountBodyProductSubtotalMin),
+  "couponCode": zod.string().max(adminQuoteIndividualInvoiceDiscountBodyCouponCodeMax).nullish(),
+  "manualDiscountPercent": zod.number().min(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMin).max(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMax).multipleOf(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMultipleOf).optional()
+})
+
+export const AdminQuoteIndividualInvoiceDiscountResponse = zod.object({
+  "productSubtotal": zod.number(),
+  "couponCode": zod.string().nullable(),
+  "couponDiscountAmount": zod.number(),
+  "manualDiscountPercent": zod.number(),
+  "manualDiscountAmount": zod.number(),
+  "discountAmount": zod.number(),
+  "productsTotal": zod.number()
+})
+
+
 /**
  * @summary Get the current customer
  */
@@ -4739,6 +4793,13 @@ export const AdminListOrdersResponseItem = zod.object({
   "orderNumber": zod.string(),
   "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
   "fulfillmentMethod": zod.union([zod.enum(['delivery', 'pickup']),zod.null()]).optional(),
+  "couponCode": zod.string().nullish(),
+  "couponDiscountAmount": zod.number().nullish(),
+  "manualDiscountPercent": zod.number().nullish(),
+  "manualDiscountAmount": zod.number().nullish(),
+  "manualDiscountReason": zod.string().nullish(),
+  "manualDiscountByAdminId": zod.number().nullish(),
+  "manualDiscountAt": zod.coerce.date().nullish(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4773,6 +4834,14 @@ export const adminCreateOrderBodyItemsItemQuantityMultipleOf = 1;
 
 export const adminCreateOrderBodyShippingCostMin = 0;
 
+export const adminCreateOrderBodyCouponCodeMax = 100;
+
+export const adminCreateOrderBodyDiscountOverridePercentMin = 0;
+export const adminCreateOrderBodyDiscountOverridePercentMax = 100;
+export const adminCreateOrderBodyDiscountOverridePercentMultipleOf = 0.01;
+
+export const adminCreateOrderBodyDiscountOverrideReasonMax = 500;
+
 
 
 export const AdminCreateOrderBody = zod.object({
@@ -4800,7 +4869,12 @@ export const AdminCreateOrderBody = zod.object({
   "paymentMethod": zod.enum(['cash', 'bank-transfer', 'moyasar']),
   "shippingCost": zod.number().min(adminCreateOrderBodyShippingCostMin).optional(),
   "adminNotes": zod.string().nullish(),
-  "sendPaymentLink": zod.boolean().optional()
+  "sendPaymentLink": zod.boolean().optional(),
+  "couponCode": zod.string().max(adminCreateOrderBodyCouponCodeMax).nullish(),
+  "discountOverride": zod.object({
+  "percent": zod.number().min(adminCreateOrderBodyDiscountOverridePercentMin).max(adminCreateOrderBodyDiscountOverridePercentMax).multipleOf(adminCreateOrderBodyDiscountOverridePercentMultipleOf),
+  "reason": zod.string().max(adminCreateOrderBodyDiscountOverrideReasonMax).optional()
+}).optional()
 })
 
 export const AdminCreateOrderResponse = zod.object({
@@ -4810,6 +4884,13 @@ export const AdminCreateOrderResponse = zod.object({
   "orderNumber": zod.string(),
   "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
   "fulfillmentMethod": zod.union([zod.enum(['delivery', 'pickup']),zod.null()]).optional(),
+  "couponCode": zod.string().nullish(),
+  "couponDiscountAmount": zod.number().nullish(),
+  "manualDiscountPercent": zod.number().nullish(),
+  "manualDiscountAmount": zod.number().nullish(),
+  "manualDiscountReason": zod.string().nullish(),
+  "manualDiscountByAdminId": zod.number().nullish(),
+  "manualDiscountAt": zod.coerce.date().nullish(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4843,6 +4924,13 @@ export const AdminGetOrderResponse = zod.object({
   "orderNumber": zod.string(),
   "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
   "fulfillmentMethod": zod.union([zod.enum(['delivery', 'pickup']),zod.null()]).optional(),
+  "couponCode": zod.string().nullish(),
+  "couponDiscountAmount": zod.number().nullish(),
+  "manualDiscountPercent": zod.number().nullish(),
+  "manualDiscountAmount": zod.number().nullish(),
+  "manualDiscountReason": zod.string().nullish(),
+  "manualDiscountByAdminId": zod.number().nullish(),
+  "manualDiscountAt": zod.coerce.date().nullish(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4915,6 +5003,13 @@ export const AdminUpdateOrderResponse = zod.object({
   "orderNumber": zod.string(),
   "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
   "fulfillmentMethod": zod.union([zod.enum(['delivery', 'pickup']),zod.null()]).optional(),
+  "couponCode": zod.string().nullish(),
+  "couponDiscountAmount": zod.number().nullish(),
+  "manualDiscountPercent": zod.number().nullish(),
+  "manualDiscountAmount": zod.number().nullish(),
+  "manualDiscountReason": zod.string().nullish(),
+  "manualDiscountByAdminId": zod.number().nullish(),
+  "manualDiscountAt": zod.coerce.date().nullish(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -5036,6 +5131,12 @@ export const adminListInvoicesResponseCancelledByAdminIdMultipleOf = 1;
 
 
 export const AdminListInvoicesResponseItem = zod.object({
+  "couponCode": zod.string().nullish(),
+  "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
+  "couponDiscountValue": zod.number().nullish(),
+  "couponDiscountAmount": zod.number().nullish(),
+  "manualDiscountPercent": zod.number().nullish(),
+  "manualDiscountAmount": zod.number().nullish(),
   "id": zod.number(),
   "individual": zod.boolean().default(adminListInvoicesResponseIndividualDefault).describe('True for a standalone individual invoice; absent on legacy responses means false.'),
   "cancelledAt": zod.coerce.date().nullable(),
@@ -5153,6 +5254,12 @@ export const adminCreateDistributorInvoiceResponseCancelledByAdminIdMultipleOf =
 
 
 export const AdminCreateDistributorInvoiceResponse = zod.object({
+  "couponCode": zod.string().nullish(),
+  "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
+  "couponDiscountValue": zod.number().nullish(),
+  "couponDiscountAmount": zod.number().nullish(),
+  "manualDiscountPercent": zod.number().nullish(),
+  "manualDiscountAmount": zod.number().nullish(),
   "id": zod.number(),
   "individual": zod.boolean().default(adminCreateDistributorInvoiceResponseIndividualDefault).describe('True for a standalone individual invoice; absent on legacy responses means false.'),
   "cancelledAt": zod.coerce.date().nullable(),
@@ -5547,6 +5654,12 @@ export const adminCreateExhibitionInvoiceResponseCancelledByAdminIdMultipleOf = 
 
 
 export const AdminCreateExhibitionInvoiceResponse = zod.object({
+  "couponCode": zod.string().nullish(),
+  "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
+  "couponDiscountValue": zod.number().nullish(),
+  "couponDiscountAmount": zod.number().nullish(),
+  "manualDiscountPercent": zod.number().nullish(),
+  "manualDiscountAmount": zod.number().nullish(),
   "id": zod.number(),
   "individual": zod.boolean().default(adminCreateExhibitionInvoiceResponseIndividualDefault).describe('True for a standalone individual invoice; absent on legacy responses means false.'),
   "cancelledAt": zod.coerce.date().nullable(),
@@ -5627,6 +5740,14 @@ export const AdminCreateExhibitionInvoiceResponse = zod.object({
 export const adminCreateIndividualInvoiceBodyCreationKeyMin = 16;
 export const adminCreateIndividualInvoiceBodyCreationKeyMax = 200;
 
+export const adminCreateIndividualInvoiceBodyCouponCodeMax = 100;
+
+export const adminCreateIndividualInvoiceBodyDiscountOverridePercentMin = 0;
+export const adminCreateIndividualInvoiceBodyDiscountOverridePercentMax = 100;
+export const adminCreateIndividualInvoiceBodyDiscountOverridePercentMultipleOf = 0.01;
+
+export const adminCreateIndividualInvoiceBodyDiscountOverrideReasonMax = 500;
+
 export const adminCreateIndividualInvoiceBodyBuyerNameMax = 250;
 
 export const adminCreateIndividualInvoiceBodyBuyerAddressMax = 1000;
@@ -5649,6 +5770,11 @@ export const adminCreateIndividualInvoiceBodyItemsMax = 100;
 
 export const AdminCreateIndividualInvoiceBody = zod.object({
   "creationKey": zod.string().min(adminCreateIndividualInvoiceBodyCreationKeyMin).max(adminCreateIndividualInvoiceBodyCreationKeyMax),
+  "couponCode": zod.string().max(adminCreateIndividualInvoiceBodyCouponCodeMax).nullish(),
+  "discountOverride": zod.object({
+  "percent": zod.number().min(adminCreateIndividualInvoiceBodyDiscountOverridePercentMin).max(adminCreateIndividualInvoiceBodyDiscountOverridePercentMax).multipleOf(adminCreateIndividualInvoiceBodyDiscountOverridePercentMultipleOf),
+  "reason": zod.string().max(adminCreateIndividualInvoiceBodyDiscountOverrideReasonMax).optional()
+}).optional(),
   "buyerName": zod.string().min(1).max(adminCreateIndividualInvoiceBodyBuyerNameMax),
   "buyerAddress": zod.string().max(adminCreateIndividualInvoiceBodyBuyerAddressMax).nullable(),
   "buyerTaxNumber": zod.string().regex(adminCreateIndividualInvoiceBodyBuyerTaxNumberRegExp).nullable(),
@@ -5671,6 +5797,12 @@ export const adminCreateIndividualInvoiceResponseCancelledByAdminIdMultipleOf = 
 
 
 export const AdminCreateIndividualInvoiceResponse = zod.object({
+  "couponCode": zod.string().nullish(),
+  "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
+  "couponDiscountValue": zod.number().nullish(),
+  "couponDiscountAmount": zod.number().nullish(),
+  "manualDiscountPercent": zod.number().nullish(),
+  "manualDiscountAmount": zod.number().nullish(),
   "id": zod.number(),
   "individual": zod.boolean().default(adminCreateIndividualInvoiceResponseIndividualDefault).describe('True for a standalone individual invoice; absent on legacy responses means false.'),
   "cancelledAt": zod.coerce.date().nullable(),

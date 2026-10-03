@@ -19,6 +19,20 @@ export interface AdminOrder {
   /** @nullable */
   orderSource?: AdminOrderOrderSource;
   fulfillmentMethod?: OrderFulfillmentMethod | null;
+  /** @nullable */
+  couponCode?: string | null;
+  /** @nullable */
+  couponDiscountAmount?: number | null;
+  /** @nullable */
+  manualDiscountPercent?: number | null;
+  /** @nullable */
+  manualDiscountAmount?: number | null;
+  /** @nullable */
+  manualDiscountReason?: string | null;
+  /** @nullable */
+  manualDiscountByAdminId?: number | null;
+  /** @nullable */
+  manualDiscountAt?: Date | null;
   subtotal: number;
   shippingCost: number;
   discount: number;

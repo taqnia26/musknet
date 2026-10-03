@@ -9,6 +9,7 @@ import { nextLiveInvoiceNumber } from "./invoices";
 import { extractVatFromGross } from "./vat";
 import { invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
 import { zatcaPhaseOneBase64, zatcaSellerConfiguration } from "./zatca";
+import { allocateDiscountedGross, calculateSaleDiscount, discountResponseFields, validateManualDiscount, type ManualDiscountInput } from "./sale-discounts";
 
 const money = (amount: number) => amount.toFixed(2);
 const cents = (amount: number) => Math.round((amount + Number.EPSILON) * 100);
@@ -29,6 +30,8 @@ type IndividualInvoiceInput = {
   issueDate: string;
   dueDate?: string;
   collected?: { paymentDate: string; paymentMethod: "cash" | "bank_transfer" };
+  couponCode?: string | null;
+  discountOverride?: ManualDiscountInput;
   items: Array<{ productId: number; quantity: number; unitPrice: number }>;
 };
 
@@ -47,11 +50,14 @@ function normalizedInput(input: IndividualInvoiceInput): IndividualInvoiceInput 
     issueDate: input.issueDate,
     ...(input.dueDate !== undefined ? { dueDate: input.dueDate } : {}),
     ...(input.collected ? { collected: { ...input.collected } } : {}),
+    ...(input.couponCode?.trim() ? { couponCode: input.couponCode.trim().toUpperCase() } : {}),
+    ...(input.discountOverride?.percent ? { discountOverride: { percent: input.discountOverride.percent, reason: input.discountOverride.reason!.trim() } } : {}),
     items: input.items.map((item) => ({ ...item })),
   };
 }
 
 function validateInput(input: IndividualInvoiceInput) {
+  validateManualDiscount(input.discountOverride);
   if (typeof input.creationKey !== "string" || input.creationKey.trim().length < 16 || input.creationKey.length > 200) {
     throw new IndividualInvoiceValidationError("A creation key between 16 and 200 characters is required");
   }
@@ -108,10 +114,9 @@ async function invoiceResponse(tx: any, invoice: typeof invoicesTable.$inferSele
     distributorName: null,
     exhibitionName: null,
     shippingAmount: 0,
-    appliedDiscountPercent: null,
-    discountOverrideReason: null,
-    discountOverrideByAdminId: null,
-    discountOverrideAt: null,
+    ...discountResponseFields(invoice),
+    appliedDiscountPercent: invoice.appliedDiscountPercent == null ? null : Number(invoice.appliedDiscountPercent),
+    invoiceDiscountPercent: invoice.invoiceDiscountPercent == null ? null : Number(invoice.invoiceDiscountPercent),
     discountOverrideOutsideContractPeriod: null,
     cancelledByName: null,
     paidAmount,
@@ -161,12 +166,16 @@ export async function createIndividualInvoice(
       products.push(product);
     }
     const productById = new Map(products.map((product) => [product.id, product]));
-    const lines = input.items.map((item) => {
+    const discount = await calculateSaleDiscount(tx, totalGrossCents / 100, input.couponCode, input.discountOverride?.percent, true);
+    const finalGrossCents = cents(discount.productsTotal);
+    if (finalGrossCents < 1) throw new IndividualInvoiceValidationError("يجب أن تبقى قيمة الفاتورة أكبر من صفر بعد الخصم");
+    const allocated = allocateDiscountedGross(input.items.map((item) => cents(item.unitPrice) * item.quantity), finalGrossCents);
+    const lines = input.items.map((item, index) => {
       const product = productById.get(item.productId)!;
       if (product.stockQuantity < item.quantity) {
         throw new IndividualInvoiceConflictError(`Insufficient stock for ${product.nameAr}`);
       }
-      const grossCents = cents(item.unitPrice) * item.quantity;
+      const grossCents = allocated[index];
       const amounts = extractVatFromGross(grossCents, 15);
       return {
         productId: product.id,
@@ -185,10 +194,10 @@ export async function createIndividualInvoice(
     const subtotalCents = lines.reduce((sum, line) => sum + cents(line.subtotal), 0);
     const vatCents = lines.reduce((sum, line) => sum + cents(line.vatAmount), 0);
     const calculatedGrossCents = subtotalCents + vatCents;
-    if (calculatedGrossCents !== totalGrossCents) throw new Error("Individual invoice VAT calculation did not reconcile to the entered gross amounts");
+    if (calculatedGrossCents !== finalGrossCents) throw new Error("Individual invoice VAT calculation did not reconcile to the discounted gross amounts");
     const subtotal = fromCents(subtotalCents);
     const vatAmount = fromCents(vatCents);
-    const totalAmount = fromCents(totalGrossCents);
+    const totalAmount = fromCents(finalGrossCents);
     const configuration = zatcaSellerConfiguration(environment);
     const issueDatetime = invoiceIssueTimestamp(input.issueDate, new Date());
     await tx.execute(sql`select pg_advisory_xact_lock(7521010001)`);
@@ -206,7 +215,16 @@ export async function createIndividualInvoice(
       buyerAddress: input.buyerAddress,
       buyerTaxNumber: input.buyerTaxNumber,
       subtotal,
-      discountAmount: 0,
+      discountAmount: discount.discountAmount,
+      couponCode: discount.couponCode,
+      couponDiscountType: discount.couponDiscountType,
+      couponDiscountValue: discount.couponDiscountValue,
+      couponDiscountAmount: discount.couponCode ? discount.couponDiscountAmount.toFixed(2) : null,
+      manualDiscountAmount: input.discountOverride ? discount.manualDiscountAmount.toFixed(2) : null,
+      invoiceDiscountPercent: input.discountOverride ? input.discountOverride.percent.toFixed(2) : null,
+      discountOverrideReason: input.discountOverride?.reason ?? null,
+      discountOverrideByAdminId: input.discountOverride ? actorId : null,
+      discountOverrideAt: input.discountOverride ? new Date() : null,
       vatAmount,
       totalAmount,
       taxTreatment: "domestic",

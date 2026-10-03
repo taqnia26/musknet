@@ -13,6 +13,7 @@ import {
   adminUsersTable,
   accountingAccountsTable,
   categoriesTable,
+  couponsTable,
   customersTable,
   addressesTable,
   db,
@@ -834,6 +835,62 @@ describe.sequential("admin route authorization", () => {
       }
       await db.update(productsTable).set({ stockQuantity: 5 }).where(eq(productsTable.id, productId));
       await db.update(inventoryBalancesTable).set({ available: 5 }).where(eq(inventoryBalancesTable.productId, productId));
+    }
+  });
+
+  it("applies coupon then audited manual percent to products only with private previews and atomic usage", async () => {
+    const auth = { Authorization: `Bearer ${superToken}` };
+    const shopper = { Authorization: `Bearer ${issueToken(customerId)}` };
+    const [original] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    const balances = await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
+    const [coupon] = await db.insert(couponsTable).values({ code: `HAYA-${Date.now()}`, discountType: "percentage", discountValue: 10, usageLimit: 3 }).returning();
+    const ids: number[] = [];
+    const payload = {
+      userId: customerId, items: [{ productId, quantity: 1 }], orderSource: "phone",
+      fulfillmentMethod: "pickup", shippingMethod: "refrigerated", paymentMethod: "cash",
+      orderAddress: { label: "Home", city: "Dubai", country: "AE", district: "Deira", street: "Main", buildingNo: "10", additionalInfo: "", isDefault: false },
+      couponCode: coupon.code, discountOverride: { percent: 10, reason: "خصم معتمد لهذه المنتجات فقط" },
+    };
+    try {
+      await db.update(productsTable).set({ price: 200 }).where(eq(productsTable.id, productId));
+      const quoteUrl = "/api/admin/orders/discount-quote";
+      await request(app).post(quoteUrl).send({ productSubtotal: 200 }).expect(401);
+      await request(app).post(quoteUrl).set(shopper).send({ productSubtotal: 200 }).expect(401);
+      expect((await request(app).post(quoteUrl).set(auth).send({ productSubtotal: 200, couponCode: coupon.code, manualDiscountPercent: 10 }).expect(200)).body)
+        .toMatchObject({ couponDiscountAmount: 20, manualDiscountAmount: 18, discountAmount: 38, productsTotal: 162 });
+      expect((await db.select().from(couponsTable).where(eq(couponsTable.id, coupon.id)))[0].timesUsed).toBe(0);
+      for (const discountOverride of [{ percent: 101, reason: payload.discountOverride.reason }, { percent: 1.001 }, { percent: 10, reason: "قصير" }]) {
+        await request(app).post("/api/admin/orders").set(auth).send({ ...payload, discountOverride }).expect(400);
+      }
+      await request(app).post("/api/checkout/quote").set(shopper).send({ discountOverride: payload.discountOverride }).expect(400);
+      await request(app).post("/api/orders").set(shopper).send({ discountOverride: payload.discountOverride }).expect(400);
+      for (const orderSource of ["admin", "phone"]) {
+        const response = await request(app).post("/api/admin/orders").set(auth).send({ ...payload, orderSource }).expect(201);
+        ids.push(response.body.id);
+        expect(response.body).toMatchObject({
+          subtotal: 200, couponDiscountAmount: 20, manualDiscountPercent: 10, manualDiscountAmount: 18,
+          discount: 38, shippingCost: 25, total: 187, tax: 24.39, manualDiscountByAdminId: superId,
+        });
+        expect(response.body.manualDiscountAt).toBeTruthy();
+        const detail = (await request(app).get(`/api/admin/orders/${response.body.id}`).set(auth).expect(200)).body;
+        expect(detail).toMatchObject({ couponDiscountAmount: 20, manualDiscountAmount: 18, manualDiscountReason: payload.discountOverride.reason });
+        expect((await request(app).get("/api/admin/orders").set(auth).query({ search: response.body.orderNumber }).expect(200)).body[0]).toMatchObject({ manualDiscountPercent: 10 });
+        expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, response.body.id))).toHaveLength(0);
+        await request(app).patch(`/api/admin/orders/${response.body.id}`).set(auth).send({ discountOverride: { percent: 50, reason: payload.discountOverride.reason } }).expect(400);
+      }
+      const last = await Promise.all([1, 2].map(() => request(app).post("/api/admin/orders").set(auth).send(payload)));
+      expect(last.map((response) => response.status).sort()).toEqual([201, 400]);
+      ids.push(last.find((response) => response.status === 201)!.body.id);
+      expect((await db.select().from(couponsTable).where(eq(couponsTable.id, coupon.id)))[0].timesUsed).toBe(3);
+      expect((await db.select().from(productsTable).where(eq(productsTable.id, productId)))[0].stockQuantity).toBe(original.stockQuantity - 3);
+    } finally {
+      for (const id of ids) {
+        await db.delete(ordersTable).where(eq(ordersTable.id, id));
+        await db.delete(inventoryMovementsTable).where(and(eq(inventoryMovementsTable.sourceType, "order"), eq(inventoryMovementsTable.sourceId, String(id))));
+      }
+      await db.delete(couponsTable).where(eq(couponsTable.id, coupon.id));
+      await db.update(productsTable).set({ price: original.price, stockQuantity: original.stockQuantity, averageCost: original.averageCost }).where(eq(productsTable.id, productId));
+      for (const balance of balances) await db.update(inventoryBalancesTable).set({ available: balance.available, averageCost: balance.averageCost }).where(eq(inventoryBalancesTable.id, balance.id));
     }
   });
 

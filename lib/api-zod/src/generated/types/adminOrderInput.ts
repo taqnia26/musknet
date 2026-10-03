@@ -9,6 +9,7 @@ import type { AdminOrderAddress } from './adminOrderAddress';
 import type { AdminOrderInputOrderSource } from './adminOrderInputOrderSource';
 import type { AdminOrderInputPaymentMethod } from './adminOrderInputPaymentMethod';
 import type { AdminOrderLineInput } from './adminOrderLineInput';
+import type { ManualSaleDiscountInput } from './manualSaleDiscountInput';
 import type { OrderFulfillmentMethod } from './orderFulfillmentMethod';
 
 export interface AdminOrderInput {
@@ -27,4 +28,10 @@ export interface AdminOrderInput {
   /** @nullable */
   adminNotes?: string | null;
   sendPaymentLink?: boolean;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  couponCode?: string | null;
+  discountOverride?: ManualSaleDiscountInput;
 }

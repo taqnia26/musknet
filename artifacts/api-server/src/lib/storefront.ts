@@ -891,6 +891,7 @@ export async function createOrderForUser(
       couponCode: couponRecord?.code ?? null,
       couponDiscountType: couponRecord?.discountType ?? null,
       couponDiscountValue: couponRecord?.discountValue ?? null,
+      couponDiscountAmount: coupon.discount.toFixed(2),
       tax,
       total,
       address: JSON.stringify({ ...details.address, taxTreatment: "domestic" }),

@@ -393,7 +393,10 @@ describe.sequential("phone order delivery invoices", () => {
   it("keeps fixed-fee phone pickup local and issues its invoice once only on delivery", async () => {
     const id = orderIds[6];
     await db.update(ordersTable).set({
-      fulfillmentMethod: "pickup", shippingCost: 25, tax: 16.3, total: 125,
+      fulfillmentMethod: "pickup", shippingCost: 25, discount: 19, tax: 13.83, total: 106,
+      couponCode: "SNAPSHOT-COUPON", couponDiscountType: "percentage", couponDiscountValue: 10,
+      couponDiscountAmount: "10.00", manualDiscountPercent: "10.00", manualDiscountAmount: "9.00",
+      manualDiscountReason: "خصم موثق على المنتجات بعد الكوبون", manualDiscountByAdminId: actorId, manualDiscountAt: new Date(),
       address: JSON.stringify({ country: "AE", taxTreatment: "domestic" }),
     }).where(eq(ordersTable.id, id));
     await db.insert(orderItemsTable).values({
@@ -411,8 +414,14 @@ describe.sequential("phone order delivery invoices", () => {
     ]);
     const issued = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id));
     expect(issued).toHaveLength(1);
-    expect(Number(issued[0].vatAmount)).toBe(16.3);
-    expect(Number(issued[0].totalAmount)).toBe(125);
+    expect(Number(issued[0].vatAmount)).toBe(13.83);
+    expect(Number(issued[0].totalAmount)).toBe(106);
+    expect(issued[0]).toMatchObject({
+      couponDiscountAmount: "10.00", manualDiscountAmount: "9.00",
+      invoiceDiscountPercent: "10.00", discountOverrideByAdminId: actorId,
+    });
+    const lines = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, issued[0].id));
+    expect(lines[0]).toMatchObject({ totalAmount: 81, vatAmount: 10.57, subtotal: 70.43 });
   });
 
   it("does not queue admin pickup for a carrier when preparation begins", async () => {

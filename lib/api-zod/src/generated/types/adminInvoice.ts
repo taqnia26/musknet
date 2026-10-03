@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminInvoiceCouponDiscountType } from './adminInvoiceCouponDiscountType';
 import type { AdminInvoiceHistorical } from './adminInvoiceHistorical';
 import type { AdminInvoiceItem } from './adminInvoiceItem';
 import type { AdminInvoicePaymentStatus } from './adminInvoicePaymentStatus';
@@ -13,6 +14,18 @@ import type { AdminInvoiceTaxTreatment } from './adminInvoiceTaxTreatment';
 import type { ReceivablePayment } from './receivablePayment';
 
 export interface AdminInvoice {
+  /** @nullable */
+  couponCode?: string | null;
+  /** @nullable */
+  couponDiscountType?: AdminInvoiceCouponDiscountType;
+  /** @nullable */
+  couponDiscountValue?: number | null;
+  /** @nullable */
+  couponDiscountAmount?: number | null;
+  /** @nullable */
+  manualDiscountPercent?: number | null;
+  /** @nullable */
+  manualDiscountAmount?: number | null;
   id: number;
   /** True for a standalone individual invoice; absent on legacy responses means false. */
   individual?: boolean;

@@ -29,6 +29,10 @@ type InvoiceForEmail = {
   contractDiscountPercent?: number | null;
   invoiceDiscountPercent?: number | null;
   discountOverrideReason?: string | null;
+  couponCode?: string | null;
+  couponDiscountAmount?: number | null;
+  manualDiscountPercent?: number | null;
+  manualDiscountAmount?: number | null;
   totalAmount: number;
   paidAmount: number;
   outstandingAmount: number;
@@ -101,7 +105,14 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
   const inclusiveOrderSnapshot = Boolean(invoice.orderNumber) &&
     Math.round(invoice.subtotal * 100) + Math.round(invoice.vatAmount * 100) === Math.round(invoice.totalAmount * 100);
   const totalRows: Array<[string, number]> = [];
-  if (invoice.historical === "yes") {
+  const saleSnapshot = invoice.couponDiscountAmount != null || invoice.manualDiscountAmount != null;
+  if (saleSnapshot) {
+    totalRows.push(["Products before discounts (VAT included)", invoice.totalAmount - (invoice.shippingAmount ?? 0) + (invoice.discountAmount ?? 0)]);
+    if (invoice.couponDiscountAmount != null) totalRows.push([`Coupon${invoice.couponCode ? ` (${invoice.couponCode})` : ""}`, -invoice.couponDiscountAmount]);
+    if (invoice.manualDiscountAmount != null) totalRows.push([`Manual discount (${invoice.manualDiscountPercent ?? invoice.invoiceDiscountPercent ?? 0}%)`, -invoice.manualDiscountAmount]);
+    if ((invoice.shippingAmount ?? 0) > 0) totalRows.push(["Delivery / pickup (VAT included)", invoice.shippingAmount!]);
+    totalRows.push(["Net subtotal after discounts", invoice.subtotal], [vatLabel, invoice.vatAmount]);
+  } else if (invoice.historical === "yes") {
     totalRows.push(["Original net (after discount)", invoice.subtotal],
       [invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined
         ? `Prior override (${invoice.invoiceDiscountPercent}%)`
@@ -122,8 +133,8 @@ export function getInvoiceTotalRows(invoice: InvoiceForEmail): Array<[string, nu
   } else {
     totalRows.push(["Subtotal", invoice.subtotal], [vatLabel, invoice.vatAmount]);
   }
-  if ((invoice.shippingAmount ?? 0) > 0 && !inclusiveOrderSnapshot) totalRows.push(["Shipping", invoice.shippingAmount!]);
-  if (invoice.historical !== "yes" && !inclusiveOrderSnapshot && !companyContractInvoice) {
+  if ((invoice.shippingAmount ?? 0) > 0 && !inclusiveOrderSnapshot && !saleSnapshot) totalRows.push(["Shipping", invoice.shippingAmount!]);
+  if (invoice.historical !== "yes" && !inclusiveOrderSnapshot && !companyContractInvoice && !saleSnapshot) {
     totalRows.push(["Discount", -(invoice.discountAmount ?? 0)]);
   }
   if (invoice.paidAmount > 0 && invoice.paidAmount < invoice.totalAmount) {

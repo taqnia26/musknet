@@ -2452,6 +2452,42 @@ export interface AdminOrderFulfillmentOptions {
   currency: AdminOrderFulfillmentOptionsCurrency;
 }
 
+export interface ManualSaleDiscountInput {
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  percent: number;
+  /** @maxLength 500 */
+  reason?: string;
+}
+
+export interface SaleDiscountQuoteInput {
+  /** @minimum 0 */
+  productSubtotal: number;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  couponCode?: string | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  manualDiscountPercent?: number;
+}
+
+export interface SaleDiscountQuote {
+  productSubtotal: number;
+  /** @nullable */
+  couponCode: string | null;
+  couponDiscountAmount: number;
+  manualDiscountPercent: number;
+  manualDiscountAmount: number;
+  discountAmount: number;
+  productsTotal: number;
+}
+
 /**
  * @nullable
  */
@@ -2501,6 +2537,20 @@ export interface AdminOrder {
   /** @nullable */
   orderSource?: AdminOrderOrderSource;
   fulfillmentMethod?: OrderFulfillmentMethod | null;
+  /** @nullable */
+  couponCode?: string | null;
+  /** @nullable */
+  couponDiscountAmount?: number | null;
+  /** @nullable */
+  manualDiscountPercent?: number | null;
+  /** @nullable */
+  manualDiscountAmount?: number | null;
+  /** @nullable */
+  manualDiscountReason?: string | null;
+  /** @nullable */
+  manualDiscountByAdminId?: number | null;
+  /** @nullable */
+  manualDiscountAt?: string | null;
   subtotal: number;
   shippingCost: number;
   discount: number;
@@ -2611,6 +2661,12 @@ export interface AdminOrderInput {
   /** @nullable */
   adminNotes?: string | null;
   sendPaymentLink?: boolean;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  couponCode?: string | null;
+  discountOverride?: ManualSaleDiscountInput;
 }
 
 export interface AdminOrderPaymentLinkResponse {
@@ -2706,6 +2762,17 @@ export interface AdminInvoiceCancellation {
   cancelledByAdminId: number;
 }
 
+/**
+ * @nullable
+ */
+export type AdminInvoiceCouponDiscountType = typeof AdminInvoiceCouponDiscountType[keyof typeof AdminInvoiceCouponDiscountType] | null;
+
+
+export const AdminInvoiceCouponDiscountType = {
+  percentage: 'percentage',
+  fixed: 'fixed',
+} as const;
+
 export type AdminInvoiceHistorical = typeof AdminInvoiceHistorical[keyof typeof AdminInvoiceHistorical];
 
 
@@ -2783,6 +2850,18 @@ export interface AdminInvoiceItem {
 }
 
 export interface AdminInvoice {
+  /** @nullable */
+  couponCode?: string | null;
+  /** @nullable */
+  couponDiscountType?: AdminInvoiceCouponDiscountType;
+  /** @nullable */
+  couponDiscountValue?: number | null;
+  /** @nullable */
+  couponDiscountAmount?: number | null;
+  /** @nullable */
+  manualDiscountPercent?: number | null;
+  /** @nullable */
+  manualDiscountAmount?: number | null;
   id: number;
   /** True for a standalone individual invoice; absent on legacy responses means false. */
   individual?: boolean;
@@ -2909,6 +2988,12 @@ export interface IndividualInvoiceInput {
      * @maxLength 200
      */
   creationKey: string;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  couponCode?: string | null;
+  discountOverride?: ManualSaleDiscountInput;
   /**
      * @minLength 1
      * @maxLength 250

@@ -17,6 +17,17 @@ import { createShipHeroAdminRouter } from "./shiphero-admin";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
 import { ADMIN_PICKUP_FEE_SAR, adminFulfillmentOptions } from "../lib/order-fulfillment";
+import { calculateSaleDiscount, discountResponseFields, SaleDiscountValidationError, validateManualDiscount } from "../lib/sale-discounts";
+const invoiceDiscountProjection = {
+  discountOverrideByAdminId: invoicesTable.discountOverrideByAdminId,
+  discountOverrideAt: invoicesTable.discountOverrideAt,
+  couponCode: invoicesTable.couponCode,
+  couponDiscountType: invoicesTable.couponDiscountType,
+  couponDiscountValue: invoicesTable.couponDiscountValue,
+  couponDiscountAmount: sql<number | null>`${invoicesTable.couponDiscountAmount}::float8`,
+  manualDiscountAmount: sql<number | null>`${invoicesTable.manualDiscountAmount}::float8`,
+  manualDiscountPercent: sql<number | null>`case when ${invoicesTable.manualDiscountAmount} is not null then ${invoicesTable.invoiceDiscountPercent}::float8 else null end`,
+};
 import {
   adminPermissionsTable,
   adminSessionsTable,
@@ -57,6 +68,8 @@ import {
   distributorContractsTable,
   uploadedContractFilesTable,
   influencersTable,
+  influencerCouponsTable,
+  orderAttributionsTable,
   siteContentTable,
   siteContentHistoryTable,
   ownerCredentialsTable,
@@ -2083,7 +2096,7 @@ router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => 
         .some(value => value?.toLocaleLowerCase().includes(needle)));
   }
   if (query.status !== "all") rows = rows.filter((row) => row.order.status === query.status);
-  res.json(Api.AdminListOrdersResponse.parse(rows.map(({ order, customerName }) => ({ ...order, customerName }))));
+  res.json(Api.AdminListOrdersResponse.parse(rows.map(({ order, customerName }) => ({ ...order, ...discountResponseFields(order), customerName }))));
 }));
 router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
@@ -2178,10 +2191,13 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       const shippingCost = fulfillmentMethod === "pickup" ? ADMIN_PICKUP_FEE_SAR : body.shippingCost ?? (
          domestic && /الرياض|riyadh/i.test(city) ? 20 : 30
       );
-      const grossTotalCents = Math.round((subtotal + shippingCost) * 100);
+      validateManualDiscount(body.discountOverride);
+      const discount = await calculateSaleDiscount(tx, subtotal, body.couponCode, body.discountOverride?.percent, true);
+      const manual = (body.discountOverride?.percent ?? 0) > 0;
+      const grossTotalCents = Math.round((discount.productsTotal + shippingCost) * 100);
       // Pickup is fulfilled at the Saudi business site, not exported to the buyer's address.
       const tax = domestic || fulfillmentMethod === "pickup" ? extractVatFromGross(grossTotalCents, 15).vatCents / 100 : 0;
-      const total = Math.round((subtotal + shippingCost) * 100) / 100;
+      const total = grossTotalCents / 100;
       const orderNumber = await nextIndividualOrderNumber(tx);
       const [created] = await tx.insert(ordersTable).values({
         userId: body.userId,
@@ -2190,7 +2206,16 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         fulfillmentMethod,
         subtotal,
         shippingCost,
-        discount: 0,
+        discount: discount.discountAmount,
+        couponCode: discount.couponCode,
+        couponDiscountType: discount.couponDiscountType,
+        couponDiscountValue: discount.couponDiscountValue,
+        couponDiscountAmount: discount.couponDiscountAmount.toFixed(2),
+        manualDiscountPercent: manual ? body.discountOverride!.percent.toFixed(2) : null,
+        manualDiscountAmount: manual ? discount.manualDiscountAmount.toFixed(2) : null,
+        manualDiscountReason: manual ? body.discountOverride!.reason!.trim() : null,
+        manualDiscountByAdminId: manual ? res.locals.admin.id : null,
+        manualDiscountAt: manual ? new Date() : null,
         tax,
         total,
         address: JSON.stringify(cleanedAddress),
@@ -2199,6 +2224,17 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         status: body.sendPaymentLink ? "pending_payment" : "pending_review",
         adminNotes: body.adminNotes ?? null,
       }).returning();
+
+      if (discount.couponId) {
+        const [linked] = await tx.select({ influencerId: influencersTable.id, commissionRate: influencersTable.commissionRate })
+          .from(influencerCouponsTable).innerJoin(influencersTable, eq(influencersTable.id, influencerCouponsTable.influencerId))
+          .where(and(eq(influencerCouponsTable.couponId, discount.couponId), eq(influencersTable.isActive, true))).limit(1);
+        if (linked) await tx.insert(orderAttributionsTable).values({
+          orderId: created.id, influencerId: linked.influencerId, source: "coupon",
+          commissionRate: linked.commissionRate,
+          commissionAmount: Math.round(created.total * linked.commissionRate) / 100,
+        }).onConflictDoNothing();
+      }
 
       await tx.insert(orderAddressesTable).values({
         orderId: created.id,
@@ -2273,8 +2309,9 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
       catch (error) { paymentLink = { sent: false, status: error instanceof Error ? error.message : "Payment link failed", expiresAt: new Date().toISOString() }; }
     }
     const [customer] = await db.select({ name: customersTable.name }).from(customersTable).where(eq(customersTable.id, order.userId));
-    res.status(201).json(Api.AdminCreateOrderResponse.parse({ ...order, customerName: customer.name, ...(paymentLink ? { paymentLink } : {}) }));
+    res.status(201).json(Api.AdminCreateOrderResponse.parse({ ...order, ...discountResponseFields(order), customerName: customer.name, ...(paymentLink ? { paymentLink } : {}) }));
   } catch (error) {
+    if (error instanceof SaleDiscountValidationError) { res.status(400).json({ error: error.message }); return; }
     const message = error instanceof Error ? error.message : "";
     if (message === "CUSTOMER_UNAVAILABLE") {
       res.status(400).json({ error: "Customer was not found or is inactive" });
@@ -2358,6 +2395,7 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
     : null;
   res.json(Api.AdminGetOrderResponse.parse({
     ...row,
+    ...discountResponseFields(row),
     customerName: customer.name,
     customer,
     orderAddress: {
@@ -2371,6 +2409,9 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
   }));
 }));
 router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, res) => {
+  if (["couponCode", "discountOverride", "discount", "couponDiscountAmount", "manualDiscountPercent", "manualDiscountAmount", "manualDiscountReason", "manualDiscountByAdminId", "manualDiscountAt"].some((key) => req.body?.[key] !== undefined)) {
+    res.status(400).json({ error: "الخصم يُحدد عند إنشاء الطلب ولا يُعدل بعد حفظه" }); return;
+  }
   if (req.body?.fulfillmentMethod !== undefined) {
     res.status(400).json({ error: "طريقة التنفيذ تُحدد عند إنشاء الطلب ولا تُعدل بعد حفظه" }); return;
   }
@@ -2394,7 +2435,7 @@ router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, re
   row ??= await updateOrderAndIssueInvoice(params.id, body, process.env, res.locals.admin.id);
   if (!row) { res.status(404).json({ error: "Order not found" }); return; }
   const [customer] = await db.select({ name: customersTable.name }).from(customersTable).where(eq(customersTable.id, row.userId));
-  res.json(Api.AdminUpdateOrderResponse.parse({ ...row, customerName: customer.name }));
+  res.json(Api.AdminUpdateOrderResponse.parse({ ...row, ...discountResponseFields(row), customerName: customer.name }));
 }));
 
 router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res) => {
@@ -2419,8 +2460,6 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     appliedDiscountPercent: invoicesTable.appliedDiscountPercent,
     invoiceDiscountPercent: invoicesTable.invoiceDiscountPercent,
     discountOverrideReason: invoicesTable.discountOverrideReason,
-    discountOverrideByAdminId: invoicesTable.discountOverrideByAdminId,
-    discountOverrideAt: invoicesTable.discountOverrideAt,
     discountOverrideOutsideContractPeriod: invoicesTable.discountOverrideOutsideContractPeriod,
     paymentDays: invoicesTable.paymentDays,
     paymentTerm: invoicesTable.paymentTerm,
@@ -2441,6 +2480,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     buyerAddress: invoicesTable.buyerAddress,
     subtotal: invoicesTable.subtotal,
+    ...invoiceDiscountProjection,
     discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
     shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount,
@@ -2585,6 +2625,7 @@ router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), rout
     issueDatetime: invoicesTable.issueDatetime,
     dueDate: invoicesTable.dueDate,
     subtotal: invoicesTable.subtotal,
+    ...invoiceDiscountProjection,
     discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
     shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount,
@@ -2672,11 +2713,25 @@ router.post("/admin/invoices/individuals", permit("invoices", "edit"), route(asy
       vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
     }));
   } catch (error) {
+    if (error instanceof SaleDiscountValidationError) { res.status(400).json({ error: error.message }); return; }
     if (error instanceof IndividualInvoiceValidationError) { res.status(400).json({ error: error.message }); return; }
     if (error instanceof IndividualInvoiceConflictError) { res.status(409).json({ error: error.message }); return; }
     throw error;
   }
 }));
+
+const discountQuoteHandler = route(async (req, res) => {
+  const input = parse(Api.AdminQuoteOrderDiscountBody, req.body, res); if (!input) return;
+  try {
+    const quote = await db.transaction((tx) => calculateSaleDiscount(tx, input.productSubtotal, input.couponCode, input.manualDiscountPercent));
+    res.json(Api.AdminQuoteOrderDiscountResponse.parse(quote));
+  } catch (error) {
+    if (error instanceof SaleDiscountValidationError) { res.status(400).json({ error: error.message }); return; }
+    throw error;
+  }
+});
+router.post("/admin/orders/discount-quote", permit("orders", "edit"), discountQuoteHandler);
+router.post("/admin/invoices/discount-quote", permit("invoices", "edit"), discountQuoteHandler);
 
 router.patch("/admin/invoices/:id", permit("invoices", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateInvoiceParams, req.params, res);
@@ -2776,6 +2831,7 @@ router.post("/admin/invoices/:id/email", permit("invoices", "edit"), route(async
     buyerName: invoicesTable.buyerName, buyerAddress: invoicesTable.buyerAddress,
     buyerTaxNumber: invoicesTable.buyerTaxNumber, buyerCommercialRegistrationNumber: invoicesTable.buyerCommercialRegistrationNumber,
     issueDatetime: invoicesTable.issueDatetime, dueDate: invoicesTable.dueDate, subtotal: invoicesTable.subtotal,
+    ...invoiceDiscountProjection,
     discountAmount: sql<number>`coalesce(${ordersTable.discount}, ${invoicesTable.discountAmount}, 0)`,
     shippingAmount: sql<number>`coalesce(${ordersTable.shippingCost}, 0)`,
     vatAmount: invoicesTable.vatAmount, totalAmount: invoicesTable.totalAmount, qrCodeData: invoicesTable.qrCodeData,

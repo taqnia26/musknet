@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, count, eq, inArray } from "drizzle-orm";
 import {
-  accountingAccountsTable, adminUsersTable, categoriesTable, db, inventoryBalancesTable,
+  accountingAccountsTable, adminUsersTable, categoriesTable, couponsTable, db, inventoryBalancesTable,
   inventoryMovementsTable, invoiceItemsTable, invoicesTable, journalEntriesTable,
   journalEntryLinesTable, operationEventsTable, ordersTable, productsTable,
   receivablePaymentsTable, shipmentsTable, pool as testPool,
@@ -29,6 +29,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
   let actorId: number;
   let productId: number;
   let collectedProductId: number;
+  let discountProductId: number;
   let ordersBefore = 0;
 
   const parseInvoiceResponse = (invoice: Awaited<ReturnType<typeof createIndividualInvoice>>) =>
@@ -91,13 +92,51 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
         stockQuantity: 12,
         averageCost: "5.0000",
       },
+      {
+        nameAr: "منتج اختبار الخصم",
+        nameEn: "Discount invoice test product",
+        slug: `${base}-discount`,
+        price: 115,
+        categoryId: category.id,
+        sku: `${base}-DISCOUNT`,
+        stockQuantity: 12,
+        averageCost: "4.0000",
+      },
     ]).returning({ id: productsTable.id });
     productId = products[0].id;
     collectedProductId = products[1].id;
+    discountProductId = products[2].id;
   });
 
   afterAll(async () => {
     await pool?.end();
+  });
+
+  it("snapshots sequential coupon/manual discounts, posts discounted revenue, and replays without consuming again", async () => {
+    const productId = discountProductId;
+    const [coupon] = await db.insert(couponsTable).values({
+      code: `${base}-DISCOUNT`.toUpperCase(), discountType: "percentage", discountValue: 10, usageLimit: 1,
+    }).returning();
+    const input = {
+      creationKey: `${base}-discount-key`, buyerName: "مشتري بخصم", buyerAddress: null, buyerTaxNumber: null,
+      issueDate: today, items: [{ productId, quantity: 1, unitPrice: 115 }],
+      couponCode: coupon.code, discountOverride: { percent: 10, reason: "خصم موثق للمنتجات بعد الكوبون" },
+    };
+    const [before] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    const results = await Promise.all([1, 2].map(() => createIndividualInvoice(input, actorId, environment)));
+    expect(results[0].id).toBe(results[1].id);
+    expect(parseInvoiceResponse(results[0])).toMatchObject({
+      subtotal: 81, vatAmount: 12.15, totalAmount: 93.15, outstandingAmount: 93.15,
+      discountAmount: 21.85, couponDiscountAmount: 11.5, manualDiscountAmount: 10.35,
+      manualDiscountPercent: 10, invoiceDiscountPercent: 10, discountOverrideByAdminId: actorId,
+      discountOverrideReason: input.discountOverride.reason,
+    });
+    expect(results[0].items[0]).toMatchObject({ unitPrice: 115, subtotal: 81, vatAmount: 12.15, totalAmount: 93.15 });
+    expect((await db.select().from(couponsTable).where(eq(couponsTable.id, coupon.id)))[0].timesUsed).toBe(1);
+    expect((await db.select().from(productsTable).where(eq(productsTable.id, productId)))[0]).toMatchObject({ stockQuantity: before.stockQuantity - 1, averageCost: before.averageCost });
+    await db.update(couponsTable).set({ isActive: false }).where(eq(couponsTable.id, coupon.id));
+    expect((await createIndividualInvoice(input, actorId, environment)).id).toBe(results[0].id);
+    await expect(createIndividualInvoice({ ...input, discountOverride: { ...input.discountOverride, percent: 20 } }, actorId, environment)).rejects.toBeInstanceOf(IndividualInvoiceConflictError);
   });
 
   it("issues unpaid invoices once, replays current payment status, and rejects a conflicting key", async () => {

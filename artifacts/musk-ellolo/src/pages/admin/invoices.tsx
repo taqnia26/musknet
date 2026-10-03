@@ -54,6 +54,10 @@ function InvoiceTemplate({
   onQrLoad?: () => void;
 }) {
   const { t, lang } = useLanguage();
+  const knownSaleSnapshot = (invoice.couponDiscountAmount !== null && invoice.couponDiscountAmount !== undefined)
+    || (invoice.manualDiscountAmount !== null && invoice.manualDiscountAmount !== undefined);
+  const saleShipping = invoice.shippingAmount ?? 0;
+  const saleProductsGross = Math.round((invoice.totalAmount - saleShipping + invoice.discountAmount) * 100) / 100;
   const grossBeforeDiscount = invoice.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const usesContractTerms = Boolean(invoice.contractId || invoice.uploadedContractFileId);
   const internationalDistributor = invoice.distributorId != null && invoice.taxTreatment === 'international' && invoice.vatAmount === 0;
@@ -184,7 +188,34 @@ function InvoiceTemplate({
           )}
         </div>}
         <div className="w-full sm:w-80 space-y-4">
-          {invoice.historical === 'yes' ? (
+          {knownSaleSnapshot ? (
+            <>
+              <div data-testid="invoice-sale-products-gross" className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('إجمالي المنتجات قبل الخصم (شامل الضريبة)', 'Products gross before discounts (VAT included)')}</span>
+                <span className="font-mono"><Money value={saleProductsGross} lang={lang} fractionDigits={2} /></span>
+              </div>
+              {invoice.couponDiscountAmount !== null && invoice.couponDiscountAmount !== undefined && <div data-testid="invoice-coupon-discount" className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('خصم الكوبون', 'Coupon discount')}{invoice.couponCode ? ` (${invoice.couponCode})` : ''}</span>
+                <span className="font-mono"><Money value={-invoice.couponDiscountAmount} lang={lang} fractionDigits={2} /></span>
+              </div>}
+              {invoice.manualDiscountAmount !== null && invoice.manualDiscountAmount !== undefined && <div data-testid="invoice-manual-discount" className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('خصم يدوي', 'Manual discount')}{invoice.manualDiscountPercent !== null && invoice.manualDiscountPercent !== undefined ? ` (${invoice.manualDiscountPercent}%)` : ''}</span>
+                <span className="font-mono"><Money value={-invoice.manualDiscountAmount} lang={lang} fractionDigits={2} /></span>
+              </div>}
+              {saleShipping > 0 && <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('الشحن / رسوم الاستلام (دون خصم)', 'Shipping / pickup fee (not discounted)')}</span>
+                <span className="font-mono"><Money value={saleShipping} lang={lang} fractionDigits={2} /></span>
+              </div>}
+              <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{t('صافي المجموع الفرعي بعد الخصم', 'Net subtotal after discounts')}</span>
+                <span className="font-mono"><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span>
+              </div>
+              <div className="flex justify-between text-gray-600 px-2 text-sm">
+                <span>{vatLabel}</span>
+                <span className="font-mono"><Money value={invoice.vatAmount} lang={lang} fractionDigits={2} /></span>
+              </div>
+            </>
+          ) : invoice.historical === 'yes' ? (
             <>
               <div className="flex justify-between text-gray-600 px-2 text-sm"><span>{t('صافي المبلغ الأصلي', 'Original net')}</span><span><Money value={invoice.subtotal} lang={lang} fractionDigits={2} /></span></div>
               <div data-testid="invoice-discount" className="flex justify-between text-gray-600 px-2 text-sm"><span>{invoice.invoiceDiscountPercent !== null && invoice.invoiceDiscountPercent !== undefined
@@ -249,7 +280,7 @@ function InvoiceTemplate({
             </>
           )}
           {invoice.discountOverrideReason && <div data-testid="invoice-discount-override" className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-stone-800 break-words">
-            <strong>{t('استثناء خصم لهذه الفاتورة فقط؛ العقد لم يتغير.', 'Discount override for this invoice only; contract unchanged.')}</strong>
+            <strong>{knownSaleSnapshot && !usesContractTerms ? t('سبب الخصم اليدوي', 'Manual discount reason') : t('استثناء خصم لهذه الفاتورة فقط؛ العقد لم يتغير.', 'Discount override for this invoice only; contract unchanged.')}</strong>
             <p>{t('السبب', 'Reason')}: {invoice.discountOverrideReason}</p>
             <p>{t('سُجل بواسطة المستخدم', 'Recorded by user')} #{invoice.discountOverrideByAdminId} · {invoice.discountOverrideAt ? new Date(invoice.discountOverrideAt).toLocaleString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Riyadh' }) : '-'}</p>
           </div>}

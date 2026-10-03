@@ -298,6 +298,8 @@ import type {
   RateLimitedResponse,
   ReceivablePayment,
   ReceivablePaymentInput,
+  SaleDiscountQuote,
+  SaleDiscountQuoteInput,
   SalesReturn,
   SalesReturnDraftInput,
   SalesReturnDraftUpdate,
@@ -2460,6 +2462,136 @@ export const useVerifyOtp = <TError = ErrorType<BadRequestResponse>,
         TContext
       > => {
       return useMutation(getVerifyOtpMutationOptions(options));
+    }
+
+export const getAdminQuoteOrderDiscountUrl = () => {
+
+
+
+
+  return `/api/admin/orders/discount-quote`
+}
+
+export const adminQuoteOrderDiscount = async (saleDiscountQuoteInput: SaleDiscountQuoteInput, options?: Parameters<typeof customFetch>[1]): Promise<SaleDiscountQuote> => {
+
+  return customFetch<SaleDiscountQuote>(getAdminQuoteOrderDiscountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(saleDiscountQuoteInput)
+  }
+);}
+
+
+
+
+
+export const getAdminQuoteOrderDiscountMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminQuoteOrderDiscount>>, TError,{data: BodyType<SaleDiscountQuoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminQuoteOrderDiscount>>, TError,{data: BodyType<SaleDiscountQuoteInput>}, TContext> => {
+
+const mutationKey = ['adminQuoteOrderDiscount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminQuoteOrderDiscount>>, {data: BodyType<SaleDiscountQuoteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminQuoteOrderDiscount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminQuoteOrderDiscountMutationResult = NonNullable<Awaited<ReturnType<typeof adminQuoteOrderDiscount>>>
+    export type AdminQuoteOrderDiscountMutationBody = BodyType<SaleDiscountQuoteInput>
+    export type AdminQuoteOrderDiscountMutationError = ErrorType<BadRequestResponse>
+
+    export const useAdminQuoteOrderDiscount = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminQuoteOrderDiscount>>, TError,{data: BodyType<SaleDiscountQuoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminQuoteOrderDiscount>>,
+        TError,
+        {data: BodyType<SaleDiscountQuoteInput>},
+        TContext
+      > => {
+      return useMutation(getAdminQuoteOrderDiscountMutationOptions(options));
+    }
+
+export const getAdminQuoteIndividualInvoiceDiscountUrl = () => {
+
+
+
+
+  return `/api/admin/invoices/discount-quote`
+}
+
+export const adminQuoteIndividualInvoiceDiscount = async (saleDiscountQuoteInput: SaleDiscountQuoteInput, options?: Parameters<typeof customFetch>[1]): Promise<SaleDiscountQuote> => {
+
+  return customFetch<SaleDiscountQuote>(getAdminQuoteIndividualInvoiceDiscountUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(saleDiscountQuoteInput)
+  }
+);}
+
+
+
+
+
+export const getAdminQuoteIndividualInvoiceDiscountMutationOptions = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminQuoteIndividualInvoiceDiscount>>, TError,{data: BodyType<SaleDiscountQuoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminQuoteIndividualInvoiceDiscount>>, TError,{data: BodyType<SaleDiscountQuoteInput>}, TContext> => {
+
+const mutationKey = ['adminQuoteIndividualInvoiceDiscount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminQuoteIndividualInvoiceDiscount>>, {data: BodyType<SaleDiscountQuoteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminQuoteIndividualInvoiceDiscount(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminQuoteIndividualInvoiceDiscountMutationResult = NonNullable<Awaited<ReturnType<typeof adminQuoteIndividualInvoiceDiscount>>>
+    export type AdminQuoteIndividualInvoiceDiscountMutationBody = BodyType<SaleDiscountQuoteInput>
+    export type AdminQuoteIndividualInvoiceDiscountMutationError = ErrorType<BadRequestResponse>
+
+    export const useAdminQuoteIndividualInvoiceDiscount = <TError = ErrorType<BadRequestResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminQuoteIndividualInvoiceDiscount>>, TError,{data: BodyType<SaleDiscountQuoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminQuoteIndividualInvoiceDiscount>>,
+        TError,
+        {data: BodyType<SaleDiscountQuoteInput>},
+        TContext
+      > => {
+      return useMutation(getAdminQuoteIndividualInvoiceDiscountMutationOptions(options));
     }
 
 export const getGetCurrentUserUrl = () => {

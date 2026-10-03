@@ -7,6 +7,7 @@
  */
 import type { IndividualInvoiceInputCollected } from './individualInvoiceInputCollected';
 import type { InvoiceSaleItemInput } from './invoiceSaleItemInput';
+import type { ManualSaleDiscountInput } from './manualSaleDiscountInput';
 
 export interface IndividualInvoiceInput {
   /**
@@ -14,6 +15,12 @@ export interface IndividualInvoiceInput {
      * @maxLength 200
      */
   creationKey: string;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  couponCode?: string | null;
+  discountOverride?: ManualSaleDiscountInput;
   /**
      * @minLength 1
      * @maxLength 250

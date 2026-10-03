@@ -288,6 +288,9 @@ router.post("/coupons/validate", asyncRoute(async (req, res) => {
 router.post("/checkout/quote", asyncRoute(async (req, res) => {
   const user = await requireUser(req, res);
   if (!user) return;
+  if (["discountOverride", "manualDiscountPercent", "manualDiscountAmount", "manualDiscountReason", "manualDiscountByAdminId", "manualDiscountAt"].some((key) => req.body?.[key] !== undefined)) {
+    res.status(400).json({ error: "الخصم اليدوي متاح للإنشاء الإداري فقط" }); return;
+  }
   if (req.body?.fulfillmentMethod !== undefined && req.body.fulfillmentMethod !== "delivery") {
     res.status(400).json({ error: "خيار الاستلام غير متاح في المتجر" }); return;
   }
@@ -308,6 +311,9 @@ router.get("/orders", asyncRoute(async (req, res) => {
 router.post("/orders", asyncRoute(async (req, res) => {
   const user = await requireUser(req, res);
   if (!user) return;
+  if (["discountOverride", "manualDiscountPercent", "manualDiscountAmount", "manualDiscountReason", "manualDiscountByAdminId", "manualDiscountAt"].some((key) => req.body?.[key] !== undefined)) {
+    res.status(400).json({ error: "الخصم اليدوي متاح للإنشاء الإداري فقط" }); return;
+  }
   if (req.body?.fulfillmentMethod !== undefined && req.body.fulfillmentMethod !== "delivery") {
     res.status(400).json({ error: "خيار الاستلام غير متاح في المتجر" }); return;
   }

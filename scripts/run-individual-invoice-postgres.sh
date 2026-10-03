@@ -57,7 +57,26 @@ psql "postgresql://runner@127.0.0.1:$port/postgres" -v ON_ERROR_STOP=1 \
   -c "CREATE DATABASE \"$database_name\"" >/dev/null
 
 echo "==> Applying schema and accounting integrity to the disposable database only"
-DATABASE_URL="$database_url" pnpm --filter @workspace/db run push
+# Fresh schema push can emit composite FKs before their referenced unique indexes.
+# Export/reorder only for this disposable cluster; never provision workspace/prod here.
+DATABASE_URL="$database_url" pnpm --filter @workspace/db exec drizzle-kit export --config ./drizzle.config.ts > "$cluster_root/schema.raw"
+node --input-type=module - "$cluster_root/schema.raw" "$cluster_root/schema.sql" <<'NODE'
+import fs from "node:fs";
+const raw = fs.readFileSync(process.argv[2], "utf8");
+const start = raw.search(/^CREATE (?:TYPE|TABLE)\s/m);
+if (start < 0) throw new Error("No schema DDL in Drizzle export");
+const ddl = raw.slice(start);
+const statements = (ddl.includes("--> statement-breakpoint")
+  ? ddl.split("--> statement-breakpoint")
+  : ddl.split(/;\s*\n(?=(?:CREATE|ALTER)\s)/))
+  .map((s) => s.trim().replace(/;$/, "")).filter(Boolean);
+const rank = (s) => /^CREATE TYPE/.test(s) ? 0 : /^CREATE TABLE/.test(s) ? 1 : /^CREATE (?:UNIQUE )?INDEX/.test(s) ? 2 : 3;
+statements.sort((a, b) => rank(a) - rank(b));
+fs.writeFileSync(process.argv[3], `BEGIN;\n${statements.join(";\n")};\nCOMMIT;\n`);
+NODE
+psql "$database_url" -v ON_ERROR_STOP=1 -f "$cluster_root/schema.sql" >/dev/null
+DATABASE_URL="$database_url" pnpm --filter @workspace/db run accounting:integrity
+DATABASE_URL="$database_url" pnpm --filter @workspace/db run individual-invoices:install
 echo "==> Running standalone individual-invoice PostgreSQL integration tests"
 DATABASE_URL="$database_url" \
 INDIVIDUAL_INVOICE_POSTGRES_E2E=true \

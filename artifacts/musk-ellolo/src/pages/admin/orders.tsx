@@ -575,6 +575,14 @@ export default function AdminOrders() {
                                       <span>-<Money value={orderDetail.discount} lang={lang} fractionDigits={2} /></span>
                                     </div>
                                   )}
+                                  {(orderDetail.couponDiscountAmount != null || orderDetail.manualDiscountAmount != null) && (
+                                    <div className="space-y-1 text-xs text-muted-foreground" data-testid="order-sale-discount-breakdown">
+                                      {orderDetail.couponDiscountAmount != null && <div className="flex justify-between"><span>{t('خصم الكوبون', 'Coupon discount')}{orderDetail.couponCode ? ` (${orderDetail.couponCode})` : ''}</span><span>-<Money value={orderDetail.couponDiscountAmount} lang={lang} fractionDigits={2} /></span></div>}
+                                      {orderDetail.manualDiscountAmount != null && <div className="flex justify-between"><span>{t('خصم يدوي', 'Manual discount')}{orderDetail.manualDiscountPercent != null ? ` (${orderDetail.manualDiscountPercent}%)` : ''}</span><span>-<Money value={orderDetail.manualDiscountAmount} lang={lang} fractionDigits={2} /></span></div>}
+                                      {orderDetail.manualDiscountReason && <p className="break-words" data-testid="text-manual-discount-reason">{t('السبب', 'Reason')}: {orderDetail.manualDiscountReason}</p>}
+                                      {(orderDetail.manualDiscountByAdminId != null || orderDetail.manualDiscountAt) && <p>{t('سُجل بواسطة المستخدم', 'Recorded by user')} {orderDetail.manualDiscountByAdminId != null ? `#${orderDetail.manualDiscountByAdminId}` : ''} {orderDetail.manualDiscountAt ? `· ${new Date(orderDetail.manualDiscountAt).toLocaleString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB', { timeZone: 'Asia/Riyadh' })}` : ''}</p>}
+                                    </div>
+                                  )}
                                   <Separator className="my-2" />
                                   <div className="flex justify-between items-center text-base font-bold text-primary">
                                     <span>{t('الإجمالي النهائي', 'Total')}</span>

@@ -4,7 +4,7 @@ import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import {
   getAdminListInvoicesQueryKey, getAdminListProductsQueryKey, getAdminListInventoryQueryKey,
   getAdminListJournalEntriesQueryKey, getAdminGetTrialBalanceQueryKey, getAdminGetFinanceSummaryQueryKey,
-  useAdminCreateIndividualInvoice, useAdminListProducts, type AdminInvoice,
+  useAdminCreateIndividualInvoice, useAdminListProducts, useAdminQuoteIndividualInvoiceDiscount, type AdminInvoice,
 } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { quantityInputClass } from '@/lib/quantity-input';
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SaleDiscountFields, emptySaleDiscount, saleDiscountPayload, useSaleDiscountPreview, validateSaleDiscount } from '@/components/admin/sale-discount-fields';
 import { sortProductsForSelection } from '@/lib/product-sort';
 
 type Line = { productId: string; quantity: number; unitPrice: number };
@@ -42,6 +43,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
   const [paymentDate, setPaymentDate] = useState(saudiToday);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank_transfer'>('cash');
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  const [discountForm, setDiscountForm] = useState(emptySaleDiscount);
   const [errors, setErrors] = useState<string[]>([]);
   const [serverError, setServerError] = useState('');
   const [key, setKey] = useState(() => crypto.randomUUID());
@@ -65,7 +67,10 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
     return { net, vat: round(gross - net), gross };
   }, [lines]);
 
+  const quoteDiscount = useAdminQuoteIndividualInvoiceDiscount();
+  const discountPreview = useSaleDiscountPreview(quoteDiscount.mutateAsync, totals.gross, discountForm, open);
   const reset = () => {
+    setDiscountForm(emptySaleDiscount);
     setBuyerName(''); setBuyerAddress(''); setBuyerTaxNumber(''); setIssueDate(saudiToday()); setDueDate('');
     setCollected(false); setPaymentDate(saudiToday()); setPaymentMethod('cash'); setLines([emptyLine()]);
     setErrors([]); setServerError(''); setKey(crypto.randomUUID()); failedSig.current = null; ambiguousSig.current = null; setAmbiguous(false);
@@ -74,6 +79,8 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
 
   const validate = () => {
     const e: string[] = [];
+    const dp = validateSaleDiscount(discountForm, t);
+    if (dp) e.push(dp);
     const today = saudiToday();
     if (!buyerName.trim()) e.push(t('اسم المشتري مطلوب', 'Buyer name is required'));
     if (buyerName.trim().length > 250) e.push(t('اسم المشتري لا يتجاوز 250 حرفاً', 'Buyer name must be at most 250 characters'));
@@ -108,6 +115,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
       ...(dueDate ? { dueDate } : {}),
       ...(collected ? { collected: { paymentDate, paymentMethod } } : {}),
       items: lines.map(l => ({ productId: Number(l.productId), quantity: l.quantity, unitPrice: round(l.unitPrice) })),
+      ...saleDiscountPayload(discountForm),
     };
     const sig = JSON.stringify(data);
     let creationKey = key;
@@ -202,6 +210,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>{t('عند الحفظ يُخصم المخزون فوراً من المنتجات المحددة (وليس حجزاً)، ولا يُنشأ طلب ولا شحنة.', 'On save, stock is deducted immediately from the selected products (not reserved). No order or shipment is created.')}</p>
         </div>
+        <SaleDiscountFields idPrefix="invoice" form={discountForm} onChange={setDiscountForm} preview={discountPreview} disabled={pending} />
         {errors.length > 0 && <ul role="alert" className="list-disc ps-5 text-sm text-destructive">{errors.map(m => <li key={m}>{m}</li>)}</ul>}
         {serverError && <p role="alert" className="text-sm text-destructive">{serverError}</p>}
         <Button className="w-full" data-testid="button-submit-individual-invoice" onClick={submit} disabled={pending || isLoading || isError || catalog.length === 0}>{pending ? t('جاري الحفظ...', 'Saving...') : t('حفظ وإصدار الفاتورة', 'Save and issue invoice')}</Button>

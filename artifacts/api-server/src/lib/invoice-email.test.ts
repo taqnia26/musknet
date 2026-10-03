@@ -26,6 +26,20 @@ const baseInvoice = {
   items: [{ productName: "Product", quantity: 1, unitPrice: 100, totalAmount: 115 }],
 };
 
+it("prints separate saved sale discounts without subtracting them again from net subtotal", () => {
+  const rows = getInvoiceTotalRows({
+    ...baseInvoice, subtotal: 162.61, vatAmount: 24.39, totalAmount: 187,
+    shippingAmount: 25, discountAmount: 38, couponCode: "TEN",
+    couponDiscountAmount: 20, manualDiscountAmount: 18, manualDiscountPercent: 10,
+  });
+  expect(rows).toContainEqual(["Products before discounts (VAT included)", 200]);
+  expect(rows).toContainEqual(["Coupon (TEN)", -20]);
+  expect(rows).toContainEqual(["Manual discount (10%)", -18]);
+  expect(rows).toContainEqual(["Delivery / pickup (VAT included)", 25]);
+  expect(rows).toContainEqual(["Net subtotal after discounts", 162.61]);
+  expect(rows.some(([label]) => label === "Discount")).toBe(false);
+});
+
 describe("invoice PDF formatting", () => {
   it("keeps contract discounts and VAT in the totals", () => {
     const rows = getInvoiceTotalRows({

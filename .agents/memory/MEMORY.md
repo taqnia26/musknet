@@ -65,3 +65,4 @@
 - [Meeting scope boundaries](haya-meeting-boundaries.md) — product-only quantity removal, phone invoices on delivery; operational returns do not authorize cash refunds.
 - [Financial calendar inputs](financial-calendar-inputs.md) — preserve raw date-only inputs; generated date coercion can normalize impossible days before validation.
 - [Distributor credit boundary](distributor-credit-boundary.md) — requests have no financial effect; reviewed contract limits cover company-wide debt across old contracts.
+- [Composite-FK bootstrap](composite-fk-bootstrap.md) — fresh schema push can continue after FK errors; create referenced unique indexes first and verify strict provisioning.

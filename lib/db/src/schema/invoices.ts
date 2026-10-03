@@ -9,6 +9,7 @@ import { exhibitionsTable } from "./exhibitions";
 import { distributorContractsTable } from "./distributor-contracts";
 import { uploadedContractFilesTable } from "./uploaded-contract-files";
 import { adminUsersTable } from "./admin-users";
+import { couponDiscountTypeEnum } from "./coupons";
 
 export const taxInvoicesTable = pgTable("tax_invoices", {
   id: serial("id").primaryKey(),
@@ -47,6 +48,11 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   buyerAddress: text("buyer_address"),
   subtotal: doublePrecision("subtotal").notNull(),
   discountAmount: doublePrecision("discount_amount").notNull().default(0),
+  couponCode: text("coupon_code"),
+  couponDiscountType: couponDiscountTypeEnum("coupon_discount_type"),
+  couponDiscountValue: doublePrecision("coupon_discount_value"),
+  couponDiscountAmount: numeric("coupon_discount_amount", { precision: 16, scale: 2 }),
+  manualDiscountAmount: numeric("manual_discount_amount", { precision: 16, scale: 2 }),
   vatAmount: doublePrecision("vat_amount").notNull(),
   totalAmount: doublePrecision("total_amount").notNull(),
   qrCodeData: text("qr_code_data").notNull(),
@@ -59,6 +65,15 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
 }, (table) => [
   check("invoice_single_channel", sql`(case when ${table.orderId} is not null then 1 else 0 end + case when ${table.distributorId} is not null then 1 else 0 end + case when ${table.exhibitionId} is not null then 1 else 0 end + case when ${table.individual} then 1 else 0 end) = 1`),
   check("invoice_single_contract_source", sql`not (${table.contractId} is not null and ${table.uploadedContractFileId} is not null)`),
+  check("tax_invoices_coupon_snapshot_check", sql`(
+    (${table.couponCode} is null and ${table.couponDiscountType} is null and ${table.couponDiscountValue} is null and ${table.couponDiscountAmount} is null)
+    or (${table.couponCode} is not null and length(btrim(${table.couponCode})) > 0 and ${table.couponDiscountType} is not null
+      and ${table.couponDiscountValue} is not null and ${table.couponDiscountValue} >= 0 and ${table.couponDiscountValue} < 'Infinity'::double precision
+      and ${table.couponDiscountAmount} is not null and ${table.couponDiscountAmount} between 0 and 99999999999999.99))`),
+  check("tax_invoices_manual_discount_audit_check", sql`${table.manualDiscountAmount} is null or (
+    ${table.manualDiscountAmount} between 0 and 99999999999999.99 and ${table.invoiceDiscountPercent} is not null and ${table.invoiceDiscountPercent} between 0 and 100
+    and ${table.discountOverrideReason} is not null and length(btrim(${table.discountOverrideReason})) between 10 and 500
+    and ${table.discountOverrideByAdminId} is not null and ${table.discountOverrideAt} is not null)`),
   uniqueIndex("invoices_order_id_unique").on(table.orderId),
   uniqueIndex("invoices_sequence_number_unique").on(table.sequenceNumber),
   uniqueIndex("invoices_invoice_number_unique").on(table.invoiceNumber),

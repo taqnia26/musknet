@@ -341,6 +341,32 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
 
+  /admin/orders/discount-quote:
+    post:
+      operationId: adminQuoteOrderDiscount
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SaleDiscountQuoteInput" } } }
+      responses:
+        "200":
+          description: Read-only preview; creation revalidates coupon and prices
+          content: { application/json: { schema: { $ref: "#/components/schemas/SaleDiscountQuote" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /admin/invoices/discount-quote:
+    post:
+      operationId: adminQuoteIndividualInvoiceDiscount
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SaleDiscountQuoteInput" } } }
+      responses:
+        "200":
+          description: Read-only preview; issuance revalidates coupon and prices
+          content: { application/json: { schema: { $ref: "#/components/schemas/SaleDiscountQuote" } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
   /auth/me:
     get:
       operationId: getCurrentUser
@@ -5052,6 +5078,30 @@ components:
       properties:
         pickupFee: { type: number, minimum: 0 }
         currency: { type: string, enum: [SAR] }
+    ManualSaleDiscountInput:
+      type: object
+      required: [percent]
+      properties:
+        percent: { type: number, minimum: 0, maximum: 100, multipleOf: 0.01 }
+        reason: { type: string, maxLength: 500 }
+    SaleDiscountQuoteInput:
+      type: object
+      required: [productSubtotal]
+      properties:
+        productSubtotal: { type: number, minimum: 0 }
+        couponCode: { type: [string, "null"], maxLength: 100 }
+        manualDiscountPercent: { type: number, minimum: 0, maximum: 100, multipleOf: 0.01 }
+    SaleDiscountQuote:
+      type: object
+      required: [productSubtotal, couponCode, couponDiscountAmount, manualDiscountPercent, manualDiscountAmount, discountAmount, productsTotal]
+      properties:
+        productSubtotal: { type: number }
+        couponCode: { type: [string, "null"] }
+        couponDiscountAmount: { type: number }
+        manualDiscountPercent: { type: number }
+        manualDiscountAmount: { type: number }
+        discountAmount: { type: number }
+        productsTotal: { type: number }
     AdminOrder:
       type: object
       required: [id, userId, customerName, orderNumber, subtotal, shippingCost, discount, tax, total, status, paymentStatus, shippingMethod, paymentMethod, createdAt, updatedAt]
@@ -5062,6 +5112,13 @@ components:
         orderNumber: { type: string }
         orderSource: { type: [string, "null"], enum: [storefront, admin, phone, null] }
         fulfillmentMethod: { anyOf: [{ $ref: "#/components/schemas/OrderFulfillmentMethod" }, { type: "null" }] }
+        couponCode: { type: [string, "null"] }
+        couponDiscountAmount: { type: [number, "null"] }
+        manualDiscountPercent: { type: [number, "null"] }
+        manualDiscountAmount: { type: [number, "null"] }
+        manualDiscountReason: { type: [string, "null"] }
+        manualDiscountByAdminId: { type: [number, "null"] }
+        manualDiscountAt: { type: [string, "null"], format: date-time }
         subtotal: { type: number }
         shippingCost: { type: number }
         discount: { type: number }
@@ -5113,6 +5170,8 @@ components:
         shippingCost: { type: number, minimum: 0 }
         adminNotes: { type: [string, "null"] }
         sendPaymentLink: { type: boolean }
+        couponCode: { type: [string, "null"], maxLength: 100 }
+        discountOverride: { $ref: "#/components/schemas/ManualSaleDiscountInput" }
     AdminOrderPaymentLinkResponse:
       type: object
       required: [sent, expiresAt, status]
@@ -5203,6 +5262,12 @@ components:
       type: object
       required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, originalInvoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt, cancelledAt, cancellationReason, cancelledByAdminId, cancelledByName]
       properties:
+        couponCode: { type: [string, "null"] }
+        couponDiscountType: { type: [string, "null"], enum: [percentage, fixed, null] }
+        couponDiscountValue: { type: [number, "null"] }
+        couponDiscountAmount: { type: [number, "null"] }
+        manualDiscountPercent: { type: [number, "null"] }
+        manualDiscountAmount: { type: [number, "null"] }
         id: { type: number }
         individual: { type: boolean, default: false, description: "True for a standalone individual invoice; absent on legacy responses means false." }
         cancelledAt: { type: [string, "null"], format: date-time }
@@ -5259,6 +5324,8 @@ components:
       required: [creationKey, buyerName, buyerAddress, buyerTaxNumber, issueDate, items]
       properties:
         creationKey: { type: string, minLength: 16, maxLength: 200 }
+        couponCode: { type: [string, "null"], maxLength: 100 }
+        discountOverride: { $ref: "#/components/schemas/ManualSaleDiscountInput" }
         buyerName: { type: string, minLength: 1, maxLength: 250 }
         buyerAddress: { type: ["string", "null"], maxLength: 1000 }
         buyerTaxNumber: { type: ["string", "null"], pattern: '^[0-9]{15}$' }

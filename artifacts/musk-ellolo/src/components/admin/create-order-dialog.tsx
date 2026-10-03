@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { SaleDiscountFields, emptySaleDiscount, saleDiscountPayload, useSaleDiscountPreview, validateSaleDiscount } from '@/components/admin/sale-discount-fields';
 import {
   getAdminListInventoryQueryKey,
   getAdminListProductsQueryKey,
@@ -6,6 +7,7 @@ import {
   getGetAdminShippingDashboardQueryKey,
   useAdminCreateOrder,
   useAdminGetOrderFulfillmentOptions,
+  useAdminQuoteOrderDiscount,
   useAdminListCustomers,
   useAdminListProducts,
   useAdminCreateCustomer,
@@ -58,6 +60,7 @@ export function CreateOrderDialog() {
   const [lines, setLines] = useState<Line[]>([{ productId: '', quantity: 1 }]);
   const [address, setAddress] = useState(initialAddress);
   const [shippingMethod, setShippingMethod] = useState('admin-standard');
+  const [discountForm, setDiscountForm] = useState(emptySaleDiscount);
   const [fulfillmentMethod, setFulfillmentMethod] = useState<'delivery' | 'pickup'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<AdminOrderInputPaymentMethod>('cash');
   const [sendPaymentLink, setSendPaymentLink] = useState(false);
@@ -87,6 +90,12 @@ export function CreateOrderDialog() {
     [products, lang],
   );
 
+  const quoteDiscount = useAdminQuoteOrderDiscount();
+  const productSubtotal = useMemo(() => Math.round(lines.reduce((sum, line) => {
+    const p = availableProducts.find((x) => String(x.id) === line.productId);
+    return sum + (p ? p.price * line.quantity : 0);
+  }, 0) * 100) / 100, [lines, availableProducts]);
+  const discountPreview = useSaleDiscountPreview(quoteDiscount.mutateAsync, productSubtotal, discountForm, open);
   const reset = () => {
     setCustomerId('');
     setOrderSource('admin');
@@ -94,6 +103,7 @@ export function CreateOrderDialog() {
     setAddress(initialAddress);
     setShippingMethod('admin-standard');
     setFulfillmentMethod('delivery');
+    setDiscountForm(emptySaleDiscount);
     setPaymentMethod('cash');
     setSendPaymentLink(false);
     setAdminNotes('');
@@ -153,6 +163,9 @@ export function CreateOrderDialog() {
       return;
     }
 
+    const discountProblem = validateSaleDiscount(discountForm, t);
+    if (discountProblem) { setError(discountProblem); return; }
+
     const orderInput = {
       userId: Number(customerId),
       orderSource,
@@ -172,6 +185,7 @@ export function CreateOrderDialog() {
       fulfillmentMethod,
       paymentMethod,
       adminNotes: adminNotes.trim() || null,
+      ...saleDiscountPayload(discountForm),
       ...(orderSource !== 'phone' && sendPaymentLink && paymentMethod === 'moyasar' ? { sendPaymentLink: true } : {}),
     } as AdminOrderInput & { sendPaymentLink?: boolean };
     createOrder.mutate({
@@ -426,6 +440,7 @@ export function CreateOrderDialog() {
               </span>
             </label>
           )}
+          <SaleDiscountFields idPrefix="order" form={discountForm} onChange={setDiscountForm} preview={discountPreview} disabled={createOrder.isPending} />
           <div className="space-y-2">
             <Label htmlFor="order-admin-notes">{t('ملاحظات داخلية', 'Internal notes')}</Label>
             <Textarea id="order-admin-notes" value={adminNotes} onChange={(event) => setAdminNotes(event.target.value)} />

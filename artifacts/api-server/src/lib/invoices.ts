@@ -7,6 +7,7 @@ import { addCalendarDays, defaultCompanyDueDate, dueDateFromContract, invoiceIss
 import { reconcileHistoricalPayment } from "./historical-payment-reconciliation";
 import { INVOICE_SEQUENCE_SCOPE, nextInvoiceSequenceNumber } from "./invoice-sequence";
 import { shipheroDispatchesTable, salesReturnsTable, companyOrdersTable } from "@workspace/db";
+import { allocateDiscountedGross } from "./sale-discounts";
 import { SHIPHERO_TRIGGER_STATUS } from "./shiphero-config";
 import { assertPhoneOrderTransition, orderInvoiceIsDue } from "./phone-order-policy";
 import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, shipmentEventsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
@@ -880,6 +881,15 @@ export async function updateOrderAndIssueInvoice(
             sellerVatNumber: configuration.vatRegistrationNumber,
               subtotal: orderTaxSnapshot.legacy ? (values.subtotal ?? order.subtotal) : fromCents(cents(total) - cents(vatTotal)),
               discountAmount: values.discount ?? order.discount,
+              couponCode: order.couponDiscountAmount != null ? order.couponCode : null,
+              couponDiscountType: order.couponDiscountAmount != null ? order.couponDiscountType : null,
+              couponDiscountValue: order.couponDiscountAmount != null ? order.couponDiscountValue : null,
+              couponDiscountAmount: order.couponDiscountAmount != null && order.couponCode ? order.couponDiscountAmount : null,
+              manualDiscountAmount: order.manualDiscountAmount,
+              invoiceDiscountPercent: order.manualDiscountPercent,
+              discountOverrideReason: order.manualDiscountReason,
+              discountOverrideByAdminId: order.manualDiscountByAdminId,
+              discountOverrideAt: order.manualDiscountAt,
             totalAmount: total,
             vatAmount: vatTotal,
               taxTreatment: orderTaxSnapshot.taxTreatment,
@@ -887,19 +897,28 @@ export async function updateOrderAndIssueInvoice(
             qrCodeData: qrCodeBase64,
           }).returning({ id: invoicesTable.id });
           const orderLines = await tx.select().from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
-          for (const line of orderLines) {
+          const hasDiscountSnapshot = order.couponDiscountAmount != null && !orderTaxSnapshot.legacy;
+          const productGross = cents(order.subtotal) - cents(order.discount);
+          const discountedLines = hasDiscountSnapshot
+            ? allocateDiscountedGross(orderLines.map((line) => cents(line.totalPrice)), productGross) : [];
+          const shippingVat = extractVatFromGross(cents(order.shippingCost), orderTaxSnapshot.vatRate).vatCents;
+          const lineVat = hasDiscountSnapshot
+            ? allocateDiscountedGross(discountedLines, cents(vatTotal) - shippingVat) : [];
+          for (const [index, line] of orderLines.entries()) {
             const [product] = await tx.select({
               invoiceNameAr: productsTable.invoiceNameAr,
               invoiceNameEn: productsTable.invoiceNameEn,
               sku: productsTable.sku,
             }).from(productsTable).where(eq(productsTable.id, line.productId)).limit(1);
             if (!product) throw new Error(`Product ${line.productId} not found for invoice`);
-            const lineAmountCents = cents(line.totalPrice);
+            const lineAmountCents = hasDiscountSnapshot ? discountedLines[index] : cents(line.totalPrice);
             // Legacy order lines stored pre-VAT prices; later orders store VAT-inclusive prices.
             // Keep that historical arithmetic in the issued invoice-line snapshot as well.
             const { netCents, vatCents } = orderTaxSnapshot.legacy
               ? { netCents: lineAmountCents, vatCents: Math.round(lineAmountCents * orderTaxSnapshot.vatRate / 100) }
-              : extractVatFromGross(lineAmountCents, orderTaxSnapshot.vatRate);
+              : hasDiscountSnapshot
+                ? { netCents: lineAmountCents - lineVat[index], vatCents: lineVat[index] }
+                : extractVatFromGross(lineAmountCents, orderTaxSnapshot.vatRate);
             await tx.insert(invoiceItemsTable).values({
               invoiceId: createdInvoice.id,
               productId: line.productId,
