@@ -1502,6 +1502,22 @@ export const CreateOrderResponse = zod.object({
 
 
 /**
+ * @summary Verify a customer cart link against the signed-in shopper without changing the cart.
+ */
+export const resolveCustomerCartLinkBodyTokenMax = 512;
+
+
+
+export const ResolveCustomerCartLinkBody = zod.object({
+  "token": zod.string().min(1).max(resolveCustomerCartLinkBodyTokenMax)
+})
+
+export const ResolveCustomerCartLinkResponse = zod.object({
+  "cartPath": zod.enum(['/cart'])
+})
+
+
+/**
  * @summary Confirm a Moyasar invoice callback
  */
 
@@ -6955,6 +6971,19 @@ export const AdminCreateCustomerResponse = zod.object({
   "isActive": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Prepare an account-bound cart link without sending a message or modifying a cart.
+ */
+export const AdminCreateCustomerCartLinkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdminCreateCustomerCartLinkResponse = zod.object({
+  "path": zod.string(),
+  "expiresAt": zod.string()
 })
 
 

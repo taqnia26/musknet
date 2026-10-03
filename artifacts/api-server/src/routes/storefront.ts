@@ -1,5 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { preparedCheckoutPaymentMethods } from "../lib/prepared-payment-methods";
+import { CustomerCartLinkError, resolveCustomerCartLink } from "../lib/customer-cart-links";
+import { ResolveCustomerCartLinkBody, ResolveCustomerCartLinkResponse } from "@workspace/api-zod";
+import { db, customersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import {
   AddCartItemBody,
   AddCartItemResponse,
@@ -284,6 +288,24 @@ router.post("/coupons/validate", asyncRoute(async (req, res) => {
     return;
   }
   res.json(ValidateCouponResponse.parse(await getCoupon(parsed.data.code, parsed.data.subtotal)));
+}));
+
+router.post("/cart/link/resolve", asyncRoute(async (req, res) => {
+  const user = await requireUser(req, res); if (!user) return;
+  const parsed = ResolveCustomerCartLinkBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "رابط السلة غير صالح" }); return; }
+  try {
+    const claims = resolveCustomerCartLink(parsed.data.token);
+    if (claims.customerId !== user.id || !user.phoneVerified) {
+      res.status(403).json({ error: "الرابط لا يخص الحساب الحالي؛ سجّل الدخول برقم العميل المسجل وتحقق منه" }); return;
+    }
+    const [customer] = await db.select({ isActive: customersTable.isActive }).from(customersTable).where(eq(customersTable.id, user.id)).limit(1);
+    if (!customer?.isActive) { res.status(403).json({ error: "الحساب غير متاح" }); return; }
+    res.json(ResolveCustomerCartLinkResponse.parse({ cartPath: "/cart" }));
+  } catch (error) {
+    if (!(error instanceof CustomerCartLinkError)) throw error;
+    res.status(error.statusCode).json({ error: error.message });
+  }
 }));
 
 router.post("/checkout/quote", asyncRoute(async (req, res) => {

@@ -854,6 +854,11 @@ describe.sequential("admin route authorization", () => {
     try {
       await db.update(productsTable).set({ price: 200 }).where(eq(productsTable.id, productId));
       const quoteUrl = "/api/admin/orders/discount-quote";
+      await request(app).post(`/api/admin/customers/${payload.userId}/cart-link`).expect(401);
+      const cartLink = (await request(app).post(`/api/admin/customers/${payload.userId}/cart-link`).set(auth).expect(200)).body;
+      expect(cartLink.path).toMatch(/^\/cart\/open#link=v1\./);
+      expect(Number.isFinite(Date.parse(cartLink.expiresAt))).toBe(true);
+      await request(app).post("/api/admin/customers/99999999/cart-link").set(auth).expect(404);
       await request(app).post("/api/admin/orders").set(auth).send({ ...payload, paymentMethod: "moyasar" }).expect(503);
       await request(app).post(quoteUrl).send({ productSubtotal: 200 }).expect(401);
       await request(app).post(quoteUrl).set(shopper).send({ productSubtotal: 200 }).expect(401);

@@ -1113,6 +1113,30 @@ export interface CheckoutQuote {
   paymentMethods: PaymentMethod[];
 }
 
+export interface CustomerCartLink {
+  path: string;
+  expiresAt: string;
+}
+
+export interface CustomerCartLinkResolveInput {
+  /**
+     * @minLength 1
+     * @maxLength 512
+     */
+  token: string;
+}
+
+export type CustomerCartLinkDestinationCartPath = typeof CustomerCartLinkDestinationCartPath[keyof typeof CustomerCartLinkDestinationCartPath];
+
+
+export const CustomerCartLinkDestinationCartPath = {
+  '/cart': '/cart',
+} as const;
+
+export interface CustomerCartLinkDestination {
+  cartPath: CustomerCartLinkDestinationCartPath;
+}
+
 export type OrderInputShippingMethod = typeof OrderInputShippingMethod[keyof typeof OrderInputShippingMethod];
 
 

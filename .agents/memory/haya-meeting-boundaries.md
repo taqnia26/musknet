@@ -1,6 +1,6 @@
 ---
 name: Meeting outcome scope boundaries
-description: Confirmed boundaries for product fields, phone invoices, returns, and deferred payment activation.
+description: Confirmed boundaries for product fields, phone invoices, returns, deferred payments, and customer cart links.
 ---
 
 Remove target quantity, reorder threshold, and opening quantity only from the product add/edit screen. Preserve stored inventory and thresholds, and keep compare-at price. This item must not change invoice screens or templates.
@@ -62,3 +62,9 @@ Payment provider accounts are not activated. The user's scope is «جهز الخ
 **Why:** The user explicitly deferred provider connection and requested fields only.
 
 **How to apply:** Do not request credentials or enable live payment as part of preparing these fields. Adding credentials alone must not activate checkout; provider setup and verification require a separate approved step.
+
+The customer link destination is «سلة العميل داخل المتجر», not the existing administrative order's hosted Moyasar payment page.
+
+**Why:** The user explicitly chose the cart option after being told it is not payment of an existing administrative order.
+
+**How to apply:** Open the authenticated customer's current cart. Do not copy an existing administrative or phone order into it, create a duplicate order, or treat opening the link as approval to activate payments.

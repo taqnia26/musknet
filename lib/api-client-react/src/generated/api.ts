@@ -148,6 +148,9 @@ import type {
   CreateOrder503,
   CreditLimitApprovalInput,
   Customer,
+  CustomerCartLink,
+  CustomerCartLinkDestination,
+  CustomerCartLinkResolveInput,
   DistributorCatalogSetting,
   DistributorCatalogUpdate,
   DistributorContract,
@@ -3251,6 +3254,77 @@ export const useCreateOrder = <TError = ErrorType<BadRequestResponse | CreateOrd
         TContext
       > => {
       return useMutation(getCreateOrderMutationOptions(options));
+    }
+
+export const getResolveCustomerCartLinkUrl = () => {
+
+
+
+
+  return `/api/cart/link/resolve`
+}
+
+/**
+ * @summary Verify a customer cart link against the signed-in shopper without changing the cart.
+ */
+export const resolveCustomerCartLink = async (customerCartLinkResolveInput: CustomerCartLinkResolveInput, options?: Parameters<typeof customFetch>[1]): Promise<CustomerCartLinkDestination> => {
+
+  return customFetch<CustomerCartLinkDestination>(getResolveCustomerCartLinkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(customerCartLinkResolveInput)
+  }
+);}
+
+
+
+
+
+export const getResolveCustomerCartLinkMutationOptions = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveCustomerCartLink>>, TError,{data: BodyType<CustomerCartLinkResolveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resolveCustomerCartLink>>, TError,{data: BodyType<CustomerCartLinkResolveInput>}, TContext> => {
+
+const mutationKey = ['resolveCustomerCartLink'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolveCustomerCartLink>>, {data: BodyType<CustomerCartLinkResolveInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  resolveCustomerCartLink(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResolveCustomerCartLinkMutationResult = NonNullable<Awaited<ReturnType<typeof resolveCustomerCartLink>>>
+    export type ResolveCustomerCartLinkMutationBody = BodyType<CustomerCartLinkResolveInput>
+    export type ResolveCustomerCartLinkMutationError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | Error>
+
+    /**
+ * @summary Verify a customer cart link against the signed-in shopper without changing the cart.
+ */
+export const useResolveCustomerCartLink = <TError = ErrorType<BadRequestResponse | UnauthorizedResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveCustomerCartLink>>, TError,{data: BodyType<CustomerCartLinkResolveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resolveCustomerCartLink>>,
+        TError,
+        {data: BodyType<CustomerCartLinkResolveInput>},
+        TContext
+      > => {
+      return useMutation(getResolveCustomerCartLinkMutationOptions(options));
     }
 
 export const getReceiveMoyasarPaymentCallbackUrl = () => {
@@ -12054,6 +12128,77 @@ export const useAdminCreateCustomer = <TError = ErrorType<BadRequestResponse | U
         TContext
       > => {
       return useMutation(getAdminCreateCustomerMutationOptions(options));
+    }
+
+export const getAdminCreateCustomerCartLinkUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/customers/${id}/cart-link`
+}
+
+/**
+ * @summary Prepare an account-bound cart link without sending a message or modifying a cart.
+ */
+export const adminCreateCustomerCartLink = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<CustomerCartLink> => {
+
+  return customFetch<CustomerCartLink>(getAdminCreateCustomerCartLinkUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminCreateCustomerCartLinkMutationOptions = <TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCustomerCartLink>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminCreateCustomerCartLink>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['adminCreateCustomerCartLink'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminCreateCustomerCartLink>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  adminCreateCustomerCartLink(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminCreateCustomerCartLinkMutationResult = NonNullable<Awaited<ReturnType<typeof adminCreateCustomerCartLink>>>
+
+    export type AdminCreateCustomerCartLinkMutationError = ErrorType<UnauthorizedResponse | ForbiddenResponse | Error>
+
+    /**
+ * @summary Prepare an account-bound cart link without sending a message or modifying a cart.
+ */
+export const useAdminCreateCustomerCartLink = <TError = ErrorType<UnauthorizedResponse | ForbiddenResponse | Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminCreateCustomerCartLink>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminCreateCustomerCartLink>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAdminCreateCustomerCartLinkMutationOptions(options));
     }
 
 export const getAdminGetCustomerUrl = (id: number,) => {

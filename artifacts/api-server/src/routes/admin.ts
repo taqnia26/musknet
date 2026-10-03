@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { createCustomerCartLink, CustomerCartLinkError } from "../lib/customer-cart-links";
 import { and, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode";
@@ -3734,6 +3735,18 @@ router.post("/admin/customers", permit("customers", "edit"), route(async (req, r
   });
   if (!row) { res.status(409).json({ error: "A customer with this phone number already exists" }); return; }
   res.status(201).json(Api.AdminCreateCustomerResponse.parse(await customerWithProfile(row)));
+}));
+router.post("/admin/customers/:id/cart-link", permit("customers", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminCreateCustomerCartLinkParams, req.params, res); if (!params) return;
+  const [customer] = await db.select({ isActive: customersTable.isActive }).from(customersTable).where(eq(customersTable.id, params.id)).limit(1);
+  if (!customer) { res.status(404).json({ error: "Customer not found" }); return; }
+  if (!customer.isActive) { res.status(409).json({ error: "لا يمكن إنشاء رابط سلة لعميل موقوف" }); return; }
+  try {
+    res.json(Api.AdminCreateCustomerCartLinkResponse.parse(createCustomerCartLink(params.id)));
+  } catch (error) {
+    if (!(error instanceof CustomerCartLinkError)) throw error;
+    res.status(error.statusCode).json({ error: error.message });
+  }
 }));
 router.get("/admin/customers/:id", permit("customers", "view"), route(async (req, res) => {
   const params = parse(Api.AdminGetCustomerParams, req.params, res); if (!params) return;

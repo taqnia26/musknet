@@ -551,6 +551,24 @@ paths:
                 properties:
                   error: { type: string }
 
+  /cart/link/resolve:
+    post:
+      operationId: resolveCustomerCartLink
+      tags: [cart]
+      summary: Verify a customer cart link against the signed-in shopper without changing the cart.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CustomerCartLinkResolveInput" }
+      responses:
+        "200": { description: Verified cart destination, content: { application/json: { schema: { $ref: "#/components/schemas/CustomerCartLinkDestination" } } } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "410": { description: Expired link, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "503": { description: Link setup is incomplete, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /payments/moyasar/callback:
     post:
       operationId: receiveMoyasarPaymentCallback
@@ -1956,6 +1974,20 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "409": { description: Phone already belongs to a customer, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  /admin/customers/{id}/cart-link:
+    post:
+      operationId: adminCreateCustomerCartLink
+      tags: [admin]
+      summary: Prepare an account-bound cart link without sending a message or modifying a cart.
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200": { description: Prepared cart link, content: { application/json: { schema: { $ref: "#/components/schemas/CustomerCartLink" } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { description: Customer not found, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "409": { description: Customer is suspended, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "503": { description: Link setup is incomplete, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/customers/{id}:
     get:
       operationId: adminGetCustomer
@@ -4107,6 +4139,22 @@ components:
           type: number
         estimatedDays:
           type: string
+    CustomerCartLink:
+      type: object
+      required: [path, expiresAt]
+      properties:
+        path: { type: string }
+        expiresAt: { type: string }
+    CustomerCartLinkResolveInput:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, minLength: 1, maxLength: 512 }
+    CustomerCartLinkDestination:
+      type: object
+      required: [cartPath]
+      properties:
+        cartPath: { type: string, enum: ["/cart"] }
     PaymentMethod:
       type: object
       required: [id, name, description, available]

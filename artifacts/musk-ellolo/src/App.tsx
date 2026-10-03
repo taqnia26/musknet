@@ -9,6 +9,7 @@ import Home from '@/pages/home';
 import Products from '@/pages/products';
 import ProductDetails from '@/pages/product-details';
 import Cart from '@/pages/cart';
+import CartLink from '@/pages/cart-link';
 import Checkout from '@/pages/checkout';
 import About from '@/pages/about';
 import Policy from '@/pages/policy';
@@ -67,6 +68,7 @@ function Router() {
         <Route path="/products/:slug" component={ProductDetails} />
         <Route path="/categories/:slug" component={Products} />
         <Route path="/cart" component={Cart} />
+        <Route path="/cart/open" component={CartLink} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/about" component={About} />
         <Route path="/policy" component={Policy} />

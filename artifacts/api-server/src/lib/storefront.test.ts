@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import app from "../app";
+import { createCustomerCartLink } from "./customer-cart-links";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   customersTable,
@@ -246,6 +247,26 @@ describe.sequential("persistent storefront carts and orders", () => {
     expect(order).toMatchObject({ shippingCost: price, total: riyadh.total, tax: riyadh.tax });
     const [shipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, order!.id));
     expect(shipment).toMatchObject({ serviceMethod: method, collectedCost: price });
+  });
+
+  it("opens only the verified customer's existing cart without changing stock, orders, or cart contents", async () => {
+    const owner = await createUser("cart-link-owner");
+    const other = await createUser("cart-link-other");
+    await db.update(customersTable).set({ phoneVerified: true }).where(eq(customersTable.id, owner.id));
+    await addToCart(owner.id, 1, 1);
+    const token = new URLSearchParams(createCustomerCartLink(owner.id).path.split("#")[1]).get("link")!;
+    const before = await getCartForUser(owner.id);
+    const [stockBefore] = await db.select({ stock: productsTable.stockQuantity }).from(productsTable).where(eq(productsTable.id, 1));
+    await request(app).post("/api/cart/link/resolve").send({ token }).expect(401);
+    await request(app).post("/api/cart/link/resolve").set("Authorization", `Bearer ${issueToken(other.id)}`).send({ token }).expect(403);
+    await request(app).post("/api/cart/link/resolve").set("Authorization", `Bearer ${issueToken(owner.id)}`).send({ token }).expect(200, { cartPath: "/cart" });
+    await request(app).post("/api/cart/link/resolve").set("Authorization", `Bearer ${issueToken(owner.id)}`).send({ token: "invalid" }).expect(400);
+    expect(await getCartForUser(owner.id)).toEqual(before);
+    expect(await db.select().from(ordersTable).where(eq(ordersTable.userId, owner.id))).toHaveLength(0);
+    const [stockAfter] = await db.select({ stock: productsTable.stockQuantity }).from(productsTable).where(eq(productsTable.id, 1));
+    expect(stockAfter).toEqual(stockBefore);
+    await db.update(customersTable).set({ isActive: false }).where(eq(customersTable.id, owner.id));
+    await request(app).post("/api/cart/link/resolve").set("Authorization", `Bearer ${issueToken(owner.id)}`).send({ token }).expect(403);
   });
 
   it("shows five prepared payment fields and prevents unconfigured checkout without consuming the cart", async () => {

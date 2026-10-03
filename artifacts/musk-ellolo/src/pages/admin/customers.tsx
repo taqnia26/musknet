@@ -20,6 +20,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { createCustomerSchema, editCustomerSchema, customerPayload, customerCreateError, type CreateCustomerValues, type EditCustomerValues } from '@/lib/customer-create';
 import { emptyIntakeAddress, type IntakeAddressField } from '@/lib/intake-address';
 import { IntakeAddressFields } from '@/components/admin/intake-address-fields';
+import { CustomerCartLinkDialog } from '@/components/admin/customer-cart-link-dialog';
 
 export default function AdminCustomers() {
   const { t } = useLanguage();
@@ -27,6 +28,7 @@ export default function AdminCustomers() {
   const [search, setSearch] = useState('');
   const [mode, setMode] = useState<'create' | 'edit' | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<AdminCustomer | null>(null);
+  const [cartLinkCustomer, setCartLinkCustomer] = useState<AdminCustomer | null>(null);
   const queryClient = useQueryClient();
   const { data: currentUser } = useGetAdminMe();
   const { data: customers, isLoading } = useAdminListCustomers({ search });
@@ -191,7 +193,7 @@ export default function AdminCustomers() {
                 <TableCell>{hasPermission(currentUser, 'customers', 'edit') && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('المزيد', 'More')}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end"><DropdownMenuItem onClick={() => openEdit(customer)} disabled={updateMutation.isPending}><Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}</DropdownMenuItem></DropdownMenuContent>
+                    <DropdownMenuContent align="end"><DropdownMenuItem onClick={() => openEdit(customer)} disabled={updateMutation.isPending}><Edit2 className="h-4 w-4" />{t('تعديل', 'Edit')}</DropdownMenuItem><DropdownMenuItem onClick={() => setCartLinkCustomer(customer)} disabled={!customer.isActive} data-testid={`customer-cart-link-${customer.id}`}>{t('رابط سلة العميل', 'Customer cart link')}</DropdownMenuItem></DropdownMenuContent>
                   </DropdownMenu>
                 )}</TableCell>
               </TableRow>
@@ -199,6 +201,7 @@ export default function AdminCustomers() {
           </TableBody>
         </Table>
       </div>
+      {cartLinkCustomer && <CustomerCartLinkDialog key={cartLinkCustomer.id} customer={cartLinkCustomer} onClose={() => setCartLinkCustomer(null)} />}
     </div>
   );
 }
