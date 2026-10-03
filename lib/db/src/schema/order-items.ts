@@ -1,4 +1,4 @@
-import { doublePrecision, integer, numeric, pgTable, serial, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { doublePrecision, integer, numeric, pgTable, serial, text, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { ordersTable } from "./orders";
@@ -14,7 +14,7 @@ export const orderItemsTable = pgTable("storefront_order_items", {
   costSnapshot: numeric("cost_snapshot", { precision: 19, scale: 4, mode: "string" }).notNull().default("0"),
   imageUrl: text("image_url"),
 }, (table) => [
-  uniqueIndex("storefront_order_items_return_source_unique").on(table.id, table.orderId, table.productId),
+  unique("storefront_order_items_return_source_unique").on(table.id, table.orderId, table.productId),
 ]);
 
 export const insertOrderItemSchema = createInsertSchema(orderItemsTable).omit({ id: true });
