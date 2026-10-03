@@ -317,7 +317,7 @@ function InvoiceTemplate({
   );
 }
 
-function InvoicePreviewDialog({ 
+export function InvoicePreviewDialog({ 
   invoice, 
   open, 
   onOpenChange,

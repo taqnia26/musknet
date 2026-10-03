@@ -80,3 +80,9 @@ Cancellation covers company invoices and standalone direct individual invoices, 
 **Why:** The user chose «الشركات والفواتير المباشرة للأفراد» and «تلقائياً بعد الإلغاء», with the collection/shipping safeguards and no-refund boundary explicitly preserved.
 
 **How to apply:** Keep reversal and archival atomic and preserve the original invoice, number, and actor/time audit. Block any collected invoice, advanced shipment, or stock already recovered by a completed return; never use archival as a shortcut around cancellation checks. Do not backfill old cancellations.
+
+Order documents include a non-tax order summary before and after invoicing, and the actual issued invoice as a separate option.
+
+**Why:** The user chose «ملخص الطلب والفاتورة عند صدورها» rather than restricting all documents to the issued invoice.
+
+**How to apply:** Label the summary clearly as not a tax invoice or payment receipt. Printing and downloading must never issue an invoice, collect payment, or advance the order.

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { OrderDocuments } from '@/components/admin/order-documents';
 import { 
   useAdminListOrders, 
   type AdminOrder,
@@ -295,6 +296,9 @@ export default function AdminOrders() {
                         <DropdownMenuItem onSelect={() => setSelectedOrderId(order.id)}>
                           <Eye className="me-2 h-4 w-4" />{t('عرض التفاصيل', 'View details')}
                         </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setSelectedOrderId(order.id)}>
+                          {t('طباعة وتنزيل المستندات', 'Print and download documents')}
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <Dialog open={selectedOrderId === order.id} onOpenChange={(v) => !v && setSelectedOrderId(null)}>
@@ -323,6 +327,7 @@ export default function AdminOrders() {
                             </div>
                           ) : (
                             <div className="space-y-8 pb-8">
+                              <OrderDocuments orderId={orderDetail.id} canViewInvoice={hasPermission(currentUser, 'invoices', 'view')} />
                               {/* Top Metrics & Actions */}
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="space-y-4 col-span-1 md:col-span-2">

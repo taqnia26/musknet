@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { OrderDocuments } from '@/components/admin/order-documents';
+import { useGetAdminMe } from '@workspace/api-client-react';
+import { hasPermission } from '@/lib/permissions';
 import { useQueryClient } from '@tanstack/react-query';
 import { getAdminListInvoicesQueryKey } from '@workspace/api-client-react';
 import { Link } from 'wouter';
@@ -42,6 +45,7 @@ const termRows = (x: DistributorPortalTerms, lang: string, t: T): [string, strin
 ];
 
 function Review({ id, onClose }: { id: number; onClose: () => void }) {
+  const { data: currentUser } = useGetAdminMe();
   const { t, lang } = useLanguage();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -88,6 +92,7 @@ function Review({ id, onClose }: { id: number; onClose: () => void }) {
         {q.isError && <div><p className="text-destructive text-sm">{errMsg(q.error, t('تعذر تحميل المراجعة', 'Could not load review'))}</p><Button size="sm" variant="outline" className="mt-2" onClick={() => q.refetch()}>{t('إعادة المحاولة', 'Retry')}</Button></div>}
         {r && (
           <div className="space-y-5 text-sm">
+            <OrderDocuments orderId={id} company invoiceId={r.order.invoiceId} canViewInvoice={hasPermission(currentUser, 'invoices', 'view')} />
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div><p className="font-semibold">{r.company.companyName}</p><p className="text-muted-foreground">{r.company.contactName} {r.company.email ? `- ${r.company.email}` : ''}</p></div>
               <Badge className={statusClass(r.order.status)}>{statusLabel(r.order.status, t)}</Badge>
