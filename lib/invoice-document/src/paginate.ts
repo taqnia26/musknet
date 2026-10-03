@@ -11,7 +11,11 @@ export function paginateDocument() {
   };
   const scale = 96/25.4, mm = (px:number) => px/scale;
   const find = (kind:string) => cfg.elements.find(e=>e.kind===kind)!;
-  const footer = find("footer"), table = find("table");
+  const table = find("table");
+  // The footer mark must be clearly legible: reserve a fixed 22mm band ending at the 8mm safe margin.
+  // Saved designs (e.g. footer y=280,h=8) are lifted at render time only; stored designs are untouched.
+  const FOOTER_BAND=22, savedFooter=find("footer");
+  const footer={...savedFooter,y:Math.min(savedFooter.y,289-FOOTER_BAND),height:FOOTER_BAND};
   let page: HTMLElement;
   const failures: string[] = [];
   function newPage() {
@@ -19,9 +23,10 @@ export function paginateDocument() {
     page.setAttribute("aria-label", cfg.language==="ar"?"صفحة الفاتورة":"Invoice page");
     root.appendChild(page);
     const foot = source.querySelector<HTMLElement>('[data-kind="footer"]')!.cloneNode(true) as HTMLElement;
+    foot.style.top=`${footer.y}mm`;foot.style.height=`${footer.height}mm`;foot.style.minHeight=`${footer.height}mm`;
     page.appendChild(foot);
     const index = document.createElement("span"); index.className="page-number";
-    index.textContent=String(root.children.length); page.appendChild(index);
+    index.textContent=String(root.querySelectorAll(".invoice-page").length); page.appendChild(index);
     return page;
   }
   function append(el:HTMLElement,x:number,y:number,width:number) {
@@ -109,7 +114,8 @@ export function paginateDocument() {
       }
     }
   }
-  let summaryY=Math.max(summaryOrigin,rowBottom()+8);
+  // Lift the summary when the enlarged footer band would otherwise push it off a page with room to spare.
+  let summaryY=Math.max(Math.min(summaryOrigin,maxBottom-summaryHeight),rowBottom()+8);
   if(summaryY+summaryHeight>maxBottom) {newPage();summaryY=14;}
   for(const {e,node} of summary) {
     append(node,e.x,summaryY+offsets.get(e.kind)!,e.width);
@@ -128,7 +134,7 @@ export function paginateDocument() {
     let y=14;newPage();
     for(const block of blocks) {
       block.classList.add("invoice-block");
-      block.style.fontFamily=container.style.fontFamily||"Amiri";
+      block.style.fontFamily=container.style.fontFamily||"InvoiceFormal";
       block.style.fontSize=container.style.fontSize||"11pt";
       block.style.lineHeight=container.style.lineHeight||"1.4";
       block.dir=container.dir|| (cfg.language==="ar"?"rtl":"ltr");

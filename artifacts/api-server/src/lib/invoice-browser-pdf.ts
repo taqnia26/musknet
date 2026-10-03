@@ -18,9 +18,10 @@ const data=(file:string,mime:string)=>{
 let assetCache:InvoiceAssets|undefined;
 export function invoicePdfAssets():InvoiceAssets {
   return assetCache??= {
-    logo:data("invoice-logo-black.png","image/png"),mark:data("musk-ellolo-mark-black.png","image/png"),
+    logo:data("invoice-logo-black.png","image/png"),mark:data("musk-ellolo-footer-logo.png","image/png"),
     riyal:data("saudi-riyal-symbol.svg","image/svg+xml"),amiri:data("amiri-regular.ttf","font/ttf"),
     ping:data("en-US-58c84d4f8c.woff2","font/woff2"),
+    formal:data("tajawal-Regular.ttf","font/ttf"),formalBold:data("tajawal-Bold.ttf","font/ttf"),
   };
 }
 let launching:Promise<Browser>|undefined;

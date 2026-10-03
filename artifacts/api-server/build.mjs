@@ -17,7 +17,7 @@ async function buildAll() {
   // Runtime resources belong to this API's build output, not a sibling app.
   const assetsDir = path.resolve(distDir, "invoice-assets");
   await mkdir(assetsDir, { recursive: true });
-  for (const file of ["invoice-logo-black.png", "musk-ellolo-mark-black.png", "saudi-riyal-symbol.svg", "amiri-regular.ttf", "amiri-OFL.txt", "en-US-58c84d4f8c.woff2"]) {
+  for (const file of ["invoice-logo-black.png", "musk-ellolo-mark-black.png", "saudi-riyal-symbol.svg", "amiri-regular.ttf", "amiri-OFL.txt", "en-US-58c84d4f8c.woff2", "musk-ellolo-footer-logo.png", "tajawal-Regular.ttf", "tajawal-Bold.ttf", "tajawal-OFL.txt"]) {
     await copyFile(path.resolve(artifactDir, "../musk-ellolo/public/site-assets", file), path.resolve(assetsDir, file));
   }
   const browserDir = path.resolve(artifactDir, ".cache/invoice-browser");

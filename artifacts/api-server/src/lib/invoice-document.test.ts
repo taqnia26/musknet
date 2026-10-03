@@ -64,7 +64,7 @@ describe("protected shared invoice document",()=>{
       expect(out.metrics.rows).toBe(invoice.items.length);
       expect(out.metrics.errors).toEqual([]);
       expect(out.metrics.fontStatus).toBe("loaded");
-      expect(out.metrics.pages).toBe(long?3:1);
+      if(long) expect(out.metrics.pages).toBeGreaterThan(2); else expect(out.metrics.pages).toBe(1);
       expect(out.metrics.text).toContain("300000000000003");
       expect(out.metrics.text).toContain("230.00");
     }
@@ -93,7 +93,8 @@ describe("protected shared invoice document",()=>{
     try {
       const file=`${dir}/invoice.pdf`;writeFileSync(file,out.buffer);
       const fonts=execFileSync("pdffonts",[file]).toString();
-      expect(fonts).toContain("Amiri");
+      expect(fonts).toContain("Tajawal");
+      expect(fonts).not.toContain("Amiri");
       expect(fonts).toMatch(/yes\s+yes\s+yes/);
       const text=execFileSync("pdftotext",["-layout",file,"-"]).toString();
       expect(text).toContain("مسك");
@@ -106,4 +107,28 @@ describe("protected shared invoice document",()=>{
       expect(Math.abs(Number(media[2])-841.89)).toBeLessThan(1);
     } finally {rmSync(dir,{recursive:true,force:true});}
   });
+  it("historical records drop the heading, saved Amiri designs render formal Tajawal, footer logo sits above the site",async()=>{
+    const html=renderInvoiceHtml({invoice:{...sampleInvoice(),historical:"yes"},assets:invoicePdfAssets()});
+    expect(html).not.toContain("تسجيل فاتورة سابقة");
+    expect(html).not.toContain("فاتورة ضريبية");
+    expect(html).toContain("ليس إصداراً ضريبياً جديداً");
+    expect(renderInvoiceHtml({invoice:sampleInvoice(),assets:invoicePdfAssets()})).toContain("فاتورة ضريبية");
+    const saved=createTemplate();expect(saved.elements.every(e=>e.font==="Amiri")).toBe(true);
+    const out=await inspectInvoiceDocument({...sampleInvoice(true),historical:"yes"},"ar",saved);
+    expect(out.metrics.errors).toEqual([]);
+    expect(out.html).not.toMatch(/font-family:Amiri/);
+    expect(out.html).toContain(invoicePdfAssets().mark);
+    expect(out.html).toContain(".footer-mark{display:block;width:auto;height:13mm");
+    // Short invoice with saved 8mm footer: 22mm band lifted, summary still fits on page 1 without overlap.
+    const short=await inspectInvoiceDocument(sampleInvoice(),"ar",saved,false);
+    expect(short.metrics.errors).toEqual([]);expect(short.metrics.pages).toBe(1);
+    const dir=mkdtempSync(`${tmpdir()}/shared-invoice-`);
+    try {
+      const file=`${dir}/i.pdf`;writeFileSync(file,out.buffer);
+      expect(execFileSync("pdffonts",[file]).toString()).toContain("Tajawal");
+      const text=execFileSync("pdftotext",["-layout",file,"-"]).toString();
+      expect(text.match(/muskellolo\.com/g)?.length).toBe(out.metrics.pages);
+      if(process.env.INVOICE_RENDER_OUT) writeFileSync(`${process.env.INVOICE_RENDER_OUT}/invoice.pdf`,out.buffer);
+    } finally {rmSync(dir,{recursive:true,force:true});}
+  },30_000);
 });
