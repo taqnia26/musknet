@@ -26,3 +26,9 @@ Approval of operational sales returns does not authorize expanding financial can
 **Why:** The meeting review separated the inventory-return item from the cancellation/archive policy, whose expansion remains subject to the owner's approval.
 
 **How to apply:** Treat later financial corrections as an explicitly approved scope. Never interpret approval of return storage or stock recovery as permission to refund money or cancel the entire original sale.
+
+Keep order numbering as L-123 for individual and phone orders, and CO-00000123 for company orders. Do not introduce a separate phone prefix or renumber previous records.
+
+**Why:** The owner explicitly chose to preserve these existing formats rather than distinguish phone orders with a new prefix.
+
+**How to apply:** Preserve this numbering policy when extending order creation; phone-order identification remains separate from its number.
