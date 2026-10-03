@@ -9,11 +9,13 @@ import type { AdminOrderAddress } from './adminOrderAddress';
 import type { AdminOrderInputOrderSource } from './adminOrderInputOrderSource';
 import type { AdminOrderInputPaymentMethod } from './adminOrderInputPaymentMethod';
 import type { AdminOrderLineInput } from './adminOrderLineInput';
+import type { OrderFulfillmentMethod } from './orderFulfillmentMethod';
 
 export interface AdminOrderInput {
   /** @minimum 1 */
   userId: number;
   orderSource?: AdminOrderInputOrderSource;
+  fulfillmentMethod?: OrderFulfillmentMethod;
   /** @minItems 1 */
   items: AdminOrderLineInput[];
   orderAddress: AdminOrderAddress;

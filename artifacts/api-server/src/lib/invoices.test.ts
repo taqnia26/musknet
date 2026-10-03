@@ -4,7 +4,7 @@ import {
   accountingAccountsTable, adminUsersTable, categoriesTable, customersTable, db, inventoryBalancesTable, inventoryMovementsTable,
   invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryAuditTable,
   journalEntryLinesTable, operationEventsTable, orderItemsTable, ordersTable, productsTable, receivablePaymentsTable, wholesaleDistributorsTable,
-  uploadedContractFilesTable, distributorContractsTable, shipmentsTable, shipmentEventsTable,
+  uploadedContractFilesTable, distributorContractsTable, shipmentsTable, shipmentEventsTable, shipheroDispatchesTable,
 } from "@workspace/db";
 import { cancelCompanyInvoice, createDistributorInvoice, createReceivablePayment, DistributorInvoiceConflictError, DistributorInvoiceValidationError, lockDistributorContractSource, updateOrderAndIssueInvoice } from "./invoices";
 import { invoiceItemName } from "./invoice-email";
@@ -13,7 +13,7 @@ import { createCompanyInvoice } from "./company-invoices";
 
 const base = 1_700_000_000 + (Date.now() % 100_000_000);
 const customerId = base;
-const orderIds = [base + 1, base + 2, base + 3, base + 4, base + 5, base + 6];
+const orderIds = [base + 1, base + 2, base + 3, base + 4, base + 5, base + 6, base + 7, base + 8];
 let distributorId: number;
 let inactiveDistributorId: number;
 let internationalDistributorId: number;
@@ -388,6 +388,44 @@ describe.sequential("phone order delivery invoices", () => {
     const afterCollection = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id));
     expect(afterCollection).toHaveLength(1);
     expect(afterCollection[0].id).toBe(first.id);
+  });
+
+  it("keeps fixed-fee phone pickup local and issues its invoice once only on delivery", async () => {
+    const id = orderIds[6];
+    await db.update(ordersTable).set({
+      fulfillmentMethod: "pickup", shippingCost: 25, tax: 16.3, total: 125,
+      address: JSON.stringify({ country: "AE", taxTreatment: "domestic" }),
+    }).where(eq(ordersTable.id, id));
+    await db.insert(orderItemsTable).values({
+      orderId: id, productId, productName: "Phone pickup fixture", quantity: 1,
+      unitPrice: 100, totalPrice: 100, costSnapshot: "7.0000",
+    });
+    await updateOrderAndIssueInvoice(id, { paymentStatus: "paid" }, environment, actorId);
+    await updateOrderAndIssueInvoice(id, { status: "preparing" }, environment, actorId);
+    await updateOrderAndIssueInvoice(id, { status: "out_for_delivery" }, environment, actorId);
+    expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id))).toHaveLength(0);
+    expect(await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, id))).toHaveLength(0);
+    await Promise.all([
+      updateOrderAndIssueInvoice(id, { status: "delivered" }, environment, actorId),
+      updateOrderAndIssueInvoice(id, { status: "delivered" }, environment, actorId),
+    ]);
+    const issued = await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id));
+    expect(issued).toHaveLength(1);
+    expect(Number(issued[0].vatAmount)).toBe(16.3);
+    expect(Number(issued[0].totalAmount)).toBe(125);
+  });
+
+  it("does not queue admin pickup for a carrier when preparation begins", async () => {
+    const id = orderIds[7];
+    await db.update(ordersTable).set({ orderSource: "admin", fulfillmentMethod: "pickup", shippingCost: 25, tax: 16.3, total: 125 }).where(eq(ordersTable.id, id));
+    await db.insert(orderItemsTable).values({
+      orderId: id, productId, productName: "Admin pickup fixture", quantity: 1,
+      unitPrice: 100, totalPrice: 100, costSnapshot: "7.0000",
+    });
+    const preparing = await updateOrderAndIssueInvoice(id, { status: "preparing" }, environment, actorId);
+    expect(preparing?.status).toBe("preparing");
+    expect(await db.select().from(shipheroDispatchesTable).where(eq(shipheroDispatchesTable.orderId, id))).toHaveLength(0);
+    expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id))).toHaveLength(0);
   });
 });
 

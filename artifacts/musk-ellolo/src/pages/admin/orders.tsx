@@ -40,6 +40,12 @@ function stageOf(order: AdminOrder): OrderStatus {
   return order.status as string as OrderStatus;
 }
 
+function fulfillmentLabel(m: string | null | undefined, t: (ar: string, en: string) => string) {
+  if (m === 'pickup') return t('استلام من موقعنا', 'Pickup from our location');
+  if (m === 'delivery') return t('توصيل', 'Delivery');
+  return t('غير مسجل', 'Not recorded');
+}
+
 export default function AdminOrders() {
   const { t, lang } = useLanguage();
   const [search, setSearch] = useState('');
@@ -246,6 +252,7 @@ export default function AdminOrders() {
                   <TableCell>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{order.customerName}</span>
+                      <Badge variant="outline" data-testid={`badge-fulfillment-${order.id}`}>{fulfillmentLabel(order.fulfillmentMethod, t)}</Badge>
                       {order.orderSource === 'phone' && (
                         <Badge variant="outline" data-testid={`badge-phone-order-${order.id}`}>{t('طلب هاتفي', 'Phone order')}</Badge>
                       )}
@@ -327,8 +334,15 @@ export default function AdminOrders() {
                                     <div className="bg-muted/30 p-4 rounded-md border">
                                       <p className="text-xs text-muted-foreground mb-1 font-medium">{t('طريقة الشحن', 'Shipping Method')}</p>
                                         <p className="font-semibold text-sm capitalize break-words">{orderDetail.shippingMethod}</p>
+                                        <p className="text-xs text-muted-foreground mt-1" data-testid="text-detail-fulfillment">{t('التسليم', 'Fulfillment')}: {fulfillmentLabel(orderDetail.fulfillmentMethod, t)}</p>
                                     </div>
                                   </div>
+                                  {orderDetail.fulfillmentMethod === 'pickup' && (
+                                    <div className="bg-muted/30 p-4 rounded-md border text-sm" data-testid="text-pickup-info">
+                                      <p className="font-semibold">{t('طلب استلام', 'Pickup order')}</p>
+                                      <p className="text-xs text-muted-foreground mt-1">{t('لا توجد شحنة مع شركة شحن لهذا الطلب لأن العميل سيستلمه بنفسه.', 'No carrier shipment exists for this order because the customer collects it.')}</p>
+                                    </div>
+                                  )}
                                   {orderDetail.trackingNumber && (
                                     <div className="bg-muted/30 p-4 rounded-md border flex items-center gap-3">
                                       <Truck className="h-5 w-5 text-primary opacity-70" />

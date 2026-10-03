@@ -4715,6 +4715,16 @@ export const AdminDeleteCategoryParams = zod.object({
 export const AdminDeleteCategoryResponse = zod.void()
 
 
+export const adminGetOrderFulfillmentOptionsResponsePickupFeeMin = 0;
+
+
+
+export const AdminGetOrderFulfillmentOptionsResponse = zod.object({
+  "pickupFee": zod.number().min(adminGetOrderFulfillmentOptionsResponsePickupFeeMin),
+  "currency": zod.enum(['SAR'])
+})
+
+
 export const adminListOrdersQueryStatusDefault = `all`;
 
 export const AdminListOrdersQueryParams = zod.object({
@@ -4728,6 +4738,7 @@ export const AdminListOrdersResponseItem = zod.object({
   "customerName": zod.string(),
   "orderNumber": zod.string(),
   "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
+  "fulfillmentMethod": zod.union([zod.enum(['delivery', 'pickup']),zod.null()]).optional(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4767,6 +4778,7 @@ export const adminCreateOrderBodyShippingCostMin = 0;
 export const AdminCreateOrderBody = zod.object({
   "userId": zod.number().min(1).multipleOf(adminCreateOrderBodyUserIdMultipleOf),
   "orderSource": zod.enum(['admin', 'phone']).default(adminCreateOrderBodyOrderSourceDefault),
+  "fulfillmentMethod": zod.enum(['delivery', 'pickup']).optional(),
   "items": zod.array(zod.object({
   "productId": zod.number().min(1).multipleOf(adminCreateOrderBodyItemsItemProductIdMultipleOf),
   "quantity": zod.number().min(1).multipleOf(adminCreateOrderBodyItemsItemQuantityMultipleOf)
@@ -4797,6 +4809,7 @@ export const AdminCreateOrderResponse = zod.object({
   "customerName": zod.string(),
   "orderNumber": zod.string(),
   "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
+  "fulfillmentMethod": zod.union([zod.enum(['delivery', 'pickup']),zod.null()]).optional(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4829,6 +4842,7 @@ export const AdminGetOrderResponse = zod.object({
   "customerName": zod.string(),
   "orderNumber": zod.string(),
   "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
+  "fulfillmentMethod": zod.union([zod.enum(['delivery', 'pickup']),zod.null()]).optional(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),
@@ -4900,6 +4914,7 @@ export const AdminUpdateOrderResponse = zod.object({
   "customerName": zod.string(),
   "orderNumber": zod.string(),
   "orderSource": zod.union([zod.literal('storefront'),zod.literal('admin'),zod.literal('phone'),zod.literal(null)]).nullish(),
+  "fulfillmentMethod": zod.union([zod.enum(['delivery', 'pickup']),zod.null()]).optional(),
   "subtotal": zod.number(),
   "shippingCost": zod.number(),
   "discount": zod.number(),

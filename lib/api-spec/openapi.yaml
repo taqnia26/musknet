@@ -1299,6 +1299,18 @@ paths:
       responses:
         "204": { description: Permanently deleted unreferenced category }
         "409": { description: Category is referenced; deactivate or reclassify first }
+  /admin/order-fulfillment-options:
+    get:
+      operationId: adminGetOrderFulfillmentOptions
+      tags: [admin]
+      responses:
+        "200":
+          description: Admin-only order fulfillment policy
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminOrderFulfillmentOptions" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /admin/orders:
     get:
       operationId: adminListOrders
@@ -5031,6 +5043,15 @@ components:
         parentId: { type: [number, "null"] }
         imageUrl: { type: [string, "null"] }
         isActive: { type: boolean }
+    OrderFulfillmentMethod:
+      type: string
+      enum: [delivery, pickup]
+    AdminOrderFulfillmentOptions:
+      type: object
+      required: [pickupFee, currency]
+      properties:
+        pickupFee: { type: number, minimum: 0 }
+        currency: { type: string, enum: [SAR] }
     AdminOrder:
       type: object
       required: [id, userId, customerName, orderNumber, subtotal, shippingCost, discount, tax, total, status, paymentStatus, shippingMethod, paymentMethod, createdAt, updatedAt]
@@ -5040,6 +5061,7 @@ components:
         customerName: { type: string }
         orderNumber: { type: string }
         orderSource: { type: [string, "null"], enum: [storefront, admin, phone, null] }
+        fulfillmentMethod: { anyOf: [{ $ref: "#/components/schemas/OrderFulfillmentMethod" }, { type: "null" }] }
         subtotal: { type: number }
         shippingCost: { type: number }
         discount: { type: number }
@@ -5080,6 +5102,7 @@ components:
       properties:
         userId: { type: number, minimum: 1, multipleOf: 1 }
         orderSource: { type: string, enum: [admin, phone], default: admin }
+        fulfillmentMethod: { $ref: "#/components/schemas/OrderFulfillmentMethod" }
         items:
           type: array
           minItems: 1

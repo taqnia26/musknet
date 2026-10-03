@@ -80,6 +80,7 @@ import type {
   AdminLoginInput,
   AdminOrder,
   AdminOrderDetail,
+  AdminOrderFulfillmentOptions,
   AdminOrderInput,
   AdminOrderPaymentLinkResponse,
   AdminOrderUpdate,
@@ -8411,6 +8412,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getAdminDeleteCategoryMutationOptions(options));
     }
+
+export const getAdminGetOrderFulfillmentOptionsUrl = () => {
+
+
+
+
+  return `/api/admin/order-fulfillment-options`
+}
+
+export const adminGetOrderFulfillmentOptions = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminOrderFulfillmentOptions> => {
+
+  return customFetch<AdminOrderFulfillmentOptions>(getAdminGetOrderFulfillmentOptionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetOrderFulfillmentOptionsQueryKey = () => {
+    return [
+    `/api/admin/order-fulfillment-options`
+    ] as const;
+    }
+
+
+export const getAdminGetOrderFulfillmentOptionsQueryOptions = <TData = Awaited<ReturnType<typeof adminGetOrderFulfillmentOptions>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetOrderFulfillmentOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetOrderFulfillmentOptionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetOrderFulfillmentOptions>>> = ({ signal }) => adminGetOrderFulfillmentOptions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetOrderFulfillmentOptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetOrderFulfillmentOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetOrderFulfillmentOptions>>>
+export type AdminGetOrderFulfillmentOptionsQueryError = ErrorType<UnauthorizedResponse | ForbiddenResponse>
+
+
+
+export function useAdminGetOrderFulfillmentOptions<TData = Awaited<ReturnType<typeof adminGetOrderFulfillmentOptions>>, TError = ErrorType<UnauthorizedResponse | ForbiddenResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetOrderFulfillmentOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetOrderFulfillmentOptionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getAdminListOrdersUrl = (params?: AdminListOrdersParams,) => {
   const normalizedParams = new URLSearchParams();

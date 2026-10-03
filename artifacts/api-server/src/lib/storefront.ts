@@ -884,6 +884,7 @@ export async function createOrderForUser(
     const [created] = await tx.insert(ordersTable).values({
       userId,
       orderNumber,
+      fulfillmentMethod: "delivery",
       subtotal,
       shippingCost,
       discount: coupon.discount,

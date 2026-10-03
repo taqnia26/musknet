@@ -1,4 +1,5 @@
 import request from "supertest";
+import { issueToken } from "../lib/storefront";
 import { mkdtemp, chmod, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -833,6 +834,72 @@ describe.sequential("admin route authorization", () => {
       }
       await db.update(productsTable).set({ stockQuantity: 5 }).where(eq(productsTable.id, productId));
       await db.update(inventoryBalancesTable).set({ available: 5 }).where(eq(inventoryBalancesTable.productId, productId));
+    }
+  });
+
+  it("enforces admin-only fixed-fee pickup independently of shipping type without classifying legacy orders", async () => {
+    const auth = { Authorization: `Bearer ${superToken}` };
+    const shopper = { Authorization: `Bearer ${issueToken(customerId)}` };
+    const options = "/api/admin/order-fulfillment-options";
+    await request(app).get(options).expect(401);
+    await request(app).get(options).set(shopper).expect(401);
+    expect((await request(app).get(options).set(auth).expect(200)).body).toEqual({ pickupFee: 25, currency: "SAR" });
+    await request(app).post("/api/checkout/quote").set(shopper)
+      .send({ city: "الرياض", shippingMethod: "regular", fulfillmentMethod: "pickup" }).expect(400);
+    await request(app).post("/api/orders").set(shopper)
+      .send({ fulfillmentMethod: "pickup" }).expect(400);
+
+    const url = "/api/admin/orders";
+    const payload = {
+      userId: customerId, items: [{ productId, quantity: 1 }],
+      orderAddress: { label: "Home", city: "الرياض", country: "SA", nationalAddressShortCode: "RIYH1234", district: "Olaya", street: "Main", buildingNo: "10", additionalInfo: "", isDefault: false },
+      fulfillmentMethod: "pickup", shippingMethod: "refrigerated", paymentMethod: "cash",
+    };
+    const [originalProduct] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+    const originalBalances = await db.select().from(inventoryBalancesTable).where(eq(inventoryBalancesTable.productId, productId));
+    const created: number[] = [];
+    try {
+      await request(app).post(url).set(auth).send({ ...payload, shippingCost: 0 }).expect(400);
+      await request(app).post(url).set(auth).send({ ...payload, fulfillmentMethod: "collection" }).expect(400);
+      await request(app).post(url).set(auth).send({ ...payload, shippingMethod: "pickup" }).expect(400);
+      for (const orderSource of ["admin", "phone"]) {
+        const result = await request(app).post(url).set(auth).send({
+          ...payload, orderSource,
+          ...(orderSource === "phone" ? { shippingCost: 25, orderAddress: {
+            label: "Home", city: "Dubai", country: "AE", district: "Deira", street: "Main", buildingNo: "10", additionalInfo: "", isDefault: false,
+          } } : {}),
+        }).expect(response => expect(response.status, response.body.error).toBe(201));
+        const id = result.body.id;
+        created.push(id);
+        expect(result.body).toMatchObject({
+          fulfillmentMethod: "pickup", orderSource, shippingMethod: "refrigerated",
+          shippingCost: 25, subtotal: originalProduct.price,
+          tax: Math.round((originalProduct.price + 25) * 100 * 15 / 115) / 100,
+          total: originalProduct.price + 25, status: "pending_review",
+        });
+        expect(JSON.parse(result.body.address).taxTreatment).toBe("domestic");
+        expect(result.body.orderNumber).toMatch(/^L-\d+$/);
+        expect((await request(app).get(`${url}/${id}`).set(auth).expect(200)).body.fulfillmentMethod).toBe("pickup");
+        expect((await request(app).get(url).set(auth).query({ search: result.body.orderNumber }).expect(200)).body)
+          .toEqual(expect.arrayContaining([expect.objectContaining({ id, fulfillmentMethod: "pickup" })]));
+        expect(await db.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, id))).toHaveLength(0);
+        expect(await db.select().from(invoicesTable).where(eq(invoicesTable.orderId, id))).toHaveLength(0);
+        await request(app).patch(`${url}/${id}`).set(auth).send({ fulfillmentMethod: "delivery" }).expect(400);
+        const [unchanged] = await db.select().from(ordersTable).where(eq(ordersTable.id, id));
+        expect(unchanged).toMatchObject({ fulfillmentMethod: "pickup", shippingCost: 25, total: originalProduct.price + 25 });
+      }
+      expect((await request(app).get(`${url}/${orderId}`).set(auth).expect(200)).body.fulfillmentMethod).toBeNull();
+      const [after] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
+      expect(after.stockQuantity).toBe(originalProduct.stockQuantity - 2);
+    } finally {
+      for (const id of created) {
+        await db.delete(ordersTable).where(eq(ordersTable.id, id));
+        await db.delete(inventoryMovementsTable).where(and(eq(inventoryMovementsTable.sourceType, "order"), eq(inventoryMovementsTable.sourceId, String(id))));
+      }
+      await db.update(productsTable).set({ stockQuantity: originalProduct.stockQuantity, averageCost: originalProduct.averageCost }).where(eq(productsTable.id, productId));
+      for (const balance of originalBalances) await db.update(inventoryBalancesTable)
+        .set({ available: balance.available, averageCost: balance.averageCost })
+        .where(eq(inventoryBalancesTable.id, balance.id));
     }
   });
 

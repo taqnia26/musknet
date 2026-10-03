@@ -9,6 +9,7 @@ import type { AdminOrderOrderSource } from './adminOrderOrderSource';
 import type { AdminOrderPaymentLink } from './adminOrderPaymentLink';
 import type { AdminOrderPaymentStatus } from './adminOrderPaymentStatus';
 import type { AdminOrderStatus } from './adminOrderStatus';
+import type { OrderFulfillmentMethod } from './orderFulfillmentMethod';
 
 export interface AdminOrder {
   id: number;
@@ -17,6 +18,7 @@ export interface AdminOrder {
   orderNumber: string;
   /** @nullable */
   orderSource?: AdminOrderOrderSource;
+  fulfillmentMethod?: OrderFulfillmentMethod | null;
   subtotal: number;
   shippingCost: number;
   discount: number;

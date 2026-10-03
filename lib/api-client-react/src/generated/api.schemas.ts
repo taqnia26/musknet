@@ -2431,6 +2431,27 @@ export interface AdminCategoryUpdate {
   isActive?: boolean;
 }
 
+export type OrderFulfillmentMethod = typeof OrderFulfillmentMethod[keyof typeof OrderFulfillmentMethod];
+
+
+export const OrderFulfillmentMethod = {
+  delivery: 'delivery',
+  pickup: 'pickup',
+} as const;
+
+export type AdminOrderFulfillmentOptionsCurrency = typeof AdminOrderFulfillmentOptionsCurrency[keyof typeof AdminOrderFulfillmentOptionsCurrency];
+
+
+export const AdminOrderFulfillmentOptionsCurrency = {
+  SAR: 'SAR',
+} as const;
+
+export interface AdminOrderFulfillmentOptions {
+  /** @minimum 0 */
+  pickupFee: number;
+  currency: AdminOrderFulfillmentOptionsCurrency;
+}
+
 /**
  * @nullable
  */
@@ -2479,6 +2500,7 @@ export interface AdminOrder {
   orderNumber: string;
   /** @nullable */
   orderSource?: AdminOrderOrderSource;
+  fulfillmentMethod?: OrderFulfillmentMethod | null;
   subtotal: number;
   shippingCost: number;
   discount: number;
@@ -2577,6 +2599,7 @@ export interface AdminOrderInput {
   /** @minimum 1 */
   userId: number;
   orderSource?: AdminOrderInputOrderSource;
+  fulfillmentMethod?: OrderFulfillmentMethod;
   /** @minItems 1 */
   items: AdminOrderLineInput[];
   orderAddress: AdminOrderAddress;

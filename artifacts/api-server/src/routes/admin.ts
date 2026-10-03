@@ -16,6 +16,7 @@ import { createSallaInvoiceRouter } from "./salla-invoices";
 import { createShipHeroAdminRouter } from "./shiphero-admin";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
+import { ADMIN_PICKUP_FEE_SAR, adminFulfillmentOptions } from "../lib/order-fulfillment";
 import {
   adminPermissionsTable,
   adminSessionsTable,
@@ -2067,6 +2068,9 @@ router.delete("/admin/categories/:id", permit("categories", "delete"), route(asy
   res.sendStatus(204);
 }));
 
+router.get("/admin/order-fulfillment-options", permit("orders", "view"), route(async (_req, res) => {
+  res.json(Api.AdminGetOrderFulfillmentOptionsResponse.parse(adminFulfillmentOptions));
+}));
 router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => {
   const query = parse(Api.AdminListOrdersQueryParams, req.query, res); if (!query) return;
   let rows = await db.select({ order: ordersTable, customerName: customersTable.name })
@@ -2083,6 +2087,13 @@ router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => 
 }));
 router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
+  const fulfillmentMethod = body.fulfillmentMethod ?? "delivery";
+  if (body.shippingMethod === "pickup") {
+    res.status(400).json({ error: "الاستلام يُحدد في طريقة التنفيذ، وليس في نوع الشحن" }); return;
+  }
+  if (fulfillmentMethod === "pickup" && body.shippingCost !== undefined && body.shippingCost !== ADMIN_PICKUP_FEE_SAR) {
+    res.status(400).json({ error: "رسوم الاستلام ثابتة: 25 ريالاً شاملة الضريبة المطبقة؛ لا يمكن تعديلها" }); return;
+  }
   if (body.orderSource === "phone" && body.sendPaymentLink) {
     res.status(400).json({ error: "Phone orders start in pending review; payment-link routing awaits approval" }); return;
   }
@@ -2119,7 +2130,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
   }
   const cleanedAddress = {
     ...body.orderAddress, city, country,
-    taxTreatment: domestic ? "domestic" : "international",
+    taxTreatment: domestic || fulfillmentMethod === "pickup" ? "domestic" : "international",
     nationalAddressShortCode: saudiAddress ? shortCode : null,
     postalCode: body.orderAddress.postalCode?.trim() || null,
     additionalNumber: body.orderAddress.additionalNumber?.trim() || null,
@@ -2164,17 +2175,19 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         (sum, item) => sum + item.product.price * item.quantity,
         0,
       ) * 100) / 100;
-      const shippingCost = body.shippingCost ?? (
+      const shippingCost = fulfillmentMethod === "pickup" ? ADMIN_PICKUP_FEE_SAR : body.shippingCost ?? (
          domestic && /الرياض|riyadh/i.test(city) ? 20 : 30
       );
       const grossTotalCents = Math.round((subtotal + shippingCost) * 100);
-      const tax = domestic ? extractVatFromGross(grossTotalCents, 15).vatCents / 100 : 0;
+      // Pickup is fulfilled at the Saudi business site, not exported to the buyer's address.
+      const tax = domestic || fulfillmentMethod === "pickup" ? extractVatFromGross(grossTotalCents, 15).vatCents / 100 : 0;
       const total = Math.round((subtotal + shippingCost) * 100) / 100;
       const orderNumber = await nextIndividualOrderNumber(tx);
       const [created] = await tx.insert(ordersTable).values({
         userId: body.userId,
         orderNumber,
         orderSource: body.orderSource ?? "admin",
+        fulfillmentMethod,
         subtotal,
         shippingCost,
         discount: 0,
@@ -2201,7 +2214,7 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         additionalInfo: cleanedAddress.additionalInfo,
         isDefault: cleanedAddress.isDefault,
       });
-      await tx.insert(shipmentsTable).values({
+      if (fulfillmentMethod !== "pickup") await tx.insert(shipmentsTable).values({
         channel: "online",
         orderId: created.id,
         shippingScope: domestic ? "domestic" : "international",
@@ -2358,6 +2371,9 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
   }));
 }));
 router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, res) => {
+  if (req.body?.fulfillmentMethod !== undefined) {
+    res.status(400).json({ error: "طريقة التنفيذ تُحدد عند إنشاء الطلب ولا تُعدل بعد حفظه" }); return;
+  }
   const params = parse(Api.AdminUpdateOrderParams, req.params, res);
   const body = parse(Api.AdminUpdateOrderBody, req.body, res); if (!params || !body) return;
   let row;

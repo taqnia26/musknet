@@ -5,6 +5,7 @@ import {
   getAdminListOrdersQueryKey,
   getGetAdminShippingDashboardQueryKey,
   useAdminCreateOrder,
+  useAdminGetOrderFulfillmentOptions,
   useAdminListCustomers,
   useAdminListProducts,
   useAdminCreateCustomer,
@@ -57,6 +58,7 @@ export function CreateOrderDialog() {
   const [lines, setLines] = useState<Line[]>([{ productId: '', quantity: 1 }]);
   const [address, setAddress] = useState(initialAddress);
   const [shippingMethod, setShippingMethod] = useState('admin-standard');
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<'delivery' | 'pickup'>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<AdminOrderInputPaymentMethod>('cash');
   const [sendPaymentLink, setSendPaymentLink] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
@@ -75,6 +77,8 @@ export function CreateOrderDialog() {
   const { data: products } = useAdminListProducts({ status: 'active' });
   const createCustomer = useAdminCreateCustomer();
   const createOrder = useAdminCreateOrder();
+  const fulfillmentOptions = useAdminGetOrderFulfillmentOptions();
+  const pickupFee = fulfillmentOptions.data?.pickupFee;
   const availableProducts = useMemo(
     () => sortProductsForSelection(
       (products ?? []).filter((product) => product.stockQuantity > 0),
@@ -89,6 +93,7 @@ export function CreateOrderDialog() {
     setLines([{ productId: '', quantity: 1 }]);
     setAddress(initialAddress);
     setShippingMethod('admin-standard');
+    setFulfillmentMethod('delivery');
     setPaymentMethod('cash');
     setSendPaymentLink(false);
     setAdminNotes('');
@@ -143,6 +148,11 @@ export function CreateOrderDialog() {
       return;
     }
 
+    if (fulfillmentMethod === 'pickup' && pickupFee === undefined) {
+      setError(t('تعذر تحميل رسوم الاستلام. أعد المحاولة.', 'Pickup fee could not be loaded. Retry.'));
+      return;
+    }
+
     const orderInput = {
       userId: Number(customerId),
       orderSource,
@@ -159,6 +169,7 @@ export function CreateOrderDialog() {
         isDefault: false,
       },
       shippingMethod,
+      fulfillmentMethod,
       paymentMethod,
       adminNotes: adminNotes.trim() || null,
       ...(orderSource !== 'phone' && sendPaymentLink && paymentMethod === 'moyasar' ? { sendPaymentLink: true } : {}),
@@ -365,9 +376,27 @@ export function CreateOrderDialog() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin-standard">{t('توصيل قياسي', 'Standard delivery')}</SelectItem>
-                  <SelectItem value="pickup">{t('استلام', 'Pickup')}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>{t('طريقة التسليم', 'Fulfillment')}</Label>
+              <Select value={fulfillmentMethod} onValueChange={(value) => setFulfillmentMethod(value as 'delivery' | 'pickup')}>
+                <SelectTrigger data-testid="select-fulfillment-method"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="delivery" data-testid="option-fulfillment-delivery">{t('توصيل', 'Delivery')}</SelectItem>
+                  <SelectItem value="pickup" data-testid="option-fulfillment-pickup">{t('استلام من موقعنا', 'Pickup from our location')}</SelectItem>
+                </SelectContent>
+              </Select>
+              {fulfillmentMethod === 'pickup' && (
+                <p className="text-xs text-muted-foreground" data-testid="text-pickup-fee-notice">
+                  {fulfillmentOptions.isLoading
+                    ? t('جاري تحميل رسوم الاستلام...', 'Loading pickup fee...')
+                    : pickupFee !== undefined
+                      ? t(`رسوم الاستلام ثابتة ${pickupFee} ريال شاملة ضريبة القيمة المضافة. لا تُنشأ شحنة مع شركة شحن.`, `Pickup fee is a fixed ${pickupFee} SAR including VAT. No carrier shipment is created.`)
+                      : <>{t('تعذر تحميل رسوم الاستلام.', 'Could not load the pickup fee.')} <button type="button" className="underline" onClick={() => fulfillmentOptions.refetch()} data-testid="button-retry-pickup-fee">{t('إعادة المحاولة', 'Retry')}</button></>}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>{t('طريقة الدفع', 'Payment method')}</Label>

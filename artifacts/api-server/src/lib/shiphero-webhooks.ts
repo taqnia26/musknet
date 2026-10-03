@@ -254,6 +254,10 @@ async function processEventRow(
     await persistProcessingResult(tx, event.id, "ignored_phone_order", "Phone orders currently use manual warehouse fulfillment.", decoded.eventAt);
     return;
   }
+  if (order.fulfillmentMethod === "pickup") {
+    await persistProcessingResult(tx, event.id, "ignored_pickup_order", "Pickup orders cannot advance through carrier webhooks.", decoded.eventAt);
+    return;
+  }
   const [shipment] = await tx.select().from(shipmentsTable)
     .where(eq(shipmentsTable.orderId, order.id)).for("update");
   if (!shipment) {

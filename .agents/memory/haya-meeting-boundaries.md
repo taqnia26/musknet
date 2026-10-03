@@ -37,4 +37,16 @@ Delivery to the customer versus pickup from the business site must be a separate
 
 **Why:** The owner explicitly approved adding the independent delivery/pickup choice while retaining regular/refrigerated shipping.
 
-**How to apply:** Keep fulfillment metadata distinct from shipping-service data. Obtain the outstanding fee and availability decisions rather than assuming free pickup or silently enabling it in every interface.
+**How to apply:** Keep fulfillment metadata distinct from shipping-service data. Preserve unknown historical fulfillment; do not infer it from old shipping-method strings.
+
+The delivery/pickup choice is only in the control panel, not customer checkout. Pickup costs a final 25 SAR per order.
+
+**Why:** The owner said «في لوحة التحكم بس مابغاها تظهر للعميل» and entered 25 as the final per-order pickup fee.
+
+**How to apply:** Keep the picker admin-only for admin/phone creation and the fee server-owned. Do not enable customer pickup or change this fee without a new instruction.
+
+Do not add fulfillment changes to the generic saved-order status edit.
+
+**Why:** Switching delivery/pickup also changes charges and can conflict with an issued invoice; the approved addition is a creation choice, not a silent financial recalculation.
+
+**How to apply:** A future fulfillment-edit request needs an explicit workflow that protects recorded charges, issued documents, and advanced shipments.

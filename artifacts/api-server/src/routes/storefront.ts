@@ -288,6 +288,9 @@ router.post("/coupons/validate", asyncRoute(async (req, res) => {
 router.post("/checkout/quote", asyncRoute(async (req, res) => {
   const user = await requireUser(req, res);
   if (!user) return;
+  if (req.body?.fulfillmentMethod !== undefined && req.body.fulfillmentMethod !== "delivery") {
+    res.status(400).json({ error: "خيار الاستلام غير متاح في المتجر" }); return;
+  }
   const parsed = GetCheckoutQuoteBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
@@ -305,6 +308,9 @@ router.get("/orders", asyncRoute(async (req, res) => {
 router.post("/orders", asyncRoute(async (req, res) => {
   const user = await requireUser(req, res);
   if (!user) return;
+  if (req.body?.fulfillmentMethod !== undefined && req.body.fulfillmentMethod !== "delivery") {
+    res.status(400).json({ error: "خيار الاستلام غير متاح في المتجر" }); return;
+  }
   const parsed = CreateOrderBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

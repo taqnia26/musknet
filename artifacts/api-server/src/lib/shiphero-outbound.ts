@@ -34,6 +34,8 @@ export type ShipHeroOrderPreflightInput = {
     shippingMethod: string;
     shippingCost: number;
     address: string;
+    fulfillmentMethod?: string | null;
+    orderSource?: string | null;
   };
   customer: { name: string; phone: string };
   address: {
@@ -114,6 +116,9 @@ function splitRecipientName(fullName: string): { first_name: string; last_name?:
 
 export function buildShipHeroOrderPayload(input: ShipHeroOrderPreflightInput): ShipHeroOrderInput {
   const { order, customer, settings } = input;
+  if (order.fulfillmentMethod === "pickup" || order.orderSource === "phone") {
+    throw new ShipHeroOutboundError(409, "Pickup and phone orders use local warehouse fulfillment; external dispatch is not allowed");
+  }
   if (order.status !== SHIPHERO_TRIGGER_STATUS) {
     throw new ShipHeroOutboundError(409, `Order ${order.orderNumber} is not in preparing status`);
   }
@@ -552,6 +557,8 @@ async function createDatabaseRepository(): Promise<ShipHeroOutboundRepository> {
         shippingMethod: order.shippingMethod,
         shippingCost: order.shippingCost,
         address: order.address,
+        fulfillmentMethod: order.fulfillmentMethod,
+        orderSource: order.orderSource,
       },
       customer: { name: customer?.name ?? "", phone: customer?.phone ?? "" },
       address: parseOrderAddress(order.address, address),
@@ -578,6 +585,9 @@ async function createDatabaseRepository(): Promise<ShipHeroOutboundRepository> {
         const [order] = await tx.select().from(ordersTable)
           .where(eq(ordersTable.id, orderId)).limit(1);
         if (!order) throw new ShipHeroOutboundError(404, `Order ${orderId} was not found`);
+        if (order.fulfillmentMethod === "pickup" || order.orderSource === "phone") {
+          throw new ShipHeroOutboundError(409, "Pickup and phone orders cannot be dispatched externally");
+        }
         const dispatch = await findDispatch(tx, orderId, true);
 
         if (dispatch) {

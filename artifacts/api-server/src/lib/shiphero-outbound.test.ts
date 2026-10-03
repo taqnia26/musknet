@@ -175,6 +175,17 @@ class MockOutboundRepository implements ShipHeroOutboundRepository {
 }
 
 describe("ShipHero outbound preflight", () => {
+  it("refuses pickup and phone payloads before any remote dispatch", () => {
+    const pickup = samplePreflight();
+    pickup.order.fulfillmentMethod = "pickup";
+    expect(() => buildShipHeroOrderPayload(pickup)).toThrow(/external dispatch is not allowed/);
+    const phone = samplePreflight();
+    phone.order.orderSource = "phone";
+    expect(() => buildShipHeroOrderPayload(phone)).toThrow(/external dispatch is not allowed/);
+    const legacy = samplePreflight();
+    legacy.order.fulfillmentMethod = null;
+    expect(() => buildShipHeroOrderPayload(legacy)).not.toThrow();
+  });
   it("allows only paid orders at the preparing trigger status", () => {
     expect(() => buildShipHeroOrderPayload(samplePreflight())).not.toThrow();
 

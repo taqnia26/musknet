@@ -13,6 +13,8 @@ export const ordersTable = pgTable("storefront_orders", {
   orderNumber: text("order_number").notNull(),
   // NULL means an historical source was not recorded; do not infer it.
   orderSource: text("order_source").default("storefront"),
+  // NULL preserves unknown historical fulfillment; only live creation assigns a known method.
+  fulfillmentMethod: text("fulfillment_method"),
   subtotal: doublePrecision("subtotal").notNull(),
   shippingCost: doublePrecision("shipping_cost").notNull(),
   discount: doublePrecision("discount").notNull(),
@@ -34,6 +36,7 @@ export const ordersTable = pgTable("storefront_orders", {
 }, (table) => [
   uniqueIndex("storefront_orders_order_number_unique").on(table.orderNumber),
   check("storefront_orders_source_check", sql`${table.orderSource} is null or ${table.orderSource} in ('storefront', 'admin', 'phone')`),
+  check("storefront_orders_fulfillment_method_check", sql`${table.fulfillmentMethod} is null or ${table.fulfillmentMethod} in ('delivery', 'pickup')`),
   check("storefront_orders_status_check", sql`${table.status} in ('cancelled', 'returned', 'pending_review', 'preparing', 'out_for_delivery', 'delivered', 'pending_payment')`),
 ]);
 

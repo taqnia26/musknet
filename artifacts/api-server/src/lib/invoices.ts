@@ -924,7 +924,7 @@ export async function updateOrderAndIssueInvoice(
       .where(eq(ordersTable.id, order.id)).returning();
     // Only entering preparing creates a durable job. Order creation and earlier
     // statuses never call ShipHero; the worker rechecks payment and live readiness.
-    if (statusChanged && updated.status === SHIPHERO_TRIGGER_STATUS && updated.orderSource !== "phone") {
+    if (statusChanged && updated.status === SHIPHERO_TRIGGER_STATUS && updated.orderSource !== "phone" && updated.fulfillmentMethod !== "pickup") {
       await tx.insert(shipheroDispatchesTable).values({
         orderId: updated.id, orderNumber: updated.orderNumber, status: "queued",
       }).onConflictDoNothing({ target: shipheroDispatchesTable.orderId });
