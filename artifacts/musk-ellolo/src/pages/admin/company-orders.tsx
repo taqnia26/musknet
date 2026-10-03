@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { OrderDocuments } from '@/components/admin/order-documents';
+import { CompanyOrderEditorDialog } from '@/components/admin/company-order-editor-dialog';
 import { useGetAdminMe } from '@workspace/api-client-react';
 import { hasPermission } from '@/lib/permissions';
 import { useQueryClient } from '@tanstack/react-query';
@@ -166,6 +167,9 @@ export default function AdminCompanyOrders() {
   const [status, setStatus] = useState<'all' | ListAdminCompanyOrdersStatus>('all');
   const [search, setSearch] = useState('');
   const [openId, setOpenId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
+  const { data: currentUser } = useGetAdminMe();
+  const canEdit = hasPermission(currentUser, 'company-orders', 'edit');
   const params = { ...(status !== 'all' ? { status } : {}), ...(search.trim() ? { search: search.trim() } : {}) };
   const q = useListAdminCompanyOrders(params, { query: { queryKey: getListAdminCompanyOrdersQueryKey(params), staleTime: 15_000 } });
   const orders = q.data?.orders ?? [];
@@ -195,13 +199,14 @@ export default function AdminCompanyOrders() {
                   <TableCell dir="ltr">{new Date(o.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-GB')}</TableCell>
                   <TableCell>{money(o.totalAmount, lang)}</TableCell>
                   <TableCell><Badge className={statusClass(o.status)}>{statusLabel(o.status, t)}</Badge></TableCell>
-                  <TableCell><Button size="sm" variant="outline" onClick={() => setOpenId(o.id)} data-testid={`button-review-order-${o.id}`}>{o.status === 'pending_review' ? t('مراجعة', 'Review') : t('عرض', 'View')}</Button></TableCell>
+                  <TableCell><Button size="sm" variant="outline" onClick={() => setOpenId(o.id)} data-testid={`button-review-order-${o.id}`}>{o.status === 'pending_review' ? t('مراجعة', 'Review') : t('عرض', 'View')}</Button>{canEdit && <Button size="sm" variant="ghost" className="ms-1" onClick={() => setEditId(o.id)} data-testid={`button-edit-company-order-${o.id}`}>{t('تعديل', 'Edit')}</Button>}</TableCell>
                 </TableRow>
               ))}
           </TableBody>
         </Table>
       </div>
       {openId != null && <Review id={openId} onClose={() => setOpenId(null)} />}
+      {editId != null && canEdit && <CompanyOrderEditorDialog orderId={editId} open onOpenChange={(v) => { if (!v) setEditId(null); }} />}
     </div>
   );
 }

@@ -10,3 +10,9 @@ Capture unit cost immutably when inventory leaves stock. Post COGS from that sna
 **Why:** Recomputing cost later or writing from stale quantities can make inventory valuation diverge from the general ledger under ordinary purchases, payments, cancellations, and concurrent requests.
 
 **How to apply:** Use these rules for every new purchase receipt, production consumption/output, fulfillment, cancellation, refund, opening balance, or inventory adjustment path.
+
+Order-edit cost provenance is cumulative: downstream returns/cancellations must consider original fulfillment plus audited edits, not require all quantities to have the original unit cost or original journal alone.
+
+**Why:** Added units can carry a later cost, and an originally zero-cost order can acquire its first positive cost through editing. Original-only checks incorrectly reject legitimate returns or subsequent edits.
+
+**How to apply:** Reconcile audited movements and their posted journals against the current line snapshot, including increases, decreases and blended costs; do not substitute today's inventory cost for missing historical evidence.

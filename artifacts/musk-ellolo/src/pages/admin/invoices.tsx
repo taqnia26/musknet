@@ -118,6 +118,7 @@ function InvoiceTemplate({
           <p className="font-semibold text-lg text-[#292728]">{invoice.buyerName || invoice.distributorName || '-'}</p>
           {invoice.buyerPhone && <p className="text-xs sm:text-sm text-gray-600 mt-2">{t('الجوال', 'Phone')}: <span dir="ltr" className="inline-block">{invoice.buyerPhone}</span></p>}
           {invoice.buyerAddress && <p className="text-xs sm:text-sm text-gray-600 mt-2 whitespace-pre-wrap leading-relaxed">{invoice.buyerAddress}</p>}
+          {invoice.shippingDetails && <div className="mt-3 border-t pt-2 text-xs text-gray-600"><p className="font-semibold">{t('بيانات الشحنة الحالية (ملحق تشغيلي)', 'Current shipment (operational attachment)')}</p><p className="whitespace-pre-wrap">{invoice.shippingDetails}</p></div>}
           {invoice.buyerTaxNumber && <p className="text-xs sm:text-sm text-gray-600 mt-2">{t('الرقم الضريبي', 'VAT')}: <span className="font-mono text-gray-900">{invoice.buyerTaxNumber}</span></p>}
           {invoice.buyerCommercialRegistrationNumber && <p className="text-xs sm:text-sm text-gray-600 mt-1">{t('السجل التجاري', 'CR')}: <span className="font-mono text-gray-900">{invoice.buyerCommercialRegistrationNumber}</span></p>}
           {invoice.orderNumber && <p className="mt-3 text-xs text-stone-500">{t('رقم الطلب', 'Order No.')}: <span className="font-mono text-stone-700">{invoice.orderNumber}</span></p>}

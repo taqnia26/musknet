@@ -14,6 +14,11 @@ import type { AdminInvoiceTaxTreatment } from './adminInvoiceTaxTreatment';
 import type { ReceivablePayment } from './receivablePayment';
 
 export interface AdminInvoice {
+  /**
+     * Current linked shipment information, not an amendment to the issued tax document.
+     * @nullable
+     */
+  shippingDetails?: string | null;
   /** @nullable */
   couponCode?: string | null;
   /** @nullable */

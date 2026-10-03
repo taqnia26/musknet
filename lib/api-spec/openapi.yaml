@@ -1398,6 +1398,23 @@ paths:
       parameters: [{ $ref: "#/components/parameters/AdminId" }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrderUpdate" } } } }
       responses: { "200": { description: Order, content: { application/json: { schema: { $ref: "#/components/schemas/AdminOrder" } } } } }
+  /admin/orders/{id}/edit:
+    get:
+      operationId: adminGetOrderEditor
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200": { description: Editable order and audit history, content: { application/json: { schema: { $ref: "#/components/schemas/OrderEditorState" } } } }
+    put:
+      operationId: adminSaveOrderEditor
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/OrderEditInput" } } } }
+      responses:
+        "200": { description: Saved order, content: { application/json: { schema: { $ref: "#/components/schemas/OrderEditorState" } } } }
+        "409": { description: Order changed or no longer editable, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/orders/{id}/payment-link:
     post:
       operationId: adminSendOrderPaymentLink
@@ -3130,6 +3147,23 @@ paths:
         - { name: status, in: query, schema: { type: string, enum: [pending_review, approved, rejected] } }
         - { name: search, in: query, schema: { type: string, maxLength: 100 } }
       responses: { "200": { description: Company-order review queue, content: { application/json: { schema: { $ref: "#/components/schemas/AdminCompanyOrdersPage" } } } } }
+  /admin/company-orders/{id}/edit:
+    get:
+      operationId: adminGetCompanyOrderEditor
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      responses:
+        "200": { description: Company order editor, content: { application/json: { schema: { $ref: "#/components/schemas/CompanyOrderEditorState" } } } }
+    put:
+      operationId: adminSaveCompanyOrderEditor
+      tags: [admin]
+      security: [{ adminBearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/AdminId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CompanyOrderEditInput" } } } }
+      responses:
+        "200": { description: Saved company order, content: { application/json: { schema: { $ref: "#/components/schemas/CompanyOrderEditorState" } } } }
+        "409": { description: Order changed or already decided, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
   /admin/company-orders/{orderId}/review:
     get:
       operationId: getAdminCompanyOrderReview
@@ -5198,6 +5232,76 @@ components:
             expiresAt: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    CompanyOrderEditInput:
+      type: object
+      additionalProperties: false
+      required: [requestKey, expectedUpdatedAt, items, contactName, contactPhone, orderAddress, discountOverride, adminNotes]
+      properties:
+        requestKey: { type: string, minLength: 16, maxLength: 200 }
+        expectedUpdatedAt: { type: string, minLength: 20, maxLength: 40 }
+        items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/OrderEditLine" } }
+        contactName: { type: string, minLength: 1, maxLength: 200 }
+        contactPhone: { type: string, minLength: 8, maxLength: 30 }
+        orderAddress: { $ref: "#/components/schemas/AdminOrderAddressInput" }
+        discountOverride:
+          anyOf:
+            - { $ref: "#/components/schemas/ManualSaleDiscountInput" }
+            - { type: "null" }
+        adminNotes: { type: [string, "null"], maxLength: 2000 }
+    CompanyOrderEditorState:
+      type: object
+      required: [orderNumber, eligible, blockedReason, contractDiscountPercent, values, history]
+      properties:
+        orderNumber: { type: string }
+        eligible: { type: boolean }
+        blockedReason: { type: [string, "null"] }
+        contractDiscountPercent: { type: number }
+        values: { $ref: "#/components/schemas/CompanyOrderEditInput" }
+        history: { type: array, items: { $ref: "#/components/schemas/OrderEditAudit" } }
+    OrderEditLine:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId: { type: number, minimum: 1, multipleOf: 1 }
+        productName: { type: string }
+        quantity: { type: number, minimum: 1, maximum: 100000, multipleOf: 1 }
+        unitPrice: { type: number, minimum: 0.01, maximum: 10000000, multipleOf: 0.01 }
+    OrderEditInput:
+      type: object
+      additionalProperties: false
+      required: [requestKey, expectedUpdatedAt, items, customerName, customerPhone, orderAddress, fulfillmentMethod, shippingMethod, shippingCost, paymentMethod, couponCode, discountOverride, adminNotes]
+      properties:
+        requestKey: { type: string, minLength: 16, maxLength: 200 }
+        expectedUpdatedAt: { type: string, minLength: 20, maxLength: 40 }
+        items: { type: array, minItems: 1, maxItems: 100, items: { $ref: "#/components/schemas/OrderEditLine" } }
+        customerName: { type: string, minLength: 1, maxLength: 200 }
+        customerPhone: { type: string, minLength: 8, maxLength: 30 }
+        orderAddress: { $ref: "#/components/schemas/AdminOrderAddressInput" }
+        fulfillmentMethod: { type: string, enum: [delivery, pickup] }
+        shippingMethod: { type: string, enum: [admin-standard, regular, refrigerated] }
+        shippingCost: { type: number, minimum: 0, maximum: 100000, multipleOf: 0.01 }
+        paymentMethod: { type: string, enum: [cash, bank-transfer] }
+        couponCode: { type: [string, "null"], maxLength: 100 }
+        discountOverride: { $ref: "#/components/schemas/ManualSaleDiscountInput" }
+        adminNotes: { type: [string, "null"], maxLength: 2000 }
+    OrderEditAudit:
+      type: object
+      required: [id, actorName, editedAt, beforeSnapshot, afterSnapshot]
+      properties:
+        id: { type: number }
+        actorName: { type: string }
+        editedAt: { type: string, format: date-time }
+        beforeSnapshot: { type: object, additionalProperties: true }
+        afterSnapshot: { type: object, additionalProperties: true }
+    OrderEditorState:
+      type: object
+      required: [orderNumber, eligible, blockedReason, values, history]
+      properties:
+        orderNumber: { type: string }
+        eligible: { type: boolean }
+        blockedReason: { type: [string, "null"] }
+        values: { $ref: "#/components/schemas/OrderEditInput" }
+        history: { type: array, items: { $ref: "#/components/schemas/OrderEditAudit" } }
     AdminOrderUpdate:
       type: object
       properties:
@@ -5322,6 +5426,7 @@ components:
       type: object
       required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, originalInvoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt, cancelledAt, cancellationReason, cancelledByAdminId, cancelledByName]
       properties:
+        shippingDetails: { type: [string, "null"], description: "Current linked shipment information, not an amendment to the issued tax document." }
         couponCode: { type: [string, "null"] }
         couponDiscountType: { type: [string, "null"], enum: [percentage, fixed, null] }
         couponDiscountValue: { type: [number, "null"] }

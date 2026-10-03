@@ -115,6 +115,13 @@ describe("invoice PDF formatting", () => {
     expect(arabicPdf.length).toBeGreaterThan(2000);
     expect(englishPdf.length).toBeGreaterThan(2000);
   });
+  it("adds a separate shipment attachment only when real linked details are supplied", async () => {
+    const plain = await createInvoicePdf(baseInvoice, "ar");
+    const shipped = await createInvoicePdf({ ...baseInvoice, shippingDetails: "الرياض — ABCD1234 — TRACK-TEST — pending" }, "ar");
+    const pages = (pdf: Buffer) => (pdf.toString("latin1").match(/\/Type \/Page\b/g) ?? []).length;
+    expect(pages(shipped)).toBe(pages(plain) + 1);
+    expect(shipped.length).toBeGreaterThan(plain.length);
+  });
 
   it("embeds the invoice logo and ZATCA QR on a readable light page", async () => {
     const pdf = await createInvoicePdf({

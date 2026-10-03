@@ -1,4 +1,4 @@
-import { check, doublePrecision, integer, numeric, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { check, doublePrecision, integer, jsonb, numeric, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -37,10 +37,12 @@ export const ordersTable = pgTable("storefront_orders", {
   shippingMethod: text("shipping_method").notNull(),
   paymentMethod: text("payment_method").notNull(),
   adminNotes: text("admin_notes"),
+  adminEditSnapshot: jsonb("admin_edit_snapshot").$type<Record<string, unknown>>(),
   statusManuallyUpdatedAt: timestamp("status_manually_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
+  check("storefront_orders_admin_edit_snapshot_check", sql`${table.adminEditSnapshot} is null or jsonb_typeof(${table.adminEditSnapshot}) = 'object'`),
   uniqueIndex("storefront_orders_order_number_unique").on(table.orderNumber),
   check("storefront_orders_source_check", sql`${table.orderSource} is null or ${table.orderSource} in ('storefront', 'admin', 'phone')`),
   check("storefront_orders_fulfillment_method_check", sql`${table.fulfillmentMethod} is null or ${table.fulfillmentMethod} in ('delivery', 'pickup')`),

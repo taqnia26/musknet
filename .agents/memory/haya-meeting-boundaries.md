@@ -92,3 +92,9 @@ The requested order editor covers all editable order fields, not only status cha
 **Why:** The user specified «السماح بالتعديل يكون على كل البنود افتحلي التعديل فيها».
 
 **How to apply:** Include products, quantities, prices, discounts, fulfillment/address and notes in the editor. Preserve existing issued-document, collection, shipping, identity, tax and audit protections; this instruction does not authorize silently rewriting posted financial history or linked customer accounts.
+
+Explicit company-order price and discount edits must survive approval; current contract credit, minimum order, tax and eligibility rules still apply.
+
+**Why:** Repricing an edited order from the catalog during approval would silently discard the owner's requested control over all order fields.
+
+**How to apply:** Keep order-specific price overrides separate from catalog/contract changes, pass the discount exception through invoice issuance, and treat the delivery contact/address as order data rather than a change to company identity or tax residence.

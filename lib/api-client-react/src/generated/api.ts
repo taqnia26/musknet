@@ -132,6 +132,8 @@ import type {
   CompanyOrder,
   CompanyOrderDecisionInput,
   CompanyOrderDecisionResponse,
+  CompanyOrderEditInput,
+  CompanyOrderEditorState,
   CompanyOrderReview,
   ConflictResponse,
   ContractFileUploadRequest,
@@ -255,6 +257,8 @@ import type {
   OpeningBalanceMappingInput,
   OpeningBalanceReconciliation,
   Order,
+  OrderEditInput,
+  OrderEditorState,
   OrderInput,
   OtpRequest,
   OtpRequestResult,
@@ -8969,6 +8973,143 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getAdminUpdateOrderMutationOptions(options));
+    }
+
+export const getAdminGetOrderEditorUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/orders/${id}/edit`
+}
+
+export const adminGetOrderEditor = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<OrderEditorState> => {
+
+  return customFetch<OrderEditorState>(getAdminGetOrderEditorUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetOrderEditorQueryKey = (id: number,) => {
+    return [
+    `/api/admin/orders/${id}/edit`
+    ] as const;
+    }
+
+
+export const getAdminGetOrderEditorQueryOptions = <TData = Awaited<ReturnType<typeof adminGetOrderEditor>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetOrderEditor>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetOrderEditorQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetOrderEditor>>> = ({ signal }) => adminGetOrderEditor(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetOrderEditor>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetOrderEditorQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetOrderEditor>>>
+export type AdminGetOrderEditorQueryError = ErrorType<unknown>
+
+
+
+export function useAdminGetOrderEditor<TData = Awaited<ReturnType<typeof adminGetOrderEditor>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetOrderEditor>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetOrderEditorQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminSaveOrderEditorUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/orders/${id}/edit`
+}
+
+export const adminSaveOrderEditor = async (id: number,
+    orderEditInput: OrderEditInput, options?: Parameters<typeof customFetch>[1]): Promise<OrderEditorState> => {
+
+  return customFetch<OrderEditorState>(getAdminSaveOrderEditorUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orderEditInput)
+  }
+);}
+
+
+
+
+
+export const getAdminSaveOrderEditorMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSaveOrderEditor>>, TError,{id: number;data: BodyType<OrderEditInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSaveOrderEditor>>, TError,{id: number;data: BodyType<OrderEditInput>}, TContext> => {
+
+const mutationKey = ['adminSaveOrderEditor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSaveOrderEditor>>, {id: number;data: BodyType<OrderEditInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminSaveOrderEditor(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSaveOrderEditorMutationResult = NonNullable<Awaited<ReturnType<typeof adminSaveOrderEditor>>>
+    export type AdminSaveOrderEditorMutationBody = BodyType<OrderEditInput>
+    export type AdminSaveOrderEditorMutationError = ErrorType<Error>
+
+    export const useAdminSaveOrderEditor = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSaveOrderEditor>>, TError,{id: number;data: BodyType<OrderEditInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSaveOrderEditor>>,
+        TError,
+        {id: number;data: BodyType<OrderEditInput>},
+        TContext
+      > => {
+      return useMutation(getAdminSaveOrderEditorMutationOptions(options));
     }
 
 export const getAdminSendOrderPaymentLinkUrl = (id: number,) => {
@@ -22122,6 +22263,143 @@ export function useListAdminCompanyOrders<TData = Awaited<ReturnType<typeof list
 
 
 
+
+export const getAdminGetCompanyOrderEditorUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/company-orders/${id}/edit`
+}
+
+export const adminGetCompanyOrderEditor = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<CompanyOrderEditorState> => {
+
+  return customFetch<CompanyOrderEditorState>(getAdminGetCompanyOrderEditorUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAdminGetCompanyOrderEditorQueryKey = (id: number,) => {
+    return [
+    `/api/admin/company-orders/${id}/edit`
+    ] as const;
+    }
+
+
+export const getAdminGetCompanyOrderEditorQueryOptions = <TData = Awaited<ReturnType<typeof adminGetCompanyOrderEditor>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCompanyOrderEditor>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAdminGetCompanyOrderEditorQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof adminGetCompanyOrderEditor>>> = ({ signal }) => adminGetCompanyOrderEditor(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof adminGetCompanyOrderEditor>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AdminGetCompanyOrderEditorQueryResult = NonNullable<Awaited<ReturnType<typeof adminGetCompanyOrderEditor>>>
+export type AdminGetCompanyOrderEditorQueryError = ErrorType<unknown>
+
+
+
+export function useAdminGetCompanyOrderEditor<TData = Awaited<ReturnType<typeof adminGetCompanyOrderEditor>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof adminGetCompanyOrderEditor>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAdminGetCompanyOrderEditorQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAdminSaveCompanyOrderEditorUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/company-orders/${id}/edit`
+}
+
+export const adminSaveCompanyOrderEditor = async (id: number,
+    companyOrderEditInput: CompanyOrderEditInput, options?: Parameters<typeof customFetch>[1]): Promise<CompanyOrderEditorState> => {
+
+  return customFetch<CompanyOrderEditorState>(getAdminSaveCompanyOrderEditorUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(companyOrderEditInput)
+  }
+);}
+
+
+
+
+
+export const getAdminSaveCompanyOrderEditorMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSaveCompanyOrderEditor>>, TError,{id: number;data: BodyType<CompanyOrderEditInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminSaveCompanyOrderEditor>>, TError,{id: number;data: BodyType<CompanyOrderEditInput>}, TContext> => {
+
+const mutationKey = ['adminSaveCompanyOrderEditor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminSaveCompanyOrderEditor>>, {id: number;data: BodyType<CompanyOrderEditInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  adminSaveCompanyOrderEditor(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminSaveCompanyOrderEditorMutationResult = NonNullable<Awaited<ReturnType<typeof adminSaveCompanyOrderEditor>>>
+    export type AdminSaveCompanyOrderEditorMutationBody = BodyType<CompanyOrderEditInput>
+    export type AdminSaveCompanyOrderEditorMutationError = ErrorType<Error>
+
+    export const useAdminSaveCompanyOrderEditor = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminSaveCompanyOrderEditor>>, TError,{id: number;data: BodyType<CompanyOrderEditInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminSaveCompanyOrderEditor>>,
+        TError,
+        {id: number;data: BodyType<CompanyOrderEditInput>},
+        TContext
+      > => {
+      return useMutation(getAdminSaveCompanyOrderEditorMutationOptions(options));
+    }
 
 export const getGetAdminCompanyOrderReviewUrl = (orderId: number,) => {
 

@@ -2599,6 +2599,180 @@ export interface AdminOrder {
   updatedAt: string;
 }
 
+export interface OrderEditLine {
+  /** @minimum 1 */
+  productId: number;
+  productName?: string;
+  /**
+     * @minimum 1
+     * @maximum 100000
+     */
+  quantity: number;
+  /**
+     * @minimum 0.01
+     * @maximum 10000000
+     */
+  unitPrice: number;
+}
+
+export interface AdminOrderAddressInput {
+  label?: string;
+  city?: string;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  nationalAddressShortCode?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** @nullable */
+  additionalNumber?: string | null;
+  district?: string;
+  street?: string;
+  buildingNo?: string;
+  /** @nullable */
+  additionalInfo?: string | null;
+  isDefault?: boolean;
+}
+
+export interface CompanyOrderEditInput {
+  /**
+     * @minLength 16
+     * @maxLength 200
+     */
+  requestKey: string;
+  /**
+     * @minLength 20
+     * @maxLength 40
+     */
+  expectedUpdatedAt: string;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  items: OrderEditLine[];
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  contactName: string;
+  /**
+     * @minLength 8
+     * @maxLength 30
+     */
+  contactPhone: string;
+  orderAddress: AdminOrderAddressInput;
+  discountOverride: ManualSaleDiscountInput | null;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  adminNotes: string | null;
+}
+
+export type OrderEditAuditBeforeSnapshot = { [key: string]: unknown };
+
+export type OrderEditAuditAfterSnapshot = { [key: string]: unknown };
+
+export interface OrderEditAudit {
+  id: number;
+  actorName: string;
+  editedAt: string;
+  beforeSnapshot: OrderEditAuditBeforeSnapshot;
+  afterSnapshot: OrderEditAuditAfterSnapshot;
+}
+
+export interface CompanyOrderEditorState {
+  orderNumber: string;
+  eligible: boolean;
+  /** @nullable */
+  blockedReason: string | null;
+  contractDiscountPercent: number;
+  values: CompanyOrderEditInput;
+  history: OrderEditAudit[];
+}
+
+export type OrderEditInputFulfillmentMethod = typeof OrderEditInputFulfillmentMethod[keyof typeof OrderEditInputFulfillmentMethod];
+
+
+export const OrderEditInputFulfillmentMethod = {
+  delivery: 'delivery',
+  pickup: 'pickup',
+} as const;
+
+export type OrderEditInputShippingMethod = typeof OrderEditInputShippingMethod[keyof typeof OrderEditInputShippingMethod];
+
+
+export const OrderEditInputShippingMethod = {
+  'admin-standard': 'admin-standard',
+  regular: 'regular',
+  refrigerated: 'refrigerated',
+} as const;
+
+export type OrderEditInputPaymentMethod = typeof OrderEditInputPaymentMethod[keyof typeof OrderEditInputPaymentMethod];
+
+
+export const OrderEditInputPaymentMethod = {
+  cash: 'cash',
+  'bank-transfer': 'bank-transfer',
+} as const;
+
+export interface OrderEditInput {
+  /**
+     * @minLength 16
+     * @maxLength 200
+     */
+  requestKey: string;
+  /**
+     * @minLength 20
+     * @maxLength 40
+     */
+  expectedUpdatedAt: string;
+  /**
+     * @minItems 1
+     * @maxItems 100
+     */
+  items: OrderEditLine[];
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  customerName: string;
+  /**
+     * @minLength 8
+     * @maxLength 30
+     */
+  customerPhone: string;
+  orderAddress: AdminOrderAddressInput;
+  fulfillmentMethod: OrderEditInputFulfillmentMethod;
+  shippingMethod: OrderEditInputShippingMethod;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     */
+  shippingCost: number;
+  paymentMethod: OrderEditInputPaymentMethod;
+  /**
+     * @maxLength 100
+     * @nullable
+     */
+  couponCode: string | null;
+  discountOverride: ManualSaleDiscountInput;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  adminNotes: string | null;
+}
+
+export interface OrderEditorState {
+  orderNumber: string;
+  eligible: boolean;
+  /** @nullable */
+  blockedReason: string | null;
+  values: OrderEditInput;
+  history: OrderEditAudit[];
+}
+
 export type AdminOrderUpdateStatus = typeof AdminOrderUpdateStatus[keyof typeof AdminOrderUpdateStatus];
 
 
@@ -2654,25 +2828,6 @@ export const AdminOrderInputPaymentMethod = {
   'bank-transfer': 'bank-transfer',
   moyasar: 'moyasar',
 } as const;
-
-export interface AdminOrderAddressInput {
-  label?: string;
-  city?: string;
-  /** @nullable */
-  country?: string | null;
-  /** @nullable */
-  nationalAddressShortCode?: string | null;
-  /** @nullable */
-  postalCode?: string | null;
-  /** @nullable */
-  additionalNumber?: string | null;
-  district?: string;
-  street?: string;
-  buildingNo?: string;
-  /** @nullable */
-  additionalInfo?: string | null;
-  isDefault?: boolean;
-}
 
 export interface AdminOrderInput {
   /** @minimum 1 */
@@ -2883,6 +3038,11 @@ export interface AdminInvoiceItem {
 }
 
 export interface AdminInvoice {
+  /**
+     * Current linked shipment information, not an amendment to the issued tax document.
+     * @nullable
+     */
+  shippingDetails?: string | null;
   /** @nullable */
   couponCode?: string | null;
   /** @nullable */

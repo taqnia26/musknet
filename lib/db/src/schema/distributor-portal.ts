@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -12,6 +13,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { wholesaleDistributorsTable } from "./wholesale-distributors";
 import { adminUsersTable } from "./admin-users";
@@ -63,6 +65,7 @@ export const companyOrdersTable = pgTable("company_orders", {
   snapshotTotals: jsonb("snapshot_totals").$type<Record<string, number>>().notNull(),
   snapshotFingerprint: text("snapshot_fingerprint").notNull(),
   reviewSnapshot: jsonb("review_snapshot").$type<Record<string, unknown>>(),
+  adminEditSnapshot: jsonb("admin_edit_snapshot").$type<Record<string, unknown>>(),
   reviewedByAdminId: integer("reviewed_by_admin_id").references(() => adminUsersTable.id, { onDelete: "set null" }),
   decisionAt: timestamp("decision_at", { withTimezone: true }),
   decisionReason: text("decision_reason"),
@@ -71,6 +74,7 @@ export const companyOrdersTable = pgTable("company_orders", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   uniqueIndex("company_orders_number_unique").on(table.orderNumber),
+  check("company_orders_admin_edit_snapshot_check", sql`${table.adminEditSnapshot} is null or jsonb_typeof(${table.adminEditSnapshot}) = 'object'`),
   uniqueIndex("company_orders_company_key_unique").on(table.distributorId, table.idempotencyKey),
   uniqueIndex("company_orders_invoice_unique").on(table.invoiceId),
   index("company_orders_company_created_idx").on(table.distributorId, table.createdAt),

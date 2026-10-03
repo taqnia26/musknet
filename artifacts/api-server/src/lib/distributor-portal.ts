@@ -154,7 +154,7 @@ export async function resolvePortalTerms(tx: any, company: PortalCompany) {
   return { terms, blockReasons, contract, file };
 }
 
-function totalsFor(lines: OrderLine[]) {
+export function totalsFor(lines: OrderLine[]) {
   const subtotal = lines.reduce((sum, line) => sum + cents(line.subtotal), 0);
   const discountAmount = lines.reduce((sum, line) => sum + cents(line.unitPrice) * line.quantity -
     cents(line.subtotal) - cents(line.vatAmount), 0);
@@ -283,6 +283,8 @@ export async function createReviewSnapshot(tx: any, order: typeof companyOrdersT
     vatAmount: Number(row.vatAmount),
     totalAmount: Number(row.totalAmount),
   }));
+  const override = order.adminEditSnapshot?.discountOverride as { percent: number; reason?: string } | null | undefined;
+  if (override) context.terms = { ...context.terms, discountPercent: override.percent };
   const ids = originalItems.map((item) => item.productId);
   const currentProducts = ids.length ? await tx.select().from(productsTable).where(inArray(productsTable.id, ids)) : [];
   const products = currentProducts as CatalogProduct[];
@@ -308,7 +310,8 @@ export async function createReviewSnapshot(tx: any, order: typeof companyOrdersT
       reasons.push(`Insufficient stock for ${product.nameAr}: ${product.stockQuantity} available, ${item.quantity} requested.`);
     }
     stockChecks.push({ productId: item.productId, quantity: item.quantity, stockQuantity: product.stockQuantity });
-    currentItems.push(...calculateLines([product], [{ productId: item.productId, quantity: item.quantity }], context.terms));
+    // An explicit admin price is a reviewed order snapshot, not a catalog edit.
+    currentItems.push(...calculateLines([{ ...product, price: order.adminEditSnapshot ? item.unitPrice : product.price }], [{ productId: item.productId, quantity: item.quantity }], context.terms));
   }
   const currentTotals = totalsFor(currentItems);
   const snapshotTerms = order.snapshotTerms as unknown as PortalTerms;

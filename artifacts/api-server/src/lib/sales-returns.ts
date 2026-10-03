@@ -4,7 +4,7 @@ import {
   companyOrderItemsTable, companyOrdersTable, customersTable, db,
   inventoryBalancesTable, inventoryLocationsTable, inventoryMovementsTable, invoicesTable,
   journalEntriesTable, operationEventsTable, orderItemsTable, ordersTable,
-  productsTable, salesReturnLinesTable, salesReturnsTable, wholesaleDistributorsTable,
+  productsTable, salesReturnLinesTable, salesReturnsTable, wholesaleDistributorsTable, orderEditAuditsTable,
 } from "@workspace/db";
 import { postJournalEntry } from "./accounting";
 
@@ -83,6 +83,22 @@ export async function getReturnSource(executor: Executor, sourceType: ReturnSour
     eq(inventoryMovementsTable.sourceType, movementSource), eq(inventoryMovementsTable.sourceId, String(movementId)),
     sql`${inventoryMovementsTable.quantityChange} < 0`,
   ));
+  const edits = sourceType === "individual" ? await executor.select({
+    movement: inventoryMovementsTable,
+    proven: sql<boolean>`exists (
+      select 1 from operation_events e
+      where e.source_type = 'order_edit' and e.source_id = ${orderEditAuditsTable.id}::text
+        and e.status = 'posted' and (e.payload->>'orderId')::integer = ${sourceId}
+        and ((e.payload->>'costDelta')::numeric = 0 or exists (
+          select 1 from journal_entries j where j.source_type = 'order_edit_cogs'
+          and j.source_id = ${orderEditAuditsTable.id}::text and j.status = 'posted'
+        ))
+    )`,
+  }).from(inventoryMovementsTable)
+    .innerJoin(orderEditAuditsTable, and(eq(orderEditAuditsTable.orderId, sourceId),
+      sql`${inventoryMovementsTable.sourceId} = ${orderEditAuditsTable.id}::text`))
+    .where(eq(inventoryMovementsTable.sourceType, "order_edit"))
+    .orderBy(asc(inventoryMovementsTable.id)) : [];
   const completed = await executor.select({
     itemId: sourceType === "individual" ? salesReturnLinesTable.orderItemId : salesReturnLinesTable.companyOrderItemId,
     quantity: salesReturnLinesTable.quantity,
@@ -102,8 +118,29 @@ export async function getReturnSource(executor: Executor, sourceType: ReturnSour
       exits.every((m) => m.unitCost !== null && Number(m.unitCost) >= 0) &&
       new Set(exits.map((m) => m.unitCost)).size === 1;
     let unitCost: string | null = provenCost ? exits[0].unitCost : null;
-    if (sourceType === "individual" && unitCost !== line.costSnapshot) unitCost = null;
-    if (unitCost !== null && Number(unitCost) > 0 && !cogs) unitCost = null;
+    const lineEdits = edits.filter(e => e.movement.productId === line.productId);
+    if (sourceType === "individual" && lineEdits.length) {
+      // Replay audited additions/removals at each immutable movement cost.
+      // A blended line cannot be checked by requiring every exit to have one cost.
+      let quantity = exitsQuantity;
+      let cost = quantity > 0 ? exits.reduce((sum, m) => sum - m.quantityChange * Number(m.unitCost), 0) / quantity : 0;
+      let valid = exits.every(m => m.unitCost !== null && Number(m.unitCost) >= 0) &&
+        (cost === 0 || !!cogs);
+      cost = Number(cost.toFixed(4));
+      for (const { movement: m, proven } of lineEdits) {
+        const delta = -m.quantityChange;
+        const movementCost = Number(m.unitCost);
+        if (!proven || m.unitCost === null || !Number.isFinite(movementCost) || movementCost < 0 ||
+          quantity + delta < 0 || (delta < 0 && Math.abs(cost - movementCost) > 0.00001)) valid = false;
+        cost = quantity + delta > 0 ? Number(((quantity * cost + delta * movementCost) / (quantity + delta)).toFixed(4)) : 0;
+        quantity += delta;
+      }
+      unitCost = valid && quantity === sourceQuantities.get(line.productId) &&
+        cost.toFixed(4) === line.costSnapshot ? line.costSnapshot! : null;
+    } else {
+      if (sourceType === "individual" && unitCost !== line.costSnapshot) unitCost = null;
+      if (unitCost !== null && Number(unitCost) > 0 && !cogs) unitCost = null;
+    }
     const returnedQuantity = completed.filter((l) => l.itemId === line.id).reduce((sum, l) => sum + l.quantity, 0);
     return { id: line.id, productId: line.productId, productName: line.productName, quantity: line.quantity,
       returnedQuantity, remainingQuantity: Math.max(0, line.quantity - returnedQuantity), unitCost };

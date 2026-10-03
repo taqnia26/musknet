@@ -18,6 +18,8 @@ import { createShipHeroAdminRouter } from "./shiphero-admin";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
 import { ADMIN_PICKUP_FEE_SAR, adminFulfillmentOptions } from "../lib/order-fulfillment";
+import { getOrderEditor, saveOrderEditor, orderContact } from "../lib/order-editing";
+import { invoiceShippingDetails } from "../lib/invoice-shipping-details";
 import { calculateSaleDiscount, discountResponseFields, SaleDiscountValidationError, validateManualDiscount } from "../lib/sale-discounts";
 const invoiceDiscountProjection = {
   discountOverrideByAdminId: invoicesTable.discountOverrideByAdminId,
@@ -2093,11 +2095,11 @@ router.get("/admin/orders", permit("orders", "view"), route(async (req, res) => 
   if (query.search) {
     const needle = query.search.trim().toLocaleLowerCase();
     rows = rows.filter(row =>
-      [row.customerName, row.order.orderNumber, row.order.trackingNumber]
+      [orderContact(row.order, { name: row.customerName, phone: null }).name, row.order.orderNumber, row.order.trackingNumber]
         .some(value => value?.toLocaleLowerCase().includes(needle)));
   }
   if (query.status !== "all") rows = rows.filter((row) => row.order.status === query.status);
-  res.json(Api.AdminListOrdersResponse.parse(rows.map(({ order, customerName }) => ({ ...order, ...discountResponseFields(order), customerName }))));
+  res.json(Api.AdminListOrdersResponse.parse(rows.map(({ order, customerName }) => ({ ...order, ...discountResponseFields(order), customerName: orderContact(order, { name: customerName, phone: null }).name }))));
 }));
 router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateOrderBody, req.body, res); if (!body) return;
@@ -2403,8 +2405,8 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
   res.json(Api.AdminGetOrderResponse.parse({
     ...row,
     ...discountResponseFields(row),
-    customerName: customer.name,
-    customer,
+    customerName: orderContact(row, customer).name,
+    customer: orderContact(row, customer),
     orderAddress: {
       label: address.label, city: address.city, district: address.district, street: address.street,
       country: address.country, nationalAddressShortCode: address.nationalAddressShortCode,
@@ -2414,6 +2416,19 @@ router.get("/admin/orders/:id", permit("orders", "view"), route(async (req, res)
     items,
     coupon,
   }));
+}));
+router.get("/admin/orders/:id/edit", permit("orders", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminGetOrderEditorParams, req.params, res); if (!params) return;
+  res.json(await getOrderEditor(params.id));
+}));
+router.put("/admin/orders/:id/edit", permit("orders", "edit"), route(async (req, res) => {
+  const params = parse(Api.AdminSaveOrderEditorParams, req.params, res);
+  const body = parse(Api.AdminSaveOrderEditorBody.strict(), req.body, res); if (!params || !body) return;
+  try { res.json(await saveOrderEditor(params.id, body, res.locals.admin.id)); }
+  catch (error) {
+    if (error instanceof SaleDiscountValidationError) { res.status(400).json({ error: error.message }); return; }
+    throw error;
+  }
 }));
 router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, res) => {
   if (["couponCode", "discountOverride", "discount", "couponDiscountAmount", "manualDiscountPercent", "manualDiscountAmount", "manualDiscountReason", "manualDiscountByAdminId", "manualDiscountAt"].some((key) => req.body?.[key] !== undefined)) {
@@ -2442,7 +2457,7 @@ router.patch("/admin/orders/:id", permit("orders", "edit"), route(async (req, re
   row ??= await updateOrderAndIssueInvoice(params.id, body, process.env, res.locals.admin.id);
   if (!row) { res.status(404).json({ error: "Order not found" }); return; }
   const [customer] = await db.select({ name: customersTable.name }).from(customersTable).where(eq(customersTable.id, row.userId));
-  res.json(Api.AdminUpdateOrderResponse.parse({ ...row, ...discountResponseFields(row), customerName: customer.name }));
+  res.json(Api.AdminUpdateOrderResponse.parse({ ...row, ...discountResponseFields(row), customerName: orderContact(row, { name: customer.name, phone: null }).name }));
 }));
 
 router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res) => {
@@ -2527,6 +2542,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     ? await db.select().from(receivablePaymentsTable).where(inArray(receivablePaymentsTable.invoiceId, rows.map((row) => row.id))).orderBy(receivablePaymentsTable.paymentDate, receivablePaymentsTable.id)
     : [];
   const today = new Date().toISOString().slice(0, 10);
+  const shippingDetails = await invoiceShippingDetails(rows.map(row => row.id));
   const enriched = rows.map((row) => {
     const payments = paymentRows.filter((payment) => payment.invoiceId === row.id);
     const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
@@ -2534,6 +2550,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
     const paymentStatus = outstandingAmount === 0 ? "paid" as const : paidAmount > 0 ? "partial" as const : "unpaid" as const;
     return {
       ...row,
+      shippingDetails: shippingDetails.get(row.id) ?? null,
       contractDiscountPercent: row.contractDiscountPercent === null ? null : Number(row.contractDiscountPercent),
       appliedDiscountPercent: row.appliedDiscountPercent === null ? null : Number(row.appliedDiscountPercent),
       invoiceDiscountPercent: row.invoiceDiscountPercent === null ? null : Number(row.invoiceDiscountPercent),
@@ -2652,6 +2669,7 @@ router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), rout
   const paidAmount = Math.round(payments.reduce((sum, payment) => sum + payment.amount, 0) * 100) / 100;
   const pdf = await createInvoicePdf({
     ...invoice,
+    shippingDetails: (await invoiceShippingDetails([invoice.id])).get(invoice.id) ?? null,
     vatRate: invoice.vatRate === null ? null : Number(invoice.vatRate),
     contractDiscountPercent: invoice.contractDiscountPercent === null ? null : Number(invoice.contractDiscountPercent),
     invoiceDiscountPercent: invoice.invoiceDiscountPercent === null ? null : Number(invoice.invoiceDiscountPercent),

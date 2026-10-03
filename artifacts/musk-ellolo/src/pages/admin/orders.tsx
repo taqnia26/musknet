@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck, Clock3, ClipboardCheck, PackageCheck, Package, Ban, CreditCard, MoreHorizontal, PackageX } from 'lucide-react';
+import { Search, Eye, AlertCircle, ShoppingBag, MapPin, User, Receipt, Truck, Clock3, ClipboardCheck, PackageCheck, Package, Ban, CreditCard, MoreHorizontal, PackageX, Pencil } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,6 +34,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Separator } from '@/components/ui/separator';
 import { CreateOrderDialog } from '@/components/admin/create-order-dialog';
+import { OrderEditorDialog } from '@/components/admin/order-editor-dialog';
 import { useDestructiveConfirmation } from '@/hooks/use-destructive-confirmation';
 
 type OrderStage = 'all' | OrderStatus;
@@ -52,6 +53,7 @@ export default function AdminOrders() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<OrderStage>('all');
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [editOrderId, setEditOrderId] = useState<number | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
   
   const queryClient = useQueryClient();
@@ -170,6 +172,9 @@ export default function AdminOrders() {
   return (
     <div className="space-y-6">
       {confirmationDialog}
+      {editOrderId !== null && hasPermission(currentUser, 'orders', 'edit') && (
+        <OrderEditorDialog orderId={editOrderId} open onOpenChange={(v) => { if (!v) setEditOrderId(null); }} />
+      )}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('طلبات الأفراد', 'Individual Orders')}</h1>
@@ -299,6 +304,11 @@ export default function AdminOrders() {
                         <DropdownMenuItem onSelect={() => setSelectedOrderId(order.id)}>
                           {t('طباعة وتنزيل المستندات', 'Print and download documents')}
                         </DropdownMenuItem>
+                        {hasPermission(currentUser, 'orders', 'edit') && (
+                          <DropdownMenuItem onSelect={() => setEditOrderId(order.id)} data-testid={`button-edit-order-${order.id}`}>
+                            <Pencil className="me-2 h-4 w-4" />{t('تعديل الطلب', 'Edit order')}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <Dialog open={selectedOrderId === order.id} onOpenChange={(v) => !v && setSelectedOrderId(null)}>

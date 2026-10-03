@@ -5054,6 +5054,283 @@ export const AdminUpdateOrderResponse = zod.object({
 })
 
 
+export const AdminGetOrderEditorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminGetOrderEditorResponseValuesRequestKeyMin = 16;
+export const adminGetOrderEditorResponseValuesRequestKeyMax = 200;
+
+export const adminGetOrderEditorResponseValuesExpectedUpdatedAtMin = 20;
+export const adminGetOrderEditorResponseValuesExpectedUpdatedAtMax = 40;
+
+export const adminGetOrderEditorResponseValuesItemsItemProductIdMultipleOf = 1;
+
+export const adminGetOrderEditorResponseValuesItemsItemQuantityMax = 100000;
+export const adminGetOrderEditorResponseValuesItemsItemQuantityMultipleOf = 1;
+
+export const adminGetOrderEditorResponseValuesItemsItemUnitPriceMin = 0.01;
+export const adminGetOrderEditorResponseValuesItemsItemUnitPriceMax = 10000000;
+export const adminGetOrderEditorResponseValuesItemsItemUnitPriceMultipleOf = 0.01;
+
+export const adminGetOrderEditorResponseValuesItemsMax = 100;
+
+export const adminGetOrderEditorResponseValuesCustomerNameMax = 200;
+
+export const adminGetOrderEditorResponseValuesCustomerPhoneMin = 8;
+export const adminGetOrderEditorResponseValuesCustomerPhoneMax = 30;
+
+export const adminGetOrderEditorResponseValuesOrderAddressLabelDefault = `\u0627\u0644\u0645\u0646\u0632\u0644`;
+export const adminGetOrderEditorResponseValuesOrderAddressCityDefault = ``;
+export const adminGetOrderEditorResponseValuesOrderAddressDistrictDefault = ``;
+export const adminGetOrderEditorResponseValuesOrderAddressStreetDefault = ``;
+export const adminGetOrderEditorResponseValuesOrderAddressBuildingNoDefault = ``;
+export const adminGetOrderEditorResponseValuesOrderAddressAdditionalInfoDefault = null;
+export const adminGetOrderEditorResponseValuesOrderAddressIsDefaultDefault = false;
+export const adminGetOrderEditorResponseValuesShippingCostMin = 0;
+export const adminGetOrderEditorResponseValuesShippingCostMax = 100000;
+export const adminGetOrderEditorResponseValuesShippingCostMultipleOf = 0.01;
+
+export const adminGetOrderEditorResponseValuesCouponCodeMax = 100;
+
+export const adminGetOrderEditorResponseValuesDiscountOverridePercentMin = 0;
+export const adminGetOrderEditorResponseValuesDiscountOverridePercentMax = 100;
+export const adminGetOrderEditorResponseValuesDiscountOverridePercentMultipleOf = 0.01;
+
+export const adminGetOrderEditorResponseValuesDiscountOverrideReasonMax = 500;
+
+export const adminGetOrderEditorResponseValuesAdminNotesMax = 2000;
+
+
+
+export const AdminGetOrderEditorResponse = zod.object({
+  "orderNumber": zod.string(),
+  "eligible": zod.boolean(),
+  "blockedReason": zod.string().nullable(),
+  "values": zod.object({
+  "requestKey": zod.string().min(adminGetOrderEditorResponseValuesRequestKeyMin).max(adminGetOrderEditorResponseValuesRequestKeyMax),
+  "expectedUpdatedAt": zod.string().min(adminGetOrderEditorResponseValuesExpectedUpdatedAtMin).max(adminGetOrderEditorResponseValuesExpectedUpdatedAtMax),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminGetOrderEditorResponseValuesItemsItemProductIdMultipleOf),
+  "productName": zod.string().optional(),
+  "quantity": zod.number().min(1).max(adminGetOrderEditorResponseValuesItemsItemQuantityMax).multipleOf(adminGetOrderEditorResponseValuesItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminGetOrderEditorResponseValuesItemsItemUnitPriceMin).max(adminGetOrderEditorResponseValuesItemsItemUnitPriceMax).multipleOf(adminGetOrderEditorResponseValuesItemsItemUnitPriceMultipleOf)
+})).min(1).max(adminGetOrderEditorResponseValuesItemsMax),
+  "customerName": zod.string().min(1).max(adminGetOrderEditorResponseValuesCustomerNameMax),
+  "customerPhone": zod.string().min(adminGetOrderEditorResponseValuesCustomerPhoneMin).max(adminGetOrderEditorResponseValuesCustomerPhoneMax),
+  "orderAddress": zod.object({
+  "label": zod.string().default(adminGetOrderEditorResponseValuesOrderAddressLabelDefault),
+  "city": zod.string().default(adminGetOrderEditorResponseValuesOrderAddressCityDefault),
+  "country": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "additionalNumber": zod.string().nullish(),
+  "district": zod.string().default(adminGetOrderEditorResponseValuesOrderAddressDistrictDefault),
+  "street": zod.string().default(adminGetOrderEditorResponseValuesOrderAddressStreetDefault),
+  "buildingNo": zod.string().default(adminGetOrderEditorResponseValuesOrderAddressBuildingNoDefault),
+  "additionalInfo": zod.string().nullish().default(adminGetOrderEditorResponseValuesOrderAddressAdditionalInfoDefault),
+  "isDefault": zod.boolean().default(adminGetOrderEditorResponseValuesOrderAddressIsDefaultDefault)
+}),
+  "fulfillmentMethod": zod.enum(['delivery', 'pickup']),
+  "shippingMethod": zod.enum(['admin-standard', 'regular', 'refrigerated']),
+  "shippingCost": zod.number().min(adminGetOrderEditorResponseValuesShippingCostMin).max(adminGetOrderEditorResponseValuesShippingCostMax).multipleOf(adminGetOrderEditorResponseValuesShippingCostMultipleOf),
+  "paymentMethod": zod.enum(['cash', 'bank-transfer']),
+  "couponCode": zod.string().max(adminGetOrderEditorResponseValuesCouponCodeMax).nullable(),
+  "discountOverride": zod.object({
+  "percent": zod.number().min(adminGetOrderEditorResponseValuesDiscountOverridePercentMin).max(adminGetOrderEditorResponseValuesDiscountOverridePercentMax).multipleOf(adminGetOrderEditorResponseValuesDiscountOverridePercentMultipleOf),
+  "reason": zod.string().max(adminGetOrderEditorResponseValuesDiscountOverrideReasonMax).optional()
+}),
+  "adminNotes": zod.string().max(adminGetOrderEditorResponseValuesAdminNotesMax).nullable()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.number(),
+  "actorName": zod.string(),
+  "editedAt": zod.coerce.date(),
+  "beforeSnapshot": zod.record(zod.string(), zod.unknown()),
+  "afterSnapshot": zod.record(zod.string(), zod.unknown())
+}))
+})
+
+
+export const AdminSaveOrderEditorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminSaveOrderEditorBodyRequestKeyMin = 16;
+export const adminSaveOrderEditorBodyRequestKeyMax = 200;
+
+export const adminSaveOrderEditorBodyExpectedUpdatedAtMin = 20;
+export const adminSaveOrderEditorBodyExpectedUpdatedAtMax = 40;
+
+export const adminSaveOrderEditorBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminSaveOrderEditorBodyItemsItemQuantityMax = 100000;
+export const adminSaveOrderEditorBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminSaveOrderEditorBodyItemsItemUnitPriceMin = 0.01;
+export const adminSaveOrderEditorBodyItemsItemUnitPriceMax = 10000000;
+export const adminSaveOrderEditorBodyItemsItemUnitPriceMultipleOf = 0.01;
+
+export const adminSaveOrderEditorBodyItemsMax = 100;
+
+export const adminSaveOrderEditorBodyCustomerNameMax = 200;
+
+export const adminSaveOrderEditorBodyCustomerPhoneMin = 8;
+export const adminSaveOrderEditorBodyCustomerPhoneMax = 30;
+
+export const adminSaveOrderEditorBodyOrderAddressLabelDefault = `\u0627\u0644\u0645\u0646\u0632\u0644`;
+export const adminSaveOrderEditorBodyOrderAddressCityDefault = ``;
+export const adminSaveOrderEditorBodyOrderAddressDistrictDefault = ``;
+export const adminSaveOrderEditorBodyOrderAddressStreetDefault = ``;
+export const adminSaveOrderEditorBodyOrderAddressBuildingNoDefault = ``;
+export const adminSaveOrderEditorBodyOrderAddressAdditionalInfoDefault = null;
+export const adminSaveOrderEditorBodyOrderAddressIsDefaultDefault = false;
+export const adminSaveOrderEditorBodyShippingCostMin = 0;
+export const adminSaveOrderEditorBodyShippingCostMax = 100000;
+export const adminSaveOrderEditorBodyShippingCostMultipleOf = 0.01;
+
+export const adminSaveOrderEditorBodyCouponCodeMax = 100;
+
+export const adminSaveOrderEditorBodyDiscountOverridePercentMin = 0;
+export const adminSaveOrderEditorBodyDiscountOverridePercentMax = 100;
+export const adminSaveOrderEditorBodyDiscountOverridePercentMultipleOf = 0.01;
+
+export const adminSaveOrderEditorBodyDiscountOverrideReasonMax = 500;
+
+export const adminSaveOrderEditorBodyAdminNotesMax = 2000;
+
+
+
+export const AdminSaveOrderEditorBody = zod.object({
+  "requestKey": zod.string().min(adminSaveOrderEditorBodyRequestKeyMin).max(adminSaveOrderEditorBodyRequestKeyMax),
+  "expectedUpdatedAt": zod.string().min(adminSaveOrderEditorBodyExpectedUpdatedAtMin).max(adminSaveOrderEditorBodyExpectedUpdatedAtMax),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminSaveOrderEditorBodyItemsItemProductIdMultipleOf),
+  "productName": zod.string().optional(),
+  "quantity": zod.number().min(1).max(adminSaveOrderEditorBodyItemsItemQuantityMax).multipleOf(adminSaveOrderEditorBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminSaveOrderEditorBodyItemsItemUnitPriceMin).max(adminSaveOrderEditorBodyItemsItemUnitPriceMax).multipleOf(adminSaveOrderEditorBodyItemsItemUnitPriceMultipleOf)
+})).min(1).max(adminSaveOrderEditorBodyItemsMax),
+  "customerName": zod.string().min(1).max(adminSaveOrderEditorBodyCustomerNameMax),
+  "customerPhone": zod.string().min(adminSaveOrderEditorBodyCustomerPhoneMin).max(adminSaveOrderEditorBodyCustomerPhoneMax),
+  "orderAddress": zod.object({
+  "label": zod.string().default(adminSaveOrderEditorBodyOrderAddressLabelDefault),
+  "city": zod.string().default(adminSaveOrderEditorBodyOrderAddressCityDefault),
+  "country": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "additionalNumber": zod.string().nullish(),
+  "district": zod.string().default(adminSaveOrderEditorBodyOrderAddressDistrictDefault),
+  "street": zod.string().default(adminSaveOrderEditorBodyOrderAddressStreetDefault),
+  "buildingNo": zod.string().default(adminSaveOrderEditorBodyOrderAddressBuildingNoDefault),
+  "additionalInfo": zod.string().nullish().default(adminSaveOrderEditorBodyOrderAddressAdditionalInfoDefault),
+  "isDefault": zod.boolean().default(adminSaveOrderEditorBodyOrderAddressIsDefaultDefault)
+}),
+  "fulfillmentMethod": zod.enum(['delivery', 'pickup']),
+  "shippingMethod": zod.enum(['admin-standard', 'regular', 'refrigerated']),
+  "shippingCost": zod.number().min(adminSaveOrderEditorBodyShippingCostMin).max(adminSaveOrderEditorBodyShippingCostMax).multipleOf(adminSaveOrderEditorBodyShippingCostMultipleOf),
+  "paymentMethod": zod.enum(['cash', 'bank-transfer']),
+  "couponCode": zod.string().max(adminSaveOrderEditorBodyCouponCodeMax).nullable(),
+  "discountOverride": zod.object({
+  "percent": zod.number().min(adminSaveOrderEditorBodyDiscountOverridePercentMin).max(adminSaveOrderEditorBodyDiscountOverridePercentMax).multipleOf(adminSaveOrderEditorBodyDiscountOverridePercentMultipleOf),
+  "reason": zod.string().max(adminSaveOrderEditorBodyDiscountOverrideReasonMax).optional()
+}),
+  "adminNotes": zod.string().max(adminSaveOrderEditorBodyAdminNotesMax).nullable()
+})
+
+export const adminSaveOrderEditorResponseValuesRequestKeyMin = 16;
+export const adminSaveOrderEditorResponseValuesRequestKeyMax = 200;
+
+export const adminSaveOrderEditorResponseValuesExpectedUpdatedAtMin = 20;
+export const adminSaveOrderEditorResponseValuesExpectedUpdatedAtMax = 40;
+
+export const adminSaveOrderEditorResponseValuesItemsItemProductIdMultipleOf = 1;
+
+export const adminSaveOrderEditorResponseValuesItemsItemQuantityMax = 100000;
+export const adminSaveOrderEditorResponseValuesItemsItemQuantityMultipleOf = 1;
+
+export const adminSaveOrderEditorResponseValuesItemsItemUnitPriceMin = 0.01;
+export const adminSaveOrderEditorResponseValuesItemsItemUnitPriceMax = 10000000;
+export const adminSaveOrderEditorResponseValuesItemsItemUnitPriceMultipleOf = 0.01;
+
+export const adminSaveOrderEditorResponseValuesItemsMax = 100;
+
+export const adminSaveOrderEditorResponseValuesCustomerNameMax = 200;
+
+export const adminSaveOrderEditorResponseValuesCustomerPhoneMin = 8;
+export const adminSaveOrderEditorResponseValuesCustomerPhoneMax = 30;
+
+export const adminSaveOrderEditorResponseValuesOrderAddressLabelDefault = `\u0627\u0644\u0645\u0646\u0632\u0644`;
+export const adminSaveOrderEditorResponseValuesOrderAddressCityDefault = ``;
+export const adminSaveOrderEditorResponseValuesOrderAddressDistrictDefault = ``;
+export const adminSaveOrderEditorResponseValuesOrderAddressStreetDefault = ``;
+export const adminSaveOrderEditorResponseValuesOrderAddressBuildingNoDefault = ``;
+export const adminSaveOrderEditorResponseValuesOrderAddressAdditionalInfoDefault = null;
+export const adminSaveOrderEditorResponseValuesOrderAddressIsDefaultDefault = false;
+export const adminSaveOrderEditorResponseValuesShippingCostMin = 0;
+export const adminSaveOrderEditorResponseValuesShippingCostMax = 100000;
+export const adminSaveOrderEditorResponseValuesShippingCostMultipleOf = 0.01;
+
+export const adminSaveOrderEditorResponseValuesCouponCodeMax = 100;
+
+export const adminSaveOrderEditorResponseValuesDiscountOverridePercentMin = 0;
+export const adminSaveOrderEditorResponseValuesDiscountOverridePercentMax = 100;
+export const adminSaveOrderEditorResponseValuesDiscountOverridePercentMultipleOf = 0.01;
+
+export const adminSaveOrderEditorResponseValuesDiscountOverrideReasonMax = 500;
+
+export const adminSaveOrderEditorResponseValuesAdminNotesMax = 2000;
+
+
+
+export const AdminSaveOrderEditorResponse = zod.object({
+  "orderNumber": zod.string(),
+  "eligible": zod.boolean(),
+  "blockedReason": zod.string().nullable(),
+  "values": zod.object({
+  "requestKey": zod.string().min(adminSaveOrderEditorResponseValuesRequestKeyMin).max(adminSaveOrderEditorResponseValuesRequestKeyMax),
+  "expectedUpdatedAt": zod.string().min(adminSaveOrderEditorResponseValuesExpectedUpdatedAtMin).max(adminSaveOrderEditorResponseValuesExpectedUpdatedAtMax),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminSaveOrderEditorResponseValuesItemsItemProductIdMultipleOf),
+  "productName": zod.string().optional(),
+  "quantity": zod.number().min(1).max(adminSaveOrderEditorResponseValuesItemsItemQuantityMax).multipleOf(adminSaveOrderEditorResponseValuesItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminSaveOrderEditorResponseValuesItemsItemUnitPriceMin).max(adminSaveOrderEditorResponseValuesItemsItemUnitPriceMax).multipleOf(adminSaveOrderEditorResponseValuesItemsItemUnitPriceMultipleOf)
+})).min(1).max(adminSaveOrderEditorResponseValuesItemsMax),
+  "customerName": zod.string().min(1).max(adminSaveOrderEditorResponseValuesCustomerNameMax),
+  "customerPhone": zod.string().min(adminSaveOrderEditorResponseValuesCustomerPhoneMin).max(adminSaveOrderEditorResponseValuesCustomerPhoneMax),
+  "orderAddress": zod.object({
+  "label": zod.string().default(adminSaveOrderEditorResponseValuesOrderAddressLabelDefault),
+  "city": zod.string().default(adminSaveOrderEditorResponseValuesOrderAddressCityDefault),
+  "country": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "additionalNumber": zod.string().nullish(),
+  "district": zod.string().default(adminSaveOrderEditorResponseValuesOrderAddressDistrictDefault),
+  "street": zod.string().default(adminSaveOrderEditorResponseValuesOrderAddressStreetDefault),
+  "buildingNo": zod.string().default(adminSaveOrderEditorResponseValuesOrderAddressBuildingNoDefault),
+  "additionalInfo": zod.string().nullish().default(adminSaveOrderEditorResponseValuesOrderAddressAdditionalInfoDefault),
+  "isDefault": zod.boolean().default(adminSaveOrderEditorResponseValuesOrderAddressIsDefaultDefault)
+}),
+  "fulfillmentMethod": zod.enum(['delivery', 'pickup']),
+  "shippingMethod": zod.enum(['admin-standard', 'regular', 'refrigerated']),
+  "shippingCost": zod.number().min(adminSaveOrderEditorResponseValuesShippingCostMin).max(adminSaveOrderEditorResponseValuesShippingCostMax).multipleOf(adminSaveOrderEditorResponseValuesShippingCostMultipleOf),
+  "paymentMethod": zod.enum(['cash', 'bank-transfer']),
+  "couponCode": zod.string().max(adminSaveOrderEditorResponseValuesCouponCodeMax).nullable(),
+  "discountOverride": zod.object({
+  "percent": zod.number().min(adminSaveOrderEditorResponseValuesDiscountOverridePercentMin).max(adminSaveOrderEditorResponseValuesDiscountOverridePercentMax).multipleOf(adminSaveOrderEditorResponseValuesDiscountOverridePercentMultipleOf),
+  "reason": zod.string().max(adminSaveOrderEditorResponseValuesDiscountOverrideReasonMax).optional()
+}),
+  "adminNotes": zod.string().max(adminSaveOrderEditorResponseValuesAdminNotesMax).nullable()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.number(),
+  "actorName": zod.string(),
+  "editedAt": zod.coerce.date(),
+  "beforeSnapshot": zod.record(zod.string(), zod.unknown()),
+  "afterSnapshot": zod.record(zod.string(), zod.unknown())
+}))
+})
+
+
 export const AdminSendOrderPaymentLinkParams = zod.object({
   "id": zod.coerce.number()
 })
@@ -5153,6 +5430,7 @@ export const adminListInvoicesResponseCancelledByAdminIdMultipleOf = 1;
 
 
 export const AdminListInvoicesResponseItem = zod.object({
+  "shippingDetails": zod.string().nullish().describe('Current linked shipment information, not an amendment to the issued tax document.'),
   "couponCode": zod.string().nullish(),
   "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
   "couponDiscountValue": zod.number().nullish(),
@@ -5277,6 +5555,7 @@ export const adminCreateDistributorInvoiceResponseCancelledByAdminIdMultipleOf =
 
 
 export const AdminCreateDistributorInvoiceResponse = zod.object({
+  "shippingDetails": zod.string().nullish().describe('Current linked shipment information, not an amendment to the issued tax document.'),
   "couponCode": zod.string().nullish(),
   "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
   "couponDiscountValue": zod.number().nullish(),
@@ -5678,6 +5957,7 @@ export const adminCreateExhibitionInvoiceResponseCancelledByAdminIdMultipleOf = 
 
 
 export const AdminCreateExhibitionInvoiceResponse = zod.object({
+  "shippingDetails": zod.string().nullish().describe('Current linked shipment information, not an amendment to the issued tax document.'),
   "couponCode": zod.string().nullish(),
   "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
   "couponDiscountValue": zod.number().nullish(),
@@ -5828,6 +6108,7 @@ export const adminCreateIndividualInvoiceResponseCancelledByAdminIdMultipleOf = 
 
 
 export const AdminCreateIndividualInvoiceResponse = zod.object({
+  "shippingDetails": zod.string().nullish().describe('Current linked shipment information, not an amendment to the issued tax document.'),
   "couponCode": zod.string().nullish(),
   "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
   "couponDiscountValue": zod.number().nullish(),
@@ -12228,6 +12509,252 @@ export const ListAdminCompanyOrdersResponse = zod.object({
   "invoiceId": zod.number().multipleOf(listAdminCompanyOrdersResponseOrdersItemInvoiceIdMultipleOf).nullable()
 })),
   "total": zod.number().min(listAdminCompanyOrdersResponseTotalMin).multipleOf(listAdminCompanyOrdersResponseTotalMultipleOf)
+})
+
+
+export const AdminGetCompanyOrderEditorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminGetCompanyOrderEditorResponseValuesRequestKeyMin = 16;
+export const adminGetCompanyOrderEditorResponseValuesRequestKeyMax = 200;
+
+export const adminGetCompanyOrderEditorResponseValuesExpectedUpdatedAtMin = 20;
+export const adminGetCompanyOrderEditorResponseValuesExpectedUpdatedAtMax = 40;
+
+export const adminGetCompanyOrderEditorResponseValuesItemsItemProductIdMultipleOf = 1;
+
+export const adminGetCompanyOrderEditorResponseValuesItemsItemQuantityMax = 100000;
+export const adminGetCompanyOrderEditorResponseValuesItemsItemQuantityMultipleOf = 1;
+
+export const adminGetCompanyOrderEditorResponseValuesItemsItemUnitPriceMin = 0.01;
+export const adminGetCompanyOrderEditorResponseValuesItemsItemUnitPriceMax = 10000000;
+export const adminGetCompanyOrderEditorResponseValuesItemsItemUnitPriceMultipleOf = 0.01;
+
+export const adminGetCompanyOrderEditorResponseValuesItemsMax = 100;
+
+export const adminGetCompanyOrderEditorResponseValuesContactNameMax = 200;
+
+export const adminGetCompanyOrderEditorResponseValuesContactPhoneMin = 8;
+export const adminGetCompanyOrderEditorResponseValuesContactPhoneMax = 30;
+
+export const adminGetCompanyOrderEditorResponseValuesOrderAddressLabelDefault = `\u0627\u0644\u0645\u0646\u0632\u0644`;
+export const adminGetCompanyOrderEditorResponseValuesOrderAddressCityDefault = ``;
+export const adminGetCompanyOrderEditorResponseValuesOrderAddressDistrictDefault = ``;
+export const adminGetCompanyOrderEditorResponseValuesOrderAddressStreetDefault = ``;
+export const adminGetCompanyOrderEditorResponseValuesOrderAddressBuildingNoDefault = ``;
+export const adminGetCompanyOrderEditorResponseValuesOrderAddressAdditionalInfoDefault = null;
+export const adminGetCompanyOrderEditorResponseValuesOrderAddressIsDefaultDefault = false;
+export const adminGetCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMin = 0;
+export const adminGetCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMax = 100;
+export const adminGetCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMultipleOf = 0.01;
+
+export const adminGetCompanyOrderEditorResponseValuesDiscountOverrideOneReasonMax = 500;
+
+export const adminGetCompanyOrderEditorResponseValuesAdminNotesMax = 2000;
+
+
+
+export const AdminGetCompanyOrderEditorResponse = zod.object({
+  "orderNumber": zod.string(),
+  "eligible": zod.boolean(),
+  "blockedReason": zod.string().nullable(),
+  "contractDiscountPercent": zod.number(),
+  "values": zod.object({
+  "requestKey": zod.string().min(adminGetCompanyOrderEditorResponseValuesRequestKeyMin).max(adminGetCompanyOrderEditorResponseValuesRequestKeyMax),
+  "expectedUpdatedAt": zod.string().min(adminGetCompanyOrderEditorResponseValuesExpectedUpdatedAtMin).max(adminGetCompanyOrderEditorResponseValuesExpectedUpdatedAtMax),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminGetCompanyOrderEditorResponseValuesItemsItemProductIdMultipleOf),
+  "productName": zod.string().optional(),
+  "quantity": zod.number().min(1).max(adminGetCompanyOrderEditorResponseValuesItemsItemQuantityMax).multipleOf(adminGetCompanyOrderEditorResponseValuesItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminGetCompanyOrderEditorResponseValuesItemsItemUnitPriceMin).max(adminGetCompanyOrderEditorResponseValuesItemsItemUnitPriceMax).multipleOf(adminGetCompanyOrderEditorResponseValuesItemsItemUnitPriceMultipleOf)
+})).min(1).max(adminGetCompanyOrderEditorResponseValuesItemsMax),
+  "contactName": zod.string().min(1).max(adminGetCompanyOrderEditorResponseValuesContactNameMax),
+  "contactPhone": zod.string().min(adminGetCompanyOrderEditorResponseValuesContactPhoneMin).max(adminGetCompanyOrderEditorResponseValuesContactPhoneMax),
+  "orderAddress": zod.object({
+  "label": zod.string().default(adminGetCompanyOrderEditorResponseValuesOrderAddressLabelDefault),
+  "city": zod.string().default(adminGetCompanyOrderEditorResponseValuesOrderAddressCityDefault),
+  "country": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "additionalNumber": zod.string().nullish(),
+  "district": zod.string().default(adminGetCompanyOrderEditorResponseValuesOrderAddressDistrictDefault),
+  "street": zod.string().default(adminGetCompanyOrderEditorResponseValuesOrderAddressStreetDefault),
+  "buildingNo": zod.string().default(adminGetCompanyOrderEditorResponseValuesOrderAddressBuildingNoDefault),
+  "additionalInfo": zod.string().nullish().default(adminGetCompanyOrderEditorResponseValuesOrderAddressAdditionalInfoDefault),
+  "isDefault": zod.boolean().default(adminGetCompanyOrderEditorResponseValuesOrderAddressIsDefaultDefault)
+}),
+  "discountOverride": zod.union([zod.object({
+  "percent": zod.number().min(adminGetCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMin).max(adminGetCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMax).multipleOf(adminGetCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMultipleOf),
+  "reason": zod.string().max(adminGetCompanyOrderEditorResponseValuesDiscountOverrideOneReasonMax).optional()
+}),zod.null()]),
+  "adminNotes": zod.string().max(adminGetCompanyOrderEditorResponseValuesAdminNotesMax).nullable()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.number(),
+  "actorName": zod.string(),
+  "editedAt": zod.coerce.date(),
+  "beforeSnapshot": zod.record(zod.string(), zod.unknown()),
+  "afterSnapshot": zod.record(zod.string(), zod.unknown())
+}))
+})
+
+
+export const AdminSaveCompanyOrderEditorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const adminSaveCompanyOrderEditorBodyRequestKeyMin = 16;
+export const adminSaveCompanyOrderEditorBodyRequestKeyMax = 200;
+
+export const adminSaveCompanyOrderEditorBodyExpectedUpdatedAtMin = 20;
+export const adminSaveCompanyOrderEditorBodyExpectedUpdatedAtMax = 40;
+
+export const adminSaveCompanyOrderEditorBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminSaveCompanyOrderEditorBodyItemsItemQuantityMax = 100000;
+export const adminSaveCompanyOrderEditorBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminSaveCompanyOrderEditorBodyItemsItemUnitPriceMin = 0.01;
+export const adminSaveCompanyOrderEditorBodyItemsItemUnitPriceMax = 10000000;
+export const adminSaveCompanyOrderEditorBodyItemsItemUnitPriceMultipleOf = 0.01;
+
+export const adminSaveCompanyOrderEditorBodyItemsMax = 100;
+
+export const adminSaveCompanyOrderEditorBodyContactNameMax = 200;
+
+export const adminSaveCompanyOrderEditorBodyContactPhoneMin = 8;
+export const adminSaveCompanyOrderEditorBodyContactPhoneMax = 30;
+
+export const adminSaveCompanyOrderEditorBodyOrderAddressLabelDefault = `\u0627\u0644\u0645\u0646\u0632\u0644`;
+export const adminSaveCompanyOrderEditorBodyOrderAddressCityDefault = ``;
+export const adminSaveCompanyOrderEditorBodyOrderAddressDistrictDefault = ``;
+export const adminSaveCompanyOrderEditorBodyOrderAddressStreetDefault = ``;
+export const adminSaveCompanyOrderEditorBodyOrderAddressBuildingNoDefault = ``;
+export const adminSaveCompanyOrderEditorBodyOrderAddressAdditionalInfoDefault = null;
+export const adminSaveCompanyOrderEditorBodyOrderAddressIsDefaultDefault = false;
+export const adminSaveCompanyOrderEditorBodyDiscountOverrideOnePercentMin = 0;
+export const adminSaveCompanyOrderEditorBodyDiscountOverrideOnePercentMax = 100;
+export const adminSaveCompanyOrderEditorBodyDiscountOverrideOnePercentMultipleOf = 0.01;
+
+export const adminSaveCompanyOrderEditorBodyDiscountOverrideOneReasonMax = 500;
+
+export const adminSaveCompanyOrderEditorBodyAdminNotesMax = 2000;
+
+
+
+export const AdminSaveCompanyOrderEditorBody = zod.object({
+  "requestKey": zod.string().min(adminSaveCompanyOrderEditorBodyRequestKeyMin).max(adminSaveCompanyOrderEditorBodyRequestKeyMax),
+  "expectedUpdatedAt": zod.string().min(adminSaveCompanyOrderEditorBodyExpectedUpdatedAtMin).max(adminSaveCompanyOrderEditorBodyExpectedUpdatedAtMax),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminSaveCompanyOrderEditorBodyItemsItemProductIdMultipleOf),
+  "productName": zod.string().optional(),
+  "quantity": zod.number().min(1).max(adminSaveCompanyOrderEditorBodyItemsItemQuantityMax).multipleOf(adminSaveCompanyOrderEditorBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminSaveCompanyOrderEditorBodyItemsItemUnitPriceMin).max(adminSaveCompanyOrderEditorBodyItemsItemUnitPriceMax).multipleOf(adminSaveCompanyOrderEditorBodyItemsItemUnitPriceMultipleOf)
+})).min(1).max(adminSaveCompanyOrderEditorBodyItemsMax),
+  "contactName": zod.string().min(1).max(adminSaveCompanyOrderEditorBodyContactNameMax),
+  "contactPhone": zod.string().min(adminSaveCompanyOrderEditorBodyContactPhoneMin).max(adminSaveCompanyOrderEditorBodyContactPhoneMax),
+  "orderAddress": zod.object({
+  "label": zod.string().default(adminSaveCompanyOrderEditorBodyOrderAddressLabelDefault),
+  "city": zod.string().default(adminSaveCompanyOrderEditorBodyOrderAddressCityDefault),
+  "country": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "additionalNumber": zod.string().nullish(),
+  "district": zod.string().default(adminSaveCompanyOrderEditorBodyOrderAddressDistrictDefault),
+  "street": zod.string().default(adminSaveCompanyOrderEditorBodyOrderAddressStreetDefault),
+  "buildingNo": zod.string().default(adminSaveCompanyOrderEditorBodyOrderAddressBuildingNoDefault),
+  "additionalInfo": zod.string().nullish().default(adminSaveCompanyOrderEditorBodyOrderAddressAdditionalInfoDefault),
+  "isDefault": zod.boolean().default(adminSaveCompanyOrderEditorBodyOrderAddressIsDefaultDefault)
+}),
+  "discountOverride": zod.union([zod.object({
+  "percent": zod.number().min(adminSaveCompanyOrderEditorBodyDiscountOverrideOnePercentMin).max(adminSaveCompanyOrderEditorBodyDiscountOverrideOnePercentMax).multipleOf(adminSaveCompanyOrderEditorBodyDiscountOverrideOnePercentMultipleOf),
+  "reason": zod.string().max(adminSaveCompanyOrderEditorBodyDiscountOverrideOneReasonMax).optional()
+}),zod.null()]),
+  "adminNotes": zod.string().max(adminSaveCompanyOrderEditorBodyAdminNotesMax).nullable()
+})
+
+export const adminSaveCompanyOrderEditorResponseValuesRequestKeyMin = 16;
+export const adminSaveCompanyOrderEditorResponseValuesRequestKeyMax = 200;
+
+export const adminSaveCompanyOrderEditorResponseValuesExpectedUpdatedAtMin = 20;
+export const adminSaveCompanyOrderEditorResponseValuesExpectedUpdatedAtMax = 40;
+
+export const adminSaveCompanyOrderEditorResponseValuesItemsItemProductIdMultipleOf = 1;
+
+export const adminSaveCompanyOrderEditorResponseValuesItemsItemQuantityMax = 100000;
+export const adminSaveCompanyOrderEditorResponseValuesItemsItemQuantityMultipleOf = 1;
+
+export const adminSaveCompanyOrderEditorResponseValuesItemsItemUnitPriceMin = 0.01;
+export const adminSaveCompanyOrderEditorResponseValuesItemsItemUnitPriceMax = 10000000;
+export const adminSaveCompanyOrderEditorResponseValuesItemsItemUnitPriceMultipleOf = 0.01;
+
+export const adminSaveCompanyOrderEditorResponseValuesItemsMax = 100;
+
+export const adminSaveCompanyOrderEditorResponseValuesContactNameMax = 200;
+
+export const adminSaveCompanyOrderEditorResponseValuesContactPhoneMin = 8;
+export const adminSaveCompanyOrderEditorResponseValuesContactPhoneMax = 30;
+
+export const adminSaveCompanyOrderEditorResponseValuesOrderAddressLabelDefault = `\u0627\u0644\u0645\u0646\u0632\u0644`;
+export const adminSaveCompanyOrderEditorResponseValuesOrderAddressCityDefault = ``;
+export const adminSaveCompanyOrderEditorResponseValuesOrderAddressDistrictDefault = ``;
+export const adminSaveCompanyOrderEditorResponseValuesOrderAddressStreetDefault = ``;
+export const adminSaveCompanyOrderEditorResponseValuesOrderAddressBuildingNoDefault = ``;
+export const adminSaveCompanyOrderEditorResponseValuesOrderAddressAdditionalInfoDefault = null;
+export const adminSaveCompanyOrderEditorResponseValuesOrderAddressIsDefaultDefault = false;
+export const adminSaveCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMin = 0;
+export const adminSaveCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMax = 100;
+export const adminSaveCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMultipleOf = 0.01;
+
+export const adminSaveCompanyOrderEditorResponseValuesDiscountOverrideOneReasonMax = 500;
+
+export const adminSaveCompanyOrderEditorResponseValuesAdminNotesMax = 2000;
+
+
+
+export const AdminSaveCompanyOrderEditorResponse = zod.object({
+  "orderNumber": zod.string(),
+  "eligible": zod.boolean(),
+  "blockedReason": zod.string().nullable(),
+  "contractDiscountPercent": zod.number(),
+  "values": zod.object({
+  "requestKey": zod.string().min(adminSaveCompanyOrderEditorResponseValuesRequestKeyMin).max(adminSaveCompanyOrderEditorResponseValuesRequestKeyMax),
+  "expectedUpdatedAt": zod.string().min(adminSaveCompanyOrderEditorResponseValuesExpectedUpdatedAtMin).max(adminSaveCompanyOrderEditorResponseValuesExpectedUpdatedAtMax),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminSaveCompanyOrderEditorResponseValuesItemsItemProductIdMultipleOf),
+  "productName": zod.string().optional(),
+  "quantity": zod.number().min(1).max(adminSaveCompanyOrderEditorResponseValuesItemsItemQuantityMax).multipleOf(adminSaveCompanyOrderEditorResponseValuesItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminSaveCompanyOrderEditorResponseValuesItemsItemUnitPriceMin).max(adminSaveCompanyOrderEditorResponseValuesItemsItemUnitPriceMax).multipleOf(adminSaveCompanyOrderEditorResponseValuesItemsItemUnitPriceMultipleOf)
+})).min(1).max(adminSaveCompanyOrderEditorResponseValuesItemsMax),
+  "contactName": zod.string().min(1).max(adminSaveCompanyOrderEditorResponseValuesContactNameMax),
+  "contactPhone": zod.string().min(adminSaveCompanyOrderEditorResponseValuesContactPhoneMin).max(adminSaveCompanyOrderEditorResponseValuesContactPhoneMax),
+  "orderAddress": zod.object({
+  "label": zod.string().default(adminSaveCompanyOrderEditorResponseValuesOrderAddressLabelDefault),
+  "city": zod.string().default(adminSaveCompanyOrderEditorResponseValuesOrderAddressCityDefault),
+  "country": zod.string().nullish(),
+  "nationalAddressShortCode": zod.string().nullish(),
+  "postalCode": zod.string().nullish(),
+  "additionalNumber": zod.string().nullish(),
+  "district": zod.string().default(adminSaveCompanyOrderEditorResponseValuesOrderAddressDistrictDefault),
+  "street": zod.string().default(adminSaveCompanyOrderEditorResponseValuesOrderAddressStreetDefault),
+  "buildingNo": zod.string().default(adminSaveCompanyOrderEditorResponseValuesOrderAddressBuildingNoDefault),
+  "additionalInfo": zod.string().nullish().default(adminSaveCompanyOrderEditorResponseValuesOrderAddressAdditionalInfoDefault),
+  "isDefault": zod.boolean().default(adminSaveCompanyOrderEditorResponseValuesOrderAddressIsDefaultDefault)
+}),
+  "discountOverride": zod.union([zod.object({
+  "percent": zod.number().min(adminSaveCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMin).max(adminSaveCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMax).multipleOf(adminSaveCompanyOrderEditorResponseValuesDiscountOverrideOnePercentMultipleOf),
+  "reason": zod.string().max(adminSaveCompanyOrderEditorResponseValuesDiscountOverrideOneReasonMax).optional()
+}),zod.null()]),
+  "adminNotes": zod.string().max(adminSaveCompanyOrderEditorResponseValuesAdminNotesMax).nullable()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.number(),
+  "actorName": zod.string(),
+  "editedAt": zod.coerce.date(),
+  "beforeSnapshot": zod.record(zod.string(), zod.unknown()),
+  "afterSnapshot": zod.record(zod.string(), zod.unknown())
+}))
 })
 
 

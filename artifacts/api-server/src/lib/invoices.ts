@@ -8,6 +8,8 @@ import { reconcileHistoricalPayment } from "./historical-payment-reconciliation"
 import { INVOICE_SEQUENCE_SCOPE, nextInvoiceSequenceNumber } from "./invoice-sequence";
 import { shipheroDispatchesTable, salesReturnsTable, companyOrdersTable } from "@workspace/db";
 import { allocateDiscountedGross } from "./sale-discounts";
+import { customersTable } from "@workspace/db";
+import { orderContact } from "./order-editing";
 import { SHIPHERO_TRIGGER_STATUS } from "./shiphero-config";
 import { assertPhoneOrderTransition, orderInvoiceIsDue } from "./phone-order-policy";
 import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, exhibitionsTable, invoiceItemsTable, invoicesTable, journalEntriesTable, journalEntryLinesTable, ordersTable, orderItemsTable, orderPaymentLinksTable, productsTable, operationEventsTable, inventoryMovementsTable, receivablePaymentsTable, wholesaleDistributorsTable, shipmentsTable, shipmentEventsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
@@ -846,7 +848,7 @@ export async function updateOrderAndIssueInvoice(
       }
       const [shipment] = await tx.select().from(shipmentsTable).where(eq(shipmentsTable.orderId, order.id)).for("update");
       if (shipment) {
-        if (shipment.status !== "pending" || shipment.trackingNumber || shipment.carrierShipmentId || shipment.labelUrl || shipment.shippedAt ||
+        if (!["pending", "cancelled"].includes(shipment.status) || shipment.trackingNumber || shipment.carrierShipmentId || shipment.labelUrl || shipment.shippedAt || shipment.deliveredAt ||
           shipment.integrationStatus !== "not_requested" || shipment.integrationAttempts)
           throw new AccountingConflictError("Shipment has advanced; use the shipping return workflow");
         await tx.update(shipmentsTable).set({ status: "cancelled" }).where(eq(shipmentsTable.id, shipment.id));
@@ -886,7 +888,17 @@ export async function updateOrderAndIssueInvoice(
             invoiceTotal: money(total),
             vatTotal: money(vatTotal),
           });
+          const [orderCustomer] = await tx.select().from(customersTable).where(eq(customersTable.id, order.userId));
+          const recipient = orderContact(order, orderCustomer ?? { name: "", phone: null });
           const [createdInvoice] = await tx.insert(invoicesTable).values({
+            buyerName: recipient.name || null,
+            buyerPhone: recipient.phone,
+            buyerAddress: (() => {
+              try {
+                const a = JSON.parse(order.address);
+                return [a.country, a.nationalAddressShortCode, a.city, a.district, a.street, a.buildingNo].filter(Boolean).join(" — ") || null;
+              } catch { return order.address || null; }
+            })(),
             orderId: order.id,
             sequenceNumber,
             invoiceNumber,
@@ -972,7 +984,10 @@ export async function updateOrderAndIssueInvoice(
       const items = await tx.select({ productId: orderItemsTable.productId, quantity: orderItemsTable.quantity, costSnapshot: orderItemsTable.costSnapshot })
         .from(orderItemsTable).where(eq(orderItemsTable.orderId, order.id));
       const fulfillmentMovements = await tx.select({ productId: inventoryMovementsTable.productId })
-        .from(inventoryMovementsTable).where(and(eq(inventoryMovementsTable.sourceType, "order"), eq(inventoryMovementsTable.sourceId, String(order.id))));
+        .from(inventoryMovementsTable).where(sql`
+          (${inventoryMovementsTable.sourceType} = 'order' and ${inventoryMovementsTable.sourceId} = ${String(order.id)})
+          or (${inventoryMovementsTable.sourceType} = 'order_edit' and ${inventoryMovementsTable.sourceId} in
+            (select id::text from order_edit_audits where order_id = ${order.id}))`);
       const returnedItems = fulfillmentMovements.length ? items : [];
       const productIds = [...new Set(returnedItems.map((item) => item.productId))].sort((a, b) => a - b);
       for (const productId of productIds) await tx.execute(sql`select id from ${productsTable} where id = ${productId} for update`);
@@ -1002,7 +1017,9 @@ export async function updateOrderAndIssueInvoice(
           });
         }
         const [cogsJournal] = await tx.select({ id: journalEntriesTable.id }).from(journalEntriesTable)
-          .where(and(eq(journalEntriesTable.sourceType, "sale_cogs"), eq(journalEntriesTable.sourceId, String(order.id)))).limit(1);
+          .where(sql`(${journalEntriesTable.sourceType} = 'sale_cogs' and ${journalEntriesTable.sourceId} = ${String(order.id)})
+            or (${journalEntriesTable.sourceType} = 'order_edit_cogs' and ${journalEntriesTable.sourceId} in
+              (select id::text from order_edit_audits where order_id = ${order.id}))`).limit(1);
         if (reversalCost > 0 && cogsJournal) {
           const postedLines = await tx.select({
             accountCode: accountingAccountsTable.code,
@@ -1011,7 +1028,12 @@ export async function updateOrderAndIssueInvoice(
             description: journalEntryLinesTable.description,
           }).from(journalEntryLinesTable)
             .innerJoin(accountingAccountsTable, eq(journalEntryLinesTable.accountId, accountingAccountsTable.id))
-            .where(eq(journalEntryLinesTable.journalEntryId, cogsJournal.id))
+            .where(sql`${journalEntryLinesTable.journalEntryId} in (
+              select id from journal_entries where
+              (source_type = 'sale_cogs' and source_id = ${String(order.id)})
+              or (source_type = 'order_edit_cogs' and source_id in
+                (select id::text from order_edit_audits where order_id = ${order.id}))
+            )`)
             .orderBy(journalEntryLinesTable.lineNumber);
           if (postedLines.length) await postJournalEntry({
             entryDate: new Date().toISOString().slice(0, 10), description: `Reverse COGS ${order.orderNumber}`,

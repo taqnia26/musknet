@@ -11,6 +11,7 @@ import {
   distributorPortalLoginAttemptsTable,
   distributorPortalSessionsTable,
   productsTable,
+  shipmentsTable,
   wholesaleDistributorsTable,
 } from "@workspace/db";
 import { ensureAdminSeeded, adminFromToken, permissionsFor } from "../lib/admin-auth";
@@ -21,6 +22,8 @@ import {
   lockDistributorContractSource,
 } from "../lib/invoices";
 import { createCurrentCompanyInvoiceInTransaction, type CompanyInvoiceInput } from "../lib/company-invoices";
+import { getCompanyOrderEditor, saveCompanyOrderEditor } from "../lib/company-order-editing";
+import { SaleDiscountValidationError } from "../lib/sale-discounts";
 import {
   approvalIssueDates,
   calculateLines,
@@ -472,6 +475,21 @@ async function getCompanyOrderForReview(orderId: number) {
   });
 }
 
+router.get("/admin/company-orders/:id/edit", adminRoute("edit", async (req, res) => {
+  const params = Api.AdminGetCompanyOrderEditorParams.safeParse(req.params);
+  if (!params.success) throw new PortalError(400, "Invalid order id");
+  res.json(await getCompanyOrderEditor(params.data.id));
+}));
+router.put("/admin/company-orders/:id/edit", adminRoute("edit", async (req, res, admin) => {
+  const params = Api.AdminSaveCompanyOrderEditorParams.safeParse(req.params);
+  const body = Api.AdminSaveCompanyOrderEditorBody.strict().safeParse(req.body);
+  if (!params.success || !body.success) throw new PortalError(400, "بيانات تعديل الطلب غير صالحة.");
+  try { res.json(await saveCompanyOrderEditor(params.data.id, body.data, admin.id)); }
+  catch (error) {
+    if (error instanceof SaleDiscountValidationError) throw new PortalError(400, error.message);
+    throw error;
+  }
+}));
 router.get("/admin/company-orders/:orderId/review", adminRoute("view", async (req, res) => {
   const params = Api.GetAdminCompanyOrderReviewParams.safeParse(req.params);
   if (!params.success) throw new PortalError(400, "Invalid company order id");
@@ -572,6 +590,9 @@ router.post("/admin/company-orders/:orderId/decision", adminRoute("edit", async 
       contractId: review.currentTerms.contractId ?? undefined,
       uploadedContractFileId: review.currentTerms.uploadedContractFileId ?? undefined,
       items: review.currentItems.map(({ productId, quantity, unitPrice }) => ({ productId, quantity, unitPrice })),
+      ...(order.adminEditSnapshot?.discountOverride ? {
+        discountOverride: order.adminEditSnapshot.discountOverride as { percent: number; reason?: string },
+      } : {}),
     };
     let invoice: Awaited<ReturnType<typeof createCurrentCompanyInvoiceInTransaction>>;
     try {
@@ -582,6 +603,23 @@ router.post("/admin/company-orders/:orderId/decision", adminRoute("edit", async 
         throw new PortalError(409, error.message, { review: latest });
       }
       throw error;
+    }
+    const shippingSnapshot = order.adminEditSnapshot as {
+      contactName?: string; contactPhone?: string; orderAddress?: Api.CompanyOrderEditInput["orderAddress"];
+    } | null;
+    if (shippingSnapshot?.orderAddress) {
+      const a = shippingSnapshot.orderAddress;
+      await tx.update(shipmentsTable).set({
+        recipientName: shippingSnapshot.contactName ?? null, recipientPhone: shippingSnapshot.contactPhone ?? null,
+        destinationCountry: a.country, destinationCity: a.city ?? "",
+        nationalAddressShortCode: a.nationalAddressShortCode,
+        destinationDistrict: a.country === "SA" ? null : a.district,
+        destinationStreet: a.country === "SA" ? null : a.street,
+        destinationBuildingNumber: a.country === "SA" ? null : a.buildingNo,
+        destinationAdditionalDetails: a.additionalInfo,
+        destinationAddress: a.country === "SA" ? a.nationalAddressShortCode : [a.city, a.district, a.street, a.buildingNo].filter(Boolean).join(", "),
+        shippingScope: a.country === "SA" ? "domestic" : "international",
+      }).where(and(eq(shipmentsTable.invoiceId, invoice.id), eq(shipmentsTable.status, "pending")));
     }
     const decisionAt = new Date();
     const [updated] = await tx.update(companyOrdersTable).set({

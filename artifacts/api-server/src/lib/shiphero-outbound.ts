@@ -560,7 +560,10 @@ async function createDatabaseRepository(): Promise<ShipHeroOutboundRepository> {
         fulfillmentMethod: order.fulfillmentMethod,
         orderSource: order.orderSource,
       },
-      customer: { name: customer?.name ?? "", phone: customer?.phone ?? "" },
+      customer: {
+        name: typeof order.adminEditSnapshot?.customerName === "string" ? order.adminEditSnapshot.customerName : customer?.name ?? "",
+        phone: typeof order.adminEditSnapshot?.customerPhone === "string" ? order.adminEditSnapshot.customerPhone : customer?.phone ?? "",
+      },
       address: parseOrderAddress(order.address, address),
       items: catalogItems,
       mappings,

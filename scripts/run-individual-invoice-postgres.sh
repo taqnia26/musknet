@@ -82,4 +82,4 @@ DATABASE_URL="$database_url" \
 INDIVIDUAL_INVOICE_POSTGRES_E2E=true \
 INDIVIDUAL_INVOICE_E2E_DATABASE="$database_name" \
 INDIVIDUAL_INVOICE_E2E_CLUSTER_DIR="$data_directory" \
-  pnpm --filter @workspace/api-server exec vitest run src/lib/individual-invoices.postgres.test.ts --maxWorkers=1
+  pnpm --filter @workspace/api-server exec vitest run "${1:-src/lib/individual-invoices.postgres.test.ts}" --maxWorkers=1

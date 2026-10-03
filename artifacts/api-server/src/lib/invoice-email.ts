@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { saudiCalendarDate } from "./invoice-dates";
 
 type InvoiceForEmail = {
+  shippingDetails?: string | null;
   historical?: string;
   invoiceNumber: string;
   originalInvoiceNumber?: string | null;
@@ -237,6 +238,18 @@ export async function createInvoicePdf(invoice: InvoiceForEmail, language: Invoi
   for (let index = pages.start; index < pages.start + pages.count; index++) {
     document.switchToPage(index);
     document.image(invoiceFooter, 42, 751, { fit: [511, 70], align: "center", valign: "center" });
+  }
+  if (invoice.shippingDetails) {
+    const shippingFont = [
+      resolve(dirname(fileURLToPath(import.meta.url)), "../../musk-ellolo/public/site-assets/amiri-regular.ttf"),
+      resolve(dirname(fileURLToPath(import.meta.url)), "../../../musk-ellolo/public/site-assets/amiri-regular.ttf"),
+    ].find(existsSync);
+    if (!shippingFont) throw new Error("Shipment attachment font is unavailable");
+    document.addPage();
+    document.font(shippingFont).fillColor("#292728");
+    document.fontSize(14).text(language === "ar" ? "بيانات الشحنة المرتبطة الحالية — ملحق تشغيلي" : "Current linked shipment — operational attachment", 42, 65, { width: 510 });
+    document.moveDown().fontSize(10).text(invoice.invoiceNumber);
+    document.moveDown().text(invoice.shippingDetails, { width: 510 });
   }
   document.end();
   return completed;
