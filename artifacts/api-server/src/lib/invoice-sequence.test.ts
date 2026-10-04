@@ -30,9 +30,9 @@ describe("monotonic invoice sequence high-water", () => {
       },
     };
 
-    await expect(nextLiveInvoiceNumber(tx, "INV")).resolves.toEqual({
+    await expect(nextLiveInvoiceNumber(tx, "M")).resolves.toEqual({
       sequenceNumber: 401,
-      invoiceNumber: "INV-000401",
+      invoiceNumber: "M-000401",
     });
     expect(executeCount).toBe(2); // Read and advance the retained ledger in this transaction.
     expect(restoredHistoricalInvoices).toEqual(historicalSnapshot);

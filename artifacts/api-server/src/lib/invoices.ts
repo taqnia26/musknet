@@ -16,7 +16,7 @@ import { db, adminUsersTable, accountingAccountsTable, exhibitionProductsTable, 
 
 const INVOICE_NUMBER_LOCK = 7_521_010_001;
 
-export async function nextLiveInvoiceNumber(tx: any, prefix: "INV" | "LC") {
+export async function nextLiveInvoiceNumber(tx: any, prefix: "INV" | "LC" | "M" | "ML") {
   // Caller holds INVOICE_NUMBER_LOCK. Historical external references occupy the
   // same namespace, but never consume the live sequence.
   const [{ liveMaximum }] = await tx.select({
@@ -529,7 +529,7 @@ export async function createDistributorInvoice(
     const issuedAt = new Date();
     const issueDate = input.issueDate ? dateOnly(input.issueDate) : saudiCalendarDate(issuedAt);
     const issueDatetime = invoiceIssueTimestamp(issueDate, issuedAt);
-    const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "LC");
+    const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "ML");
     const qrCodeData = zatcaPhaseOneBase64({
       ...configuration,
       timestamp: issueDatetime.toISOString(),
@@ -878,7 +878,7 @@ export async function updateOrderAndIssueInvoice(
         if (!afterLock) {
           const configuration = zatcaSellerConfiguration(environment);
           const issuedAt = new Date();
-          const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "INV");
+          const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "M");
           const total = values.total ?? order.total;
           const vatTotal = values.tax ?? order.tax;
           const orderTaxSnapshot = orderInvoiceTaxSnapshot(order);

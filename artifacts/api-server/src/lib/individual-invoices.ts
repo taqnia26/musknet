@@ -217,7 +217,7 @@ export async function createIndividualInvoice(
     const configuration = zatcaSellerConfiguration(environment);
     const issueDatetime = invoiceIssueTimestamp(input.issueDate, new Date());
     await tx.execute(sql`select pg_advisory_xact_lock(7521010001)`);
-    const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "INV");
+    const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "M");
     const [invoice] = await tx.insert(invoicesTable).values({
       individual: true,
       creationKey: input.creationKey,

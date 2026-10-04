@@ -249,7 +249,7 @@ describe.sequential("atomic invoice issuance", () => {
       invoiceNameAr: "منتج فاتورة موزع",
       invoiceNameEn: "Distributor invoice product",
     }).where(eq(productsTable.id, productId));
-    expect(rows.every((row) => /^INV-[0-9]+$/.test(row.invoiceNumber))).toBe(true);
+    expect(rows.every((row) => /^M-[0-9]+$/.test(row.invoiceNumber))).toBe(true);
   });
 
   it("preserves legacy totals and destination treatment on late invoice issuance", async () => {
@@ -533,7 +533,7 @@ describe.sequential("distributor invoice issuance", () => {
     await expect(createDistributorInvoice({
       ...request, items: [{ productId, quantity: 3, unitPrice: 20 }],
     }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
-    expect(invoice.invoiceNumber).toMatch(/^LC-[0-9]+$/);
+    expect(invoice.invoiceNumber).toMatch(/^ML-[0-9]+$/);
     expect(retriedInvoice.invoiceNumber).toBe(invoice.invoiceNumber);
     const [persisted] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
     expect(persisted.invoiceNumber).toBe(invoice.invoiceNumber);
@@ -586,8 +586,8 @@ describe.sequential("distributor invoice issuance", () => {
         items: [{ productId, quantity: 1, unitPrice: 20 }],
       }, actorId, env),
     ]);
-    expect(first.invoiceNumber).toMatch(/^LC-[0-9]+$/);
-    expect(second.invoiceNumber).toMatch(/^LC-[0-9]+$/);
+    expect(first.invoiceNumber).toMatch(/^ML-[0-9]+$/);
+    expect(second.invoiceNumber).toMatch(/^ML-[0-9]+$/);
     expect(first.invoiceNumber).not.toBe(second.invoiceNumber);
     expect(Math.abs(first.sequenceNumber - second.sequenceNumber)).toBe(1);
   });

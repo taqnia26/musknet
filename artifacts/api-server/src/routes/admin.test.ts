@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import {
   adminPermissionsTable,
+  invoiceDesignSettingsTable,
   adminIntegrationsTable,
   adminSessionsTable,
   adminUserPermissionsTable,
@@ -1138,7 +1139,7 @@ describe.sequential("admin route authorization", () => {
 
   it("lists searchable invoices, renders trusted QR SVG, and enforces invoices:view", async () => {
     const list = await request(app)
-      .get("/api/admin/invoices?search=INV-")
+      .get("/api/admin/invoices?search=M-")
       .set("Authorization", `Bearer ${superToken}`)
       .expect(200);
     const invoice = list.body.find((item: { orderId: number }) => item.orderId === orderId);
@@ -1165,11 +1166,13 @@ describe.sequential("admin route authorization", () => {
       .expect(200);
     expect(Buffer.from(qr.body).subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
 
+    // The disposable PostgreSQL schema has no seeded singleton settings row.
+    await db.insert(invoiceDesignSettingsTable).values({ id: 1 }).onConflictDoNothing();
     const downloadedPdf = await request(app)
       .get(`/api/admin/invoices/${invoice.id}/pdf/en`)
-      .set("Authorization", `Bearer ${superToken}`)
-      .expect("Content-Type", /application\/pdf/)
-      .expect(200);
+      .set("Authorization", `Bearer ${superToken}`);
+    expect(downloadedPdf.status, JSON.stringify(downloadedPdf.body)).toBe(200);
+    expect(downloadedPdf.headers["content-type"]).toMatch(/application\/pdf/);
     expect(downloadedPdf.headers["content-disposition"]).toContain("attachment;");
     expect(downloadedPdf.headers["cache-control"]).toBe("no-store");
 

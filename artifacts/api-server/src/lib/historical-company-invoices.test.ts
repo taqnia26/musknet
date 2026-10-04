@@ -122,20 +122,43 @@ describe.sequential("historical company invoices", () => {
     const [highwater] = await db.select({ value: backupInvoiceHighwaterTable.value }).from(backupInvoiceHighwaterTable)
       .where(eq(backupInvoiceHighwaterTable.scope, INVOICE_SEQUENCE_SCOPE)).limit(1);
     const nextSequence = nextInvoiceSequenceNumber(Number(row.liveMaximum), Number(highwater?.value ?? 0));
-    const reservedNumber = `LC-${String(nextSequence).padStart(6, "0")}`;
+    const reservedNumber = `ML-${String(nextSequence).padStart(6, "0")}`;
     const reserved = await createHistoricalInvoice({ ...input(), creationKey: `${key}-reserved-create`, invoiceNumber: reservedNumber, issueDate: "2026-06-10", dueDate: "2026-07-10", payments: [] }, actorId);
     invoiceIds.push(reserved.id);
     reservedInvoiceId = reserved.id;
     const occupiedNumbers = new Set((await db.select({ invoiceNumber: invoicesTable.invoiceNumber }).from(invoicesTable))
       .map(invoice => invoice.invoiceNumber.toLowerCase()));
     let expectedNextSequence = nextSequence;
-    while (occupiedNumbers.has(`LC-${String(expectedNextSequence).padStart(6, "0")}`.toLowerCase())) expectedNextSequence += 1;
+    while (occupiedNumbers.has(`ML-${String(expectedNextSequence).padStart(6, "0")}`.toLowerCase())) expectedNextSequence += 1;
     await db.transaction(async tx => {
       await tx.execute(sql`select pg_advisory_xact_lock(${7_521_010_001})`);
-      const next = await nextLiveInvoiceNumber(tx, "LC");
+      const next = await nextLiveInvoiceNumber(tx, "ML");
       expect(next.invoiceNumber).not.toBe(reservedNumber);
       expect(next.sequenceNumber).toBe(expectedNextSequence);
     });
+  });
+  it("keeps one global counter across M, ML, exhibitions and historical references without rewriting issued numbers", async () => {
+    const before = await db.select({
+      id: invoicesTable.id, invoiceNumber: invoicesTable.invoiceNumber,
+      originalInvoiceNumber: invoicesTable.originalInvoiceNumber, sequenceNumber: invoicesTable.sequenceNumber,
+    }).from(invoicesTable).orderBy(invoicesTable.id);
+    const rollback = new Error("rollback allocator-only regression");
+    await expect(db.transaction(async tx => {
+      await tx.execute(sql`select pg_advisory_xact_lock(${7_521_010_001})`);
+      let previous = 0;
+      for (const prefix of ["M", "ML", "INV", "LC"] as const) {
+        const next = await nextLiveInvoiceNumber(tx, prefix);
+        expect(next.sequenceNumber).toBeGreaterThan(previous);
+        expect(next.invoiceNumber).toBe(`${prefix}-${String(next.sequenceNumber).padStart(6, "0")}`);
+        if (prefix === "ML") expect(next.invoiceNumber.startsWith("M-")).toBe(false);
+        previous = next.sequenceNumber;
+      }
+      throw rollback;
+    })).rejects.toBe(rollback);
+    expect(await db.select({
+      id: invoicesTable.id, invoiceNumber: invoicesTable.invoiceNumber,
+      originalInvoiceNumber: invoicesTable.originalInvoiceNumber, sequenceNumber: invoicesTable.sequenceNumber,
+    }).from(invoicesTable).orderBy(invoicesTable.id)).toEqual(before);
   });
   it("stores an internal invoice reference separately from the original document number", async () => {
     const issueDate = new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

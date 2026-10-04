@@ -47,6 +47,8 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
         issueDate: today, items: [{ productId, quantity: 1, unitPrice: 115 }],
       });
       const invoice = await createIndividualInvoice(input, actorId, environment);
+      expect(invoice.invoiceNumber).toMatch(/^M-\d{6,}$/);
+      expect(invoice.invoiceNumber.startsWith("ML-")).toBe(false);
       expect(invoice.buyerPhone).toBeNull();
       expect(invoice.buyerAddress).toBe(input.buyerAddress);
     }
