@@ -47,11 +47,10 @@ export function Money({
         maximumFractionDigits: fractionDigits ?? maximumFractionDigits ?? 2,
       }).format(Number(value ?? 0));
   return (
-    <span className={`inline-flex items-baseline gap-[0.2em] whitespace-nowrap ${className}`} dir="ltr"
+    <span style={{ unicodeBidi: 'isolate', flexDirection: 'row' }} className={`inline-flex items-baseline gap-[0.2em] whitespace-nowrap ${className}`} dir="ltr"
       role="img" aria-label={`${formatted} ${lang === 'ar' ? 'ريال سعودي' : 'Saudi riyals'}`}>
-      {lang === 'ar' && <RiyalSymbol />}
-      <span aria-hidden="true">{formatted}</span>
-      {lang === 'en' && <span aria-hidden="true">SAR</span>}
+      {lang === 'ar' ? <RiyalSymbol /> : <span aria-hidden="true">SAR</span>}
+      <span aria-hidden="true" dir="ltr">{formatted}</span>
     </span>
   );
 }

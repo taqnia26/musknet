@@ -28,7 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertTriangle, Search } from 'lucide-react';
 
 const money = (n: number | null | undefined, lang: string) =>
-  n == null ? '-' : `${new Intl.NumberFormat(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ${lang === 'ar' ? 'ر.س' : 'SAR'}`;
+  n == null ? '-' : `\u2066${lang === 'ar' ? 'ر.س' : 'SAR'} ${new Intl.NumberFormat(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}\u2069`;
 const errMsg = (e: unknown, f: string) => { const c = e as { data?: { error?: string }; message?: string }; return c?.data?.error ?? c?.message ?? f; };
 type T = (a: string, e: string) => string;
 const statusLabel = (s: string, t: T) => s === 'approved' ? t('معتمد', 'Approved') : s === 'rejected' ? t('مرفوض', 'Rejected') : t('قيد المراجعة', 'Pending review');

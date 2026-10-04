@@ -68,7 +68,7 @@ export function SallaInvoiceArchive() {
   }
 
   const canImport = hasPermission(user, 'invoices', 'edit') && hasPermission(user, 'integrations', 'edit');
-  const money = (amount: number, currency: string) => `${amount.toFixed(2)} ${currency}`;
+  const money = (amount: number, currency: string) => `\u2066${currency} ${amount.toFixed(2)}\u2069`;
 
   return (
     <section className="space-y-4 rounded-lg border bg-card p-4 sm:p-6" aria-label={t('أرشيف فواتير سلة', 'Salla invoice archive')}>

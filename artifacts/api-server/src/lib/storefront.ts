@@ -755,7 +755,7 @@ function couponResult(
   const discount = Math.min(subtotal, Math.round(rawDiscount * 100) / 100);
   const suffix = coupon.discountType === "percentage"
     ? `${coupon.discountValue}٪`
-    : `${coupon.discountValue} ريال سعودي`;
+    : `\u2066ريال سعودي ${coupon.discountValue}\u2069`;
   return {
     valid: true,
     discount,

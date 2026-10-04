@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  InvoiceDocument, type DesignElement, type InvoiceAssets, type InvoiceDesign, type InvoiceFacts, type InvoiceLanguage,
+  InvoiceDocument, editorView, type DesignElement, type InvoiceAssets, type InvoiceDesign, type InvoiceFacts, type InvoiceLanguage,
 } from '@workspace/invoice-document';
 import { cn } from '@/lib/utils';
 import { KIND_AR, PX_MM, computeGesture, type Box, type DocReport, type Dir, type Guide } from './helpers';
@@ -74,7 +74,7 @@ export function InvoiceCanvas(p: Props) {
 
   const boxes: Box[] = useMemo(() => measured
     ? measured.boxes.map(b=>{
-        const before=measured.design.elements.find(e=>e.id===b.id),current=design.elements.find(e=>e.id===b.id);
+        const before=editorView(measured.design).elements.find(e=>e.id===b.id),current=design.elements.find(e=>e.id===b.id);
         if(!before||!current) return b;
         return {...b,x:b.x+(current.x-before.x)*PX_MM,y:b.y+(current.y-before.y)*PX_MM,
           w:b.w+(current.width-before.width)*PX_MM,h:b.h+(current.height-before.height)*PX_MM};

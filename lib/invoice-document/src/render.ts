@@ -21,7 +21,7 @@ export function renderInvoiceHtml(input:{
 }):string {
   const i=input.invoice,d=designSchema.parse(input.design??createTemplate()),lang=input.language??"ar",a=input.assets;
   const t=(ar:string,en:string)=>lang==="ar"?ar:en;
-  const money=(value:number)=>`<span class="money" dir="ltr">${new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(value)} ${lang==="ar"?`<img src="${safeAsset(a.riyal)}" alt="ريال سعودي">`:"SAR"}</span>`;
+  const money=(value:number)=>`<span class="money" dir="ltr">${lang==="ar"?`<img class="money-symbol" src="${safeAsset(a.riyal)}" alt="ريال سعودي">`:`<span class="money-symbol">SAR</span>`}<span class="money-amount" dir="ltr">${new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(value)}</span></span>`;
   const line=(label:string,value:unknown)=>`<p><strong>${escape(label)}</strong> <bdi>${escape(value)}</bdi></p>`;
   const useContract=Boolean(i.contractId||i.uploadedContractFileId||i.contractNumber);
   const collection=i.outstandingAmount<=0?t("تم التحصيل بالكامل","Collected in full"):i.paidAmount>0?t("تحصيل جزئي","Partially collected"):t("غير محصلة","Not collected");
@@ -47,7 +47,8 @@ export function renderInvoiceHtml(input:{
     footer:`<img class="footer-mark" src="${safeAsset(a.mark)}" alt="Musk Ellolo"><span class="footer-site" dir="ltr">muskellolo.com</span>`,
   };
   const heading:Record<string,string>={seller:t("بيانات البائع","Seller details"),buyer:t("بيانات العميل","Bill to"),notes:t("ملاحظات","Notes")};
-  const els=d.elements.filter(e=>e.kind!=="table").map(e=>{
+  // Notes are intentionally never rendered (user request); underlying data stays untouched.
+  const els=d.elements.filter(e=>e.kind!=="table"&&e.kind!=="notes").map(e=>{
     const css=`left:${e.x}mm;top:${e.y}mm;width:${e.width}mm;min-height:${e.height}mm;${["logo","qr"].includes(e.kind)?`height:${e.height}mm;`:""}font-family:${fontStack(e.font)};font-size:${e.fontSize}pt;font-weight:${e.fontWeight};color:${e.color};background:${e.background};text-align:${e.align};border:${e.borderWidth}mm solid ${e.borderColor};padding:${e.padding}mm;line-height:${e.lineHeight}`;
     const content=e.kind==="text"?`<p class="pre">${escape(e.text)}</p>`:e.kind==="divider"?`<div style="border-top:.25mm solid ${e.borderColor};width:100%"></div>`:contents[e.kind];
     const title=e.heading&&lang==="ar"?e.heading:heading[e.kind];
@@ -75,7 +76,7 @@ export function renderInvoiceHtml(input:{
 table{border-collapse:collapse;table-layout:fixed;width:100%;border:var(--table-border)}
 th,td{padding:var(--cell-padding);border-bottom:.15mm solid #e2e2e2;overflow-wrap:anywhere;vertical-align:top;text-align:start}
 th{font-weight:bold}thead{display:table-header-group}td:not(:first-child),th:not(:first-child){text-align:center}
-.money{white-space:nowrap;display:inline-flex;align-items:center;gap:.7mm;font-family:Ping,InvoiceFormal;font-size:inherit}
+.money{white-space:nowrap;display:inline-flex;flex-direction:row;direction:ltr;unicode-bidi:isolate;align-items:center;gap:.7mm;font-family:Ping,InvoiceFormal;font-size:inherit}
 .money img{width:2.8mm;height:2.8mm;object-fit:contain}.total-row{display:flex;align-items:start;justify-content:space-between;gap:2mm;margin:0 0 1mm}
 .total-row>span:first-child{flex:1}.grand-total{border-top:.2mm solid #ccc;background:#eee;padding:2mm 1mm;font-weight:bold;margin-top:1mm}
 .collection{border-top:.2mm solid #ddd;padding-top:1mm}.notice{border:.2mm solid #b68737;padding:1.5mm;margin-bottom:2mm}

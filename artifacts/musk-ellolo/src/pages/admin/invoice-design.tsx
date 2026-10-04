@@ -5,7 +5,7 @@ import {
   useAdminResetInvoiceDesign, getAdminGetInvoiceDesignQueryKey, getAdminGetPublishedInvoiceDesignQueryKey,
 } from '@workspace/api-client-react';
 import {
-  browserAssets, createTemplate, designErrors, designSchema, retainRenderableDesign,
+  applyEditorPatch, browserAssets, createTemplate, editorView, designErrors, designSchema, retainRenderableDesign,
   type DesignElement, type InvoiceDesign,
 } from '@workspace/invoice-document';
 import {
@@ -123,10 +123,11 @@ function Editor({ canEdit, canInvoices }: { canEdit: boolean; canInvoices: boole
 
   const { edit, gestureEdit, undo, redo } = h;
   const patchEl = useCallback((id: string, p: Partial<DesignElement>, k?: string) =>
-    edit((d) => ({ ...d, elements: d.elements.map((e) => (e.id === id ? { ...e, ...p } : e)) }), k), [edit]);
+    edit((d) => applyEditorPatch(d, id, p), k), [edit]);
   const onGesture = useCallback((id: string, p: Partial<DesignElement>, first: boolean) =>
-    gestureEdit((d) => ({ ...d, elements: d.elements.map((e) => (e.id === id ? { ...e, ...p } : e)) }), first), [gestureEdit]);
-  const sel = design?.elements.find((e) => e.id === selId) ?? null;
+    gestureEdit((d) => applyEditorPatch(d, id, p), first), [gestureEdit]);
+  const view = design ? editorView(design) : null;
+  const sel = view?.elements.find((e) => e.id === selId) ?? null;
   const removeSel = () => {
     if (!sel || (sel.kind !== 'text' && sel.kind !== 'divider')) return;
     edit((d) => ({ ...d, elements: d.elements.filter((e) => e.id !== sel.id) }));
@@ -240,7 +241,7 @@ function Editor({ canEdit, canInvoices }: { canEdit: boolean; canInvoices: boole
               {src.list.slice(0, 100).map((i) => <option key={i.id} value={`inv:${i.id}`}>فاتورة {i.invoiceNumber}</option>)}
             </select>
           </div>
-          <InvoiceCanvas design={design} renderDesign={renderDesign ?? design} invoice={src.invoice} assets={assets} qrUrl={src.qrUrl}
+          <InvoiceCanvas design={view!} renderDesign={renderDesign ?? design} invoice={src.invoice} assets={assets} qrUrl={src.qrUrl}
             zoom={zoom} selId={selId} canEdit={canEdit} onSelect={setSelId} onGesture={onGesture} onReport={setReport} />
           <p className="border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
             اسحب العنصر أو مقابضه لتحريكه بحرية. الأسهم تحرك 0.5 مم، ومع Shift خمسة مم. المواضع بالمليمتر من الزاوية العليا اليسرى للورقة A4 وبدون عكس في العربية. بعد ترقيم الصفحات تُعرض الإطارات على مواضع العناصر الفعلية في كل صفحة، والبيانات المالية في المعاينة لا تُعدَّل من هنا.

@@ -419,7 +419,7 @@ export function OrderEditorDialog({ orderId, open, onOpenChange }: { orderId: nu
                     </Select>
                   </div>
                   {form.fulfillmentMethod === 'pickup' ? (
-                    <p className="text-xs text-muted-foreground md:col-span-2" data-testid="text-edit-pickup-fee">{t(`رسوم الاستلام ثابتة ${PICKUP_FEE} ريال شاملة الضريبة.`, `Pickup fee is a fixed ${PICKUP_FEE} SAR including VAT.`)}</p>
+                    <p className="text-xs text-muted-foreground md:col-span-2" data-testid="text-edit-pickup-fee">{t('رسوم الاستلام ثابتة', 'Pickup fee is a fixed')} <Money value={PICKUP_FEE} lang={lang} /> {t('شاملة الضريبة.', 'including VAT.')}</p>
                   ) : (
                     <div className="space-y-2">
                       <Label htmlFor="edit-shipping-cost">{t('رسوم التوصيل (شاملة الضريبة)', 'Delivery charge (VAT included)')}</Label>

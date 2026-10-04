@@ -118,8 +118,10 @@ export function designErrors(value: unknown): string[] {
       if((Math.max(fg,header)+.05)/(Math.min(fg,header)+.05)<4.5) errors.push("لون رأس الجدول يخفي العناوين الإلزامية.");
     }
   }
+  // Totals render in the notes box, so their own stored geometry is inert when notes exist.
+  const inert = (e: DesignElement) => e.kind === "totals" && d.elements.some(n => n.kind === "notes");
   for (let i=0; i<d.elements.length;i++) for (let j=i+1;j<d.elements.length;j++)
-    if (intersects(d.elements[i],d.elements[j])) errors.push(`تداخل بين ${d.elements[i].id} و${d.elements[j].id}.`);
+    if (!inert(d.elements[i]) && !inert(d.elements[j]) && intersects(d.elements[i],d.elements[j])) errors.push(`تداخل بين ${d.elements[i].id} و${d.elements[j].id}.`);
   const table = d.elements.find(e => e.kind === "table"), footer = d.elements.find(e => e.kind === "footer");
   if (table && footer) {
     for (const e of d.elements) {
@@ -134,4 +136,20 @@ export function validateDesign(value: unknown): InvoiceDesign {
   const design = designSchema.parse(value), errors = designErrors(design);
   if (errors.length) throw new Error(errors.join("\n"));
   return design;
+}
+/** Notes are never rendered; totals print in the notes box geometry (stored designs untouched).
+ * Editor view: one visible "totals" box carrying the notes geometry, no notes box. */
+const GEOM = ["x", "y", "width", "height"] as const;
+export function editorView(d: InvoiceDesign): InvoiceDesign {
+  const notes = d.elements.find(e => e.kind === "notes");
+  if (!notes) return d;
+  return { ...d, elements: d.elements.filter(e => e.kind !== "notes").map(e => e.kind === "totals" ? { ...e, x: notes.x, y: notes.y, width: notes.width, height: notes.height } : e) };
+}
+/** Route an editor patch: totals geometry edits go to the notes element (the effective placement). */
+export function applyEditorPatch(d: InvoiceDesign, id: string, p: Partial<DesignElement>): InvoiceDesign {
+  const target = d.elements.find(e => e.id === id), notes = d.elements.find(e => e.kind === "notes");
+  if (target?.kind !== "totals" || !notes) return { ...d, elements: d.elements.map(e => e.id === id ? { ...e, ...p } : e) };
+  const geom: Partial<DesignElement> = {}, rest: Partial<DesignElement> = { ...p };
+  for (const k of GEOM) if (k in p) { (geom as Record<string, unknown>)[k] = p[k]; delete rest[k]; }
+  return { ...d, elements: d.elements.map(e => e.id === notes.id ? { ...e, ...geom } : e.id === id ? { ...e, ...rest } : e) };
 }

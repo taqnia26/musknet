@@ -83,8 +83,10 @@ export async function inspectInvoiceDocument(invoice:InvoiceFacts,language:Invoi
       const root=document.getElementById("invoice-pages")!;
       return {pages:root.children.length,errors:JSON.parse(root.dataset.errors??"[]") as string[],
         text:root.textContent??"",rows:root.querySelectorAll("[data-row]").length,
-        fontStatus:document.fonts.status};
+        fontStatus:document.fonts.status,
+        money:[...root.querySelectorAll(".money")].map(m=>{const sy=m.querySelector(".money-symbol")!.getBoundingClientRect(),am=m.querySelector(".money-amount")!;const r=am.getBoundingClientRect();return {symbolRight:sy.right,amountLeft:r.left,amount:am.textContent??""};})};
     });
+    if(process.env.INVOICE_SCREENSHOT_OUT) await page.screenshot({path:process.env.INVOICE_SCREENSHOT_OUT,fullPage:true});
     if(metrics.errors.length) throw new Error(`Invoice content cannot fit safely: ${metrics.errors.join("; ")}`);
     const buffer=pdf?await page.pdf({format:"A4",printBackground:true,preferCSSPageSize:true}):Buffer.alloc(0);
     return {buffer,metrics,html};

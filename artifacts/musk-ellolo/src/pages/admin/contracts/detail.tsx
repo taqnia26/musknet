@@ -371,13 +371,13 @@ export default function AdminContractDetail() {
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-muted-foreground">الحد المذكور في العقد الموقع</span>
                   <span className="font-medium">
-                    {contract.contractCreditLimit === null ? 'لا يتضمن العقد القديم حداً موثقاً' : `${Number(contract.contractCreditLimit).toLocaleString('ar-SA')} ر.س`}
+                    {contract.contractCreditLimit === null ? 'لا يتضمن العقد القديم حداً موثقاً' : `\u2066ر.س ${Number(contract.contractCreditLimit).toLocaleString('ar-SA')}\u2069`}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
                   <span className="text-muted-foreground">الحد المعتمد</span>
                   <span className="font-semibold" data-testid="contract-credit-limit">
-                    {contract.creditLimit === null ? 'غير معتمد' : `${Number(contract.creditLimit).toLocaleString('ar-SA')} ر.س`}
+                    {contract.creditLimit === null ? 'غير معتمد' : `\u2066ر.س ${Number(contract.creditLimit).toLocaleString('ar-SA')}\u2069`}
                   </span>
                 </div>
                 {contract.creditLimitApprovedAt && (

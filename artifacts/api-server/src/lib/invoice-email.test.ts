@@ -100,9 +100,9 @@ describe("invoice PDF formatting", () => {
     ]);
   });
 
-  it("uses the official riyal symbol for Arabic and a trailing SAR label for English", async () => {
+  it("uses the official riyal symbol for Arabic and a leading SAR label for English", async () => {
     expect(invoiceMoneyLabel(123.45, "ar")).toBe("123.45");
-    expect(invoiceMoneyLabel(123.45, "en")).toBe("123.45 SAR");
+    expect(invoiceMoneyLabel(123.45, "en")).toBe("SAR 123.45");
 
     const arabicPdf = await createInvoicePdf(baseInvoice, "ar");
     const englishPdf = await createInvoicePdf(baseInvoice, "en");

@@ -6,7 +6,8 @@ export type InvoiceForEmail=InvoiceFacts;
 export const invoiceItemName=(item:InvoiceFacts["items"][number],language:InvoiceLanguage)=>
   language==="en"?item.productNameEn??item.productName:item.productName;
 const money=(value:number)=>value.toFixed(2);
-export const invoiceMoneyLabel=(value:number,language:InvoiceLanguage)=>language==="en"?`${money(value)} SAR`:money(value);
+export const invoiceMoneyLabel=(value:number,language:InvoiceLanguage)=>language==="en"?`SAR ${money(value)}`:money(value);
+const emailMoney=(value:number)=>`<span dir="ltr" style="display:inline-flex;flex-direction:row;direction:ltr;unicode-bidi:isolate;gap:0.25em"><span>ريال سعودي</span><span dir="ltr">${money(value)}</span></span>`;
 export const invoiceBusinessIssueDate=businessDate;
 export const getInvoiceTotalRows=(invoice:InvoiceFacts):Array<[string,number]>=>invoiceTotalRows(invoice).map(r=>[r.en,r.value]);
 /** Same trusted HTML/CSS document used by the preview and print component. */
@@ -27,7 +28,7 @@ export async function sendInvoiceEmail(input: { recipient: string; invoice: Invo
       from,
       to: [input.recipient],
       subject: `${input.invoice.historical === "yes" ? "Prior invoice copy" : "Tax Invoice"} ${input.invoice.invoiceNumber} - Musk Ellolo`,
-      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>${input.invoice.historical === "yes" ? "نسخة فاتورة سابقة (ليست إصداراً ضريبياً جديداً)" : "فاتورة ضريبية"} ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة مرفقة بصيغة PDF.</p><p>${vatDescription}: <strong>${money(input.invoice.vatAmount)} ريال سعودي</strong></p><p>الإجمالي: <strong>${money(input.invoice.totalAmount)} ريال سعودي</strong></p><p>الرصيد المستحق: <strong>${money(input.invoice.outstandingAmount)} ريال سعودي</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
+      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>${input.invoice.historical === "yes" ? "نسخة فاتورة سابقة (ليست إصداراً ضريبياً جديداً)" : "فاتورة ضريبية"} ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة مرفقة بصيغة PDF.</p><p>${vatDescription}: <strong>${emailMoney(input.invoice.vatAmount)}</strong></p><p>الإجمالي: <strong>${emailMoney(input.invoice.totalAmount)}</strong></p><p>الرصيد المستحق: <strong>${emailMoney(input.invoice.outstandingAmount)}</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
       attachments: [{ filename: `${input.invoice.invoiceNumber}.pdf`, content: input.pdf.toString("base64") }],
   };
   const apiKey = process.env.RESEND_API_KEY?.trim();

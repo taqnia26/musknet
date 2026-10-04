@@ -29,7 +29,7 @@ import { LogOut, Minus, Plus, RefreshCw, Search } from 'lucide-react';
 const TOKEN_KEY = 'musk-ellolo-distributor-portal-token';
 const STALE = 30_000;
 const money = (n: number | null | undefined, lang: string) =>
-  n == null ? '-' : `${new Intl.NumberFormat(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ${lang === 'ar' ? 'ر.س' : 'SAR'}`;
+  n == null ? '-' : `\u2066${lang === 'ar' ? 'ر.س' : 'SAR'} ${new Intl.NumberFormat(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}\u2069`;
 const newKey = () => (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}-portal`);
 const errMsg = (e: unknown, fallback: string) => {
   const c = e as { data?: { error?: string }; message?: string };

@@ -1,3 +1,4 @@
+import { Money } from '@/components/money';
 import { useMemo, useState } from 'react';
 import { SaleDiscountFields, emptySaleDiscount, saleDiscountPayload, useSaleDiscountPreview, validateSaleDiscount } from '@/components/admin/sale-discount-fields';
 import {
@@ -414,7 +415,7 @@ export function CreateOrderDialog() {
                   {fulfillmentOptions.isLoading
                     ? t('جاري تحميل رسوم الاستلام...', 'Loading pickup fee...')
                     : pickupFee !== undefined
-                      ? t(`رسوم الاستلام ثابتة ${pickupFee} ريال شاملة ضريبة القيمة المضافة. لا تُنشأ شحنة مع شركة شحن.`, `Pickup fee is a fixed ${pickupFee} SAR including VAT. No carrier shipment is created.`)
+                      ? <>{t('رسوم الاستلام ثابتة', 'Pickup fee is a fixed')} <Money value={pickupFee} lang={lang} /> {t('شاملة ضريبة القيمة المضافة. لا تُنشأ شحنة مع شركة شحن.', 'including VAT. No carrier shipment is created.')}</>
                       : <>{t('تعذر تحميل رسوم الاستلام.', 'Could not load the pickup fee.')} <button type="button" className="underline" onClick={() => fulfillmentOptions.refetch()} data-testid="button-retry-pickup-fee">{t('إعادة المحاولة', 'Retry')}</button></>}
                 </p>
               )}

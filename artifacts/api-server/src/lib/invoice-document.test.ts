@@ -81,7 +81,8 @@ describe("protected shared invoice document",()=>{
       items:[{productName:name,quantity:1,unitPrice:230,totalAmount:230}]},"ar",createTemplate(),false);
     expect(huge.metrics.pages).toBeGreaterThan(2);
     expect(huge.metrics.text.match(/وصف طويل/g)?.length).toBe(800);
-    expect(huge.metrics.text.match(/ملاحظة طويلة/g)?.length).toBe(500);
+    expect(huge.metrics.text).not.toContain("ملاحظة طويلة");
+    expect(huge.html).not.toContain('data-kind="notes"');
     const qr=await QRCode.toDataURL("real immutable payload");
     const html=renderInvoiceHtml({invoice:base,assets:invoicePdfAssets(),qrUrl:qr});
     expect(html).toContain(qr);
@@ -120,7 +121,8 @@ describe("protected shared invoice document",()=>{
     expect(out.html).toContain(invoicePdfAssets().mark);
     expect(out.html).toContain(".footer-mark{display:block;width:auto;height:13mm");
     // Short invoice with saved 8mm footer: 22mm band lifted, summary still fits on page 1 without overlap.
-    const short=await inspectInvoiceDocument(sampleInvoice(),"ar",saved,false);
+    const short=await inspectInvoiceDocument({...sampleInvoice(),notes:"NOTE-LEAK"},"ar",saved,false);
+    expect(short.metrics.text).not.toContain("NOTE-LEAK");expect(short.html).not.toContain('data-kind="notes"');
     expect(short.metrics.errors).toEqual([]);expect(short.metrics.pages).toBe(1);
     const dir=mkdtempSync(`${tmpdir()}/shared-invoice-`);
     try {
@@ -130,5 +132,17 @@ describe("protected shared invoice document",()=>{
       expect(text.match(/muskellolo\.com/g)?.length).toBe(out.metrics.pages);
       if(process.env.INVOICE_RENDER_OUT) writeFileSync(`${process.env.INVOICE_RENDER_OUT}/invoice.pdf`,out.buffer);
     } finally {rmSync(dir,{recursive:true,force:true});}
+  },30_000);
+  it("places the currency symbol physically left of every amount in Arabic and English, including zero and negative",async()=>{
+    const base=sampleInvoice();
+    const invoice={...base,paidAmount:0,outstandingAmount:-12.5,items:[...base.items,{productName:"خصم",productNameEn:"Discount",quantity:1,unitPrice:-40,totalAmount:-40}]};
+    for(const lang of ["ar","en"] as const){
+      const out=await inspectInvoiceDocument(invoice,lang,createTemplate(),false);
+      expect(out.metrics.money.length).toBeGreaterThan(6);
+      for(const m of out.metrics.money) expect(m.symbolRight).toBeLessThanOrEqual(m.amountLeft+0.5);
+      const amounts=out.metrics.money.map(m=>m.amount);
+      expect(amounts).toContain("0.00");expect(amounts).toContain("-12.50");expect(amounts).toContain("-40.00");
+      expect(out.html).toMatch(lang==="ar"?/<img class="money-symbol"[^>]*><span class="money-amount" dir="ltr">/:/<span class="money-symbol">SAR<\/span><span class="money-amount" dir="ltr">/);
+    }
   },30_000);
 });

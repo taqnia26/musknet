@@ -12,14 +12,14 @@ describe('Saudi riyal amount presentation', () => {
       expect(html).toContain(lang === 'ar' ? 'ريال سعودي' : 'Saudi riyals');
       expect(html).toContain('dir="ltr"');
       expect(html).not.toContain('ر.س');
-      const numberPosition = html.indexOf('>1,234.50</span>');
+      const numberPosition = html.indexOf('1,234.50</span>');
       if (lang === 'ar') {
         expect(html).toContain('saudi-riyal-symbol.svg');
         expect(html).not.toContain('>SAR</span>');
         expect(html.indexOf('saudi-riyal-symbol.svg')).toBeLessThan(numberPosition);
       } else {
         expect(html).not.toContain('saudi-riyal-symbol.svg');
-        expect(html.indexOf('>SAR</span>')).toBeGreaterThan(numberPosition);
+        expect(html.indexOf('>SAR</span>')).toBeLessThan(numberPosition);
       }
     }
   });
@@ -27,7 +27,7 @@ describe('Saudi riyal amount presentation', () => {
   it('preserves financial precision and the minus sign in the number', () => {
     const html = renderToStaticMarkup(<Money value="-1234.5678" lang="ar" minimumFractionDigits={2} maximumFractionDigits={4} />);
     expect(html).toContain('-1,234.5678');
-    expect(html.indexOf('saudi-riyal-symbol.svg')).toBeLessThan(html.indexOf('>-1,234.5678</span>'));
+    expect(html.indexOf('saudi-riyal-symbol.svg')).toBeLessThan(html.indexOf('-1,234.5678</span>'));
   });
 
   it('lets the SVG artwork inherit contrast colors instead of relying on a font glyph', () => {
@@ -47,6 +47,17 @@ describe('Saudi riyal amount presentation', () => {
         expect(html).toContain(lang === 'ar' ? 'saudi-riyal-symbol.svg' : '>SAR</span>');
         expect(html).not.toContain('DollarSign');
       }
+    }
+  });
+});
+describe('inline prose money keeps the symbol left', () => {
+  it('renders the pickup-fee sentence with symbol before the fee in both languages', () => {
+    for (const lang of ['ar', 'en'] as const) {
+      const html = renderToStaticMarkup(<p dir={lang === 'ar' ? 'rtl' : 'ltr'}>{lang === 'ar' ? 'رسوم الاستلام ثابتة' : 'Pickup fee is a fixed'} <Money value={-0} lang={lang} /> {lang === 'ar' ? 'شاملة الضريبة.' : 'including VAT.'}</p>);
+      const symbol = html.indexOf(lang === 'ar' ? 'saudi-riyal-symbol.svg' : '>SAR</span>');
+      expect(symbol).toBeGreaterThan(-1);
+      expect(symbol).toBeLessThan(html.indexOf('>0</span>') === -1 ? html.indexOf('0</span>') : html.indexOf('>0</span>'));
+      expect(html).toContain('unicode-bidi:isolate');
     }
   });
 });

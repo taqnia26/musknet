@@ -409,7 +409,7 @@ export default function AdminContractsList() {
                                   variant={file.creditLimit === null ? 'outline' : 'secondary'}
                                   className={`ms-1 ${file.creditLimit === null ? 'border-amber-500/40 bg-amber-500/10 text-amber-800' : 'border-transparent bg-success text-success-foreground'}`}
                                 >
-                                  {file.creditLimit === null ? 'حد الائتمان غير معتمد' : `حد الائتمان: ${Number(file.creditLimit).toLocaleString('ar-SA')} ر.س`}
+                                  {file.creditLimit === null ? 'حد الائتمان غير معتمد' : `حد الائتمان: \u2066ر.س ${Number(file.creditLimit).toLocaleString('ar-SA')}\u2069`}
                                 </Badge>
                               )}
                             </div>

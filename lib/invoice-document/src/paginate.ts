@@ -44,8 +44,10 @@ export function paginateDocument() {
   }
   const warning=source.querySelector<HTMLElement>('[data-warning]');
   if(warning) headerBottom=append(warning,table.x,headerBottom+3,table.width)+3;
-  const summaryKinds=["notes","totals","qr"];
-  const summary = summaryKinds.map(kind=>({e:find(kind),node:source.querySelector<HTMLElement>(`[data-kind="${kind}"]`)!}));
+  // Notes are never rendered; totals take the saved notes box's LEFT position (render-time only, designs untouched).
+  const notesBox=cfg.elements.find(e=>e.kind==="notes"), savedTotals=find("totals");
+  const effective=(kind:string)=>kind==="totals"&&notesBox?{...savedTotals,x:notesBox.x,y:notesBox.y,width:notesBox.width,height:notesBox.height}:find(kind);
+  const summary = ["totals","qr"].map(kind=>({e:effective(kind),node:source.querySelector<HTMLElement>(`[data-kind="${kind}"]`)!}));
   // Measure natural content sizes before assigning the summary to a page.
   const measure=document.createElement("div"); measure.className="invoice-measure";root.appendChild(measure);
   const summaryOrigin=Math.min(...summary.map(s=>s.e.y));
@@ -119,15 +121,6 @@ export function paginateDocument() {
   if(summaryY+summaryHeight>maxBottom) {newPage();summaryY=14;}
   for(const {e,node} of summary) {
     append(node,e.x,summaryY+offsets.get(e.kind)!,e.width);
-  }
-  if(summaryY+summaryHeight>maxBottom) {
-    // Move lengthy notes to their own paginated attachment; totals/QR stay intact.
-    const notes=summary.find(s=>s.e.kind==="notes")!;
-    notes.node.remove();
-    // QR no longer needs the notes' expanded offset once notes move to an attachment.
-    const qr=summary.find(s=>s.e.kind==="qr")!;
-    qr.node.style.top=`${14+qr.e.y-summaryOrigin}mm`;
-    appendAttachment(notes.node);
   }
   function appendAttachment(container:HTMLElement) {
     const blocks=Array.from(container.children) as HTMLElement[];
