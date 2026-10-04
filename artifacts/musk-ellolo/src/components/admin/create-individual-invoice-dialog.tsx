@@ -70,7 +70,12 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
   }, [lines]);
 
   const quoteDiscount = useAdminQuoteIndividualInvoiceDiscount();
-  const discountPreview = useSaleDiscountPreview(quoteDiscount.mutateAsync, totals.gross, discountForm, open);
+  const quoteContext = useMemo(() => ({
+    items: lines.filter(l => l.productId && l.quantity >= 1).map(l => ({ productId: Number(l.productId), quantity: l.quantity, unitPrice: round(l.unitPrice) })),
+    ...(buyerPhone.trim() ? { buyerPhone: buyerPhone.trim() } : {}),
+    ...(/^[A-Z]{2}$/.test(address.country) ? { country: address.country } : {}),
+  }), [lines, buyerPhone, address.country]);
+  const discountPreview = useSaleDiscountPreview(quoteDiscount.mutateAsync, totals.gross, discountForm, open, quoteContext);
   const reset = () => {
     setDiscountForm(emptySaleDiscount);
     setBuyerName(''); setBuyerPhone(''); setAddress(emptyInvoiceAddress()); setIssueDate(saudiToday()); setDueDate('');
@@ -83,6 +88,8 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
     const e: string[] = [];
     const dp = validateSaleDiscount(discountForm, t);
     if (dp) e.push(dp);
+    if (discountForm.coupon.trim() && discountPreview.error) e.push(discountPreview.error);
+    if (discountForm.coupon.trim() && discountPreview.loading) e.push(t('انتظر اكتمال التحقق من الكوبون', 'Wait for the coupon check to finish'));
     const today = saudiToday();
     if (!buyerName.trim()) e.push(t('اسم المشتري مطلوب', 'Buyer name is required'));
     if (buyerPhone.trim() && (buyerPhone.length > 40 || !/^(?=(?:\D*\d){8,15}\D*$)\+?[\d ().-]+$/.test(buyerPhone.trim())))
@@ -117,6 +124,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
       buyerPhone: buyerPhone.trim() || null,
       buyerAddress: buyerAddress.trim() || null,
       buyerTaxNumber: null,
+      buyerCountry: /^[A-Z]{2}$/.test(address.country) ? address.country : null,
       issueDate,
       ...(dueDate ? { dueDate } : {}),
       ...(collected ? { collected: { paymentDate, paymentMethod } } : {}),

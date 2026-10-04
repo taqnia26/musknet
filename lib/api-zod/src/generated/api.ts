@@ -2120,12 +2120,33 @@ export const adminQuoteOrderDiscountBodyManualDiscountPercentMin = 0;
 export const adminQuoteOrderDiscountBodyManualDiscountPercentMax = 100;
 export const adminQuoteOrderDiscountBodyManualDiscountPercentMultipleOf = 0.01;
 
+export const adminQuoteOrderDiscountBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminQuoteOrderDiscountBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminQuoteOrderDiscountBodyItemsItemUnitPriceMin = 0;
+
+export const adminQuoteOrderDiscountBodyItemsMax = 100;
+
+export const adminQuoteOrderDiscountBodyCustomerIdMultipleOf = 1;
+
+export const adminQuoteOrderDiscountBodyBuyerPhoneMax = 40;
+
+export const adminQuoteOrderDiscountBodyCountryRegExp = new RegExp('^[A-Z]{2}$');
 
 
 export const AdminQuoteOrderDiscountBody = zod.object({
   "productSubtotal": zod.number().min(adminQuoteOrderDiscountBodyProductSubtotalMin),
   "couponCode": zod.string().max(adminQuoteOrderDiscountBodyCouponCodeMax).nullish(),
-  "manualDiscountPercent": zod.number().min(adminQuoteOrderDiscountBodyManualDiscountPercentMin).max(adminQuoteOrderDiscountBodyManualDiscountPercentMax).multipleOf(adminQuoteOrderDiscountBodyManualDiscountPercentMultipleOf).optional()
+  "manualDiscountPercent": zod.number().min(adminQuoteOrderDiscountBodyManualDiscountPercentMin).max(adminQuoteOrderDiscountBodyManualDiscountPercentMax).multipleOf(adminQuoteOrderDiscountBodyManualDiscountPercentMultipleOf).optional(),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminQuoteOrderDiscountBodyItemsItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(adminQuoteOrderDiscountBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminQuoteOrderDiscountBodyItemsItemUnitPriceMin)
+})).max(adminQuoteOrderDiscountBodyItemsMax).optional().describe('Line context used for coupon product exclusions; server revalidates prices'),
+  "customerId": zod.number().min(1).multipleOf(adminQuoteOrderDiscountBodyCustomerIdMultipleOf).optional(),
+  "buyerPhone": zod.string().max(adminQuoteOrderDiscountBodyBuyerPhoneMax).optional(),
+  "country": zod.string().regex(adminQuoteOrderDiscountBodyCountryRegExp).optional()
 })
 
 export const AdminQuoteOrderDiscountResponse = zod.object({
@@ -2135,7 +2156,8 @@ export const AdminQuoteOrderDiscountResponse = zod.object({
   "manualDiscountPercent": zod.number(),
   "manualDiscountAmount": zod.number(),
   "discountAmount": zod.number(),
-  "productsTotal": zod.number()
+  "productsTotal": zod.number(),
+  "freeShipping": zod.boolean().optional().describe('Coupon waives delivery fee; pickup fee unchanged')
 })
 
 
@@ -2147,12 +2169,33 @@ export const adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMin = 0
 export const adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMax = 100;
 export const adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMultipleOf = 0.01;
 
+export const adminQuoteIndividualInvoiceDiscountBodyItemsItemProductIdMultipleOf = 1;
+
+export const adminQuoteIndividualInvoiceDiscountBodyItemsItemQuantityMultipleOf = 1;
+
+export const adminQuoteIndividualInvoiceDiscountBodyItemsItemUnitPriceMin = 0;
+
+export const adminQuoteIndividualInvoiceDiscountBodyItemsMax = 100;
+
+export const adminQuoteIndividualInvoiceDiscountBodyCustomerIdMultipleOf = 1;
+
+export const adminQuoteIndividualInvoiceDiscountBodyBuyerPhoneMax = 40;
+
+export const adminQuoteIndividualInvoiceDiscountBodyCountryRegExp = new RegExp('^[A-Z]{2}$');
 
 
 export const AdminQuoteIndividualInvoiceDiscountBody = zod.object({
   "productSubtotal": zod.number().min(adminQuoteIndividualInvoiceDiscountBodyProductSubtotalMin),
   "couponCode": zod.string().max(adminQuoteIndividualInvoiceDiscountBodyCouponCodeMax).nullish(),
-  "manualDiscountPercent": zod.number().min(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMin).max(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMax).multipleOf(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMultipleOf).optional()
+  "manualDiscountPercent": zod.number().min(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMin).max(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMax).multipleOf(adminQuoteIndividualInvoiceDiscountBodyManualDiscountPercentMultipleOf).optional(),
+  "items": zod.array(zod.object({
+  "productId": zod.number().min(1).multipleOf(adminQuoteIndividualInvoiceDiscountBodyItemsItemProductIdMultipleOf),
+  "quantity": zod.number().min(1).multipleOf(adminQuoteIndividualInvoiceDiscountBodyItemsItemQuantityMultipleOf),
+  "unitPrice": zod.number().min(adminQuoteIndividualInvoiceDiscountBodyItemsItemUnitPriceMin)
+})).max(adminQuoteIndividualInvoiceDiscountBodyItemsMax).optional().describe('Line context used for coupon product exclusions; server revalidates prices'),
+  "customerId": zod.number().min(1).multipleOf(adminQuoteIndividualInvoiceDiscountBodyCustomerIdMultipleOf).optional(),
+  "buyerPhone": zod.string().max(adminQuoteIndividualInvoiceDiscountBodyBuyerPhoneMax).optional(),
+  "country": zod.string().regex(adminQuoteIndividualInvoiceDiscountBodyCountryRegExp).optional()
 })
 
 export const AdminQuoteIndividualInvoiceDiscountResponse = zod.object({
@@ -2162,7 +2205,8 @@ export const AdminQuoteIndividualInvoiceDiscountResponse = zod.object({
   "manualDiscountPercent": zod.number(),
   "manualDiscountAmount": zod.number(),
   "discountAmount": zod.number(),
-  "productsTotal": zod.number()
+  "productsTotal": zod.number(),
+  "freeShipping": zod.boolean().optional().describe('Coupon waives delivery fee; pickup fee unchanged')
 })
 
 
@@ -2339,7 +2383,8 @@ export const ValidateCouponResponse = zod.object({
   "valid": zod.boolean(),
   "discount": zod.number(),
   "message": zod.string(),
-  "code": zod.string().nullish()
+  "code": zod.string().nullish(),
+  "freeShipping": zod.boolean().optional().describe('True when the validated coupon waives delivery fees (pickup fee unchanged)')
 })
 
 
@@ -7001,6 +7046,7 @@ export const adminCreateIndividualInvoiceBodyBuyerPhoneRegExp = new RegExp('^(?:
 export const adminCreateIndividualInvoiceBodyBuyerAddressMax = 1000;
 
 export const adminCreateIndividualInvoiceBodyBuyerTaxNumberRegExp = new RegExp('^[0-9]{15}$');
+export const adminCreateIndividualInvoiceBodyBuyerCountryRegExp = new RegExp('^[A-Z]{2}$');
 export const adminCreateIndividualInvoiceBodyIssueDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
 export const adminCreateIndividualInvoiceBodyDueDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
 export const adminCreateIndividualInvoiceBodyCollectedPaymentDateRegExp = new RegExp('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
@@ -7027,6 +7073,7 @@ export const AdminCreateIndividualInvoiceBody = zod.object({
   "buyerPhone": zod.string().max(adminCreateIndividualInvoiceBodyBuyerPhoneMax).regex(adminCreateIndividualInvoiceBodyBuyerPhoneRegExp).nullish(),
   "buyerAddress": zod.string().max(adminCreateIndividualInvoiceBodyBuyerAddressMax).nullable(),
   "buyerTaxNumber": zod.string().regex(adminCreateIndividualInvoiceBodyBuyerTaxNumberRegExp).nullable(),
+  "buyerCountry": zod.string().regex(adminCreateIndividualInvoiceBodyBuyerCountryRegExp).nullish(),
   "issueDate": zod.string().regex(adminCreateIndividualInvoiceBodyIssueDateRegExp),
   "dueDate": zod.string().regex(adminCreateIndividualInvoiceBodyDueDateRegExp).optional(),
   "collected": zod.object({
@@ -7707,6 +7754,15 @@ export const AdminListCouponsQueryParams = zod.object({
   "status": zod.enum(['active', 'inactive', 'all']).default(adminListCouponsQueryStatusDefault)
 })
 
+export const adminListCouponsResponsePerCustomerLimitMultipleOf = 1;
+
+export const adminListCouponsResponseMaxDiscountExclusiveMin = 0;
+
+export const adminListCouponsResponseExcludedProductIdsItemMultipleOf = 1;
+
+export const adminListCouponsResponseAllowedCountriesItemRegExp = new RegExp('^[A-Z]{2}$');
+
+
 export const AdminListCouponsResponseItem = zod.object({
   "id": zod.number(),
   "code": zod.string(),
@@ -7716,7 +7772,12 @@ export const AdminListCouponsResponseItem = zod.object({
   "usageLimit": zod.number().nullish(),
   "timesUsed": zod.number(),
   "isActive": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "freeShipping": zod.boolean().optional(),
+  "perCustomerLimit": zod.number().min(1).multipleOf(adminListCouponsResponsePerCustomerLimitMultipleOf).nullish(),
+  "maxDiscount": zod.number().gt(adminListCouponsResponseMaxDiscountExclusiveMin).nullish(),
+  "excludedProductIds": zod.array(zod.number().min(1).multipleOf(adminListCouponsResponseExcludedProductIdsItemMultipleOf)).optional(),
+  "allowedCountries": zod.array(zod.string().regex(adminListCouponsResponseAllowedCountriesItemRegExp)).optional().describe('ISO2 codes; empty means all countries')
 })
 export const AdminListCouponsResponse = zod.array(AdminListCouponsResponseItem)
 
@@ -7725,6 +7786,13 @@ export const AdminListCouponsResponse = zod.array(AdminListCouponsResponseItem)
 export const adminCreateCouponBodyDiscountValueMin = 0;
 
 
+export const adminCreateCouponBodyPerCustomerLimitMultipleOf = 1;
+
+export const adminCreateCouponBodyMaxDiscountExclusiveMin = 0;
+
+export const adminCreateCouponBodyExcludedProductIdsItemMultipleOf = 1;
+
+export const adminCreateCouponBodyAllowedCountriesItemRegExp = new RegExp('^[A-Z]{2}$');
 
 
 export const AdminCreateCouponBody = zod.object({
@@ -7733,8 +7801,22 @@ export const AdminCreateCouponBody = zod.object({
   "discountValue": zod.number().min(adminCreateCouponBodyDiscountValueMin),
   "expiresAt": zod.coerce.date().nullish(),
   "usageLimit": zod.number().min(1).nullish(),
-  "isActive": zod.boolean().optional()
+  "isActive": zod.boolean().optional(),
+  "freeShipping": zod.boolean().optional(),
+  "perCustomerLimit": zod.number().min(1).multipleOf(adminCreateCouponBodyPerCustomerLimitMultipleOf).nullish(),
+  "maxDiscount": zod.number().gt(adminCreateCouponBodyMaxDiscountExclusiveMin).nullish(),
+  "excludedProductIds": zod.array(zod.number().min(1).multipleOf(adminCreateCouponBodyExcludedProductIdsItemMultipleOf)).optional(),
+  "allowedCountries": zod.array(zod.string().regex(adminCreateCouponBodyAllowedCountriesItemRegExp)).optional().describe('ISO2 codes; empty means all countries')
 })
+
+export const adminCreateCouponResponsePerCustomerLimitMultipleOf = 1;
+
+export const adminCreateCouponResponseMaxDiscountExclusiveMin = 0;
+
+export const adminCreateCouponResponseExcludedProductIdsItemMultipleOf = 1;
+
+export const adminCreateCouponResponseAllowedCountriesItemRegExp = new RegExp('^[A-Z]{2}$');
+
 
 export const AdminCreateCouponResponse = zod.object({
   "id": zod.number(),
@@ -7745,7 +7827,12 @@ export const AdminCreateCouponResponse = zod.object({
   "usageLimit": zod.number().nullish(),
   "timesUsed": zod.number(),
   "isActive": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "freeShipping": zod.boolean().optional(),
+  "perCustomerLimit": zod.number().min(1).multipleOf(adminCreateCouponResponsePerCustomerLimitMultipleOf).nullish(),
+  "maxDiscount": zod.number().gt(adminCreateCouponResponseMaxDiscountExclusiveMin).nullish(),
+  "excludedProductIds": zod.array(zod.number().min(1).multipleOf(adminCreateCouponResponseExcludedProductIdsItemMultipleOf)).optional(),
+  "allowedCountries": zod.array(zod.string().regex(adminCreateCouponResponseAllowedCountriesItemRegExp)).optional().describe('ISO2 codes; empty means all countries')
 })
 
 
@@ -7757,6 +7844,13 @@ export const AdminUpdateCouponParams = zod.object({
 export const adminUpdateCouponBodyOneDiscountValueMin = 0;
 
 
+export const adminUpdateCouponBodyOnePerCustomerLimitMultipleOf = 1;
+
+export const adminUpdateCouponBodyOneMaxDiscountExclusiveMin = 0;
+
+export const adminUpdateCouponBodyOneExcludedProductIdsItemMultipleOf = 1;
+
+export const adminUpdateCouponBodyOneAllowedCountriesItemRegExp = new RegExp('^[A-Z]{2}$');
 
 
 export const AdminUpdateCouponBody = zod.object({
@@ -7765,8 +7859,22 @@ export const AdminUpdateCouponBody = zod.object({
   "discountValue": zod.number().min(adminUpdateCouponBodyOneDiscountValueMin),
   "expiresAt": zod.coerce.date().nullish(),
   "usageLimit": zod.number().min(1).nullish(),
-  "isActive": zod.boolean().optional()
+  "isActive": zod.boolean().optional(),
+  "freeShipping": zod.boolean().optional(),
+  "perCustomerLimit": zod.number().min(1).multipleOf(adminUpdateCouponBodyOnePerCustomerLimitMultipleOf).nullish(),
+  "maxDiscount": zod.number().gt(adminUpdateCouponBodyOneMaxDiscountExclusiveMin).nullish(),
+  "excludedProductIds": zod.array(zod.number().min(1).multipleOf(adminUpdateCouponBodyOneExcludedProductIdsItemMultipleOf)).optional(),
+  "allowedCountries": zod.array(zod.string().regex(adminUpdateCouponBodyOneAllowedCountriesItemRegExp)).optional().describe('ISO2 codes; empty means all countries')
 })
+
+export const adminUpdateCouponResponsePerCustomerLimitMultipleOf = 1;
+
+export const adminUpdateCouponResponseMaxDiscountExclusiveMin = 0;
+
+export const adminUpdateCouponResponseExcludedProductIdsItemMultipleOf = 1;
+
+export const adminUpdateCouponResponseAllowedCountriesItemRegExp = new RegExp('^[A-Z]{2}$');
+
 
 export const AdminUpdateCouponResponse = zod.object({
   "id": zod.number(),
@@ -7777,7 +7885,12 @@ export const AdminUpdateCouponResponse = zod.object({
   "usageLimit": zod.number().nullish(),
   "timesUsed": zod.number(),
   "isActive": zod.boolean(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "freeShipping": zod.boolean().optional(),
+  "perCustomerLimit": zod.number().min(1).multipleOf(adminUpdateCouponResponsePerCustomerLimitMultipleOf).nullish(),
+  "maxDiscount": zod.number().gt(adminUpdateCouponResponseMaxDiscountExclusiveMin).nullish(),
+  "excludedProductIds": zod.array(zod.number().min(1).multipleOf(adminUpdateCouponResponseExcludedProductIdsItemMultipleOf)).optional(),
+  "allowedCountries": zod.array(zod.string().regex(adminUpdateCouponResponseAllowedCountriesItemRegExp)).optional().describe('ISO2 codes; empty means all countries')
 })
 
 

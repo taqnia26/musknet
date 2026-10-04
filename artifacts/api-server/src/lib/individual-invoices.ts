@@ -26,6 +26,7 @@ type IndividualInvoiceInput = {
   creationKey: string;
   buyerName: string;
   buyerPhone?: string | null;
+  buyerCountry?: string | null;
   buyerAddress: string | null;
   buyerTaxNumber: string | null;
   issueDate: string;
@@ -47,6 +48,7 @@ function normalizedInput(input: IndividualInvoiceInput): IndividualInvoiceInput 
     creationKey: input.creationKey.trim(),
     buyerName: input.buyerName.trim(),
     buyerPhone: input.buyerPhone?.trim() || null,
+    buyerCountry: input.buyerCountry?.trim().toUpperCase() || null,
     buyerAddress: input.buyerAddress?.trim() || null,
     buyerTaxNumber: input.buyerTaxNumber?.trim() || null,
     issueDate: input.issueDate,
@@ -173,10 +175,17 @@ export async function createIndividualInvoice(
       products.push(product);
     }
     const productById = new Map(products.map((product) => [product.id, product]));
-    const discount = await calculateSaleDiscount(tx, totalGrossCents / 100, input.couponCode, input.discountOverride?.percent, true);
+    const discount = await calculateSaleDiscount(tx, totalGrossCents / 100, input.couponCode, input.discountOverride?.percent, true, {
+      buyerPhone: input.buyerPhone, country: input.buyerCountry, items: input.items,
+    });
     const finalGrossCents = cents(discount.productsTotal);
     if (finalGrossCents < 1) throw new IndividualInvoiceValidationError("يجب أن تبقى قيمة الفاتورة أكبر من صفر بعد الخصم");
-    const allocated = allocateDiscountedGross(input.items.map((item) => cents(item.unitPrice) * item.quantity), finalGrossCents);
+    const grossLines = input.items.map(item => cents(item.unitPrice) * item.quantity);
+    const eligibleLines = input.items.map((item, index) => discount.couponExcludedProductIds.includes(item.productId) ? 0 : grossLines[index]);
+    const eligibleTotal = eligibleLines.reduce((a,b) => a+b,0);
+    const afterCouponEligible = allocateDiscountedGross(eligibleLines, eligibleTotal - cents(discount.couponDiscountAmount));
+    const afterCoupon = grossLines.map((value,index) => value - eligibleLines[index] + afterCouponEligible[index]);
+    const allocated = allocateDiscountedGross(afterCoupon, finalGrossCents);
     const lines = input.items.map((item, index) => {
       const product = productById.get(item.productId)!;
       if (product.stockQuantity < item.quantity) {

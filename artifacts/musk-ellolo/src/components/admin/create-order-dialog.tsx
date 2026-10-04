@@ -97,7 +97,16 @@ export function CreateOrderDialog() {
     const p = availableProducts.find((x) => String(x.id) === line.productId);
     return sum + (p ? p.price * line.quantity : 0);
   }, 0) * 100) / 100, [lines, availableProducts]);
-  const discountPreview = useSaleDiscountPreview(quoteDiscount.mutateAsync, productSubtotal, discountForm, open);
+  const quoteContext = useMemo(() => ({
+    items: lines.flatMap((line) => {
+      const p = availableProducts.find((x) => String(x.id) === line.productId);
+      return p && line.quantity >= 1 ? [{ productId: p.id, quantity: line.quantity, unitPrice: p.price }] : [];
+    }),
+    ...(customerId ? { customerId: Number(customerId) } : {}),
+    ...(/^[A-Z]{2}$/.test(address.country.trim().toUpperCase()) ? { country: address.country.trim().toUpperCase() } : {}),
+  }), [lines, availableProducts, customerId, address.country]);
+  const discountPreview = useSaleDiscountPreview(quoteDiscount.mutateAsync, productSubtotal, discountForm, open, quoteContext);
+  const couponFreeDelivery = fulfillmentMethod === 'delivery' && Boolean(discountForm.coupon.trim()) && discountPreview.quote?.freeShipping === true;
   const reset = () => {
     setCustomerId('');
     setOrderSource('admin');
@@ -156,7 +165,7 @@ export function CreateOrderDialog() {
       return;
     }
     const needsExplicitDeliveryCost = address.country === 'SA' && !address.city.trim() && fulfillmentMethod === 'delivery';
-    if (needsExplicitDeliveryCost && (!shippingCost.trim() || !Number.isFinite(Number(shippingCost)) || Number(shippingCost) < 0)) {
+    if (needsExplicitDeliveryCost && !couponFreeDelivery && (!shippingCost.trim() || !Number.isFinite(Number(shippingCost)) || Number(shippingCost) < 0)) {
       setError(t('حدد رسوم التوصيل؛ لا نستنتج المدينة من العنوان المختصر', 'Enter delivery charges; the city is not inferred from the short code'));
       return;
     }
@@ -173,6 +182,10 @@ export function CreateOrderDialog() {
 
     const discountProblem = validateSaleDiscount(discountForm, t);
     if (discountProblem) { setError(discountProblem); return; }
+    if (discountForm.coupon.trim() && (discountPreview.loading || discountPreview.error)) {
+      setError(discountPreview.error ?? t('انتظر اكتمال التحقق من الكوبون', 'Wait for the coupon check to finish'));
+      return;
+    }
 
     const orderInput = {
       userId: Number(customerId),
@@ -192,7 +205,7 @@ export function CreateOrderDialog() {
       shippingMethod,
       fulfillmentMethod,
       paymentMethod,
-      ...(needsExplicitDeliveryCost ? { shippingCost: Number(shippingCost) } : {}),
+      ...(needsExplicitDeliveryCost ? { shippingCost: couponFreeDelivery ? 0 : Number(shippingCost) } : {}),
       adminNotes: adminNotes.trim() || null,
       ...saleDiscountPayload(discountForm),
       ...(orderSource !== 'phone' && sendPaymentLink && paymentMethod === 'moyasar' ? { sendPaymentLink: true } : {}),
@@ -441,7 +454,8 @@ export function CreateOrderDialog() {
           </div>
           {address.country === 'SA' && !address.city.trim() && fulfillmentMethod === 'delivery' && <div className="space-y-2">
             <Label htmlFor="order-delivery-charge">{t('رسوم التوصيل (شاملة الضريبة) *', 'Delivery charges (VAT included) *')}</Label>
-            <Input id="order-delivery-charge" data-testid="order-delivery-charge" type="number" min={0} step="0.01" value={shippingCost} onChange={(event) => setShippingCost(event.target.value)} />
+            <Input id="order-delivery-charge" data-testid="order-delivery-charge" type="number" min={0} step="0.01" disabled={couponFreeDelivery} value={couponFreeDelivery ? '0' : shippingCost} onChange={(event) => setShippingCost(event.target.value)} />
+            {couponFreeDelivery && <p className="text-xs text-emerald-700">{t('الكوبون يلغي رسوم التوصيل؛ سيعاد التحقق عند الإنشاء.', 'The coupon waives the delivery fee; it is revalidated on creation.')}</p>}
             <p className="text-xs text-muted-foreground">{t('لا يتم تخمين المدينة أو رسومها من العنوان الوطني المختصر.', 'The city and its delivery charge are not inferred from the national address short code.')}</p>
           </div>}
           {paymentMethod === 'moyasar' && orderSource !== 'phone' && (

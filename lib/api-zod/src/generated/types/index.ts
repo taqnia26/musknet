@@ -565,6 +565,7 @@ export * from './richSpan';
 export * from './richSpanColor';
 export * from './saleDiscountQuote';
 export * from './saleDiscountQuoteInput';
+export * from './saleDiscountQuoteInputItemsItem';
 export * from './salesReturn';
 export * from './salesReturnCondition';
 export * from './salesReturnDraftInput';

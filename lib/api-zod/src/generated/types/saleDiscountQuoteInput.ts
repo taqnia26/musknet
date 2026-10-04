@@ -5,6 +5,7 @@
  * Public storefront API for Musk Ellolo
  * OpenAPI spec version: 0.1.0
  */
+import type { SaleDiscountQuoteInputItemsItem } from './saleDiscountQuoteInputItemsItem';
 
 export interface SaleDiscountQuoteInput {
   /** @minimum 0 */
@@ -19,4 +20,15 @@ export interface SaleDiscountQuoteInput {
      * @maximum 100
      */
   manualDiscountPercent?: number;
+  /**
+     * Line context used for coupon product exclusions; server revalidates prices
+     * @maxItems 100
+     */
+  items?: SaleDiscountQuoteInputItemsItem[];
+  /** @minimum 1 */
+  customerId?: number;
+  /** @maxLength 40 */
+  buyerPhone?: string;
+  /** @pattern ^[A-Z]{2}$ */
+  country?: string;
 }

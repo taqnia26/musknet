@@ -1,6 +1,8 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { preparedCheckoutPaymentMethods } from "./prepared-payment-methods";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { calculateSaleDiscount, SaleDiscountValidationError } from "./sale-discounts";
+import type { CouponContext } from "./coupon-rules";
 import {
   addressesTable,
   adminUsersTable,
@@ -765,20 +767,15 @@ function couponResult(
   };
 }
 
-export async function getCoupon(code: string, subtotal: number) {
+export async function getCoupon(code: string, subtotal: number, context: CouponContext = {}) {
   await ensureCatalogSeeded();
-  const normalizedCode = code.trim().toUpperCase();
-  const [coupon] = await db
-    .select()
-    .from(couponsTable)
-    .where(and(
-      eq(couponsTable.code, normalizedCode),
-      eq(couponsTable.isActive, true),
-      sql`(${couponsTable.expiresAt} is null or ${couponsTable.expiresAt} > now())`,
-      sql`(${couponsTable.usageLimit} is null or ${couponsTable.timesUsed} < ${couponsTable.usageLimit})`,
-    ))
-    .limit(1);
-  return couponResult(coupon, subtotal);
+  try {
+    const discount = await db.transaction(tx => calculateSaleDiscount(tx, subtotal, code, 0, false, context));
+    return { valid: true, discount: discount.discountAmount, freeShipping: discount.freeShipping, code: discount.couponCode, couponId: discount.couponId, message: "تم تطبيق الكوبون" };
+  } catch (error) {
+    if (!(error instanceof SaleDiscountValidationError)) throw error;
+    return { valid: false, discount: 0, freeShipping: false, code: null, couponId: null, message: error.message };
+  }
 }
 
 const individualShippingMethods = [
@@ -793,9 +790,13 @@ function individualShippingPrice(method: string) {
 }
 
 export async function getQuote(userId: number, _city: string, shippingMethod: string, couponCode?: string | null) {
-  const shippingCost = individualShippingPrice(shippingMethod);
+  let shippingCost = individualShippingPrice(shippingMethod);
   const cart = await getCartForUser(userId);
-  const coupon = couponCode ? await getCoupon(couponCode, cart.subtotal) : { discount: 0 };
+  const coupon = couponCode ? await getCoupon(couponCode, cart.subtotal, {
+    customerId: userId, country: "SA", items: cart.items.map(i => ({productId: i.product.id, quantity: i.quantity, unitPrice: i.product.price})),
+  }) : { valid: true, discount: 0, freeShipping: false };
+  if (!coupon.valid) throw new SaleDiscountValidationError("message" in coupon ? String(coupon.message) : "الكوبون غير صالح");
+  if (coupon.freeShipping) shippingCost = 0;
   const net = Math.max(0, cart.subtotal - coupon.discount);
   const taxableGrossCents = Math.round((net + shippingCost) * 100);
   const tax = extractVatFromGross(taxableGrossCents, 15).vatCents / 100;
@@ -823,7 +824,7 @@ export async function createOrderForUser(
   trustedPayment?: { confirmedByProvider: true; environment?: NodeJS.ProcessEnv },
   referralCode?: string | null,
 ) {
-  const shippingCost = individualShippingPrice(details.shippingMethod);
+  let shippingCost = individualShippingPrice(details.shippingMethod);
   await ensureStandardAccountingChart();
   const createdOrder = await db.transaction(async (tx) => {
     const [cart] = await tx.select().from(cartsTable).where(eq(cartsTable.userId, userId)).limit(1);
@@ -853,25 +854,20 @@ export async function createOrderForUser(
     };
     let couponRecord: typeof couponsTable.$inferSelect | undefined;
     if (couponCode) {
-      const normalizedCode = couponCode.trim().toUpperCase();
-      await tx.execute(sql`select id from ${couponsTable} where ${couponsTable.code} = ${normalizedCode} for update`);
+      const normalizedCode = couponCode.trim().toLowerCase();
+      const result = await calculateSaleDiscount(tx, subtotal, couponCode, 0, true, {
+        customerId: userId, country: "SA",
+        items: items.map(i => ({productId: i.product.id, quantity: i.record.quantity, unitPrice: i.product.price})),
+      });
       [couponRecord] = await tx
         .select()
         .from(couponsTable)
         .where(and(
-          eq(couponsTable.code, normalizedCode),
-          eq(couponsTable.isActive, true),
-          sql`(${couponsTable.expiresAt} is null or ${couponsTable.expiresAt} > now())`,
-          sql`(${couponsTable.usageLimit} is null or ${couponsTable.timesUsed} < ${couponsTable.usageLimit})`,
+          sql`lower(trim(${couponsTable.code})) = ${normalizedCode}`,
         ))
         .limit(1);
-      coupon = couponResult(couponRecord, subtotal);
-      if (coupon.couponId) {
-        await tx
-          .update(couponsTable)
-          .set({ timesUsed: sql`${couponsTable.timesUsed} + 1` })
-          .where(eq(couponsTable.id, coupon.couponId));
-      }
+      coupon = { valid: true, discount: result.discountAmount, code: result.couponCode, couponId: result.couponId, message: "تم تطبيق الكوبون" };
+      if (result.freeShipping) shippingCost = 0;
     }
     const net = Math.max(0, subtotal - coupon.discount);
     const taxableGrossCents = Math.round((net + shippingCost) * 100);

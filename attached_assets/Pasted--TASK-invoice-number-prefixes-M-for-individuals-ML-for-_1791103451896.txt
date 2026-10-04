@@ -1,0 +1,33 @@
+# TASK — invoice number prefixes: M for individuals, ML for companies (report first, do not implement yet)
+
+## Requirement (from the owner)
+
+- Individual invoices: numbers start with `M`.
+- Company and distributor invoices: numbers start with `ML`.
+- Assumption: only the prefix changes. Keep the existing separator, zero-padding and sequence behaviour unless you report a concrete reason it cannot be kept. Show an example number for each prefix.
+
+## Hard rules
+
+1. Issued invoices keep their stored numbers. No renumbering and no rewriting of `invoice_number` or `original_invoice_number`. Historical and reconciled invoices are untouched. The new prefixes apply only to invoices created after the change goes live.
+2. Numbers stay unique and the numbering stays sequential. Do not weaken any existing uniqueness constraint, accounting-integrity trigger or race protection.
+3. Order numbers (`L-…`, `CO-…`) are out of scope for this task.
+4. Exhibition invoices: the owner has not specified a prefix. Leave them unchanged and report how they are numbered today.
+5. No schema change, migration, push or production access until the owner approves your plan.
+
+## Report first
+
+1. Where an invoice number is generated today and how the sequence works (`invoice-sequence.ts`, `sequence_number`): one global counter, or one per channel? How is concurrency protected?
+2. The current number format per invoice type: storefront-order invoices, standalone individual invoices, company/distributor invoices, historical or imported, exhibition. Give example numbers.
+3. State exactly which invoice types you would map to `M`, which to `ML`, and flag any type that fits neither.
+4. Every place that stores, displays, searches, parses or classifies an invoice by its number: PDF and template, email, admin search, historical reconciliation, exports, tests, anything that infers the channel from the prefix. Note that `ML…` starts with `M`. Any prefix check must match the full prefix including the separator, never `startsWith("M")`.
+5. Any database constraint, CHECK, index or trigger that depends on the number's format or on the sequence, including the accounting-integrity triggers and the `install-*` scripts.
+6. Whether the invoice number appears in the QR payload, a hash, or any signed or exported document, and what changes if the format changes.
+7. Which of these the code can support safely, with the consequences of each:
+   - A: keep the single global counter and change only the printed prefix (each prefix series will show gaps).
+   - B: independent counters per prefix (each series gap-free), including how current counter state carries over and how concurrency stays safe.
+   The owner will decide with the accountant. Do not choose one yourself.
+8. Read-only SQL for the private-server database so the owner can check current invoice numbers, sequence state and the relevant constraints and triggers before anything is applied. Your accessible development database is not evidence of production.
+
+## Deliver
+
+A written report for 1 to 8 and a proposed change list (files, and any schema change or migration shown in full, not applied). Then wait for the owner's approval.

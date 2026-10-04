@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { db, couponsTable } from "@workspace/db";
+import { checkCustomerCouponLimit, couponEligibleCents, CouponRuleError, type CouponContext } from "./coupon-rules";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export class SaleDiscountValidationError extends Error {}
@@ -18,7 +19,7 @@ export function validateManualDiscount(input?: ManualDiscountInput) {
 }
 
 // Preview never reserves a coupon. Creation reserves it inside the sale transaction.
-export async function calculateSaleDiscount(tx: Tx, subtotal: number, couponCode?: string | null, percent = 0, consume = false) {
+export async function calculateSaleDiscount(tx: Tx, subtotal: number, couponCode?: string | null, percent = 0, consume = false, context: CouponContext = {}) {
   validateManualDiscount({ percent, reason: "معاينة حساب الخصم" });
   const base = Math.round(subtotal * 100);
   if (!Number.isSafeInteger(base) || base < 0 || base > 9_000_000_000_000_000) {
@@ -28,18 +29,23 @@ export async function calculateSaleDiscount(tx: Tx, subtotal: number, couponCode
   let couponCents = 0;
   const code = couponCode?.trim().toUpperCase();
   if (code) {
-    await tx.execute(sql`select id from ${couponsTable} where ${couponsTable.code} = ${code} for update`);
+    await tx.execute(sql`select id from ${couponsTable} where lower(trim(${couponsTable.code})) = lower(${code}) for update`);
     [coupon] = await tx.select().from(couponsTable).where(and(
-      eq(couponsTable.code, code), eq(couponsTable.isActive, true),
+      sql`lower(trim(${couponsTable.code})) = lower(${code})`, eq(couponsTable.isActive, true),
       sql`(${couponsTable.expiresAt} is null or ${couponsTable.expiresAt} > now())`,
-      sql`(${couponsTable.usageLimit} is null or ${couponsTable.timesUsed} < ${couponsTable.usageLimit})`,
+      context.alreadyRedeemed ? undefined : sql`(${couponsTable.usageLimit} is null or ${couponsTable.timesUsed} < ${couponsTable.usageLimit})`,
     )).limit(1);
     if (!coupon || !Number.isFinite(coupon.discountValue) || coupon.discountValue < 0 ||
         (coupon.discountType === "percentage" && coupon.discountValue > 100)) {
       throw new SaleDiscountValidationError("الكوبون غير صالح أو منتهي أو استُنفد حد استخدامه");
     }
-    couponCents = Math.min(base, Math.round(coupon.discountType === "percentage"
-      ? base * coupon.discountValue / 100 : coupon.discountValue * 100));
+    try {
+      couponCents = couponEligibleCents(coupon, subtotal, context);
+      await checkCustomerCouponLimit(tx, coupon, context);
+    } catch (error) {
+      if (error instanceof CouponRuleError) throw new SaleDiscountValidationError(error.message);
+      throw error;
+    }
     if (consume) await tx.update(couponsTable).set({ timesUsed: sql`${couponsTable.timesUsed} + 1` }).where(eq(couponsTable.id, coupon.id));
   }
   const manualCents = Number((BigInt(base - couponCents) * BigInt(Math.round(percent * 100)) + 5_000n) / 10_000n);
@@ -54,6 +60,8 @@ export async function calculateSaleDiscount(tx: Tx, subtotal: number, couponCode
     discountAmount: (couponCents + manualCents) / 100,
     productsTotal: (base - couponCents - manualCents) / 100,
     couponId: coupon?.id ?? null,
+    freeShipping: coupon?.freeShipping ?? false,
+    couponExcludedProductIds: coupon?.excludedProductIds ?? [],
   };
 }
 

@@ -287,7 +287,12 @@ router.post("/coupons/validate", asyncRoute(async (req, res) => {
     res.status(400).json({ error: parsed.error.message });
     return;
   }
-  res.json(ValidateCouponResponse.parse(await getCoupon(parsed.data.code, parsed.data.subtotal)));
+  const owner = await cartOwner(req, res);
+  const cart = await getCart(owner);
+  res.json(ValidateCouponResponse.parse(await getCoupon(parsed.data.code, cart.subtotal, {
+    customerId: "userId" in owner ? owner.userId : undefined, country: "SA",
+    items: cart.items.map(i => ({productId: i.product.id, quantity: i.quantity, unitPrice: i.product.price})),
+  })));
 }));
 
 router.post("/cart/link/resolve", asyncRoute(async (req, res) => {

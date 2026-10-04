@@ -154,7 +154,16 @@ export async function saveOrderEditor(orderId: number, input: OrderEditInput, ac
     const code = input.couponCode?.trim().toUpperCase() || null;
     const percent = input.discountOverride.percent;
     let discount: Awaited<ReturnType<typeof calculateSaleDiscount>>;
-    if (code && code === order.couponCode) {
+    const [currentCoupon] = code ? await tx.select().from(couponsTable)
+      .where(sql`lower(trim(${couponsTable.code}))=lower(${code})`).for("update") : [];
+    if (code && code === order.couponCode?.toUpperCase() && currentCoupon &&
+      (currentCoupon.freeShipping || currentCoupon.perCustomerLimit != null || currentCoupon.maxDiscount != null ||
+       currentCoupon.allowedCountries.length || currentCoupon.excludedProductIds.length)) {
+      discount = await calculateSaleDiscount(tx, subtotal, code, percent, false, {
+        customerId: order.userId, country: input.fulfillmentMethod === "pickup" ? "SA" : address.country,
+        items: input.items, excludeOrderId: order.id, alreadyRedeemed: true,
+      });
+    } else if (code && code === order.couponCode?.toUpperCase()) {
       if (!order.couponDiscountType || order.couponDiscountValue === null) conflict("تفاصيل الكوبون التاريخية غير مكتملة.");
       // Keep the already-consumed coupon's original terms, even after expiry.
       const base = cents(subtotal);
@@ -165,15 +174,19 @@ export async function saveOrderEditor(orderId: number, input: OrderEditInput, ac
         couponDiscountValue: order.couponDiscountValue, couponDiscountAmount: couponCents / 100,
         manualDiscountPercent: percent, manualDiscountAmount: manualCents / 100,
         discountAmount: (couponCents + manualCents) / 100, productsTotal: (base - couponCents - manualCents) / 100,
-        couponId: null,
+        couponId: null, freeShipping: false, couponExcludedProductIds: [],
       };
     } else {
       // Lock both coupon rows consistently before reserving/releasing usage.
       const codes = [code, order.couponCode].filter((v): v is string => !!v).sort();
-      for (const c of codes) await tx.execute(sql`select id from ${couponsTable} where ${couponsTable.code} = ${c} for update`);
-      discount = await calculateSaleDiscount(tx, subtotal, code, percent, true);
+      for (const c of codes) await tx.execute(sql`select id from ${couponsTable} where lower(trim(${couponsTable.code})) = lower(${c}) for update`);
+      discount = await calculateSaleDiscount(tx, subtotal, code, percent, true, {
+        customerId: order.userId, country: input.fulfillmentMethod === "pickup" ? "SA" : address.country,
+        items: input.items, excludeOrderId: order.id,
+      });
       if (order.couponCode) await tx.update(couponsTable).set({ timesUsed: sql`greatest(0, ${couponsTable.timesUsed} - 1)` }).where(eq(couponsTable.code, order.couponCode));
     }
+    if (discount.freeShipping && input.fulfillmentMethod !== "pickup") input.shippingCost = 0;
     const total = money(discount.productsTotal + input.shippingCost);
     const tax = address.country === "SA" || input.fulfillmentMethod === "pickup" ? extractVatFromGross(cents(total), 15).vatCents / 100 : 0;
     const [audit] = await tx.insert(orderEditAuditsTable).values({

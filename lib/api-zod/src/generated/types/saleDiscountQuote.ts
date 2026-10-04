@@ -15,4 +15,6 @@ export interface SaleDiscountQuote {
   manualDiscountAmount: number;
   discountAmount: number;
   productsTotal: number;
+  /** Coupon waives delivery fee; pickup fee unchanged */
+  freeShipping?: boolean;
 }

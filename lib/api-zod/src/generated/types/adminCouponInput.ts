@@ -21,4 +21,22 @@ export interface AdminCouponInput {
      */
   usageLimit?: number | null;
   isActive?: boolean;
+  freeShipping?: boolean;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  perCustomerLimit?: number | null;
+  /**
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  maxDiscount?: number | null;
+  /** @items.minimum 1 */
+  excludedProductIds?: number[];
+  /**
+     * ISO2 codes; empty means all countries
+     * @items.pattern ^[A-Z]{2}$
+     */
+  allowedCountries?: string[];
 }

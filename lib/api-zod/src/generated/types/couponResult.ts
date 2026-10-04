@@ -12,4 +12,6 @@ export interface CouponResult {
   message: string;
   /** @nullable */
   code?: string | null;
+  /** True when the validated coupon waives delivery fees (pickup fee unchanged) */
+  freeShipping?: boolean;
 }

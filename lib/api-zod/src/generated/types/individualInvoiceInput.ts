@@ -42,6 +42,11 @@ export interface IndividualInvoiceInput {
      * @pattern ^[0-9]{15}$
      */
   buyerTaxNumber: string | null;
+  /**
+     * @nullable
+     * @pattern ^[A-Z]{2}$
+     */
+  buyerCountry?: string | null;
   /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
   issueDate: string;
   /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */

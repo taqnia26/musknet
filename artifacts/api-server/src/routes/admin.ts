@@ -16,6 +16,7 @@ import { createAnnualAgendaRouter } from "./annual-agenda";
 import { createSallaInvoiceRouter } from "./salla-invoices";
 import { createShipHeroAdminRouter } from "./shiphero-admin";
 import { createInvoiceDesignRouter } from "./invoice-design";
+import { validateCouponSettings } from "../lib/coupon-admin";
 import { localInvoiceDocument } from "../lib/invoice-document-data";
 import { prepareProductDescriptionCreate, prepareProductDescriptionUpdate, validateRawRichDescriptionFields } from "../lib/rich-description";
 import * as Api from "@workspace/api-zod";
@@ -2200,11 +2201,15 @@ router.post("/admin/orders", permit("orders", "edit"), route(async (req, res) =>
         (sum, item) => sum + item.product.price * item.quantity,
         0,
       ) * 100) / 100;
-      const shippingCost = fulfillmentMethod === "pickup" ? ADMIN_PICKUP_FEE_SAR : body.shippingCost ?? (
+      let shippingCost = fulfillmentMethod === "pickup" ? ADMIN_PICKUP_FEE_SAR : body.shippingCost ?? (
          domestic && /الرياض|riyadh/i.test(city) ? 20 : 30
       );
       validateManualDiscount(body.discountOverride);
-      const discount = await calculateSaleDiscount(tx, subtotal, body.couponCode, body.discountOverride?.percent, true);
+      const discount = await calculateSaleDiscount(tx, subtotal, body.couponCode, body.discountOverride?.percent, true, {
+        customerId: customer.id, country: fulfillmentMethod === "pickup" ? "SA" : country ?? "SA",
+        items: selectedProducts.map(i => ({productId: i.product.id, quantity: i.quantity, unitPrice: i.product.price})),
+      });
+      if (discount.freeShipping && fulfillmentMethod !== "pickup") shippingCost = 0;
       const manual = (body.discountOverride?.percent ?? 0) > 0;
       const grossTotalCents = Math.round((discount.productsTotal + shippingCost) * 100);
       // Pickup is fulfilled at the Saudi business site, not exported to the buyer's address.
@@ -2708,7 +2713,7 @@ router.post("/admin/invoices/individuals", permit("invoices", "edit"), route(asy
 const discountQuoteHandler = route(async (req, res) => {
   const input = parse(Api.AdminQuoteOrderDiscountBody, req.body, res); if (!input) return;
   try {
-    const quote = await db.transaction((tx) => calculateSaleDiscount(tx, input.productSubtotal, input.couponCode, input.manualDiscountPercent));
+    const quote = await db.transaction((tx) => calculateSaleDiscount(tx, input.productSubtotal, input.couponCode, input.manualDiscountPercent, false, input));
     res.json(Api.AdminQuoteOrderDiscountResponse.parse(quote));
   } catch (error) {
     if (error instanceof SaleDiscountValidationError) { res.status(400).json({ error: error.message }); return; }
@@ -3266,13 +3271,28 @@ router.get("/admin/coupons", permit("coupons", "view"), route(async (req, res) =
 }));
 router.post("/admin/coupons", permit("coupons", "edit"), route(async (req, res) => {
   const body = parse(Api.AdminCreateCouponBody, req.body, res); if (!body) return;
-  const [row] = await db.insert(couponsTable).values({ ...body, code: body.code.toUpperCase() }).returning();
+  const settingsError = await validateCouponSettings(body);
+  if (settingsError) { res.status(400).json({error:settingsError}); return; }
+  const [duplicate] = await db.select({id:couponsTable.id}).from(couponsTable).where(sql`lower(trim(${couponsTable.code})) = lower(${body.code.trim()})`);
+  if (duplicate) { res.status(409).json({error:"كود الكوبون مستخدم مسبقًا، بغض النظر عن حالة الأحرف"}); return; }
+  const [row] = await db.insert(couponsTable).values({ ...body, code: body.code.trim() }).returning();
   res.status(201).json(Api.AdminCreateCouponResponse.parse(row));
 }));
 router.patch("/admin/coupons/:id", permit("coupons", "edit"), route(async (req, res) => {
   const params = parse(Api.AdminUpdateCouponParams, req.params, res);
   const body = parse(Api.AdminUpdateCouponBody.partial(), req.body, res); if (!params || !body) return;
-  const [row] = await db.update(couponsTable).set({ ...body, code: body.code?.toUpperCase() }).where(eq(couponsTable.id, params.id)).returning();
+  const [existing] = await db.select().from(couponsTable).where(eq(couponsTable.id, params.id));
+  if (!existing) { res.status(404).json({error:"Coupon not found"}); return; }
+  const settingsError = await validateCouponSettings({...existing,...body});
+  if (settingsError) { res.status(400).json({error:settingsError}); return; }
+  if (body.code && existing.timesUsed > 0 && body.code.trim().toLowerCase() !== existing.code.toLowerCase()) {
+    res.status(400).json({error:"لا يمكن تغيير كود سبق استخدامه؛ أنشئ كوبونًا جديدًا للحفاظ على سجل الاستخدام"}); return;
+  }
+  if (body.code) {
+    const [duplicate] = await db.select({id:couponsTable.id}).from(couponsTable).where(and(ne(couponsTable.id,params.id),sql`lower(trim(${couponsTable.code})) = lower(${body.code.trim()})`));
+    if (duplicate) { res.status(409).json({error:"كود الكوبون مستخدم مسبقًا"}); return; }
+  }
+  const [row] = await db.update(couponsTable).set({ ...body, code: body.code?.trim() }).where(eq(couponsTable.id, params.id)).returning();
   if (!row) { res.status(404).json({ error: "Coupon not found" }); return; }
   res.json(Api.AdminUpdateCouponResponse.parse(row));
 }));

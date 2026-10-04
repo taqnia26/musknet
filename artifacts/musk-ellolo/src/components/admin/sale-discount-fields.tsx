@@ -42,7 +42,13 @@ export function saleDiscountPayload(f: SaleDiscountForm) {
 
 type QuoteFn = (vars: { data: SaleDiscountQuoteInput }) => Promise<SaleDiscountQuote>;
 
-export function useSaleDiscountPreview(quote: QuoteFn, productSubtotal: number, form: SaleDiscountForm, enabled: boolean) {
+export type SaleDiscountContext = Pick<SaleDiscountQuoteInput, 'items' | 'customerId' | 'buyerPhone' | 'country'>;
+
+/** Context changes (lines, customer, phone, country) re-key the quote so a stale result is never shown. */
+export function useSaleDiscountPreview(quote: QuoteFn, productSubtotal: number, form: SaleDiscountForm, enabled: boolean, context: SaleDiscountContext = {}) {
+  const contextKey = JSON.stringify(context);
+  const contextRef = useRef(context);
+  contextRef.current = context;
   const quoteRef = useRef(quote);
   quoteRef.current = quote;
   const latest = useRef(0);
@@ -50,7 +56,7 @@ export function useSaleDiscountPreview(quote: QuoteFn, productSubtotal: number, 
   const percent = parsePercent(form.percent);
   const coupon = form.coupon.trim();
   const active = enabled && percent !== null && productSubtotal > 0 && (coupon !== '' || percent > 0);
-  const key = `${productSubtotal}|${coupon}|${percent}`;
+  const key = `${productSubtotal}|${coupon}|${percent}|${contextKey}`;
 
   useEffect(() => {
     latest.current += 1;
@@ -58,7 +64,7 @@ export function useSaleDiscountPreview(quote: QuoteFn, productSubtotal: number, 
     if (!active) { setState({ key, quote: null, error: null, loading: false }); return; }
     setState({ key, quote: null, error: null, loading: true });
     const handle = window.setTimeout(() => {
-      quoteRef.current({ data: { productSubtotal, ...(coupon ? { couponCode: coupon } : {}), manualDiscountPercent: percent ?? 0 } })
+      quoteRef.current({ data: { productSubtotal, ...(coupon ? { couponCode: coupon } : {}), manualDiscountPercent: percent ?? 0, ...(coupon ? contextRef.current : {}) } })
         .then((q) => { if (id === latest.current) setState({ key, quote: q, error: null, loading: false }); })
         .catch((e: unknown) => {
           if (id !== latest.current) return;
@@ -113,6 +119,7 @@ export function SaleDiscountFields({ form, onChange, preview, idPrefix, disabled
               <div className="flex justify-between"><span>{t('مجموع المنتجات', 'Products subtotal')}</span><Money value={q.productSubtotal} lang={lang} fractionDigits={2} /></div>
               <div className="flex justify-between"><span>{t('خصم الكوبون', 'Coupon discount')}{q.couponCode ? ` (${q.couponCode})` : ''}</span><span>-<Money value={q.couponDiscountAmount} lang={lang} fractionDigits={2} /></span></div>
               <div className="flex justify-between"><span>{t(`خصم يدوي (${q.manualDiscountPercent}%)`, `Manual discount (${q.manualDiscountPercent}%)`)}</span><span>-<Money value={q.manualDiscountAmount} lang={lang} fractionDigits={2} /></span></div>
+              {q.freeShipping && <div className="flex justify-between text-emerald-700" data-testid={`${idPrefix}-free-shipping`}><span>{t('الكوبون يشمل توصيلاً مجانياً', 'Coupon includes free delivery')}</span><span>{t('رسوم التوصيل = 0 (رسوم الاستلام كما هي)', 'Delivery fee = 0 (pickup fee unchanged)')}</span></div>}
               <div className="flex justify-between font-semibold border-t pt-1"><span>{t('المنتجات بعد الخصم (دون رسوم)', 'Products after discounts (excl. fees)')}</span><Money value={q.productsTotal} lang={lang} fractionDigits={2} /></div>
             </> : null}
         </div>

@@ -1246,6 +1246,8 @@ export interface CouponResult {
   message: string;
   /** @nullable */
   code?: string | null;
+  /** True when the validated coupon waives delivery fees (pickup fee unchanged) */
+  freeShipping?: boolean;
 }
 
 export type CheckoutQuoteInputShippingMethod = typeof CheckoutQuoteInputShippingMethod[keyof typeof CheckoutQuoteInputShippingMethod];
@@ -2677,6 +2679,15 @@ export interface ManualSaleDiscountInput {
   reason?: string;
 }
 
+export type SaleDiscountQuoteInputItemsItem = {
+  /** @minimum 1 */
+  productId: number;
+  /** @minimum 1 */
+  quantity: number;
+  /** @minimum 0 */
+  unitPrice: number;
+};
+
 export interface SaleDiscountQuoteInput {
   /** @minimum 0 */
   productSubtotal: number;
@@ -2690,6 +2701,17 @@ export interface SaleDiscountQuoteInput {
      * @maximum 100
      */
   manualDiscountPercent?: number;
+  /**
+     * Line context used for coupon product exclusions; server revalidates prices
+     * @maxItems 100
+     */
+  items?: SaleDiscountQuoteInputItemsItem[];
+  /** @minimum 1 */
+  customerId?: number;
+  /** @maxLength 40 */
+  buyerPhone?: string;
+  /** @pattern ^[A-Z]{2}$ */
+  country?: string;
 }
 
 export interface SaleDiscountQuote {
@@ -2701,6 +2723,8 @@ export interface SaleDiscountQuote {
   manualDiscountAmount: number;
   discountAmount: number;
   productsTotal: number;
+  /** Coupon waives delivery fee; pickup fee unchanged */
+  freeShipping?: boolean;
 }
 
 /**
@@ -3396,6 +3420,11 @@ export interface IndividualInvoiceInput {
      * @pattern ^[0-9]{15}$
      */
   buyerTaxNumber: string | null;
+  /**
+     * @nullable
+     * @pattern ^[A-Z]{2}$
+     */
+  buyerCountry?: string | null;
   /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
   issueDate: string;
   /** @pattern ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ */
@@ -4492,6 +4521,24 @@ export interface AdminCoupon {
   timesUsed: number;
   isActive: boolean;
   createdAt: string;
+  freeShipping?: boolean;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  perCustomerLimit?: number | null;
+  /**
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  maxDiscount?: number | null;
+  /** @items.minimum 1 */
+  excludedProductIds?: number[];
+  /**
+     * ISO2 codes; empty means all countries
+     * @items.pattern ^[A-Z]{2}$
+     */
+  allowedCountries?: string[];
 }
 
 export type AdminCouponInputDiscountType = typeof AdminCouponInputDiscountType[keyof typeof AdminCouponInputDiscountType];
@@ -4516,6 +4563,24 @@ export interface AdminCouponInput {
      */
   usageLimit?: number | null;
   isActive?: boolean;
+  freeShipping?: boolean;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  perCustomerLimit?: number | null;
+  /**
+     * @exclusiveMinimum 0
+     * @nullable
+     */
+  maxDiscount?: number | null;
+  /** @items.minimum 1 */
+  excludedProductIds?: number[];
+  /**
+     * ISO2 codes; empty means all countries
+     * @items.pattern ^[A-Z]{2}$
+     */
+  allowedCountries?: string[];
 }
 
 export type AdminCouponUpdate = AdminCouponInput;
