@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>مراجعة ترقيم الفواتير — M وML</title>
+<style>body{font:16px/1.9 Tahoma,Arial,sans-serif;color:#202b31;background:#f5f6f7;margin:0}main{max-width:1040px;margin:auto;background:white;padding:40px}h1,h2,h3{line-height:1.5}h2{margin-top:35px;border-bottom:1px solid #ddd;padding-bottom:8px}table{border-collapse:collapse;width:100%;margin:18px 0}td,th{border:1px solid #ddd;padding:10px;text-align:right;vertical-align:top}code{direction:ltr;unicode-bidi:isolate;display:inline-block;font-family:monospace}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f5f7;padding:16px;font:13px/1.7 monospace}.notice{background:#fff5df;padding:18px;border-right:4px solid #c18b23}.muted{color:#58616a}@media print{body{background:white}main{padding:0}h2,h3{break-after:avoid}tr,pre{break-inside:avoid}}</style>
+<main>
+<h1>تقرير مراجعة ترقيم الفواتير</h1>
+<p>المطلوب: <code>M</code> للأفراد و<code>ML</code> للشركات والموزعين. تاريخ المراجعة: 4 أكتوبر 2026.</p>
+<div class="notice"><strong>تقرير فقط — لم يُنفّذ تغيير الترقيم.</strong> لم تُعدّل بيانات الفواتير أو مخطط قاعدة البيانات، ولم تُشغّل ترحيلات أو أوامر دفع للمخطط، ولم يُفتح اتصال بالإنتاج. النتائج أدناه من الشيفرة الحالية، وليست إثباتًا لحالة قاعدة الخادم الخاص. أمثلة الأرقام توضيحية وليست بيانات فعلية.</div>
+
+<h2>1. المولّد والتسلسل وحماية التزامن</h2>
+<ul>
+<li>المولّد المركزي <code>nextLiveInvoiceNumber</code> في <code>artifacts/api-server/src/lib/invoices.ts</code>. المساعد الحسابي في <code>invoice-sequence.ts</code>.</li>
+<li>العدّاد <strong>عام، لا عدّاد لكل قناة</strong>: الرقم التالي يبدأ من أكبر قيمة بين الحد الأقصى الموجب لـ<code>tax_invoices.sequence_number</code> والقيمة المحفوظة في <code>backup_invoice_highwater</code> للنطاق <code>public.tax_invoices.sequence_number</code>، ثم يضيف واحدًا.</li>
+<li>الصيغة <code>prefix + "-" + String(number).padStart(6,"0")</code>. ست خانات حد أدنى، وليست حدًا أقصى؛ الرقم مليون يصبح <code>M-1000000</code>.</li>
+<li>كل مسارات الإصدار التي راجعتها تأخذ قفل المعاملة <code>pg_advisory_xact_lock(7521010001)</code> قبل التخصيص. المولّد نفسه يعتمد على استدعاء القفل من المستدعي؛ يُفضّل حصر هذا الشرط داخل واجهة التخصيص عند التعديل.</li>
+<li>يتحقق المولّد من عدم وجود <code>invoice_number</code> مساويًا دون اعتبار حالة الأحرف، ويتجاوز الرقم المحجوز. يحدث حفظ أعلى رقم وإدخال الفاتورة في معاملة واحدة؛ فشل المعاملة يعيد كليهما، لا يحرق الرقم على طريقة <code>nextval</code>.</li>
+<li>يوجد فهرس فريد مستقل لكل من <code>sequence_number</code> و<code>invoice_number</code>، وحماية إعادة المحاولة عبر رقم الطلب أو <code>creation_key</code>. الإلغاء والأرشفة ليسا وسيلة لإعادة استخدام الأرقام.</li>
+<li>الاستعادة تحفظ أعلى رقم خارج بيانات الأعمال المستعادة. قد تظهر فجوات بعد الاستعادة أو تجاوز رقم خارجي محجوز؛ هذه حماية من التكرار وليست خللًا يُصلح بإعادة الترقيم.</li>
+</ul>
+
+<h2>2 و3. الصيغ الحالية وخريطة التغيير المقترحة</h2>
+<table><thead><tr><th>النوع</th><th>الحالي ومكان الإنشاء</th><th>المقترح بعد الموافقة</th></tr></thead><tbody>
+<tr><td>فاتورة طلب فرد من المتجر، ومسارات طلبات الأفراد اليدوية التي تصدر فاتورة طلب</td><td><code>INV-000123</code>؛ مسار إصدار فاتورة الطلب في <code>invoices.ts</code></td><td><code>M-000123</code> للفواتير المنشأة بعد التفعيل فقط</td></tr>
+<tr><td>فاتورة فرد مباشرة دون طلب</td><td><code>INV-000124</code>؛ <code>individual-invoices.ts</code></td><td><code>M-000124</code></td></tr>
+<tr><td>فاتورة شركة أو موزع جديدة</td><td><code>LC-000125</code>؛ المولّد في <code>invoices.ts</code> ويستخدمه مسار الشركات في <code>company-invoices.ts</code></td><td><code>ML-000125</code></td></tr>
+<tr><td>فاتورة معرض</td><td><code>INV-000126</code>؛ إصدار المعارض في <code>invoices.ts</code></td><td>تبقى <code>INV-…</code> دون تغيير؛ لم يحدد المالك بادئة لها</td></tr>
+<tr><td>تسجيل فاتورة تاريخية برقم خارجي</td><td>الرقم المدخل كما هو، مثل <code>EXT-2024-83</code>؛ <code>historical-company-invoices.ts</code>. <code>sequence_number</code> سالب: أصغر قيمة حالية ناقص واحد، وبحد أقصى −1</td><td>لا تحويل إلى M أو ML ولا تغيير للأصل</td></tr>
+<tr><td>تسجيل تاريخي يحتاج مرجعًا داخليًا</td><td>يحجز <code>LC-000127</code> عبر المولّد العام، لكنه يخزن <code>sequence_number</code> سالبًا؛ يحتفظ بالرقم الخارجي في <code>original_invoice_number</code></td><td>إبقاؤه LC ضمن هذا المقترح لأنه تسجيل تاريخي لا إصدار ضريبي جديد. تغيير مراجع التسجيلات التاريخية المستقبلية إلى ML يحتاج قرارًا منفصلًا صريحًا</td></tr>
+<tr><td>أرشيف فواتير سلة المستوردة</td><td>رقم المصدر كما هو، نص أو رقم محوّل لنص، وقد يكون خاليًا؛ جدول <code>salla_invoice_archive</code> وفق مخطط أرشيف سلة</td><td>يبقى رقم المصدر والملف الأصلي دون تغيير</td></tr>
+</tbody></table>
+<p><strong>تنبيه مهم:</strong> التاريخي ذو المرجع الداخلي يرفع أعلى رقم محفوظ رغم تسلسله السالب؛ لذلك الاقتصار على <code>MAX(sequence_number)</code> أو على الفواتير غير التاريخية سيؤدي إلى حساب خاطئ للرقم التالي. أرقام الطلبات <code>L-…</code> و<code>CO-…</code> خارج النطاق بالكامل.</p>
+
+<h2>4. مواضع التخزين والعرض والبحث والاستدلال</h2>
+<p>هذه خريطة مواضع التعامل مع الرقم في المصدر الحالي؛ لا توجد حاجة لاستبدال أرقام مخزنة أو إعادة بناء مستندات سابقة.</p>
+<table><thead><tr><th>المجال</th><th>الملفات والتأثير</th></tr></thead><tbody>
+<tr><td>التخزين والتوليد</td><td><code>lib/db/src/schema/invoices.ts</code>، <code>invoices.ts</code>، <code>individual-invoices.ts</code>، <code>company-invoices.ts</code>، <code>historical-company-invoices.ts</code>، <code>invoice-sequence.ts</code>. الحقول: الرقم والتسلسل والرقم الأصلي. لا تعديل للقيم القديمة.</td></tr>
+<tr><td>سلة</td><td><code>lib/db/src/schema/salla-invoices.ts</code>، <code>lib/salla-invoice-import.ts</code>، <code>routes/salla-invoices.ts</code>، <code>components/admin/salla-invoice-archive.tsx</code>. مصدر منفصل، يشمل مقارنة بيانات إعادة الاستيراد؛ لا يدخل التغيير.</td></tr>
+<tr><td>القوائم والبحث والشحن</td><td><code>routes/admin.ts</code>: عرض الرقم والرقم الأصلي؛ بحث <code>ILIKE</code> عليهما وعلى بيانات الأطراف والطلبات؛ تمرير الرقم مرجعًا للشحن. التصنيف يعتمد على حقول القناة والعلاقات، لا بادئة الرقم. البحث العام عن M قد يعرض ML أيضًا؛ هذا بحث نصي وليس تصنيفًا.</td></tr>
+<tr><td>واجهة الإدارة</td><td><code>pages/admin/invoices.tsx</code>؛ حوارات <code>create-individual-invoice</code>، <code>create-company-invoice</code>، <code>create-distributor-invoice</code>، <code>create-exhibition-invoice</code>، <code>create-historical-invoice</code>؛ <code>order-documents.tsx</code>. كلها تعرض الرقم القادم من الخادم أو نتيجة الإصدار.</td></tr>
+<tr><td>القالب وPDF والطباعة</td><td><code>lib/invoice-document/src/{model,render,paginate}.ts</code>؛ <code>invoice-browser-pdf.ts</code>؛ <code>pages/admin/invoice-design.tsx</code>؛ <code>components/admin/invoice-design/use-invoice-source.ts</code>. الرقم نص في المستند وعنوان الطباعة واسم التنزيل. مثال المصمم <code>ME-2026-000123</code> بيانات معاينة، لا مولّد حقيقي. أسماء PDF تنظّف الرموز فقط؛ M وML والشرطة تمر دون مشكلة.</td></tr>
+<tr><td>البريد</td><td><code>lib/invoice-email.ts</code>: الرقم في العنوان والمحتوى واسم مرفق PDF. الرسائل والمرفقات المرسلة سابقًا لا يعاد إرسالها أو استبدالها.</td></tr>
+<tr><td>المحاسبة والمطابقة التاريخية</td><td><code>invoices.ts</code>، <code>individual-invoices.ts</code>، <code>historical-company-invoices.ts</code>: الرقم داخل أوصاف قيود البيع والتحصيل والتكلفة وأسباب حركات المخزون وبعض حمولات الأحداث. الروابط المحاسبية الأساسية تستخدم نوع المصدر ومعرّفه، لا استخراج القناة من النص. المطابقة التاريخية تقارن الرقم والرقم الأصلي دون حساسية للحروف وتبحث أيضًا داخل أوصاف القيود.</td></tr>
+<tr><td>العقود والنسخ والتصدير</td><td><code>lib/api-spec/openapi.yaml</code> والعملاء المولدون: الرقم نص؛ لا صيغة ثابتة مطلوب تغييرها. تصدير المستندات PDF والطباعة، وأرشيف سلة، ونسخ البيانات في <code>lib/backups/engine.ts</code> تحتفظ بالرقم المخزن. لم أجد محللًا إنتاجيًا يقتطع INV أو LC ليستنتج القناة ضمن المواضع التي أظهرها البحث.</td></tr>
+<tr><td>الاختبارات</td><td><code>invoices.test.ts</code> يتوقع INV وLC؛ <code>historical-company-invoices.test.ts</code> يختبر مراجع LC وحجزها؛ <code>invoice-sequence.test.ts</code>؛ <code>individual-invoices.postgres.test.ts</code>؛ <code>invoice-document.test.ts</code>؛ <code>invoice-email.test.ts</code>؛ اختبارات <code>routes/admin*.test.ts</code> بما فيها بحث INV والشحن؛ <code>sales-returns.test.ts</code>؛ <code>lib/db/test/backup-engine.postgres.test.ts</code>. تُغيّر توقعات الإصدار الجديد فقط، وتبقى عينات الأرقام القديمة لاختبار التوافق.</td></tr>
+</tbody></table>
+<p>أي فحص بادئة جديد يجب أن يطابق <code>^M-[0-9]+$</code> أو <code>^ML-[0-9]+$</code>، لا <code>startsWith("M")</code>. والأفضل تصنيف الفاتورة من علاقاتها وحقولها كما يفعل النظام، لأن البيانات القديمة والمستوردة ليست ملزمة بالصيغة الجديدة.</p>
+
+<h2>5. القيود والفهارس والمشغّلات</h2>
+<ul>
+<li><code>invoices_sequence_number_unique</code> و<code>invoices_invoice_number_unique</code> و<code>invoices_order_id_unique</code> و<code>invoices_creation_key_unique</code>: جميعها تبقى. فهرس الرقم النصي الحالي فريد بالمقارنة المعتادة للنص، بينما المولّد والمطابقة التاريخية يتحققان أيضًا دون حساسية للحروف.</li>
+<li><code>sequence_number</code> عدد صحيح إلزامي، لا sequence مستقلًا في PostgreSQL؛ <code>id</code> المتسلسل شأن آخر. لا إعادة تصفير لأي منهما. يجب رفض تجاوز النطاق العددي بدل تغيير القيود ضمن هذه المهمة.</li>
+<li>قيود <code>invoice_single_channel</code> و<code>invoice_single_contract_source</code> وشروط الخصومات لا تفرض INV أو LC؛ تبقى كما هي.</li>
+<li><code>backup_invoice_highwater</code>: مفتاح أساسي على <code>scope</code> وشرط قيمة غير سالبة. لا تخفيض للقيمة عند التفعيل أو الاستعادة.</li>
+<li><code>lib/db/scripts/install-accounting-integrity.mjs</code>: مشغّلات <code>journal_entries_immutable</code> و<code>journal_entry_lines_immutable</code> و<code>journal_entries_balanced</code> و<code>journal_entry_lines_balanced</code> تحمي القيود المرحلة وتوازنها؛ لا تربط صيغة الفاتورة ببادئة. لا تعطيل أو تعديل لها.</li>
+<li><code>install-individual-invoices.mjs</code> يهيئ قناة الفواتير الفردية وشرط القناة؛ لا يفرض بادئة. بقية مثبتات حالات الطلبات ومفاتيح مصادر المرتجعات ليست موضع تغيير.</li>
+<li>لم يظهر في المخطط والترحيلات والمثبتات المفحوصة CHECK يفرض شكل INV/LC. هذا لا ينفي وجود تخصيص على الخادم الخاص؛ استعلامات القسم 8 تكشف التعريفات الفعلية.</li>
+</ul>
+
+<h2>6. QR والبصمات والمستندات</h2>
+<p><code>lib/zatca.ts</code> يبني QR المرحلة الأولى من خمسة حقول: البائع، الرقم الضريبي، التوقيت، الإجمالي والضريبة. <strong>رقم الفاتورة ليس ضمن هذه الحمولة</strong>؛ تغيير البادئة وحده لا يغيّر هذه الحقول. لم أجد في مسارات الإصدار المفحوصة توقيع XML أو سلسلة بصمات ZATCA للمرحلة الثانية تعتمد على الرقم؛ هذا وصف للشيفرة، لا شهادة امتثال ضريبي.</p>
+<p>الرقم يظهر في PDF والطباعة والبريد وبيانات التصدير، ولذلك محتوى مستند جديد ورموزه الثنائية يختلفان بطبيعة الحال. النسخ الاحتياطية تستخدم SHA-256 للتحقق من المحتوى والملفات؛ هذا ليس توقيع فاتورة. البصمة الخاصة بإعادة محاولة تسجيل فاتورة تاريخية وحقول رقمها الأصلي يجب ألا تتغير. لا إعادة إنشاء أو تعديل لأي أصل خارجي أو مرفق أو مستند صادر سابقًا بسبب هذا التغيير.</p>
+
+<h2>7. البديلان — القرار للمالك والمحاسب</h2>
+<h3>A — استمرار التسلسل العام، وتغيير البادئة فقط</h3>
+<p>مثلًا إذا كان الرقم التالي 128: فرد <code>M-000128</code>، شركة <code>ML-000129</code>، معرض <code>INV-000130</code>، فرد <code>M-000131</code>. لا يتغير التسلسل الداخلي أو القفل أو أعلى رقم محفوظ. تظهر فجوات داخل كل بادئة، لأن بقية القنوات تشارك العدّاد. <strong>لا يحتاج تعديل مخطط أو ترحيل بيانات.</strong> لا تغيير للترتيب أو الشرطة أو الحشو بالأصفار. يبقى حجز LC للتسجيل التاريخي ذي المرجع الداخلي كما هو.</p>
+<h3>B — عدّاد عرض مستقل لكل من M وML، مع إبقاء التسلسل الداخلي العام</h3>
+<p>يمكن دعم هذا دون إسقاط تفرد <code>sequence_number</code>: يبقى الحقل تسلسلًا داخليًا عامًا، ويصبح اللاحق الظاهر في <code>invoice_number</code> مستقلًا لكل بادئة. مثلًا: فرد <code>M-000001</code> بتسلسل داخلي 128؛ شركة <code>ML-000001</code> بتسلسل 129؛ فرد <code>M-000002</code> بتسلسل 130. هذه الأمثلة تفترض عدم وجود أرقام M/ML سابقة، وليست وعدًا بالبدء من 1.</p>
+<ul>
+<li>يمكن استخدام الجدول الموجود <code>backup_invoice_highwater</code> بنطاقين إضافيين؛ لا جدول جديد ولا حذف لقيد تفرد. التغيير هنا في معنى علاقة الرقم المطبوع بالتسلسل، وليس مجرد تغيير بادئة.</li>
+<li>تُهيّأ كل سلسلة من أعلى لاحق رقمي موجود لتلك البادئة ومن أعلى قيمة محفوظة لها؛ لا تصفير لعداد قديم. يحتفظ التسلسل الداخلي بكامل أعلى قيمة عامة حالية. إذا فضّل المحاسب بدء السلسلتين من أعلى الرقم العام بدلًا من 1 عند عدم وجود تاريخ لهما، فهذا بديل تهيئة يحتاج اختياره صراحة.</li>
+<li>يبقى القفل العام نفسه، وتحديث عدادي العرض والتسلسل وإدخال الفاتورة معاملة واحدة. يُرفض التكرار وتُحترم إعادة المحاولة. المعارض ومراجع LC التاريخية تبقى على السلوك القديم.</li>
+<li>نطاقات العدادات محفوظة في جدول تحكم يحتفظ به نظام الاستعادة. يجب اختبار حفظ النطاقين الجديدين في الاستعادة وأدوات نقل الخادم، لا الاكتفاء بأن الاستعادة الحالية تعرف النطاق العام.</li>
+<li><strong>«بلا فجوات» ليست ضمانة مطلقة:</strong> الإصدار الناجح العادي بعد نقطة البداية يمكن أن يكون متتابعًا لكل سلسلة، وفشل المعاملة لا يستهلك رقمًا. لكن الاستعادة مع الاحتفاظ بأعلى رقم، وأرقام خارجية محجوزة، قد تترك فجوات لازمة لمنع إعادة الاستخدام. لا يمكن الجمع بين محو هذه الفجوات وعدم إعادة استخدام أرقام صدرت فعلًا.</li>
+<li>لا تحويل للأرقام السابقة إلى السلاسل الجديدة، ولا محاولة لاستخراج التسلسل الداخلي من الرقم المطبوع بعد هذا الخيار.</li>
+</ul>
+<p><strong>لم أختَر A أو B.</strong> كلاهما قابل للدعم وفق الحدود أعلاه. لا يصح تنفيذ B بمجرد جعل <code>sequence_number</code> يبدأ من 1 لكل بادئة؛ ذلك يصطدم مباشرة بالفهرس الفريد العام ويضعف الحماية إن أزيل.</p>
+
+<h2>8. استعلامات الخادم الخاص — قراءة فقط</h2>
+<p>يشغلها المسؤول على قاعدة الخادم المقصود بعد التحقق من الاتصال. لا مفاتيح ولا بيانات اتصال في هذه الأوامر. لا حاجة لمشاركة بيانات العملاء؛ النتائج تقتصر على الترقيم وتعريفات البنية. إذا اختلف اسم مخطط الجداول عن <code>public</code>، عدّله بعد الاستعلام الأول. إذا غاب الجدول المتوقع، توقف ولا تهيّئه تلقائيًا.</p>
+<pre>BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY;
+SELECT current_database() AS database_name, current_schema() AS schema_name,
+       current_setting('server_version') AS postgres_version,
+       to_regclass('public.tax_invoices') AS invoices_table,
+       to_regclass('public.backup_invoice_highwater') AS highwater_table;
+
+-- Actual columns/defaults: distinguish internal IDs from invoice numbering.
+SELECT table_name, column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE table_schema='public'
+  AND table_name IN ('tax_invoices','backup_invoice_highwater')
+ORDER BY table_name, ordinal_position;
+
+-- Latest records; archived/cancelled invoices remain part of numbering.
+SELECT id, invoice_number, original_invoice_number, sequence_number,
+       historical, individual, order_id, distributor_id, exhibition_id,
+       created_at, cancelled_at, archived_at
+FROM public.tax_invoices ORDER BY id DESC LIMIT 100;
+
+SELECT CASE WHEN historical='yes' THEN 'historical'
+            WHEN exhibition_id IS NOT NULL THEN 'exhibition'
+            WHEN distributor_id IS NOT NULL THEN 'company/distributor'
+            WHEN individual THEN 'standalone individual'
+            WHEN order_id IS NOT NULL THEN 'order'
+            ELSE 'unclassified' END AS channel,
+       split_part(invoice_number,'-',1) AS textual_prefix,
+       count(*) AS invoices, min(sequence_number), max(sequence_number)
+FROM public.tax_invoices GROUP BY 1,2 ORDER BY 1,2;
+
+SELECT min(sequence_number), max(sequence_number),
+       greatest(coalesce(max(sequence_number),0),0) AS live_positive_maximum
+FROM public.tax_invoices;
+SELECT scope, value, updated_at FROM public.backup_invoice_highwater ORDER BY scope;
+SELECT greatest(
+  (SELECT greatest(coalesce(max(sequence_number),0),0) FROM public.tax_invoices),
+  coalesce((SELECT value FROM public.backup_invoice_highwater
+            WHERE scope='public.tax_invoices.sequence_number'),0)
+) + 1 AS next_candidate_before_collision_check;
+
+-- Existing M/ML reservations, including external originals; no bare M prefix match.
+SELECT id, invoice_number, original_invoice_number, sequence_number, historical
+FROM public.tax_invoices
+WHERE invoice_number ~* '^(M|ML)-'
+   OR coalesce(original_invoice_number,'') ~* '^(M|ML)-'
+ORDER BY id;
+SELECT lower(invoice_number) AS normalized_number, count(*) AS copies
+FROM public.tax_invoices GROUP BY 1 HAVING count(*) > 1;
+SELECT sequence_number, count(*) FROM public.tax_invoices
+GROUP BY sequence_number HAVING count(*) > 1;
+
+-- All constraints involving these tables, including incoming foreign keys.
+SELECT conrelid::regclass AS table_name, conname, contype,
+       pg_get_constraintdef(oid,true) AS definition
+FROM pg_constraint
+WHERE conrelid IN (to_regclass('public.tax_invoices'),
+                  to_regclass('public.backup_invoice_highwater'),
+                  to_regclass('public.journal_entries'),
+                  to_regclass('public.journal_entry_lines'))
+   OR confrelid=to_regclass('public.tax_invoices')
+ORDER BY conrelid::regclass::text, conname;
+SELECT tablename,indexname,indexdef FROM pg_indexes
+WHERE schemaname='public'
+  AND tablename IN ('tax_invoices','backup_invoice_highwater',
+                    'journal_entries','journal_entry_lines')
+ORDER BY tablename,indexname;
+
+-- Non-system triggers and exact function bodies (includes accounting protections).
+SELECT n.nspname AS schema_name,c.relname AS table_name,t.tgname,
+       t.tgenabled,pg_get_triggerdef(t.oid,true) AS trigger_definition,
+       pg_get_functiondef(t.tgfoid) AS function_definition
+FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid
+JOIN pg_namespace n ON n.oid=c.relnamespace
+WHERE NOT t.tgisinternal AND n.nspname='public'
+ORDER BY c.relname,t.tgname;
+
+-- Other server-side SQL routines that may depend on invoice format/counters.
+SELECT n.nspname,p.proname,pg_get_functiondef(p.oid) AS definition
+FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+WHERE n.nspname='public' AND p.prokind IN ('f','p')
+  AND p.prosrc ~* '(invoice_number|sequence_number|backup_invoice_highwater|INV-|LC-)';
+SELECT schemaname,viewname,definition FROM pg_views
+WHERE schemaname='public'
+  AND definition ~* '(invoice_number|sequence_number|tax_invoices)';
+SELECT schemaname,matviewname,definition FROM pg_matviews
+WHERE schemaname='public'
+  AND definition ~* '(invoice_number|sequence_number|tax_invoices)';
+COMMIT;</pre>
+<p>لا توجد نتيجة إنتاج مرفقة؛ هذه استعلامات مقترحة لم تُنفّذ. عند غياب عمود أو جدول بسبب اختلاف إصدار الخادم، تُراجع البنية أولًا ولا تُنفّذ تهيئة أو إصلاح ضمن جلسة الفحص.</p>
+
+<h2>قائمة التغييرات المقترحة بعد الموافقة</h2>
+<ol>
+<li><code>invoices.ts</code>: توسيع البوادئ المسموحة وتغيير مستدعي إصدار فاتورة طلب الفرد إلى M والشركة/الموزع إلى ML، مع إبقاء مستدعي المعرض INV. لا استبدال شامل لعبارات INV أو LC.</li>
+<li><code>individual-invoices.ts</code>: إصدار الفواتير المباشرة بالبادئة M. <code>historical-company-invoices.ts</code>: تثبيت استثناء المرجع الداخلي LC واختباره، لا تغيير السجلات أو البصمات التاريخية.</li>
+<li>A: إبقاء <code>invoice-sequence.ts</code> وآلية الاستعادة والمخطط كما هي؛ لا SQL ترحيل مطلوب.</li>
+<li>B فقط: تعديل واجهة تخصيص الرقم في <code>invoices.ts</code> ومساعد <code>invoice-sequence.ts</code> للفصل بين الرقم العام واللاحق المعروض، مع حفظ نطاقَي العرض وفحص الحجز داخل المعاملة. مراجعة <code>backups/engine.ts</code> واختبار احتفاظ الاستعادة بالنطاقات الجديدة. لا تغيير في أعمدة المخطط في هذا التصميم.</li>
+<li>تحديث اختبارات الإصدار المحددة في القسم 4، وإضافة تغطية إصدار متزامن متعدد القنوات، وإعادة محاولة الطلب، وفشل المعاملة، والأرقام التاريخية المحجوزة، والإلغاء والأرشفة، واستعادة نسخة أقدم، وبقاء بيانات الفواتير القديمة والرقم الأصلي دون تغيير.</li>
+<li>اختبار PDF والبريد والبحث باستخدام فاتورة قديمة INV وأخرى M وثالثة ML، والتأكد من عدم الخلط بين M وML أو تغيير أرقام الطلبات.</li>
+<li>تفعيل إصدار الخادم بعد نتائج الفحص وموافقة المالك والمحاسب، مع منع تداخل نسختين من كود الترقيم وقت التحويل. لا إعادة ترقيم، لا تعطيل مشغلات، لا حذف فهارس.</li>
+</ol>
+<h3>نص تهيئة البيانات المحتمل للخيار B — غير منفّذ</h3>
+<p>هذا ليس مطلوبًا للخيار A، وليس موافقة للتنفيذ. يفترض اختيار بدء كل سلسلة من أعلى رقم سابق <em>لنفس البادئة</em> لا من أعلى الرقم العام. ينشئ سجلّي تحكم في الجدول الموجود فقط، ويحافظ على أية قيمة أعلى موجودة. يفحص الأرقام الأصلية أيضًا لتجنب اصطدام المرجع الجديد بأصل خارجي. يجب تشغيله ضمن نافذة منع الكتابة المتفق عليها بعد مراجعة نتائج القسم 8؛ ثم يستخدم التطبيق المنطق نفسه عند التخصيص.</p>
+<pre>BEGIN;
+SELECT pg_advisory_xact_lock(7521010001);
+WITH prefixes(prefix) AS (VALUES ('M'::text),('ML'::text)),
+references_to_preserve(reference) AS (
+  SELECT invoice_number FROM public.tax_invoices
+  UNION ALL
+  SELECT original_invoice_number FROM public.tax_invoices
+  WHERE original_invoice_number IS NOT NULL
+),
+initial_values AS (
+  SELECT p.prefix,
+    coalesce(max(substring(upper(r.reference)
+      FROM ('^' || p.prefix || '-([0-9]+)$'))::bigint),0) AS value
+  FROM prefixes p LEFT JOIN references_to_preserve r
+    ON upper(r.reference) ~ ('^' || p.prefix || '-[0-9]+$')
+  GROUP BY p.prefix
+)
+INSERT INTO public.backup_invoice_highwater(scope,value)
+SELECT 'public.tax_invoices.invoice_number:' || prefix,value FROM initial_values
+ON CONFLICT(scope) DO UPDATE
+SET value=greatest(public.backup_invoice_highwater.value,excluded.value),
+    updated_at=now();
+COMMIT;</pre>
+<p>يلزم رفض قيم عدادات تتجاوز النطاق الحسابي المدعوم في التطبيق قبل تفعيل الإصدار. إذا كان هناك رقم تاريخي لا يمكن تحويل لاحقه إلى bigint، ستفشل هذه التهيئة بدل اقتطاعه أو تجاهله. لا يغيّر النص أعلى الرقم العام ولا الفواتير السابقة. لا يوجد DDL أو تغيير مخطط مقترح في أي من التصميمين أعلاه.</p>
+<div class="notice">المطلوب قبل التنفيذ: اختيار A أو B مع المحاسب؛ ولـB تحديد نقطة بداية السلسلتين وقبول فجوات الحماية بعد الاستعادة. مراجع LC التاريخية والمعارض تبقى دون تغيير وفق النطاق الحالي. ننتظر الموافقة؛ لا يوجد نشر أو ترحيل ضمن هذا التقرير.</div>
+</main></html>

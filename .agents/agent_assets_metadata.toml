@@ -98,3 +98,17 @@ mtime_ms = 1790537429896
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/ad7950cd-5bea-4b5a-875d-3b8a8eea4519/2155274e-9583-41a4-bb5c-4793da198226"
 storage_version_token = "1790537445642016"
 content_type = "text/csv"
+
+[[outputs]]
+id = "0I_D2mxtePbz-_5H_FJB4"
+uri = "file://reports/invoice-numbering-review.html"
+type = "html"
+title = "تقرير مراجعة ترقيم الفواتير M وML"
+description = "التسلسل الحالي، القنوات والقيود، مقارنة العدّادات، قائمة التغييرات المقترحة، واستعلامات قراءة فقط للخادم الخاص. لم يُنفّذ تغيير الترقيم."
+logical_id = "ffaaebbe-0b15-4a27-bf73-d1185c961d69"
+content_hash = "sha256:7f0880a326dd82b0f92e36f3cb561a54566bc39ecdc433422444c8d6a292ae77"
+size = 30120
+mtime_ms = 1791104049686
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/ffaaebbe-0b15-4a27-bf73-d1185c961d69/a2a7f155-5607-4c76-bc1b-c363339a6824"
+storage_version_token = "1791104077472425"
+content_type = "text/html"

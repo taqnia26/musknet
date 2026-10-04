@@ -68,3 +68,4 @@
 - [Composite-FK bootstrap](composite-fk-bootstrap.md) — fresh schema push can continue after FK errors; create referenced unique indexes first and verify strict provisioning.
 - [Invoice presentation scope](invoice-presentation-scope.md) — global publication is visual only; reference group positions do not mirror with Arabic text.
 - [Serialized browser scripts](serialized-browser-scripts.md) — function serialization can retain compiler helpers; verify isolated document execution across build targets.
+- [Invoice numbering boundaries](invoice-numbering-boundaries.md) — M/ML requires report-first approval; preserve issued numbers, historical records, orders, exhibitions and uniqueness.
