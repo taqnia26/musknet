@@ -1,4 +1,5 @@
 import request from "supertest";
+import { formatInvoiceNumber } from "@workspace/invoice-document/core";
 import { issueToken } from "../lib/storefront";
 import { mkdtemp, chmod, rm } from "node:fs/promises";
 import os from "node:os";
@@ -1151,6 +1152,10 @@ describe.sequential("admin route authorization", () => {
       vatAmount: 0,
     });
     expect(Buffer.from(invoice.qrCodeData, "base64")[0]).toBe(1);
+    const shortNumberSearch = await request(app)
+      .get(`/api/admin/invoices?search=${encodeURIComponent(formatInvoiceNumber(invoice.invoiceNumber))}`)
+      .set("Authorization", `Bearer ${superToken}`).expect(200);
+    expect(shortNumberSearch.body.some((row: {id:number}) => row.id === invoice.id)).toBe(true);
 
     const companySales = await request(app)
       .get("/api/admin/invoices?channel=companies")

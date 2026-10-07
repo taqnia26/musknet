@@ -2,7 +2,9 @@ import { z } from "zod";
 
 export const elementKinds = ["logo", "title", "seller", "buyer", "info", "table", "totals", "notes", "qr", "footer", "text", "divider"] as const;
 export type ElementKind = typeof elementKinds[number];
-export const requiredKinds = elementKinds.slice(0, 10);
+/** Only the financial table and totals are mandatory; every other built-in element may be deleted and restored. */
+export const requiredKinds = ["table", "totals"] as const;
+export const optionalKinds = ["logo", "title", "seller", "buyer", "info", "notes", "qr", "footer"] as const;
 const color = z.string().regex(/^#[0-9a-fA-F]{6}$/);
 export const elementSchema = z.object({
   id: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
@@ -27,7 +29,7 @@ export const elementSchema = z.object({
 export const designSchema = z.object({
   version: z.literal(1),
   template: z.enum(["reference", "formal", "modern"]),
-  elements: z.array(elementSchema).min(10).max(24),
+  elements: z.array(elementSchema).min(2).max(24),
   columns: z.object({
     product: z.number().min(35).max(65),
     quantity: z.number().min(10).max(20),
@@ -94,6 +96,7 @@ export function designErrors(value: unknown): string[] {
   const d = parsed.data, errors: string[] = [];
   if (new Set(d.elements.map(e => e.id)).size !== d.elements.length) errors.push("معرّفات العناصر مكررة.");
   for (const kind of requiredKinds) if (d.elements.filter(e => e.kind === kind).length !== 1) errors.push(`العنصر الإلزامي ${kind} يجب أن يظهر مرة واحدة.`);
+  for (const kind of optionalKinds) if (d.elements.filter(e => e.kind === kind).length > 1) errors.push(`العنصر ${kind} لا يتكرر.`);
   if (Math.abs(Object.values(d.columns).reduce((a,b) => a+b,0) - 100) > 0.01) errors.push("يجب أن يكون مجموع عرض أعمدة الجدول 100%.");
   for (const e of d.elements) {
     if (e.x + e.width > 202 || e.y + e.height > 289) errors.push(`${e.id}: خارج حدود الصفحة.`);
@@ -152,4 +155,15 @@ export function applyEditorPatch(d: InvoiceDesign, id: string, p: Partial<Design
   const geom: Partial<DesignElement> = {}, rest: Partial<DesignElement> = { ...p };
   for (const k of GEOM) if (k in p) { (geom as Record<string, unknown>)[k] = p[k]; delete rest[k]; }
   return { ...d, elements: d.elements.map(e => e.id === notes.id ? { ...e, ...geom } : e.id === id ? { ...e, ...rest } : e) };
+}
+
+/** Built-in elements absent from the design, restorable from the template defaults. */
+export function missingKinds(d: InvoiceDesign): ElementKind[] {
+  return optionalKinds.filter(k => k !== "notes" && !d.elements.some(e => e.kind === k));
+}
+export function restoreElement(d: InvoiceDesign, kind: ElementKind): InvoiceDesign {
+  const el = createTemplate(d.template).elements.find(e => e.kind === kind);
+  if (!el || d.elements.some(e => e.kind === kind)) return d;
+  const id = d.elements.some(e => e.id === el.id) ? `${kind}-restored` : el.id;
+  return { ...d, elements: [...d.elements, { ...el, id }] };
 }

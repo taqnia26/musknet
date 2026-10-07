@@ -65,7 +65,7 @@ export function invoiceTotalRows(i: InvoiceFacts): TotalRow[] {
 }
 export function sampleInvoice(long = false): InvoiceFacts {
   return {
-    invoiceNumber:"ME-2026-000123", sellerName:"مسك اللولو", sellerVatNumber:"300000000000003",
+    invoiceNumber:"M-000123", sellerName:"مسك اللولو", sellerVatNumber:"300000000000003",
     buyerName:"عميل تجريبي — شركة العطور", buyerPhone:"+966500000000",
     buyerAddress:"الرياض · العنوان الوطني RAAA1234",buyerTaxNumber:"310000000000003",buyerCommercialRegistrationNumber:"1010000000",
     issueDatetime:"2026-10-03T09:00:00.000Z",dueDate:"2026-10-31",

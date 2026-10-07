@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatInvoiceNumber } from '@workspace/invoice-document/core';
 import {
   getAdminListInvoicesQueryKey,
   useAdminCreateDistributorInvoice,
@@ -225,7 +226,7 @@ export function CreateDistributorInvoiceDialog() {
     }, {
       onSuccess: (invoice) => {
         queryClient.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() });
-        toast({ title: t('تم إنشاء فاتورة الموزع', 'Distributor invoice created'), description: invoice.invoiceNumber });
+        toast({ title: t('تم إنشاء فاتورة الموزع', 'Distributor invoice created'), description: formatInvoiceNumber(invoice.invoiceNumber) });
         setOpen(false);
         reset();
       },

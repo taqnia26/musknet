@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { formatInvoiceNumber } from '@workspace/invoice-document/core';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   getAdminListInvoicesQueryKey,
@@ -148,7 +149,7 @@ export function CreateHistoricalInvoiceDialog() {
     try {
       const result = await create.mutateAsync({ data });
       await queryClient.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() });
-      toast({ title: t('تم تسجيل الفاتورة التاريخية', 'Historical invoice recorded'), description: result.invoiceNumber });
+      toast({ title: t('تم تسجيل الفاتورة التاريخية', 'Historical invoice recorded'), description: formatInvoiceNumber(result.invoiceNumber) });
       setOpen(false);
       reset();
     } catch (cause) {

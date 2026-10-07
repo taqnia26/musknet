@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { formatInvoiceNumber } from '@workspace/invoice-document/core';
 import {
   getAdminListInvoicesQueryKey,
   getAdminGetCompanyInvoiceSellerConfigurationQueryKey,
@@ -229,7 +230,7 @@ export function CreateCompanyInvoiceDialog() {
       await queryClient.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() });
       toast({
         title: isHistorical ? t('تم تسجيل الفاتورة السابقة', 'Prior invoice recorded') : t('تم إنشاء فاتورة الشركة', 'Company invoice created'),
-        description: result?.invoiceNumber,
+        description: formatInvoiceNumber(result?.invoiceNumber),
       });
       setOpen(false);
       reset();

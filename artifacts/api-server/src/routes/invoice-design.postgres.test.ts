@@ -77,11 +77,21 @@ describe.skipIf(process.env.INDIVIDUAL_INVOICE_POSTGRES_E2E!=="true").sequential
     const before=(await request(app).get(path).set(auth(1))).body;
     for(const design of [
       {...createTemplate(),html:"<script>alert(1)</script>"},
-      {...createTemplate(),elements:createTemplate().elements.filter(e=>e.kind!=="seller")},
+      {...createTemplate(),elements:createTemplate().elements.filter(e=>e.kind!=="table")},
       {...createTemplate(),elements:createTemplate().elements.map(e=>e.kind==="totals"?{...e,color:"#ffffff"}:e)},
     ]) await request(app).post(`${path}/publish`).set(auth(1)).send({revision:before.revision,design}).expect(400);
     expect((await request(app).get(path).set(auth(1))).body).toEqual(before);
   });
+  it("persists and publishes deleted optional elements, then restores them without changing invoice data",async()=>{
+    const before=(await request(app).get(path).set(auth(1)).expect(200)).body;
+    const design={...before.published,elements:before.published.elements.filter((e:{kind:string})=>!["logo","footer","qr"].includes(e.kind))};
+    const saved=(await request(app).put(path).set(auth(1)).send({revision:before.revision,design}).expect(200)).body;
+    expect((await request(app).get(path).set(auth(0)).expect(200)).body.draft).toEqual(design);
+    const published=(await request(app).post(`${path}/publish`).set(auth(1)).send({revision:saved.revision,design}).expect(200)).body;
+    expect((await request(app).get(publicPath).set(auth(2)).expect(200)).body.design).toEqual(design);
+    const restored=(await request(app).post(`${path}/publish`).set(auth(1)).send({revision:published.revision,design:before.published}).expect(200)).body;
+    expect(restored.published).toEqual(before.published);
+  },30_000);
   it("publishes one shared document snapshot, mocks email attachment and resets without changing invoices",async()=>{
     const before=(await request(app).get(path).set(auth(1))).body;
     const design=createTemplate("modern");

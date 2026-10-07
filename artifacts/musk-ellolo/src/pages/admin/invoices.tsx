@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { formatInvoiceNumber } from '@workspace/invoice-document/core';
 import { 
   useAdminListInvoices, 
   useAdminGetInvoiceQr,
@@ -109,7 +110,7 @@ export function InvoicePreviewDialog({
       const url = URL.createObjectURL(pdf);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${invoice.invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, '-')}.pdf`;
+      link.download = `${formatInvoiceNumber(invoice.invoiceNumber).replace(/[^a-zA-Z0-9_-]/g, '-')}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -125,7 +126,7 @@ export function InvoicePreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full p-0 overflow-hidden bg-muted/20 border-none shadow-2xl sm:max-h-[90vh] flex flex-col">
          <div className="print-hide flex justify-between items-center p-4 pe-14 bg-background border-b shrink-0">
-          <DialogTitle className="text-lg font-bold">{t('معاينة الفاتورة', 'Invoice Preview')} - {invoice?.invoiceNumber}</DialogTitle>
+          <DialogTitle className="text-lg font-bold">{t('معاينة الفاتورة', 'Invoice Preview')} - {formatInvoiceNumber(invoice?.invoiceNumber)}</DialogTitle>
           <div className="flex gap-2">
              <Button onClick={downloadPdf} variant="outline" size="sm" disabled={downloading || !invoice || !!invoice.cancelledAt}>
                {downloading ? t('جارٍ التنزيل...', 'Downloading...') : t('تنزيل PDF', 'Download PDF')}
@@ -388,7 +389,7 @@ function ArchiveInvoiceDialog({
         </DialogHeader>
         <div className="py-3">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            {t('هل أنت متأكد من أرشفة الفاتورة رقم', 'Are you sure you want to archive invoice #')} <strong className="text-foreground">{invoice?.invoiceNumber}</strong>؟
+            {t('هل أنت متأكد من أرشفة الفاتورة رقم', 'Are you sure you want to archive invoice #')} <strong className="text-foreground">{formatInvoiceNumber(invoice?.invoiceNumber)}</strong>؟
             <br /><br />
             {t('سيتم إزالتها من القائمة النشطة، ولكن سيتم الاحتفاظ بها في السجل المحاسبي ولن يتم حذفها نهائياً لضمان سلامة الدفاتر.', 'It will be removed from the active list but will be preserved in the accounting history and not permanently deleted, ensuring book integrity.')}
           </p>
@@ -419,7 +420,7 @@ function CancelCompanyInvoiceDialog({ invoice, onClose }: { invoice: AdminInvoic
       onInteractOutside={e => { if (submitting.current) e.preventDefault(); }}>
       <DialogHeader>
         <DialogTitle>{t('هل تريد إلغاء الفاتورة؟', 'Do you want to cancel the invoice?')}</DialogTitle>
-        <DialogDescription><bdi>{invoice?.invoiceNumber}</bdi> — {t('ستُعكس القيود والمخزون وتُؤرشف الفاتورة تلقائياً، دون حذف أصلها أو رد أموال.', 'Accounting and inventory will be reversed and the invoice automatically archived, without deleting the original or refunding money.')}</DialogDescription>
+        <DialogDescription><bdi>{formatInvoiceNumber(invoice?.invoiceNumber)}</bdi> — {t('ستُعكس القيود والمخزون وتُؤرشف الفاتورة تلقائياً، دون حذف أصلها أو رد أموال.', 'Accounting and inventory will be reversed and the invoice automatically archived, without deleting the original or refunding money.')}</DialogDescription>
       </DialogHeader>
       {error && <p role="alert" className="text-destructive text-sm">{error}</p>}
       <DialogFooter>
@@ -494,7 +495,7 @@ function RecordPaymentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         <DialogHeader className={lang === 'ar' ? 'text-right' : 'text-left'}>
-          <DialogTitle>{t('تسجيل دفعة', 'Record payment')} · {invoice?.invoiceNumber}</DialogTitle>
+          <DialogTitle>{t('تسجيل دفعة', 'Record payment')} · {formatInvoiceNumber(invoice?.invoiceNumber)}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="rounded-md border bg-muted/20 p-3">
@@ -637,7 +638,7 @@ function InvoiceList({ channel = 'companies' }: { channel?: 'companies' | 'onlin
               invoices?.map((invoice) => (
                 <TableRow key={invoice.id} data-testid={`invoice-row-${invoice.id}`} className="group hover:bg-muted/10 transition-colors">
                   <TableCell className="font-medium">
-                    {invoice.invoiceNumber}
+                    {formatInvoiceNumber(invoice.invoiceNumber)}
                     {invoice.cancelledAt && <span className="block text-xs text-destructive">{t('ملغاة', 'Cancelled')} · {invoice.cancellationReason} · {invoice.cancelledByName ?? `#${invoice.cancelledByAdminId}`} · {format(new Date(invoice.cancelledAt), 'yyyy-MM-dd HH:mm')}</span>}
                     {invoice.historical === 'yes' && <>
                       <Badge variant="outline" className="ms-2">{t('تسجيل سابق', 'Prior record')}</Badge>
@@ -780,7 +781,7 @@ export function AdminExhibitionInvoices() {
               isError ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-destructive">{t('تعذر تحميل الفواتير', 'Could not load invoices')}</TableCell></TableRow> :
               !invoices?.length ? <TableRow><TableCell colSpan={6} className="py-12 text-center text-muted-foreground">{t('لا توجد فواتير مطابقة', 'No invoices found')}</TableCell></TableRow> :
               invoices.map(invoice => <TableRow key={invoice.id} data-testid={`exhibition-invoice-${invoice.id}`}>
-                <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                <TableCell className="font-medium">{formatInvoiceNumber(invoice.invoiceNumber)}</TableCell>
                 <TableCell>{invoice.exhibitionName}</TableCell>
                 <TableCell>{formatRiyadhBusinessDate(invoice.issueDatetime)}</TableCell>
                 <TableCell>{invoice.buyerName}</TableCell>

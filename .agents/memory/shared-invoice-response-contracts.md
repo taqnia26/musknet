@@ -8,3 +8,7 @@ When adding a required invoice display field to a shared response schema, check 
 **Why:** A creation transaction may commit successfully before response validation throws, returning a misleading server error for a real invoice.
 
 **How to apply:** Check generated response validators and route payloads whenever changing shared invoice schemas, especially calculated or joined display fields not stored on the invoice row.
+
+The same rule applies to loosening invoice-design constraints: update the shared design validator and the OpenAPI request/response schema together, regenerate, and test save → reload → publish with the reduced element set.
+
+**Why:** A legacy minimum element count in the generated response can reject an otherwise valid design after its draft has already committed, making a successful deletion look like a failed save.

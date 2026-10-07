@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatInvoiceNumber } from '@workspace/invoice-document/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { getAdminListInvoicesQueryKey, getAdminListExhibitionProductsQueryKey, useAdminCreateExhibitionInvoice, useAdminListExhibitions, useAdminListExhibitionProducts } from '@workspace/api-client-react';
@@ -73,7 +74,7 @@ export function CreateExhibitionInvoiceDialog() {
       onSuccess: invoice => {
         client.invalidateQueries({ queryKey: getAdminListInvoicesQueryKey() });
         client.invalidateQueries({ queryKey: getAdminListExhibitionProductsQueryKey(Number(exhibitionId)) });
-        toast({ title: t('تم إصدار فاتورة المعرض', 'Exhibition invoice issued'), description: invoice.invoiceNumber });
+        toast({ title: t('تم إصدار فاتورة المعرض', 'Exhibition invoice issued'), description: formatInvoiceNumber(invoice.invoiceNumber) });
         setOpen(false); reset();
       },
       onError: err => {

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { createTemplate, validateDesign, designErrors, retainRenderableDesign, sampleInvoice, renderInvoiceHtml } from "@workspace/invoice-document/core";
+import { createTemplate, validateDesign, designErrors, retainRenderableDesign, restoreElement, sampleInvoice, renderInvoiceHtml } from "@workspace/invoice-document/core";
 import { inspectInvoiceDocument, invoicePdfAssets, closeInvoiceBrowser } from "./invoice-browser-pdf";
 import { execFileSync } from "node:child_process";
 import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
@@ -37,7 +37,7 @@ describe("protected shared invoice document",()=>{
   });
   it("rejects hidden/missing facts, geometry overlap, injection and invalid columns",()=>{
     for(const mutate of [
-      (d:ReturnType<typeof createTemplate>)=>d.elements.splice(d.elements.findIndex(e=>e.kind==="seller"),1),
+      (d:ReturnType<typeof createTemplate>)=>d.elements.splice(d.elements.findIndex(e=>e.kind==="table"),1),
       (d:ReturnType<typeof createTemplate>)=>{d.elements[0].color="#ffffff";},
       (d:ReturnType<typeof createTemplate>)=>{d.elements[0].x=200;},
       (d:ReturnType<typeof createTemplate>)=>{d.elements[1].x=14;},
@@ -74,8 +74,10 @@ describe("protected shared invoice document",()=>{
     const historic=await inspectInvoiceDocument({...base,historical:"yes",originalInvoiceNumber:"OLD-123",cancelledAt:new Date(),
       cancellationReason:"سبب الإلغاء",cancelledByName:"مستخدم الاختبار"},"ar",createTemplate(),false);
     expect(historic.metrics.text).toContain("فاتورة ملغاة");
-    expect(historic.metrics.text).toContain("ليس إصداراً ضريبياً جديداً");
-    expect(historic.metrics.text).toContain("OLD-123");
+    expect(historic.metrics.text).not.toContain("سجل داخلي لفاتورة سابقة");
+    expect(historic.metrics.text).not.toContain("OLD-123");
+    expect(historic.metrics.text).not.toContain("المرجع الداخلي");
+    expect(historic.metrics.text).toContain("رقم الفاتورة");
     expect(historic.html).not.toContain('alt="ZATCA QR"');
     const huge=await inspectInvoiceDocument({...base,notes:"ملاحظة طويلة ".repeat(500),
       items:[{productName:name,quantity:1,unitPrice:230,totalAmount:230}]},"ar",createTemplate(),false);
@@ -112,14 +114,14 @@ describe("protected shared invoice document",()=>{
     const html=renderInvoiceHtml({invoice:{...sampleInvoice(),historical:"yes"},assets:invoicePdfAssets()});
     expect(html).not.toContain("تسجيل فاتورة سابقة");
     expect(html).not.toContain("فاتورة ضريبية");
-    expect(html).toContain("ليس إصداراً ضريبياً جديداً");
+    expect(html).not.toContain("سجل داخلي لفاتورة سابقة");
     expect(renderInvoiceHtml({invoice:sampleInvoice(),assets:invoicePdfAssets()})).toContain("فاتورة ضريبية");
     const saved=createTemplate();expect(saved.elements.every(e=>e.font==="Amiri")).toBe(true);
     const out=await inspectInvoiceDocument({...sampleInvoice(true),historical:"yes"},"ar",saved);
     expect(out.metrics.errors).toEqual([]);
     expect(out.html).not.toMatch(/font-family:Amiri/);
     expect(out.html).toContain(invoicePdfAssets().mark);
-    expect(out.html).toContain(".footer-mark{display:block;width:auto;height:13mm");
+    expect(out.html).toContain(".footer-mark{display:block;width:auto;height:26mm");
     // Short invoice with saved 8mm footer: 22mm band lifted, summary still fits on page 1 without overlap.
     const short=await inspectInvoiceDocument({...sampleInvoice(),notes:"NOTE-LEAK"},"ar",saved,false);
     expect(short.metrics.text).not.toContain("NOTE-LEAK");expect(short.html).not.toContain('data-kind="notes"');
@@ -132,6 +134,36 @@ describe("protected shared invoice document",()=>{
       expect(text.match(/muskellolo\.com/g)?.length).toBe(out.metrics.pages);
       if(process.env.INVOICE_RENDER_OUT) writeFileSync(`${process.env.INVOICE_RENDER_OUT}/invoice.pdf`,out.buffer);
     } finally {rmSync(dir,{recursive:true,force:true});}
+  },30_000);
+  it("short historical invoice fits one page; long ones paginate; doubled footer logo measured",async()=>{
+    const hist={...sampleInvoice(),historical:"yes" as const,originalInvoiceNumber:"OLD-9"};
+    hist.items=Array.from({length:4},(_,index)=>({...hist.items[0],productName:`عطر تجريبي ${index+1}`,unitPrice:40,totalAmount:40}));
+    hist.subtotal=139.13;hist.vatAmount=20.87;hist.totalAmount=160;hist.outstandingAmount=160;
+    expect(hist.items).toHaveLength(4);
+    hist.invoiceNumber="LC-000005";
+    const short=await inspectInvoiceDocument(hist,"ar",createTemplate(),true);
+    expect(short.metrics.errors).toEqual([]);expect(short.metrics.pages).toBe(1);
+    expect(short.metrics.text).toContain("LC-0005");expect(short.metrics.text).not.toContain("OLD-9");
+    const dir=mkdtempSync(`${tmpdir()}/hist-`);
+    try{const f=`${dir}/h.pdf`;writeFileSync(f,short.buffer);
+      expect(execFileSync("pdfinfo",[f]).toString()).toMatch(/Pages:\s+1\n/);
+      const txt=execFileSync("pdftotext",["-layout",f,"-"]).toString();
+      expect(txt).toContain("muskellolo.com");expect(txt).toContain("LC-0005");
+      if(process.env.INVOICE_RENDER_OUT){writeFileSync(`${process.env.INVOICE_RENDER_OUT}/historical-short.pdf`,short.buffer);}
+    }finally{rmSync(dir,{recursive:true,force:true});}
+    expect(short.metrics.text).toContain("160.00");
+    const long=await inspectInvoiceDocument({...sampleInvoice(true),historical:"yes"},"ar",createTemplate(),false);
+    expect(long.metrics.errors).toEqual([]);expect(long.metrics.pages).toBeGreaterThan(1);
+  },30_000);
+  it("deleted optional elements validate, render and paginate; table/totals stay mandatory",async()=>{
+    const d=createTemplate();d.elements=d.elements.filter(e=>["table","totals","divider"].includes(e.kind));
+    expect(designErrors(d)).toEqual([]);
+    const out=await inspectInvoiceDocument(sampleInvoice(),"ar",d,false);
+    expect(out.metrics.errors).toEqual([]);expect(out.metrics.pages).toBe(1);
+    expect(out.html).not.toContain('class="footer-mark"');
+    expect(designErrors(restoreElement(d,"footer"))).toEqual([]);
+    const noTotals=createTemplate();noTotals.elements=noTotals.elements.filter(e=>e.kind!=="totals");
+    expect(()=>validateDesign(noTotals)).toThrow();
   },30_000);
   it("places the currency symbol physically left of every amount in Arabic and English, including zero and negative",async()=>{
     const base=sampleInvoice();

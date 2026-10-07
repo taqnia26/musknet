@@ -80,7 +80,7 @@ export function PropertiesPanel({ sel, ro, patch, onDelete }: Props) {
               </Field>
             </div>
           )}
-          {(sel.kind === 'text' || sel.kind === 'divider') && !ro && (
+          {sel.kind !== 'table' && sel.kind !== 'totals' && !ro && (
             <Button variant="destructive" size="sm" className="col-span-2" onClick={onDelete} data-testid="button-delete-element"><Trash2 className="me-2 h-4 w-4" />حذف العنصر</Button>
           )}
         </div>

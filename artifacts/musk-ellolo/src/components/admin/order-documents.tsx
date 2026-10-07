@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatInvoiceNumber } from '@workspace/invoice-document/core';
 import { adminGetOrder, adminListInvoices, adminDownloadInvoicePdf, getAdminCompanyOrderReview, useAdminListInvoices, getAdminListInvoicesQueryKey } from '@workspace/api-client-react';
 import { useLanguage } from '@/hooks/use-language';
 import { useToast } from '@/hooks/use-toast';
@@ -45,7 +46,7 @@ export function OrderDocuments({ orderId, canViewInvoice, company = false, invoi
         if (!invoice) throw new Error(t('لم تصدر فاتورة لهذا الطلب بعد. لا يصدر هذا الزر فاتورة جديدة.', 'No invoice has been issued for this order. This action never issues an invoice.'));
         if (action === 'printInvoice') { setPreview(invoice); return; }
         blob = await adminDownloadInvoicePdf(invoice.id, lang, options);
-        name = `${invoice.invoiceNumber}.pdf`;
+        name = `${formatInvoiceNumber(invoice.invoiceNumber)}.pdf`;
       } else {
         const a = order.orderAddress;
         const html = orderSummaryHtml(order.orderNumber, [

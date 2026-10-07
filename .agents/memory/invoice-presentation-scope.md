@@ -28,3 +28,9 @@ the currency on the right.
 **How to apply:** Isolate monetary groups from surrounding RTL text, place the
 symbol/code first in an LTR row and preserve the number's own LTR direction,
 including zero and negative values. Cover preview, print, PDF and email.
+
+The user also requires removing the printed «سجل داخلي لفاتورة سابقة» notice, using «رقم الفاتورة» instead of «المرجع الداخلي», and printing only the system's invoice number rather than the original external number. The footer logo must be twice its former visible size. Short invoices must keep their totals on the first page when there is room.
+
+**Why:** The user supplied a PDF screenshot showing an unnecessary second page, a tiny footer logo, and unwanted historical-reference wording.
+
+**How to apply:** These are presentation requirements, not permission to change historical status, stored numbers, tax treatment or original external documents. Keep cancellation notices and never invent a historical ZATCA QR or new tax issuance. The design editor must allow deletion and restoration of optional layout elements.

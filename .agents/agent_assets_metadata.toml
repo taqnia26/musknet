@@ -112,3 +112,17 @@ mtime_ms = 1791104049686
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/ffaaebbe-0b15-4a27-bf73-d1185c961d69/a2a7f155-5607-4c76-bc1b-c363339a6824"
 storage_version_token = "1791104077472425"
 content_type = "text/html"
+
+[[outputs]]
+id = "BhCSQGQqlOWBwRIXEirBb"
+uri = "file://reports/invoice-layout-preview.pdf"
+type = "pdf"
+title = "معاينة تجريبية للفاتورة بعد التعديل"
+description = "أربعة منتجات والإجماليات في صفحة واحدة، وشعار التذييل بحجم مضاعف. بيانات تجريبية وليست فاتورة صادرة."
+logical_id = "fa3a0697-0b49-47d1-aace-c18fc9ad2d3a"
+content_hash = "sha256:8ef545e4ea2f0e8f55324ba0a6b0094763dd1c2007885d8d251ff790993af0e6"
+size = 60629
+mtime_ms = 1791410054963
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/fa3a0697-0b49-47d1-aace-c18fc9ad2d3a/d53a76c6-6070-449a-a8b7-99a61b3f9e1a"
+storage_version_token = "1791410091496214"
+content_type = "application/pdf"

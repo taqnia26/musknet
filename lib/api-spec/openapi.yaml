@@ -3388,7 +3388,7 @@ components:
       properties:
         version: { type: number, enum: [1] }
         template: { type: string, enum: [reference, formal, modern] }
-        elements: { type: array, minItems: 10, maxItems: 24, items: { $ref: "#/components/schemas/InvoiceDesignElement" } }
+        elements: { type: array, minItems: 2, maxItems: 24, items: { $ref: "#/components/schemas/InvoiceDesignElement" } }
         columns: { $ref: "#/components/schemas/InvoiceDesignColumns" }
     InvoiceDesignUpdate:
       type: object

@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { formatInvoiceNumber, invoiceNumberSearchAlias } from "@workspace/invoice-document/core";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { createCustomerCartLink, CustomerCartLinkError } from "../lib/customer-cart-links";
 import { and, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
@@ -2530,6 +2531,7 @@ router.get("/admin/invoices", permit("invoices", "view"), route(async (req, res)
           : query.channel === "exhibitions" ? isNotNull(invoicesTable.exhibitionId) : undefined,
       search ? or(
         ilike(invoicesTable.invoiceNumber, `%${search}%`),
+        ilike(invoicesTable.invoiceNumber, `%${invoiceNumberSearchAlias(search)}%`),
         ilike(invoicesTable.originalInvoiceNumber, `%${search}%`),
         ilike(invoicesTable.sellerName, `%${search}%`),
         ilike(invoicesTable.sellerVatNumber, `%${search}%`),
@@ -2640,7 +2642,7 @@ router.get("/admin/invoices/:id/pdf/:language", permit("invoices", "view"), rout
   const invoice = await localInvoiceDocument(params.id);
   if (!invoice) { res.status(404).json({ error: "Invoice not found" }); return; }
   const pdf = await createInvoicePdf(invoice, params.language);
-  const safeInvoiceNumber = invoice.invoiceNumber.replace(/[^a-zA-Z0-9_-]/g, "-");
+  const safeInvoiceNumber = formatInvoiceNumber(invoice.invoiceNumber).replace(/[^a-zA-Z0-9_-]/g, "-");
   res.type("application/pdf")
     .setHeader("Cache-Control", "no-store")
     .setHeader("Content-Disposition", `attachment; filename="${safeInvoiceNumber}.pdf"`)

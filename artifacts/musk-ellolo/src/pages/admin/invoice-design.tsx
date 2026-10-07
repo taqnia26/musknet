@@ -5,7 +5,7 @@ import {
   useAdminResetInvoiceDesign, getAdminGetInvoiceDesignQueryKey, getAdminGetPublishedInvoiceDesignQueryKey,
 } from '@workspace/api-client-react';
 import {
-  applyEditorPatch, browserAssets, createTemplate, editorView, designErrors, designSchema, retainRenderableDesign,
+  applyEditorPatch, browserAssets, missingKinds, restoreElement, createTemplate, editorView, designErrors, designSchema, retainRenderableDesign,
   type DesignElement, type InvoiceDesign,
 } from '@workspace/invoice-document';
 import {
@@ -25,6 +25,8 @@ import { useDesignHistory } from '@/components/admin/invoice-design/use-design-h
 import { useInvoiceSource } from '@/components/admin/invoice-design/use-invoice-source';
 import { useLeaveGuard } from '@/components/admin/invoice-design/use-leave-guard';
 
+
+const KIND_LABEL: Record<string, string> = { logo: 'الشعار', title: 'العنوان', seller: 'بيانات البائع', buyer: 'بيانات العميل', info: 'بيانات الفاتورة', qr: 'رمز QR', footer: 'التذييل' };
 
 function Blocked({ title, body }: { title: string; body: string }) {
   return (
@@ -129,7 +131,7 @@ function Editor({ canEdit, canInvoices }: { canEdit: boolean; canInvoices: boole
   const view = design ? editorView(design) : null;
   const sel = view?.elements.find((e) => e.id === selId) ?? null;
   const removeSel = () => {
-    if (!sel || (sel.kind !== 'text' && sel.kind !== 'divider')) return;
+    if (!sel || sel.kind === 'table' || sel.kind === 'totals') return;
     edit((d) => ({ ...d, elements: d.elements.filter((e) => e.id !== sel.id) }));
     setSelId(null);
   };
@@ -235,6 +237,13 @@ function Editor({ canEdit, canInvoices }: { canEdit: boolean; canInvoices: boole
             <span className="mx-1 h-5 w-px bg-border" />
             <Button size="sm" variant="ghost" disabled={ro} onClick={() => addCustom('text')} data-testid="button-add-text"><Type className="me-1 h-4 w-4" />نص ثابت</Button>
             <Button size="sm" variant="ghost" disabled={ro} onClick={() => addCustom('divider')} data-testid="button-add-divider"><Minus className="me-1 h-4 w-4" />فاصل</Button>
+            {missingKinds(design).length > 0 && (
+              <select className={selCls} value="" disabled={ro} aria-label="إعادة إدراج عنصر محذوف" data-testid="select-restore-element"
+                onChange={(e) => { const k = e.target.value as DesignElement['kind']; if (!k) return; edit((d) => restoreElement(d, k)); }}>
+                <option value="">إدراج عنصر محذوف…</option>
+                {missingKinds(design).map((k) => <option key={k} value={k}>{KIND_LABEL[k] ?? k}</option>)}
+              </select>
+            )}
             <select className={cn(selCls, 'ms-auto')} value={src.sample} onChange={(e) => src.setSample(e.target.value)} data-testid="select-sample" aria-label="مصدر المعاينة">
               <option value="short">عينة قصيرة</option>
               <option value="long">عينة طويلة</option>

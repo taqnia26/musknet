@@ -42,7 +42,7 @@ export const adminGetInvoiceDesignResponseDraftElementsItemTextMax = 400;
 
 export const adminGetInvoiceDesignResponseDraftElementsItemHeadingMax = 60;
 
-export const adminGetInvoiceDesignResponseDraftElementsMin = 10;
+export const adminGetInvoiceDesignResponseDraftElementsMin = 2;
 export const adminGetInvoiceDesignResponseDraftElementsMax = 24;
 
 export const adminGetInvoiceDesignResponseDraftColumnsProductMin = 35;
@@ -89,7 +89,7 @@ export const adminGetInvoiceDesignResponsePublishedElementsItemTextMax = 400;
 
 export const adminGetInvoiceDesignResponsePublishedElementsItemHeadingMax = 60;
 
-export const adminGetInvoiceDesignResponsePublishedElementsMin = 10;
+export const adminGetInvoiceDesignResponsePublishedElementsMin = 2;
 export const adminGetInvoiceDesignResponsePublishedElementsMax = 24;
 
 export const adminGetInvoiceDesignResponsePublishedColumnsProductMin = 35;
@@ -211,7 +211,7 @@ export const adminSaveInvoiceDesignBodyDesignElementsItemTextMax = 400;
 
 export const adminSaveInvoiceDesignBodyDesignElementsItemHeadingMax = 60;
 
-export const adminSaveInvoiceDesignBodyDesignElementsMin = 10;
+export const adminSaveInvoiceDesignBodyDesignElementsMin = 2;
 export const adminSaveInvoiceDesignBodyDesignElementsMax = 24;
 
 export const adminSaveInvoiceDesignBodyDesignColumnsProductMin = 35;
@@ -296,7 +296,7 @@ export const adminSaveInvoiceDesignResponseDraftElementsItemTextMax = 400;
 
 export const adminSaveInvoiceDesignResponseDraftElementsItemHeadingMax = 60;
 
-export const adminSaveInvoiceDesignResponseDraftElementsMin = 10;
+export const adminSaveInvoiceDesignResponseDraftElementsMin = 2;
 export const adminSaveInvoiceDesignResponseDraftElementsMax = 24;
 
 export const adminSaveInvoiceDesignResponseDraftColumnsProductMin = 35;
@@ -343,7 +343,7 @@ export const adminSaveInvoiceDesignResponsePublishedElementsItemTextMax = 400;
 
 export const adminSaveInvoiceDesignResponsePublishedElementsItemHeadingMax = 60;
 
-export const adminSaveInvoiceDesignResponsePublishedElementsMin = 10;
+export const adminSaveInvoiceDesignResponsePublishedElementsMin = 2;
 export const adminSaveInvoiceDesignResponsePublishedElementsMax = 24;
 
 export const adminSaveInvoiceDesignResponsePublishedColumnsProductMin = 35;
@@ -465,7 +465,7 @@ export const adminPublishInvoiceDesignBodyDesignElementsItemTextMax = 400;
 
 export const adminPublishInvoiceDesignBodyDesignElementsItemHeadingMax = 60;
 
-export const adminPublishInvoiceDesignBodyDesignElementsMin = 10;
+export const adminPublishInvoiceDesignBodyDesignElementsMin = 2;
 export const adminPublishInvoiceDesignBodyDesignElementsMax = 24;
 
 export const adminPublishInvoiceDesignBodyDesignColumnsProductMin = 35;
@@ -550,7 +550,7 @@ export const adminPublishInvoiceDesignResponseDraftElementsItemTextMax = 400;
 
 export const adminPublishInvoiceDesignResponseDraftElementsItemHeadingMax = 60;
 
-export const adminPublishInvoiceDesignResponseDraftElementsMin = 10;
+export const adminPublishInvoiceDesignResponseDraftElementsMin = 2;
 export const adminPublishInvoiceDesignResponseDraftElementsMax = 24;
 
 export const adminPublishInvoiceDesignResponseDraftColumnsProductMin = 35;
@@ -597,7 +597,7 @@ export const adminPublishInvoiceDesignResponsePublishedElementsItemTextMax = 400
 
 export const adminPublishInvoiceDesignResponsePublishedElementsItemHeadingMax = 60;
 
-export const adminPublishInvoiceDesignResponsePublishedElementsMin = 10;
+export const adminPublishInvoiceDesignResponsePublishedElementsMin = 2;
 export const adminPublishInvoiceDesignResponsePublishedElementsMax = 24;
 
 export const adminPublishInvoiceDesignResponsePublishedColumnsProductMin = 35;
@@ -727,7 +727,7 @@ export const adminResetInvoiceDesignResponseDraftElementsItemTextMax = 400;
 
 export const adminResetInvoiceDesignResponseDraftElementsItemHeadingMax = 60;
 
-export const adminResetInvoiceDesignResponseDraftElementsMin = 10;
+export const adminResetInvoiceDesignResponseDraftElementsMin = 2;
 export const adminResetInvoiceDesignResponseDraftElementsMax = 24;
 
 export const adminResetInvoiceDesignResponseDraftColumnsProductMin = 35;
@@ -774,7 +774,7 @@ export const adminResetInvoiceDesignResponsePublishedElementsItemTextMax = 400;
 
 export const adminResetInvoiceDesignResponsePublishedElementsItemHeadingMax = 60;
 
-export const adminResetInvoiceDesignResponsePublishedElementsMin = 10;
+export const adminResetInvoiceDesignResponsePublishedElementsMin = 2;
 export const adminResetInvoiceDesignResponsePublishedElementsMax = 24;
 
 export const adminResetInvoiceDesignResponsePublishedColumnsProductMin = 35;
@@ -895,7 +895,7 @@ export const adminGetPublishedInvoiceDesignResponseDesignElementsItemTextMax = 4
 
 export const adminGetPublishedInvoiceDesignResponseDesignElementsItemHeadingMax = 60;
 
-export const adminGetPublishedInvoiceDesignResponseDesignElementsMin = 10;
+export const adminGetPublishedInvoiceDesignResponseDesignElementsMin = 2;
 export const adminGetPublishedInvoiceDesignResponseDesignElementsMax = 24;
 
 export const adminGetPublishedInvoiceDesignResponseDesignColumnsProductMin = 35;

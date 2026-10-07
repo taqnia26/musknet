@@ -1,5 +1,5 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
-import { invoiceTotalRows, businessDate, type InvoiceFacts, type InvoiceLanguage } from "@workspace/invoice-document/core";
+import { invoiceTotalRows, businessDate, formatInvoiceNumber, type InvoiceFacts, type InvoiceLanguage } from "@workspace/invoice-document/core";
 import { createSharedInvoicePdf } from "./invoice-browser-pdf";
 export type { InvoiceLanguage } from "@workspace/invoice-document/core";
 export type InvoiceForEmail=InvoiceFacts;
@@ -27,9 +27,9 @@ export async function sendInvoiceEmail(input: { recipient: string; invoice: Invo
   const body = {
       from,
       to: [input.recipient],
-      subject: `${input.invoice.historical === "yes" ? "Prior invoice copy" : "Tax Invoice"} ${input.invoice.invoiceNumber} - Musk Ellolo`,
-      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>${input.invoice.historical === "yes" ? "نسخة فاتورة سابقة (ليست إصداراً ضريبياً جديداً)" : "فاتورة ضريبية"} ${input.invoice.invoiceNumber}</h2><p>مرحباً، تجدون نسخة الفاتورة مرفقة بصيغة PDF.</p><p>${vatDescription}: <strong>${emailMoney(input.invoice.vatAmount)}</strong></p><p>الإجمالي: <strong>${emailMoney(input.invoice.totalAmount)}</strong></p><p>الرصيد المستحق: <strong>${emailMoney(input.invoice.outstandingAmount)}</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
-      attachments: [{ filename: `${input.invoice.invoiceNumber}.pdf`, content: input.pdf.toString("base64") }],
+      subject: `${input.invoice.historical === "yes" ? "Prior invoice copy" : "Tax Invoice"} ${formatInvoiceNumber(input.invoice.invoiceNumber)} - Musk Ellolo`,
+      html: `<div dir="rtl" style="font-family:Arial,sans-serif"><h2>${input.invoice.historical === "yes" ? "نسخة فاتورة سابقة (ليست إصداراً ضريبياً جديداً)" : "فاتورة ضريبية"} ${formatInvoiceNumber(input.invoice.invoiceNumber)}</h2><p>مرحباً، تجدون نسخة الفاتورة مرفقة بصيغة PDF.</p><p>${vatDescription}: <strong>${emailMoney(input.invoice.vatAmount)}</strong></p><p>الإجمالي: <strong>${emailMoney(input.invoice.totalAmount)}</strong></p><p>الرصيد المستحق: <strong>${emailMoney(input.invoice.outstandingAmount)}</strong></p><p>مع التحية،<br>Musk Ellolo</p></div>`,
+      attachments: [{ filename: `${formatInvoiceNumber(input.invoice.invoiceNumber)}.pdf`, content: input.pdf.toString("base64") }],
   };
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const response = apiKey

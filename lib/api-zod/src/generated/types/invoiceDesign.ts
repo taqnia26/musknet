@@ -14,7 +14,7 @@ export interface InvoiceDesign {
   version: InvoiceDesignVersion;
   template: InvoiceDesignTemplate;
   /**
-     * @minItems 10
+     * @minItems 2
      * @maxItems 24
      */
   elements: InvoiceDesignElement[];

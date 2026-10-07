@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { formatInvoiceNumber } from '@workspace/invoice-document/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import {
@@ -144,7 +145,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
         const keys = [getAdminListInvoicesQueryKey(), getAdminListProductsQueryKey(), getAdminListInventoryQueryKey(),
           getAdminListJournalEntriesQueryKey(), getAdminGetTrialBalanceQueryKey(), getAdminGetFinanceSummaryQueryKey()];
         keys.forEach(queryKey => client.invalidateQueries({ queryKey }));
-        toast({ title: t('تم إصدار الفاتورة المباشرة', 'Direct invoice issued'), description: invoice.invoiceNumber });
+        toast({ title: t('تم إصدار الفاتورة المباشرة', 'Direct invoice issued'), description: formatInvoiceNumber(invoice.invoiceNumber) });
         setOpen(false); reset();
         onCreated?.(invoice);
       },

@@ -11,20 +11,24 @@ export function paginateDocument() {
   };
   const scale = 96/25.4, mm = (px:number) => px/scale;
   const find = (kind:string) => cfg.elements.find(e=>e.kind===kind)!;
-  const table = find("table");
+  const table = find("table")??{id:"table",kind:"table",x:14,y:105,width:182,height:65};
   // The footer mark must be clearly legible: reserve a fixed 22mm band ending at the 8mm safe margin.
   // Saved designs (e.g. footer y=280,h=8) are lifted at render time only; stored designs are untouched.
-  const FOOTER_BAND=22, savedFooter=find("footer");
-  const footer={...savedFooter,y:Math.min(savedFooter.y,289-FOOTER_BAND),height:FOOTER_BAND};
+  // 26mm mark + gap + site line + rule: 33mm band. A deleted footer frees the band entirely.
+  const FOOTER_BAND=33, savedFooter=cfg.elements.find(e=>e.kind==="footer");
+  const footerNode=source.querySelector<HTMLElement>('[data-kind="footer"]');
+  const footer=savedFooter&&footerNode?{...savedFooter,y:Math.min(savedFooter.y,289-FOOTER_BAND),height:FOOTER_BAND}:{y:289,height:0};
   let page: HTMLElement;
   const failures: string[] = [];
   function newPage() {
     page = document.createElement("section"); page.className="invoice-page";
     page.setAttribute("aria-label", cfg.language==="ar"?"صفحة الفاتورة":"Invoice page");
     root.appendChild(page);
-    const foot = source.querySelector<HTMLElement>('[data-kind="footer"]')!.cloneNode(true) as HTMLElement;
-    foot.style.top=`${footer.y}mm`;foot.style.height=`${footer.height}mm`;foot.style.minHeight=`${footer.height}mm`;
-    page.appendChild(foot);
+    if(footerNode&&footer.height){
+      const foot = footerNode.cloneNode(true) as HTMLElement;
+      foot.style.top=`${footer.y}mm`;foot.style.height=`${footer.height}mm`;foot.style.minHeight=`${footer.height}mm`;
+      page.appendChild(foot);
+    }
     const index = document.createElement("span"); index.className="page-number";
     index.textContent=String(root.querySelectorAll(".invoice-page").length); page.appendChild(index);
     return page;
@@ -37,7 +41,8 @@ export function paginateDocument() {
   newPage();
   let headerBottom=table.y-4;
   for(const e of cfg.elements.filter(e=>!["table","totals","notes","qr","footer"].includes(e.kind))) {
-    const node=source.querySelector<HTMLElement>(`[data-element="${e.id}"]`)!;
+    const node=source.querySelector<HTMLElement>(`[data-element="${e.id}"]`);
+    if(!node) continue;
     const bottom=append(node,e.x,e.y,e.width);
     headerBottom=Math.max(headerBottom,bottom);
     if(bottom>footer.y-4) failures.push(`${e.id}: المحتوى أطول من المساحة المتاحة`);
@@ -46,24 +51,29 @@ export function paginateDocument() {
   if(warning) headerBottom=append(warning,table.x,headerBottom+3,table.width)+3;
   // Notes are never rendered; totals take the saved notes box's LEFT position (render-time only, designs untouched).
   const notesBox=cfg.elements.find(e=>e.kind==="notes"), savedTotals=find("totals");
-  const effective=(kind:string)=>kind==="totals"&&notesBox?{...savedTotals,x:notesBox.x,y:notesBox.y,width:notesBox.width,height:notesBox.height}:find(kind);
-  const summary = ["totals","qr"].map(kind=>({e:effective(kind),node:source.querySelector<HTMLElement>(`[data-kind="${kind}"]`)!}));
+  const effective=(kind:string)=>kind==="totals"&&notesBox&&savedTotals?{...savedTotals,x:notesBox.x,y:notesBox.y,width:notesBox.width,height:notesBox.height}:find(kind);
+  // Boxes with no rendered content (e.g. historical/cancelled QR, deleted elements) take no space at all.
+  const summary = ["totals","qr"].map(kind=>({e:effective(kind),node:source.querySelector<HTMLElement>(`[data-kind="${kind}"]`)}))
+    .filter((s):s is {e:typeof table;node:HTMLElement}=>!!s.e&&!!s.node&&s.node.innerHTML.trim()!=="");
   // Measure natural content sizes before assigning the summary to a page.
   const measure=document.createElement("div"); measure.className="invoice-measure";root.appendChild(measure);
-  const summaryOrigin=Math.min(...summary.map(s=>s.e.y));
+  const summaryOrigin=summary.length?Math.min(...summary.map(s=>s.e.y)):maxBottomFor();
+  function maxBottomFor(){return footer.y-5;}
   let summaryHeight=0;
   const offsets = new Map<string,number>();
   const heights = new Map<string,number>();
   for(const {e,node} of summary) {
     node.style.position="relative";node.style.left="0";node.style.top="0";node.style.width=`${e.width}mm`;
     measure.appendChild(node);
-    heights.set(e.kind,Math.max(e.height,mm(node.getBoundingClientRect().height)));
+    // Totals use their actual rendered height (saved box height is only a minimum in the editor), QR keeps its square.
+    if(e.kind!=="qr") node.style.minHeight="0";
+    heights.set(e.kind,e.kind==="qr"?Math.max(e.height,mm(node.getBoundingClientRect().height)):mm(node.getBoundingClientRect().height));
     offsets.set(e.kind,e.y-summaryOrigin);
     node.style.position="absolute";
   }
   // Preserve designed gaps when a dynamic notes/totals block grows vertically.
-  const qrSummary=summary.find(s=>s.e.kind==="qr")!;
-  for(const s of summary.filter(s=>s.e.kind!=="qr")) {
+  const qrSummary=summary.find(s=>s.e.kind==="qr");
+  if(qrSummary) for(const s of summary.filter(s=>s.e.kind!=="qr")) {
     if(qrSummary.e.x<s.e.x+s.e.width&&qrSummary.e.x+qrSummary.e.width>s.e.x&&qrSummary.e.y>=s.e.y+s.e.height) {
       offsets.set("qr",Math.max(offsets.get("qr")!,offsets.get(s.e.kind)!+heights.get(s.e.kind)!+(qrSummary.e.y-s.e.y-s.e.height)));
     }
@@ -118,7 +128,7 @@ export function paginateDocument() {
   }
   // Lift the summary when the enlarged footer band would otherwise push it off a page with room to spare.
   let summaryY=Math.max(Math.min(summaryOrigin,maxBottom-summaryHeight),rowBottom()+8);
-  if(summaryY+summaryHeight>maxBottom) {newPage();summaryY=14;}
+  if(summary.length&&summaryY+summaryHeight>maxBottom) {newPage();summaryY=14;}
   for(const {e,node} of summary) {
     append(node,e.x,summaryY+offsets.get(e.kind)!,e.width);
   }
@@ -159,6 +169,7 @@ export function paginateDocument() {
   }
   const shipping=source.querySelector<HTMLElement>("[data-shipping]");
   if(shipping) appendAttachment(shipping);
+  for(const n of Array.from(source.querySelectorAll<HTMLElement>('[data-kind="qr"],[data-kind="totals"]'))) n.remove();
   measure.remove();source.remove();
   for(const p of Array.from(root.querySelectorAll<HTMLElement>(".invoice-page"))) {
     for(const el of Array.from(p.querySelectorAll<HTMLElement>(".invoice-block"))) {

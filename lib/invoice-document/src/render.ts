@@ -1,6 +1,7 @@
 import { type InvoiceDesign, createTemplate, designSchema } from "./design";
 import { type InvoiceFacts, type InvoiceLanguage, businessDate, invoiceTotalRows } from "./model";
 import { paginateDocument } from "./paginate";
+import { formatInvoiceNumber } from "./number";
 /** `amiri` is retained for API compatibility; text renders in the formal Tajawal face (the pre-editor preview font). */
 export type InvoiceAssets = { logo: string; mark: string; riyal: string; amiri: string; ping: string; formal: string; formalBold: string };
 /** Saved designs may say "Amiri"; it is mapped to the formal face at render time without rewriting stored designs. */
@@ -20,6 +21,7 @@ export function renderInvoiceHtml(input:{
   assets:InvoiceAssets; qrUrl?:string|null;
 }):string {
   const i=input.invoice,d=designSchema.parse(input.design??createTemplate()),lang=input.language??"ar",a=input.assets;
+  const num=formatInvoiceNumber(i.invoiceNumber);
   const t=(ar:string,en:string)=>lang==="ar"?ar:en;
   const money=(value:number)=>`<span class="money" dir="ltr">${lang==="ar"?`<img class="money-symbol" src="${safeAsset(a.riyal)}" alt="ريال سعودي">`:`<span class="money-symbol">SAR</span>`}<span class="money-amount" dir="ltr">${new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(value)}</span></span>`;
   const line=(label:string,value:unknown)=>`<p><strong>${escape(label)}</strong> <bdi>${escape(value)}</bdi></p>`;
@@ -32,8 +34,7 @@ export function renderInvoiceHtml(input:{
     title:i.historical==="yes"?"":`<strong>${t("فاتورة ضريبية","Tax Invoice")}</strong>`,
     seller:`<strong>${escape(i.sellerName)}</strong>${line(t("الرقم الضريبي:","VAT Number:"),i.sellerVatNumber)}<p>${t("السعودية، الرياض، حي السليمانية","Saudi Arabia, Riyadh, Al Sulimaniyah")}</p>`,
     buyer:`<strong>${escape(i.buyerName||i.distributorName||"-")}</strong>${i.buyerPhone?line(t("الجوال:","Phone:"),i.buyerPhone):""}${i.buyerAddress?`<p class="pre">${escape(i.buyerAddress)}</p>`:""}${i.buyerTaxNumber?line(t("الرقم الضريبي:","VAT:"),i.buyerTaxNumber):""}${i.buyerCommercialRegistrationNumber?line(t("السجل التجاري:","CR:"),i.buyerCommercialRegistrationNumber):""}`,
-    info:line(i.historical==="yes"?t("المرجع الداخلي:","Internal reference:"):t("رقم الفاتورة:","Invoice No.:"),i.invoiceNumber)+
-      (i.historical==="yes"&&i.originalInvoiceNumber?line(t("رقم الفاتورة الأصلية:","Original invoice number:"),i.originalInvoiceNumber):"")+
+    info:line(t("رقم الفاتورة:","Invoice No.:"),num)+
       line(t("تاريخ الإصدار:","Issue Date:"),businessDate(i.issueDatetime))+line(t("تاريخ الاستحقاق:","Due Date:"),i.dueDate?.slice(0,10)||"-")+
       (i.orderNumber?line(t("رقم الطلب:","Order No.:"),i.orderNumber):"")+
       (i.exhibitionName?line(t("المعرض:","Exhibition:"),i.exhibitionName):""),
@@ -54,10 +55,9 @@ export function renderInvoiceHtml(input:{
     const title=e.heading&&lang==="ar"?e.heading:heading[e.kind];
     return `<div class="invoice-block" data-kind="${e.kind}" data-element="${e.id}" style="${css}" dir="${lang==="ar"?"rtl":"ltr"}">${title?`<div class="section-heading">${escape(title)}</div>`:""}${content??""}</div>`;
   }).join("");
-  const te=d.elements.find(e=>e.kind==="table")!;
+  const te=d.elements.find(e=>e.kind==="table")??createTemplate().elements.find(e=>e.kind==="table")!;
   const tableHtml=`<table style="font-family:${fontStack(te.font)};font-size:${te.fontSize}pt;font-weight:${te.fontWeight};color:${te.color};line-height:${te.lineHeight};--cell-padding:${te.padding+1}mm;--table-border:${te.borderWidth}mm solid ${te.borderColor}" dir="${lang==="ar"?"rtl":"ltr"}"><colgroup>${Object.values(d.columns).map(w=>`<col style="width:${w}%">`).join("")}</colgroup><thead style="background:${te.background}"><tr>${[t("المنتج","Product"),t("الكمية","Qty"),t("سعر الوحدة","Unit Price"),t("الإجمالي","Line Total")].map(label=>`<th>${label}</th>`).join("")}</tr></thead><tbody>${i.items.length?i.items.map((r,n)=>`<tr data-row="${n}"><td data-product>${escape(lang==="en"?r.productNameEn??r.productName:r.productName)}</td><td dir="ltr">${escape(r.quantity)}</td><td>${money(r.unitPrice)}</td><td>${money(r.totalAmount??Math.round(r.unitPrice*r.quantity*100)/100)}</td></tr>`).join(""):`<tr><td colspan="4">${t("لا توجد منتجات","No items")}</td></tr>`}</tbody></table>`;
-  const warning=(i.historical==="yes"?`<p>${t("سجل داخلي لفاتورة سابقة؛ ليس إصداراً ضريبياً جديداً أو اعتماد ZATCA","Internal prior record; not a new tax issuance or ZATCA certification")}</p>`:"")+
-    (i.cancelledAt?`<p><strong>${t("فاتورة ملغاة","Cancelled invoice")}</strong> · ${escape(i.cancellationReason)}</p><p>${escape(i.cancelledByName??`#${i.cancelledByAdminId}`)} · ${escape(new Date(i.cancelledAt).toLocaleString("en-GB",{timeZone:"Asia/Riyadh"}))}</p>`:"");
+  const warning=(i.cancelledAt?`<p><strong>${t("فاتورة ملغاة","Cancelled invoice")}</strong> · ${escape(i.cancellationReason)}</p><p>${escape(i.cancelledByName??`#${i.cancelledByAdminId}`)} · ${escape(new Date(i.cancelledAt).toLocaleString("en-GB",{timeZone:"Asia/Riyadh"}))}</p>`:"");
   const json=JSON.stringify({elements:d.elements,language:lang}).replace(/</g,"\\u003c");
   return `<!doctype html><html lang="${lang}" dir="ltr"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data: blob:; font-src 'self' data:; style-src 'unsafe-inline'; script-src 'nonce-invoice-document-v1'; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"><style>
 @font-face{font-family:InvoiceFormal;src:url("${safeAsset(a.formal)}") format("truetype");font-weight:100 500}
@@ -72,7 +72,7 @@ export function renderInvoiceHtml(input:{
 [data-kind=logo]{display:flex;align-items:center;justify-content:center}.qr{width:100%;height:100%;object-fit:contain}
 [data-kind=qr]{display:flex;align-items:center;justify-content:center;padding:0!important}
 [data-kind=footer]{border-top:.2mm solid #ddd!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;padding:1mm 0 0!important;color:#444!important;font-size:9pt!important;line-height:1.1!important}
-.footer-mark{display:block;width:auto;height:13mm;max-width:40mm;object-fit:contain;flex:none}.footer-site{display:block}.page-number{position:absolute;bottom:2.5mm;left:0;width:210mm;text-align:center;font-size:7pt;color:#777}
+.footer-mark{display:block;width:auto;height:26mm;max-width:80mm;object-fit:contain;flex:none}.footer-site{display:block}.page-number{position:absolute;bottom:2.5mm;left:0;width:210mm;text-align:center;font-size:7pt;color:#777}
 table{border-collapse:collapse;table-layout:fixed;width:100%;border:var(--table-border)}
 th,td{padding:var(--cell-padding);border-bottom:.15mm solid #e2e2e2;overflow-wrap:anywhere;vertical-align:top;text-align:start}
 th{font-weight:bold}thead{display:table-header-group}td:not(:first-child),th:not(:first-child){text-align:center}
@@ -83,5 +83,5 @@ th{font-weight:bold}thead{display:table-header-group}td:not(:first-child),th:not
 [data-warning]{font-size:10pt;font-weight:bold;border:.25mm solid #ac5626;padding:2mm;line-height:1.4}
 @media print{html,body{background:#fff}.invoice-page{margin:0;box-shadow:none}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 @page{size:A4 portrait;margin:0}
-</style></head><body data-invoice-number="${escape(i.invoiceNumber)}"><main id="invoice-pages"></main><div id="invoice-source">${els}${tableHtml}${warning?`<div class="invoice-block" data-warning dir="${lang==="ar"?"rtl":"ltr"}">${warning}</div>`:""}${i.shippingDetails?`<div data-shipping style="font-family:InvoiceFormal;font-size:11pt;line-height:1.4" dir="${lang==="ar"?"rtl":"ltr"}"><h2 style="font-size:14pt">${t("بيانات الشحنة الحالية (ملحق تشغيلي)","Current shipment (operational attachment)")}</h2><p>${escape(i.invoiceNumber)}</p><p class="pre">${escape(i.shippingDetails)}</p></div>`:""}</div><script id="invoice-layout" nonce="invoice-document-v1" type="application/json">${json}</script><script nonce="invoice-document-v1">const __name=(fn)=>fn;document.fonts.ready.then(()=>{(${paginateDocument.toString()})();});</script></body></html>`;
+</style></head><body data-invoice-number="${escape(num)}"><main id="invoice-pages"></main><div id="invoice-source">${els}${tableHtml}${warning?`<div class="invoice-block" data-warning dir="${lang==="ar"?"rtl":"ltr"}">${warning}</div>`:""}${i.shippingDetails?`<div data-shipping style="font-family:InvoiceFormal;font-size:11pt;line-height:1.4" dir="${lang==="ar"?"rtl":"ltr"}"><h2 style="font-size:14pt">${t("بيانات الشحنة الحالية (ملحق تشغيلي)","Current shipment (operational attachment)")}</h2><p>${escape(num)}</p><p class="pre">${escape(i.shippingDetails)}</p></div>`:""}</div><script id="invoice-layout" nonce="invoice-document-v1" type="application/json">${json}</script><script nonce="invoice-document-v1">const __name=(fn)=>fn;document.fonts.ready.then(()=>{(${paginateDocument.toString()})();});</script></body></html>`;
 }
