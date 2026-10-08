@@ -2,7 +2,8 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createTemplate, validateDesign, designErrors, retainRenderableDesign, restoreElement, sampleInvoice, renderInvoiceHtml } from "@workspace/invoice-document/core";
 import { inspectInvoiceDocument, invoicePdfAssets, closeInvoiceBrowser } from "./invoice-browser-pdf";
 import { execFileSync } from "node:child_process";
-import { writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { writeFileSync, mkdtempSync, rmSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import QRCode from "qrcode";
 
@@ -121,7 +122,8 @@ describe("protected shared invoice document",()=>{
     expect(out.metrics.errors).toEqual([]);
     expect(out.html).not.toMatch(/font-family:Amiri/);
     expect(out.html).toContain(invoicePdfAssets().mark);
-    expect(out.html).toContain(".footer-mark{display:block;width:auto;height:26mm");
+    expect(out.html).toContain(".footer-mark{display:block;width:auto;height:18.2mm");
+    expect(out.html).toContain(".footer-site{display:block;font-size:10pt}");
     // Short invoice with saved 8mm footer: 22mm band lifted, summary still fits on page 1 without overlap.
     const short=await inspectInvoiceDocument({...sampleInvoice(),notes:"NOTE-LEAK"},"ar",saved,false);
     expect(short.metrics.text).not.toContain("NOTE-LEAK");expect(short.html).not.toContain('data-kind="notes"');
@@ -177,4 +179,31 @@ describe("protected shared invoice document",()=>{
       expect(out.html).toMatch(lang==="ar"?/<img class="money-symbol"[^>]*><span class="money-amount" dir="ltr">/:/<span class="money-symbol">SAR<\/span><span class="money-amount" dir="ltr">/);
     }
   },30_000);
+  it("five-row taxed company invoice with 50% discount, QR and shipping fits one page (ar/en)",async()=>{
+    const base=sampleInvoice();
+    const rows=[[6,389],[12,389],[12,399],[6,369],[6,339]] as const;
+    const names=["عطر تجريبي ألف 50 مل","عطر تجريبي باء 50 مل","عطر تجريبي جيم 50 مل","عطر تجريبي دال 50 مل","عطر تجريبي هاء 50 مل"];
+    const invoice={...base,invoiceNumber:"TS-000099",sellerName:"مؤسسة تجريبية للعطور",sellerVatNumber:"300000000000003",
+      buyerName:"شركة اختبار وهمية للتجارة",buyerPhone:"0500000000",buyerAddress:"الرياض، حي تجريبي، شارع وهمي 12",
+      buyerTaxNumber:"311111111100003",buyerCommercialRegistrationNumber:"1010000000",
+      contractNumber:"CT-TEST-1",contractDiscountPercent:50,orderNumber:null,
+      items:rows.map(([q,p],n)=>({productName:names[n],productNameEn:`Test perfume ${n+1} 50ml`,quantity:q,unitPrice:p,totalAmount:Math.round(q*p*50)/100})),
+      discountAmount:8019,subtotal:6973.05,vatAmount:1045.95,vatRate:15,totalAmount:8019,paidAmount:0,outstandingAmount:8019,
+      qrCodeData:"synthetic tlv payload",shippingDetails:"شركة الشحن: ناقل تجريبي\nرقم التتبع: TRK-0000-1234\nالعنوان: الرياض، حي تجريبي"};
+    expect(invoice.items.map(r=>r.totalAmount)).toEqual([1167,2334,2394,1107,1017]);
+    const qr=await QRCode.toDataURL("synthetic tlv payload");
+    for(const lang of ["ar","en"] as const){
+      const html=renderInvoiceHtml({invoice,assets:invoicePdfAssets(),language:lang,qrUrl:qr});
+      expect(html).toContain("height:18.2mm");expect(html).toContain("font-size:10pt}");
+      const out=await inspectInvoiceDocument(invoice,lang,createTemplate(),true);
+      expect(out.metrics.errors).toEqual([]);
+      if(lang==="ar"&&process.env.INVOICE_RENDER_OUT){
+        mkdirSync(process.env.INVOICE_RENDER_OUT,{recursive:true});
+        writeFileSync(resolve(process.env.INVOICE_RENDER_OUT,"invoice-compact-layout-preview.pdf"),out.buffer);
+      }
+      expect(out.metrics.pages).toBe(1);
+      for(const v of ["16,038.00","8,019.00","6,973.05","1,045.95","TRK-0000-1234","2,394.00"]) expect(out.metrics.text).toContain(v);
+      expect(out.html).toContain('alt="ZATCA QR"');
+    }
+  },60_000);
 });

@@ -29,8 +29,14 @@ the currency on the right.
 symbol/code first in an LTR row and preserve the number's own LTR direction,
 including zero and negative values. Cover preview, print, PDF and email.
 
-The user also requires removing the printed «سجل داخلي لفاتورة سابقة» notice, using «رقم الفاتورة» instead of «المرجع الداخلي», and printing only the system's invoice number rather than the original external number. The footer logo must be twice its former visible size. Short invoices must keep their totals on the first page when there is room.
+The user also requires removing the printed «سجل داخلي لفاتورة سابقة» notice, using «رقم الفاتورة» instead of «المرجع الداخلي», and printing only the system's invoice number rather than the original external number. After seeing the enlarged footer, the user requested reducing that enlarged logo by 30% and enlarging the website text below it. Short invoices must keep their totals on the first page when there is room.
 
 **Why:** The user supplied a PDF screenshot showing an unnecessary second page, a tiny footer logo, and unwanted historical-reference wording.
 
 **How to apply:** These are presentation requirements, not permission to change historical status, stored numbers, tax treatment or original external documents. Keep cancellation notices and never invent a historical ZATCA QR or new tax issuance. The design editor must allow deletion and restoration of optional layout elements.
+
+Validate compact pagination with live invoices containing discount rows, an actual QR image, and shipping details together, not just historical invoices without QR. Shipping must not automatically force another page when it fits.
+
+**Why:** A five-item live invoice still produced three mostly empty pages after a historical-only reproduction passed. The user explicitly rejected those wasted pages.
+
+**How to apply:** Measure real content heights and try using empty space beside totals for QR and shipping before breaking the page. Preserve all amounts and operational text, QR size, and the established header positions.

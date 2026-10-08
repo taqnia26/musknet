@@ -72,7 +72,7 @@ export function renderInvoiceHtml(input:{
 [data-kind=logo]{display:flex;align-items:center;justify-content:center}.qr{width:100%;height:100%;object-fit:contain}
 [data-kind=qr]{display:flex;align-items:center;justify-content:center;padding:0!important}
 [data-kind=footer]{border-top:.2mm solid #ddd!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;padding:1mm 0 0!important;color:#444!important;font-size:9pt!important;line-height:1.1!important}
-.footer-mark{display:block;width:auto;height:26mm;max-width:80mm;object-fit:contain;flex:none}.footer-site{display:block}.page-number{position:absolute;bottom:2.5mm;left:0;width:210mm;text-align:center;font-size:7pt;color:#777}
+.footer-mark{display:block;width:auto;height:18.2mm;max-width:56mm;object-fit:contain;flex:none}.footer-site{display:block;font-size:10pt}.page-number{position:absolute;bottom:2.5mm;left:0;width:210mm;text-align:center;font-size:7pt;color:#777}
 table{border-collapse:collapse;table-layout:fixed;width:100%;border:var(--table-border)}
 th,td{padding:var(--cell-padding);border-bottom:.15mm solid #e2e2e2;overflow-wrap:anywhere;vertical-align:top;text-align:start}
 th{font-weight:bold}thead{display:table-header-group}td:not(:first-child),th:not(:first-child){text-align:center}

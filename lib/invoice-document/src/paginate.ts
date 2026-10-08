@@ -12,10 +12,10 @@ export function paginateDocument() {
   const scale = 96/25.4, mm = (px:number) => px/scale;
   const find = (kind:string) => cfg.elements.find(e=>e.kind===kind)!;
   const table = find("table")??{id:"table",kind:"table",x:14,y:105,width:182,height:65};
-  // The footer mark must be clearly legible: reserve a fixed 22mm band ending at the 8mm safe margin.
+  // Reserve the footer's measured design band above the 8mm safe margin.
   // Saved designs (e.g. footer y=280,h=8) are lifted at render time only; stored designs are untouched.
-  // 26mm mark + gap + site line + rule: 33mm band. A deleted footer frees the band entirely.
-  const FOOTER_BAND=33, savedFooter=cfg.elements.find(e=>e.kind==="footer");
+  // 18.2mm mark + gap + 10pt site line + rule: 25mm band. A deleted footer frees the band entirely.
+  const FOOTER_BAND=25, savedFooter=cfg.elements.find(e=>e.kind==="footer");
   const footerNode=source.querySelector<HTMLElement>('[data-kind="footer"]');
   const footer=savedFooter&&footerNode?{...savedFooter,y:Math.min(savedFooter.y,289-FOOTER_BAND),height:FOOTER_BAND}:{y:289,height:0};
   let page: HTMLElement;
@@ -71,12 +71,16 @@ export function paginateDocument() {
     offsets.set(e.kind,e.y-summaryOrigin);
     node.style.position="absolute";
   }
-  // Preserve designed gaps when a dynamic notes/totals block grows vertically.
-  const qrSummary=summary.find(s=>s.e.kind==="qr");
-  if(qrSummary) for(const s of summary.filter(s=>s.e.kind!=="qr")) {
-    if(qrSummary.e.x<s.e.x+s.e.width&&qrSummary.e.x+qrSummary.e.width>s.e.x&&qrSummary.e.y>=s.e.y+s.e.height) {
-      offsets.set("qr",Math.max(offsets.get("qr")!,offsets.get(s.e.kind)!+heights.get(s.e.kind)!+(qrSummary.e.y-s.e.y-s.e.height)));
+  // Compact stacking: a box sitting below another (horizontally overlapping) box follows the dynamic
+  // bottom of that box with its designed gap capped at 4mm. Horizontal positions are untouched;
+  // excess saved blank space between totals and QR no longer pushes the summary onto a new page.
+  const GAP_CAP=4, ordered=[...summary].sort((a,b)=>a.e.y-b.e.y);
+  for(let n=0;n<ordered.length;n++){
+    const s=ordered[n];let off=0;
+    for(let m=0;m<n;m++){const p=ordered[m];
+      if(s.e.x<p.e.x+p.e.width&&s.e.x+s.e.width>p.e.x) off=Math.max(off,offsets.get(p.e.kind)!+heights.get(p.e.kind)!+Math.min(GAP_CAP,Math.max(0,s.e.y-p.e.y-p.e.height)));
     }
+    offsets.set(s.e.kind,off);
   }
   for(const {e} of summary) summaryHeight=Math.max(summaryHeight,offsets.get(e.kind)!+heights.get(e.kind)!);
   const allRows=Array.from(source.querySelectorAll<HTMLTableRowElement>("tbody > tr"));
@@ -91,7 +95,7 @@ export function paginateDocument() {
   }
   const rowBottom=()=>startY+mm(currentTable.getBoundingClientRect().height);
   tablePage(Math.max(table.y,headerBottom+4));
-  const maxBottom=footer.y-5;
+  const maxBottom=footer.y-4;
   // Pagination uses actual browser font metrics, not an estimated row count.
   for(const row of allRows) {
     tbody.appendChild(row);
@@ -126,23 +130,56 @@ export function paginateDocument() {
       }
     }
   }
-  // Lift the summary when the enlarged footer band would otherwise push it off a page with room to spare.
-  let summaryY=Math.max(Math.min(summaryOrigin,maxBottom-summaryHeight),rowBottom()+8);
-  if(summary.length&&summaryY+summaryHeight>maxBottom) {newPage();summaryY=14;}
+  // Summary follows the actual table bottom; saved vertical blank offsets are not reproduced.
+  let summaryY=rowBottom()+5;
+  // Shipping flows after the occupied summary (full table width) when it fits on the same page.
+  // Compact overflow fallback when the same-column stack leaves no room: the QR moves into the empty
+  // side beside the totals (same size, 6mm gap) and the shipping attachment flows in that side column
+  // below the QR. Nothing is shrunk; if neither fits, the attachment starts a fresh page.
+  const shippingSrc=source.querySelector<HTMLElement>("[data-shipping]");
+  const qrS=summary.find(s=>s.e.kind==="qr"),totS=summary.find(s=>s.e.kind==="totals");
+  const probeShipping=(width:number)=>{
+    if(!shippingSrc) return 0;
+    const probe=shippingSrc.cloneNode(true) as HTMLElement;probe.style.width=`${width}mm`;
+    let h=0;measure.appendChild(probe);
+    for(const c of Array.from(probe.children) as HTMLElement[]){c.style.margin="0";h+=mm(c.getBoundingClientRect().height)+4;}
+    probe.remove();return h;
+  };
+  let shipX=table.x,shipW=table.width,shipStart=summary.length?summaryY+summaryHeight+5:rowBottom()+5;
+  if(qrS&&totS&&offsets.get("qr")!>0&&(summaryY+summaryHeight>maxBottom||(shippingSrc&&shipStart+probeShipping(table.width)>maxBottom))){
+    const w=qrS.e.width,rightX=totS.e.x+totS.e.width+6,leftX=totS.e.x-6-w;
+    const useRight=rightX+w<=table.x+table.width, useLeft=!useRight&&leftX>=table.x;
+    if(useRight||useLeft){
+      const colX=useRight?rightX:table.x, colW=useRight?table.x+table.width-rightX:totS.e.x-6-table.x;
+      const qrX=useRight?table.x+table.width-w:leftX;
+      const qrHeight=heights.get("qr")!;
+      const sideHeight=Math.max(offsets.get("totals")!+heights.get("totals")!,qrHeight+(shippingSrc?5+probeShipping(colW):0));
+      if(colW>=(shippingSrc?60:w)&&summaryY+sideHeight<=maxBottom){
+        qrS.e={...qrS.e,x:qrX};offsets.set("qr",0);
+        summaryHeight=Math.max(...summary.map(s=>offsets.get(s.e.kind)!+heights.get(s.e.kind)!));
+        shipX=colX;shipW=colW;shipStart=summaryY+qrHeight+5;
+      }
+    }
+  }
+  // Try the compact arrangement before opening another sheet.
+  if(summary.length&&summaryY+summaryHeight>maxBottom) {
+    newPage();summaryY=14;shipX=table.x;shipW=table.width;shipStart=summaryY+summaryHeight+5;
+  }
   for(const {e,node} of summary) {
     append(node,e.x,summaryY+offsets.get(e.kind)!,e.width);
   }
-  function appendAttachment(container:HTMLElement) {
+  function appendAttachment(container:HTMLElement,start:number) {
     const blocks=Array.from(container.children) as HTMLElement[];
-    let y=14;newPage();
+    // Flows after the occupied summary; a block that does not fit moves to a fresh page below.
+    let y=start;
     for(const block of blocks) {
-      block.classList.add("invoice-block");
+      block.classList.add("invoice-block");block.style.margin="0";
       block.style.fontFamily=container.style.fontFamily||"InvoiceFormal";
       block.style.fontSize=container.style.fontSize||"11pt";
       block.style.lineHeight=container.style.lineHeight||"1.4";
       block.dir=container.dir|| (cfg.language==="ar"?"rtl":"ltr");
-      let end=append(block,table.x,y,table.width);
-      if(end>maxBottom && y>14) {block.remove();newPage();y=14;end=append(block,table.x,y,table.width);}
+      let end=append(block,shipX,y,shipW);
+      if(end>maxBottom && y>14) {block.remove();newPage();y=14;shipX=table.x;shipW=table.width;end=append(block,shipX,y,shipW);}
       if(end>maxBottom) {
         // Split long paragraphs at word boundaries without dropping text.
         const words=(block.textContent??"").split(/\s+/);
@@ -159,16 +196,16 @@ export function paginateDocument() {
           }
           if(words.length) {
             newPage();y=14;activeBlock=block.cloneNode(false) as HTMLElement;
-            append(activeBlock,table.x,y,table.width);
+            shipX=table.x;shipW=table.width;append(activeBlock,shipX,y,shipW);
           }
         }
         end=y+mm(activeBlock.getBoundingClientRect().height);
       }
-      y=end+3;
+      y=end+4;
     }
   }
   const shipping=source.querySelector<HTMLElement>("[data-shipping]");
-  if(shipping) appendAttachment(shipping);
+  if(shipping) appendAttachment(shipping,shipStart);
   for(const n of Array.from(source.querySelectorAll<HTMLElement>('[data-kind="qr"],[data-kind="totals"]'))) n.remove();
   measure.remove();source.remove();
   for(const p of Array.from(root.querySelectorAll<HTMLElement>(".invoice-page"))) {

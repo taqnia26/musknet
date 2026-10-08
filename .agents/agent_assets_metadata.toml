@@ -126,3 +126,17 @@ mtime_ms = 1791410054963
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/fa3a0697-0b49-47d1-aace-c18fc9ad2d3a/d53a76c6-6070-449a-a8b7-99a61b3f9e1a"
 storage_version_token = "1791410091496214"
 content_type = "application/pdf"
+
+[[outputs]]
+id = "LPa8cEWnIgeA78umuFp3w"
+uri = "file://reports/invoice-compact-layout-preview.pdf"
+type = "pdf"
+title = "معاينة التوزيع المصحح — صفحة واحدة"
+description = "نموذج تجريبي بخمسة بنود وخصم وضريبة وQR وبيانات شحن؛ شعار أصغر 30% وعنوان موقع أوضح. ليس إعادة إصدار للفاتورة الأصلية."
+logical_id = "ec3c53e2-cd09-4b84-b281-f9fa702c2088"
+content_hash = "sha256:51b5f73e8efb12d213f7d0e376c8dd92f042ffe329f498454dbe097291599000"
+size = 64314
+mtime_ms = 1791491551914
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:156c7b71-7379-4f62-8fb3-c7d37e2ab326/ec3c53e2-cd09-4b84-b281-f9fa702c2088/592d81b4-da35-456b-b616-8dc2bdab215f"
+storage_version_token = "1791491645385372"
+content_type = "application/pdf"
