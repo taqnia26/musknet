@@ -438,6 +438,12 @@ describe.sequential("distributor portal authentication and company orders", () =
     expect(review.body.credit.limit).toBeNull();
     expect(review.body.credit.availableBefore).toBeNull();
     expect(review.body.blockReasons.join(" ")).toMatch(/explicitly approved credit limit/i);
+    // Direct admin invoice policy must not weaken credit-controlled portal approval.
+    await request(app).post(`/api/admin/company-orders/${submitted.body.id}/decision`)
+      .set(auth(adminTokens.edit)).send({
+        decision: "approve", expectedReviewFingerprint: review.body.reviewFingerprint,
+        acknowledgeChanges: false,
+      }).expect(409);
     const rejected = await request(app).post(`/api/admin/company-orders/${submitted.body.id}/decision`)
       .set(auth(adminTokens.edit)).send({
         decision: "reject",

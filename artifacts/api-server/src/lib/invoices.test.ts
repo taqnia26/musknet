@@ -805,6 +805,32 @@ describe.sequential("distributor invoice issuance", () => {
     creditTestDistributorId = company.id;
     const generated = await insertApprovedCreditContract(company.id, `Credit exposure test ${base}`, "Saudi distributor agreement", "50.00");
     const today = saudiCalendarDate(new Date());
+    // A populated but unapproved limit is not an approved ceiling for direct
+    // admin issuance. Both admin entry paths must work and retain replay safety.
+    await db.update(distributorContractsTable).set({
+      creditLimit: "0.00", creditLimitApprovedBy: null,
+      creditLimitApprovedAt: null, creditLimitApprovalReason: null,
+    }).where(eq(distributorContractsTable.id, generated.id));
+    const noApprovalInput = {
+      creationKey: `credit-unapproved-${base}`, distributorId: company.id,
+      contractId: generated.id, issueDate: today, dueDate: today,
+      items: [{ productId, quantity: 1, unitPrice: 10 }],
+    };
+    const unapproved = await createCompanyInvoice(noApprovalInput, actorId, env);
+    expect(unapproved.invoiceNumber).toMatch(/^ML-\d+$/);
+    expect((await createCompanyInvoice(noApprovalInput, actorId, env)).id).toBe(unapproved.id);
+    await db.update(distributorContractsTable).set({creditLimit:null})
+      .where(eq(distributorContractsTable.id, generated.id));
+    const noLimit = await createDistributorInvoice({
+      ...noApprovalInput, creationKey:`credit-no-limit-${base}`, taxTreatment:"domestic",
+    }, actorId, env);
+    expect(noLimit.invoiceNumber).toMatch(/^ML-\d+$/);
+    await cancelCompanyInvoice(unapproved.id, "Restore credit fixture after unapproved admin issuance", actorId);
+    await cancelCompanyInvoice(noLimit.id, "Restore credit fixture after no-limit admin issuance", actorId);
+    await db.update(distributorContractsTable).set({
+      creditLimit:generated.creditLimit, creditLimitApprovedBy:generated.creditLimitApprovedBy,
+      creditLimitApprovedAt:generated.creditLimitApprovedAt, creditLimitApprovalReason:generated.creditLimitApprovalReason,
+    }).where(eq(distributorContractsTable.id, generated.id));
     const first = await createCompanyInvoice({
       creationKey: `credit-first-${base}`,
       distributorId: company.id,

@@ -511,7 +511,10 @@ export async function createDistributorInvoice(
       creditSource,
       Math.max(0, cents(totalAmount) - (input.collected ? cents(totalAmount) : 0)),
     );
-    if (!creditPosition.allowed) {
+    // Direct admin issuance permits an unapproved/missing limit. Portal order
+    // approval separately requires approved credit under the same company lock
+    // before reaching this issuer. Never weaken getCompanyCreditPosition.
+    if (creditPosition.creditLimitCents !== null && !creditPosition.allowed) {
       throw new DistributorInvoiceConflictError(creditPosition.blockingReason ?? "Company credit limit is not approved");
     }
 
@@ -1081,6 +1084,8 @@ export async function updateOrderAndIssueInvoice(
  * Credit-limit configuration belongs to the selected current contract source;
  * exposure belongs to the company and deliberately includes invoices under all
  * older contracts, net of recorded collections and excluding cancelled invoices.
+ * allowed/blockingReason describe portal approval policy; direct admin issuance
+ * enforces the ceiling only when creditLimitCents is non-null.
  * Callers must hold lockDistributorContractSource before invoking this helper.
  */
 export async function getCompanyCreditPosition(
@@ -1106,7 +1111,7 @@ export async function getCompanyCreditPosition(
   const availableCents = creditLimitCents === null ? null : Math.max(0, creditLimitCents - outstandingCents);
   const allowed = creditLimitCents !== null && projectedOutstandingCents <= creditLimitCents;
   const blockingReason = creditLimitCents === null
-    ? "An explicitly approved credit limit is required for this contract before current company invoices can be issued"
+    ? "An explicitly approved credit limit is required for this contract before distributor portal orders can be approved"
     : allowed
       ? null
       : `Company credit limit exceeded: ${projectedOutstandingCents} cents projected against ${creditLimitCents} cents approved`;
