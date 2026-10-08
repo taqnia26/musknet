@@ -1,0 +1,31 @@
+# TASK — company invoice issuance must not require an approved credit limit
+
+## Owner decision
+
+Issuing a company or distributor invoice must no longer be blocked because the contract has no explicitly approved credit limit. Today the admin invoice screen fails with:
+
+`HTTP 409: An explicitly approved credit limit is required for this contract before current company invoices can be issued`
+
+## Required behaviour
+
+1. No approved credit limit on the contract: issuing proceeds, with no 409.
+2. An approved credit limit exists: keep enforcing it exactly as today. An invoice that would exceed an approved limit stays blocked. This is an assumption; the owner may revise it.
+3. Everything else in issuance is unchanged: contract validity checks, discount and VAT rules, `ML-` numbering, ZATCA data, accounting entries, idempotency and race protection.
+
+## Do not
+
+- Do not remove or alter the credit-limit approval feature itself: the approval dialog, the record of who approved, when and why, and the audit trail. A limit can still be set, and once set it applies per rule 2.
+- Do not change how credit limits are decided. The performance-based mechanism was left undecided in the meeting and nothing about it is built here.
+- Do not change the distributor portal's order submission or its credit-controlled order approval, unless it shares the same code path as the invoice rule. If it does, stop and report which paths share it and what portal behaviour would become. Do not change portal behaviour without the owner's confirmation.
+- No schema change and no migration. If you believe one is needed, stop and explain why.
+- Do not touch existing invoices.
+
+## Report with the change
+
+1. Where the guard lives, and every place that enforces the same requirement. For each: changed or left unchanged, and why.
+2. What admins see when no limit is approved (credit status text, warnings, disabled buttons). Any text that still claims a block that no longer exists must be corrected.
+3. Tests: add or update tests covering rules 1 and 2, and run them on real PostgreSQL.
+
+## Deliver
+
+Files changed, the test results, and confirmation that no SQL or migration is needed for production.
