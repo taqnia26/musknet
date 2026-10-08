@@ -465,6 +465,7 @@ describe.sequential("distributor invoice issuance", () => {
     }, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
     const request = {
       creationKey: `generated-prior-${base}`, distributorId, contractId: contract.id,
+      showShipping: true,
       issueDate: "2001-02-01", dueDate: "2001-03-01",
       discountOverride: { percent: 20, reason: "Approved single-invoice historical discount" },
       items: [{ productId, quantity: 1, unitPrice: 115 }],
@@ -474,6 +475,7 @@ describe.sequential("distributor invoice issuance", () => {
     const [stored] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, created.id));
     expect(stored).toMatchObject({
       historical: "yes", contractId: contract.id, contractNumber: contract.contractNumber,
+      showShipping: true,
       contractDiscountPercent: "7.50", invoiceDiscountPercent: "20.00",
       appliedDiscountPercent: "20.00",
       discountOverrideOutsideContractPeriod: true, discountOverrideByAdminId: actorId,
@@ -644,6 +646,7 @@ describe.sequential("distributor invoice issuance", () => {
     const dueDate = new Date(Date.parse(`${issueDate}T12:00:00.000Z`) + 17 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const invoice = await createCompanyInvoice({
       creationKey: `uploaded-${base}-invoice`,
+      showShipping: true,
       distributorId,
       uploadedContractFileId: files[0].id,
       issueDate,
@@ -652,6 +655,7 @@ describe.sequential("distributor invoice issuance", () => {
     }, actorId, env);
     const [persisted] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
     expect(persisted).toMatchObject({
+      showShipping: true,
       uploadedContractFileId: files[0].id,
       contractNumber: files[0].fileName,
       contractType: "Saudi distributor agreement",

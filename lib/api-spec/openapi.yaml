@@ -5551,6 +5551,7 @@ components:
       type: object
       required: [id, historical, orderId, orderNumber, distributorId, distributorName, contractId, uploadedContractFileId, contractNumber, contractType, contractDiscountPercent, paymentDays, paymentTerm, taxTreatment, vatRate, exhibitionId, exhibitionName, sequenceNumber, invoiceNumber, originalInvoiceNumber, issueDatetime, dueDate, sellerName, sellerVatNumber, buyerName, buyerTaxNumber, buyerCommercialRegistrationNumber, buyerAddress, subtotal, discountAmount, vatAmount, totalAmount, paidAmount, outstandingAmount, paymentStatus, payments, qrCodeData, items, createdAt, cancelledAt, cancellationReason, cancelledByAdminId, cancelledByName]
       properties:
+        showShipping: { type: boolean, description: "Whether this invoice includes available shipping details. Defaults to false." }
         shippingDetails: { type: [string, "null"], description: "Current linked shipment information, not an amendment to the issued tax document." }
         couponCode: { type: [string, "null"] }
         couponDiscountType: { type: [string, "null"], enum: [percentage, fixed, null] }
@@ -5614,6 +5615,7 @@ components:
       type: object
       required: [creationKey, buyerName, buyerAddress, buyerTaxNumber, issueDate, items]
       properties:
+        showShipping: { type: boolean, description: "Include shipping details in the invoice; omitted means hidden." }
         creationKey: { type: string, minLength: 16, maxLength: 200 }
         couponCode: { type: [string, "null"], maxLength: 100 }
         discountOverride: { $ref: "#/components/schemas/ManualSaleDiscountInput" }
@@ -5730,6 +5732,7 @@ components:
       type: object
       required: [creationKey, issueDate, dueDate, distributorId, items]
       properties:
+        showShipping: { type: boolean, description: "Include shipping details in the invoice; omitted means hidden." }
         creationKey: { type: string, minLength: 16, maxLength: 80 }
         issueDate: { type: string, format: date, description: "Determines current vs historical mode solely by comparison with today's Riyadh calendar date." }
         dueDate: { type: string, format: date }
@@ -5776,6 +5779,7 @@ components:
       type: object
       required: [creationKey, distributorId, items]
       properties:
+        showShipping: { type: boolean, description: "Include shipping details in the invoice; omitted means hidden." }
         creationKey: { type: string, minLength: 16, maxLength: 100 }
         distributorId: { type: number, minimum: 1, multipleOf: 1 }
         contractId: { type: number, minimum: 1, multipleOf: 1 }

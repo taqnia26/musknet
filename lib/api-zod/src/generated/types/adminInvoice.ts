@@ -14,6 +14,8 @@ import type { AdminInvoiceTaxTreatment } from './adminInvoiceTaxTreatment';
 import type { ReceivablePayment } from './receivablePayment';
 
 export interface AdminInvoice {
+  /** Whether this invoice includes available shipping details. Defaults to false. */
+  showShipping?: boolean;
   /**
      * Current linked shipment information, not an amendment to the issued tax document.
      * @nullable

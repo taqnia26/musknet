@@ -20,13 +20,12 @@ export function renderInvoiceHtml(input:{
   invoice:InvoiceFacts; design?:InvoiceDesign; language?:InvoiceLanguage;
   assets:InvoiceAssets; qrUrl?:string|null;
 }):string {
-  const i=input.invoice,d=designSchema.parse(input.design??createTemplate()),lang=input.language??"ar",a=input.assets;
+  const i={...input.invoice,shippingDetails:input.invoice.showShipping===true?input.invoice.shippingDetails:null},d=designSchema.parse(input.design??createTemplate()),lang=input.language??"ar",a=input.assets;
   const num=formatInvoiceNumber(i.invoiceNumber);
   const t=(ar:string,en:string)=>lang==="ar"?ar:en;
   const money=(value:number)=>`<span class="money" dir="ltr">${lang==="ar"?`<img class="money-symbol" src="${safeAsset(a.riyal)}" alt="ريال سعودي">`:`<span class="money-symbol">SAR</span>`}<span class="money-amount" dir="ltr">${new Intl.NumberFormat("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}).format(value)}</span></span>`;
   const line=(label:string,value:unknown)=>`<p><strong>${escape(label)}</strong> <bdi>${escape(value)}</bdi></p>`;
   const useContract=Boolean(i.contractId||i.uploadedContractFileId||i.contractNumber);
-  const collection=i.outstandingAmount<=0?t("تم التحصيل بالكامل","Collected in full"):i.paidAmount>0?t("تحصيل جزئي","Partially collected"):t("غير محصلة","Not collected");
   const paymentTerm=i.paymentTerm==="due_on_issue"?t("نقداً / يوم الإصدار","Due on issue"):i.paymentTerm==="end_of_month"?t("نهاية الشهر الميلادي","End of month"):i.paymentDays!=null?t(`${i.paymentDays} يوم`,`${i.paymentDays} days`):"";
   const contents:Record<string,string>={
     logo:`<img class="brand-logo" src="${safeAsset(a.logo)}" alt="Musk Ellolo">`,
@@ -42,14 +41,13 @@ export function renderInvoiceHtml(input:{
       (i.discountOverrideReason?`<div class="notice"><strong>${t("استثناء خصم لهذه الفاتورة فقط؛ العقد لم يتغير.","Discount override for this invoice only; contract unchanged.")}</strong>${line(t("السبب:","Reason:"),i.discountOverrideReason)}${line(t("سُجل بواسطة المستخدم:","Recorded by user:"),i.discountOverrideByAdminId!=null?`#${i.discountOverrideByAdminId}`:"-")}${line(t("وقت التسجيل:","Recorded at:"),i.discountOverrideAt?new Date(i.discountOverrideAt).toLocaleString("en-GB",{timeZone:"Asia/Riyadh"}):"-")}</div>`:"")+
       (i.notes?`<p class="pre">${escape(i.notes)}</p>`:""),
     totals:invoiceTotalRows(i).map(r=>`<div class="total-row"><span>${escape(lang==="ar"?r.ar:r.en)}</span>${money(r.value)}</div>`).join("")+
-      `<div class="total-row grand-total"><strong>${t("الإجمالي","TOTAL")}</strong>${money(i.totalAmount)}</div>`+
-      `<div class="collection"><p>${t("حالة التحصيل:","Collection status:")} ${escape(collection)}</p><div class="total-row"><span>${t("المحصل","Collected")}</span>${money(i.paidAmount)}</div><div class="total-row"><span>${t("المتبقي للتحصيل","Remaining to collect")}</span>${money(i.outstandingAmount)}</div></div>`,
-    qr:i.historical!=="yes"&&!i.cancelledAt&&input.qrUrl?`<img class="qr" src="${safeAsset(input.qrUrl)}" alt="ZATCA QR">`:"",
+      `<div class="total-row grand-total"><strong>${t("الإجمالي","TOTAL")}</strong>${money(i.totalAmount)}</div>`,
+    qr:"",
     footer:`<img class="footer-mark" src="${safeAsset(a.mark)}" alt="Musk Ellolo"><span class="footer-site" dir="ltr">muskellolo.com</span>`,
   };
   const heading:Record<string,string>={seller:t("بيانات البائع","Seller details"),buyer:t("بيانات العميل","Bill to"),notes:t("ملاحظات","Notes")};
   // Notes are intentionally never rendered (user request); underlying data stays untouched.
-  const els=d.elements.filter(e=>e.kind!=="table"&&e.kind!=="notes").map(e=>{
+  const els=d.elements.filter(e=>e.kind!=="table"&&e.kind!=="notes"&&e.kind!=="qr").map(e=>{
     const css=`left:${e.x}mm;top:${e.y}mm;width:${e.width}mm;min-height:${e.height}mm;${["logo","qr"].includes(e.kind)?`height:${e.height}mm;`:""}font-family:${fontStack(e.font)};font-size:${e.fontSize}pt;font-weight:${e.fontWeight};color:${e.color};background:${e.background};text-align:${e.align};border:${e.borderWidth}mm solid ${e.borderColor};padding:${e.padding}mm;line-height:${e.lineHeight}`;
     const content=e.kind==="text"?`<p class="pre">${escape(e.text)}</p>`:e.kind==="divider"?`<div style="border-top:.25mm solid ${e.borderColor};width:100%"></div>`:contents[e.kind];
     const title=e.heading&&lang==="ar"?e.heading:heading[e.kind];

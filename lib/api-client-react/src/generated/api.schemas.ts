@@ -3248,6 +3248,8 @@ export interface AdminInvoiceItem {
 }
 
 export interface AdminInvoice {
+  /** Whether this invoice includes available shipping details. Defaults to false. */
+  showShipping?: boolean;
   /**
      * Current linked shipment information, not an amendment to the issued tax document.
      * @nullable
@@ -3388,6 +3390,8 @@ export interface InvoiceSaleItemInput {
 }
 
 export interface IndividualInvoiceInput {
+  /** Include shipping details in the invoice; omitted means hidden. */
+  showShipping?: boolean;
   /**
      * @minLength 16
      * @maxLength 200
@@ -3601,6 +3605,8 @@ export const CompanyInvoiceInputPaymentMethod = {
 } as const;
 
 export interface CompanyInvoiceInput {
+  /** Include shipping details in the invoice; omitted means hidden. */
+  showShipping?: boolean;
   /**
      * @minLength 16
      * @maxLength 80
@@ -3685,6 +3691,8 @@ export const DistributorInvoiceInputTaxTreatment = {
 } as const;
 
 export interface DistributorInvoiceInput {
+  /** Include shipping details in the invoice; omitted means hidden. */
+  showShipping?: boolean;
   /**
      * @minLength 16
      * @maxLength 100

@@ -10,6 +10,8 @@ import type { CompanyInvoiceInputPaymentMethod } from './companyInvoiceInputPaym
 import type { CompanyInvoiceLineInput } from './companyInvoiceLineInput';
 
 export interface CompanyInvoiceInput {
+  /** Include shipping details in the invoice; omitted means hidden. */
+  showShipping?: boolean;
   /**
      * @minLength 16
      * @maxLength 80

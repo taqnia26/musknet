@@ -50,6 +50,7 @@ export function CreateCompanyInvoiceDialog() {
   const [overridePercent, setOverridePercent] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
   const [collected, setCollected] = useState(false);
+  const [showShipping, setShowShipping] = useState(false);
   const [paymentDate, setPaymentDate] = useState(dateInRiyadh);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank_transfer'>('bank_transfer');
   const [lines, setLines] = useState<Line[]>([blankLine()]);
@@ -143,6 +144,7 @@ export function CreateCompanyInvoiceDialog() {
   }, [discountPercent, lines, vatRate]);
 
   const reset = () => {
+    setShowShipping(false);
     const today = dateInRiyadh();
     setDistributorId('');
     setIssueDate(today);
@@ -210,6 +212,7 @@ export function CreateCompanyInvoiceDialog() {
     setPending(true);
     try {
       const data = {
+        showShipping,
         creationKey,
         issueDate,
         dueDate,
@@ -403,6 +406,10 @@ export function CreateCompanyInvoiceDialog() {
               <div className="space-y-1.5"><Label>{t('طريقة الدفع', 'Payment method')}</Label><Select value={paymentMethod} onValueChange={value => { if (value === 'cash' || value === 'bank_transfer') { rotateCreationKey(); setPaymentMethod(value); } }}><SelectTrigger data-testid="select-company-invoice-payment-method"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="bank_transfer">{t('تحويل بنكي', 'Bank transfer')}</SelectItem><SelectItem value="cash">{t('نقداً', 'Cash')}</SelectItem></SelectContent></Select></div>
             </div>}
           </section>
+          <div className="space-y-1">
+            <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" data-testid="company-invoice-show-shipping" className="h-4 w-4" disabled={pending} checked={showShipping} onChange={e => { rotateCreationKey(); setShowShipping(e.target.checked); }} />{t('إظهار الشحن في الفاتورة', 'Show shipping on invoice')}</label>
+            <p className="text-xs text-muted-foreground">{t('مخفي افتراضياً. عند التفعيل يظهر عنوان العميل إذا لم توجد شحنة مرتبطة.', 'Hidden by default. When enabled, the customer address is used if no shipment is linked.')}</p>
+          </div>
           {error && <p role="alert" data-testid="company-invoice-error" className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
           <Button data-testid="button-submit-company-invoice" className="w-full" onClick={submit} disabled={pending || queryError || productsLoading || distributorsLoading || contractsLoading || filesLoading || !sellerConfiguration?.available}>
             {pending ? t('جاري الحفظ...', 'Saving...') : isHistorical ? t('حفظ التسجيل الداخلي', 'Save internal record') : t('حفظ وإصدار الفاتورة', 'Save and issue invoice')}

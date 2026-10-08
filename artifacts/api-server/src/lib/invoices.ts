@@ -205,6 +205,7 @@ export async function lockDistributorContractSource(tx: any, distributorId: numb
 }
 
 async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoicesTable.$inferSelect, input: {
+  showShipping?: boolean;
   creationKey: string;
   distributorId: number;
   contractId?: number;
@@ -215,6 +216,7 @@ async function assertDistributorInvoiceReplay(tx: any, previous: typeof invoices
   items: Array<{ productId: number; quantity: number; unitPrice: number }>;
 }) {
   if (previous.cancelledAt) throw new DistributorInvoiceConflictError("Cancelled invoice cannot be reissued");
+  if (previous.showShipping !== (input.showShipping === true)) throw new DistributorInvoiceConflictError("Creation key already used for different shipping visibility");
   if (previous.distributorId !== input.distributorId) throw new DistributorInvoiceConflictError("Creation key already used for a different distributor invoice");
   const [event] = await tx.select().from(operationEventsTable)
     .where(eq(operationEventsTable.eventKey, `distributor-invoice:${previous.id}`)).limit(1);
@@ -340,7 +342,7 @@ export async function createExhibitionInvoice(
 }
 
 export async function createDistributorInvoice(
-  input: { creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; discountOverride?: { percent: number; reason?: string }; taxTreatment?: TaxTreatment; issueDate?: string | Date; dueDate?: string | Date; collected?: { paymentDate: string | Date; paymentMethod: "cash" | "bank_transfer" }; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
+  input: { showShipping?: boolean; creationKey: string; distributorId: number; contractId?: number; uploadedContractFileId?: number; discountOverride?: { percent: number; reason?: string }; taxTreatment?: TaxTreatment; issueDate?: string | Date; dueDate?: string | Date; collected?: { paymentDate: string | Date; paymentMethod: "cash" | "bank_transfer" }; items: Array<{ productId: number; quantity: number; unitPrice: number }> },
   actorId: number,
   environment: NodeJS.ProcessEnv = process.env,
   executor?: any,
@@ -541,6 +543,7 @@ export async function createDistributorInvoice(
     });
     const [invoice] = await tx.insert(invoicesTable).values({
       distributorId: distributor.id,
+      showShipping: input.showShipping === true,
       creationKey: input.creationKey,
       sequenceNumber,
       invoiceNumber,

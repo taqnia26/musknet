@@ -32,6 +32,7 @@ export const taxInvoicesTable = pgTable("tax_invoices", {
   vatRate: numeric("vat_rate", { precision: 5, scale: 2 }),
   exhibitionId: integer("exhibition_id").references(() => exhibitionsTable.id, { onDelete: "restrict" }),
   individual: boolean("individual").notNull().default(false),
+  showShipping: boolean("show_shipping").notNull().default(false),
   creationKey: text("creation_key"),
   historical: text("historical").notNull().default("no"),
   historicalCreationFingerprint: text("historical_creation_fingerprint"),

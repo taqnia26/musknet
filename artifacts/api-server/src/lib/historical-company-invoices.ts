@@ -7,6 +7,7 @@ import { reconcileHistoricalPayment } from "./historical-payment-reconciliation"
 import { saudiCalendarDate } from "./invoice-dates";
 
 export type HistoricalInvoiceInput = {
+  showShipping?: boolean;
   creationKey: string; distributorId: number; invoiceNumber?: string; issueDate: string; dueDate: string;
   internalReference?: boolean;
   buyerName: string; buyerTaxNumber?: string | null; buyerAddress?: string | null;
@@ -184,6 +185,7 @@ export async function createHistoricalInvoice(input: HistoricalInvoiceInput, act
     const [{ next }] = await tx.select({ next: sql<number>`coalesce(min(${invoicesTable.sequenceNumber}), 0) - 1` }).from(invoicesTable);
     const internalReference = input.internalReference ? (await nextLiveInvoiceNumber(tx, "LC")).invoiceNumber : input.invoiceNumber!.trim();
     const [invoice] = await tx.insert(invoicesTable).values({
+      showShipping: input.showShipping === true,
       historical: "yes", creationKey: input.creationKey, historicalCreationFingerprint: creationFingerprint(input), distributorId: input.distributorId,
       sequenceNumber: Math.min(-1, Number(next)), invoiceNumber: internalReference,
       originalInvoiceNumber: input.internalReference ? input.invoiceNumber?.trim() || null : null,

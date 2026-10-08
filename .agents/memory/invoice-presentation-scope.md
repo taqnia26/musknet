@@ -35,8 +35,8 @@ The user also requires removing the printed «سجل داخلي لفاتورة �
 
 **How to apply:** These are presentation requirements, not permission to change historical status, stored numbers, tax treatment or original external documents. Keep cancellation notices and never invent a historical ZATCA QR or new tax issuance. The design editor must allow deletion and restoration of optional layout elements.
 
-Validate compact pagination with live invoices containing discount rows, an actual QR image, and shipping details together, not just historical invoices without QR. Shipping must not automatically force another page when it fits.
+The user subsequently requested removing printed collection status, collected and outstanding amounts, and QR entirely. Shipping details must be hidden by default and included only when the issuer explicitly enables «إظهار الشحن في الفاتورة» for that invoice.
 
-**Why:** A five-item live invoice still produced three mostly empty pages after a historical-only reproduction passed. The user explicitly rejected those wasted pages.
+**Why:** The user marked these exact sections in the corrected preview and explicitly requested their removal and an opt-in shipping control.
 
-**How to apply:** Measure real content heights and try using empty space beside totals for QR and shipping before breaking the page. Preserve all amounts and operational text, QR size, and the established header positions.
+**How to apply:** Keep payment records and tax QR data in the system; this is a document-presentation rule, not data deletion. Persist the choice per invoice and apply it across preview, PDF, print and emailed attachments. Test opted-in shipping and default-hidden shipping; shipping must not force an unnecessary new page.

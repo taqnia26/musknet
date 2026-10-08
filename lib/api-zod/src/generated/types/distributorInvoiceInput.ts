@@ -9,6 +9,8 @@ import type { DistributorInvoiceInputTaxTreatment } from './distributorInvoiceIn
 import type { DistributorInvoiceLineInput } from './distributorInvoiceLineInput';
 
 export interface DistributorInvoiceInput {
+  /** Include shipping details in the invoice; omitted means hidden. */
+  showShipping?: boolean;
   /**
      * @minLength 16
      * @maxLength 100

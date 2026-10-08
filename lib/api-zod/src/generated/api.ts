@@ -6414,6 +6414,7 @@ export const adminListInvoicesResponseCancelledByAdminIdMultipleOf = 1;
 
 
 export const AdminListInvoicesResponseItem = zod.object({
+  "showShipping": zod.boolean().optional().describe('Whether this invoice includes available shipping details. Defaults to false.'),
   "shippingDetails": zod.string().nullish().describe('Current linked shipment information, not an amendment to the issued tax document.'),
   "couponCode": zod.string().nullish(),
   "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
@@ -6520,6 +6521,7 @@ export const adminCreateDistributorInvoiceBodyItemsMax = 100;
 
 
 export const AdminCreateDistributorInvoiceBody = zod.object({
+  "showShipping": zod.boolean().optional().describe('Include shipping details in the invoice; omitted means hidden.'),
   "creationKey": zod.string().min(adminCreateDistributorInvoiceBodyCreationKeyMin).max(adminCreateDistributorInvoiceBodyCreationKeyMax),
   "distributorId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyDistributorIdMultipleOf),
   "contractId": zod.number().min(1).multipleOf(adminCreateDistributorInvoiceBodyContractIdMultipleOf).optional(),
@@ -6539,6 +6541,7 @@ export const adminCreateDistributorInvoiceResponseCancelledByAdminIdMultipleOf =
 
 
 export const AdminCreateDistributorInvoiceResponse = zod.object({
+  "showShipping": zod.boolean().optional().describe('Whether this invoice includes available shipping details. Defaults to false.'),
   "shippingDetails": zod.string().nullish().describe('Current linked shipment information, not an amendment to the issued tax document.'),
   "couponCode": zod.string().nullish(),
   "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
@@ -6657,6 +6660,7 @@ export const adminCreateCompanyInvoiceBodyItemsMax = 100;
 
 
 export const AdminCreateCompanyInvoiceBody = zod.object({
+  "showShipping": zod.boolean().optional().describe('Include shipping details in the invoice; omitted means hidden.'),
   "creationKey": zod.string().min(adminCreateCompanyInvoiceBodyCreationKeyMin).max(adminCreateCompanyInvoiceBodyCreationKeyMax),
   "issueDate": zod.coerce.date().describe('Determines current vs historical mode solely by comparison with today\'s Riyadh calendar date.'),
   "dueDate": zod.coerce.date(),
@@ -6941,6 +6945,7 @@ export const adminCreateExhibitionInvoiceResponseCancelledByAdminIdMultipleOf = 
 
 
 export const AdminCreateExhibitionInvoiceResponse = zod.object({
+  "showShipping": zod.boolean().optional().describe('Whether this invoice includes available shipping details. Defaults to false.'),
   "shippingDetails": zod.string().nullish().describe('Current linked shipment information, not an amendment to the issued tax document.'),
   "couponCode": zod.string().nullish(),
   "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),
@@ -7063,6 +7068,7 @@ export const adminCreateIndividualInvoiceBodyItemsMax = 100;
 
 
 export const AdminCreateIndividualInvoiceBody = zod.object({
+  "showShipping": zod.boolean().optional().describe('Include shipping details in the invoice; omitted means hidden.'),
   "creationKey": zod.string().min(adminCreateIndividualInvoiceBodyCreationKeyMin).max(adminCreateIndividualInvoiceBodyCreationKeyMax),
   "couponCode": zod.string().max(adminCreateIndividualInvoiceBodyCouponCodeMax).nullish(),
   "discountOverride": zod.object({
@@ -7093,6 +7099,7 @@ export const adminCreateIndividualInvoiceResponseCancelledByAdminIdMultipleOf = 
 
 
 export const AdminCreateIndividualInvoiceResponse = zod.object({
+  "showShipping": zod.boolean().optional().describe('Whether this invoice includes available shipping details. Defaults to false.'),
   "shippingDetails": zod.string().nullish().describe('Current linked shipment information, not an amendment to the issued tax document.'),
   "couponCode": zod.string().nullish(),
   "couponDiscountType": zod.union([zod.literal('percentage'),zod.literal('fixed'),zod.literal(null)]).nullish(),

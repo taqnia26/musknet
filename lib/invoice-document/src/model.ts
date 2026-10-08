@@ -19,6 +19,7 @@ export type InvoiceFacts = {
   totalAmount: number; paidAmount: number; outstandingAmount: number;
   cancelledAt?: string | Date | null; cancellationReason?: string | null;
   cancelledByName?: string | null; cancelledByAdminId?: number | null;
+  showShipping?: boolean;
   shippingDetails?: string | null; notes?: string | null;
   qrCodeData?: string;
   items: Array<{ productName: string; productNameEn?: string | null; quantity: number; unitPrice: number; totalAmount?: number }>;

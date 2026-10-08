@@ -88,9 +88,9 @@ describe("protected shared invoice document",()=>{
     expect(huge.html).not.toContain('data-kind="notes"');
     const qr=await QRCode.toDataURL("real immutable payload");
     const html=renderInvoiceHtml({invoice:base,assets:invoicePdfAssets(),qrUrl:qr});
-    expect(html).toContain(qr);
+    expect(html).not.toContain(qr);
   },30_000);
-  it("creates a real PDF with embedded Arabic font, branded logo, QR and searchable Arabic",async()=>{
+  it("creates a real PDF with embedded Arabic font, branded logo and searchable Arabic",async()=>{
     const invoice={...sampleInvoice(),qrCodeData:"TEST-TLV-CONTENT"};
     const out=await inspectInvoiceDocument(invoice,"ar",createTemplate());
     const dir=mkdtempSync(`${tmpdir()}/shared-invoice-`);
@@ -169,17 +169,17 @@ describe("protected shared invoice document",()=>{
   },30_000);
   it("places the currency symbol physically left of every amount in Arabic and English, including zero and negative",async()=>{
     const base=sampleInvoice();
-    const invoice={...base,paidAmount:0,outstandingAmount:-12.5,items:[...base.items,{productName:"خصم",productNameEn:"Discount",quantity:1,unitPrice:-40,totalAmount:-40}]};
+    const invoice={...base,paidAmount:0,outstandingAmount:-12.5,items:[...base.items,{productName:"بند صفري",productNameEn:"Zero amount",quantity:1,unitPrice:0,totalAmount:0},{productName:"خصم",productNameEn:"Discount",quantity:1,unitPrice:-40,totalAmount:-40}]};
     for(const lang of ["ar","en"] as const){
       const out=await inspectInvoiceDocument(invoice,lang,createTemplate(),false);
       expect(out.metrics.money.length).toBeGreaterThan(6);
       for(const m of out.metrics.money) expect(m.symbolRight).toBeLessThanOrEqual(m.amountLeft+0.5);
       const amounts=out.metrics.money.map(m=>m.amount);
-      expect(amounts).toContain("0.00");expect(amounts).toContain("-12.50");expect(amounts).toContain("-40.00");
+      expect(amounts).toContain("0.00");expect(amounts).not.toContain("-12.50");expect(amounts).toContain("-40.00");
       expect(out.html).toMatch(lang==="ar"?/<img class="money-symbol"[^>]*><span class="money-amount" dir="ltr">/:/<span class="money-symbol">SAR<\/span><span class="money-amount" dir="ltr">/);
     }
   },30_000);
-  it("five-row taxed company invoice with 50% discount, QR and shipping fits one page (ar/en)",async()=>{
+  it("five-row taxed company invoice with 50% discount and enabled shipping fits one page without QR or collections (ar/en)",async()=>{
     const base=sampleInvoice();
     const rows=[[6,389],[12,389],[12,399],[6,369],[6,339]] as const;
     const names=["عطر تجريبي ألف 50 مل","عطر تجريبي باء 50 مل","عطر تجريبي جيم 50 مل","عطر تجريبي دال 50 مل","عطر تجريبي هاء 50 مل"];
@@ -189,7 +189,7 @@ describe("protected shared invoice document",()=>{
       contractNumber:"CT-TEST-1",contractDiscountPercent:50,orderNumber:null,
       items:rows.map(([q,p],n)=>({productName:names[n],productNameEn:`Test perfume ${n+1} 50ml`,quantity:q,unitPrice:p,totalAmount:Math.round(q*p*50)/100})),
       discountAmount:8019,subtotal:6973.05,vatAmount:1045.95,vatRate:15,totalAmount:8019,paidAmount:0,outstandingAmount:8019,
-      qrCodeData:"synthetic tlv payload",shippingDetails:"شركة الشحن: ناقل تجريبي\nرقم التتبع: TRK-0000-1234\nالعنوان: الرياض، حي تجريبي"};
+      showShipping:true,qrCodeData:"synthetic tlv payload",shippingDetails:"شركة الشحن: ناقل تجريبي\nرقم التتبع: TRK-0000-1234\nالعنوان: الرياض، حي تجريبي"};
     expect(invoice.items.map(r=>r.totalAmount)).toEqual([1167,2334,2394,1107,1017]);
     const qr=await QRCode.toDataURL("synthetic tlv payload");
     for(const lang of ["ar","en"] as const){
@@ -203,7 +203,20 @@ describe("protected shared invoice document",()=>{
       }
       expect(out.metrics.pages).toBe(1);
       for(const v of ["16,038.00","8,019.00","6,973.05","1,045.95","TRK-0000-1234","2,394.00"]) expect(out.metrics.text).toContain(v);
-      expect(out.html).toContain('alt="ZATCA QR"');
+      expect(out.html).not.toContain('alt="ZATCA QR"');
+      expect(out.metrics.text).not.toMatch(/حالة التحصيل|المحصل|المتبقي للتحصيل|Collection status|Remaining to collect/);
+    }
+  },60_000);
+  it("shipping is hidden by default and when unchecked, and visible only when explicitly enabled",async()=>{
+    for(const lang of ["ar","en"] as const) {
+      for(const showShipping of [undefined,false,true]) {
+        const out=await inspectInvoiceDocument({...sampleInvoice(),showShipping,shippingDetails:"SHIP-OPT-IN-TEST",qrCodeData:"retained-tax-payload"},lang,createTemplate(),false);
+        expect(out.metrics.errors).toEqual([]);
+        expect(out.metrics.pages).toBe(1);
+        expect(out.metrics.text.includes("SHIP-OPT-IN-TEST")).toBe(showShipping===true);
+        expect(out.html).not.toContain('alt="ZATCA QR"');
+        expect(out.metrics.text).not.toMatch(/حالة التحصيل|المتبقي للتحصيل|Collection status|Remaining to collect/);
+      }
     }
   },60_000);
 });

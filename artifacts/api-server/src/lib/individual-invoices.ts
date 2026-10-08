@@ -23,6 +23,7 @@ export class IndividualInvoiceValidationError extends Error {}
 export class IndividualInvoiceConflictError extends Error {}
 
 type IndividualInvoiceInput = {
+  showShipping?: boolean;
   creationKey: string;
   buyerName: string;
   buyerPhone?: string | null;
@@ -47,6 +48,7 @@ function normalizedInput(input: IndividualInvoiceInput): IndividualInvoiceInput 
   return {
     creationKey: input.creationKey.trim(),
     buyerName: input.buyerName.trim(),
+    ...(input.showShipping ? { showShipping: true } : {}),
     buyerPhone: input.buyerPhone?.trim() || null,
     buyerCountry: input.buyerCountry?.trim().toUpperCase() || null,
     buyerAddress: input.buyerAddress?.trim() || null,
@@ -220,6 +222,7 @@ export async function createIndividualInvoice(
     const { sequenceNumber, invoiceNumber } = await nextLiveInvoiceNumber(tx, "M");
     const [invoice] = await tx.insert(invoicesTable).values({
       individual: true,
+      showShipping: input.showShipping === true,
       creationKey: input.creationKey,
       sequenceNumber,
       invoiceNumber,

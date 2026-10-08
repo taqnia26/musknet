@@ -43,6 +43,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
   const [issueDate, setIssueDate] = useState(saudiToday);
   const [dueDate, setDueDate] = useState('');
   const [collected, setCollected] = useState(false);
+  const [showShipping, setShowShipping] = useState(false);
   const [paymentDate, setPaymentDate] = useState(saudiToday);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank_transfer'>('cash');
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
@@ -78,6 +79,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
   }), [lines, buyerPhone, address.country]);
   const discountPreview = useSaleDiscountPreview(quoteDiscount.mutateAsync, totals.gross, discountForm, open, quoteContext);
   const reset = () => {
+    setShowShipping(false);
     setDiscountForm(emptySaleDiscount);
     setBuyerName(''); setBuyerPhone(''); setAddress(emptyInvoiceAddress()); setIssueDate(saudiToday()); setDueDate('');
     setCollected(false); setPaymentDate(saudiToday()); setPaymentMethod('cash'); setLines([emptyLine()]);
@@ -121,6 +123,7 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
     setErrors(e);
     if (e.length) return;
     const data = {
+      showShipping,
       buyerName: buyerName.trim(),
       buyerPhone: buyerPhone.trim() || null,
       buyerAddress: buyerAddress.trim() || null,
@@ -182,6 +185,10 @@ export function CreateIndividualInvoiceDialog({ onCreated }: { onCreated?: (invo
         <DialogDescription>{t('فاتورة مستقلة بدون طلب أو شحنة. الأسعار شاملة ضريبة القيمة المضافة 15%.', 'Standalone invoice with no order or shipment. Prices include 15% VAT.')}</DialogDescription>
       </DialogHeader>
       <fieldset disabled={pending} className="space-y-5 min-w-0">
+        <div className="space-y-1">
+          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" data-testid="individual-invoice-show-shipping" className="h-4 w-4" checked={showShipping} onChange={e => setShowShipping(e.target.checked)} />{t('إظهار الشحن في الفاتورة', 'Show shipping on invoice')}</label>
+          <p className="text-xs text-muted-foreground">{t('مخفي افتراضياً. عند التفعيل يظهر عنوان العميل إذا لم توجد شحنة مرتبطة.', 'Hidden by default. When enabled, the customer address is used if no shipment is linked.')}</p>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2"><Label htmlFor="individual-invoice-buyer">{t('اسم المشتري', 'Buyer name')}</Label><Input id="individual-invoice-buyer" required maxLength={250} value={buyerName} onChange={e => setBuyerName(e.target.value)} /></div>
           <div className="space-y-2"><Label htmlFor="individual-invoice-phone">{t('جوال المشتري (اختياري)', 'Buyer phone (optional)')}</Label><Input id="individual-invoice-phone" data-testid="individual-invoice-phone" type="tel" dir="ltr" maxLength={40} value={buyerPhone} onChange={e => setBuyerPhone(e.target.value.replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit))).replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit))))} /><p className="text-xs text-muted-foreground">{t('يحفظ في الفاتورة فقط، دون إنشاء حساب أو ربطه بعميل.', 'Saved on this invoice only; no customer account is created or linked.')}</p></div>

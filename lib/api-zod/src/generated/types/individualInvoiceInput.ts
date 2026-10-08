@@ -10,6 +10,8 @@ import type { InvoiceSaleItemInput } from './invoiceSaleItemInput';
 import type { ManualSaleDiscountInput } from './manualSaleDiscountInput';
 
 export interface IndividualInvoiceInput {
+  /** Include shipping details in the invoice; omitted means hidden. */
+  showShipping?: boolean;
   /**
      * @minLength 16
      * @maxLength 200

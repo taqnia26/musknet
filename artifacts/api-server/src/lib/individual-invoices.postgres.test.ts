@@ -12,6 +12,8 @@ import {
 } from "./individual-invoices";
 import { cancelSalesInvoice, createReceivablePayment } from "./invoices";
 import { addCalendarDays, saudiCalendarDate } from "./invoice-dates";
+import { localInvoiceDocument } from "./invoice-document-data";
+import { invoiceShippingDetails } from "./invoice-shipping-details";
 
 const runIntegration = process.env.INDIVIDUAL_INVOICE_POSTGRES_E2E === "true";
 
@@ -134,12 +136,16 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     }).returning();
     const input = {
       creationKey: `${base}-discount-key`, buyerName: "مشتري بخصم", buyerPhone: "+966 50 123 4567", buyerAddress: null, buyerTaxNumber: null,
-      issueDate: today, items: [{ productId, quantity: 1, unitPrice: 115 }],
+      showShipping: true, issueDate: today, items: [{ productId, quantity: 1, unitPrice: 115 }],
       couponCode: coupon.code, discountOverride: { percent: 10, reason: "خصم موثق للمنتجات بعد الكوبون" },
     };
     const [before] = await db.select().from(productsTable).where(eq(productsTable.id, productId));
     const results = await Promise.all([1, 2].map(() => createIndividualInvoice(input, actorId, environment)));
     expect(results[0].id).toBe(results[1].id);
+    expect(results[0].showShipping).toBe(true);
+    expect((await localInvoiceDocument(results[0].id))?.showShipping).toBe(true);
+    expect((await invoiceShippingDetails([results[0].id])).has(results[0].id)).toBe(false); // no invented address
+    await expect(createIndividualInvoice({...input,showShipping:false},actorId,environment)).rejects.toThrow(IndividualInvoiceConflictError);
     expect(parseInvoiceResponse(results[0])).toMatchObject({
       subtotal: 81, vatAmount: 12.15, totalAmount: 93.15, outstandingAmount: 93.15,
       discountAmount: 21.85, couponDiscountAmount: 11.5, manualDiscountAmount: 10.35,
@@ -236,6 +242,8 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
     };
     const first = await createIndividualInvoice(input, actorId, environment);
     const firstContractResponse = parseInvoiceResponse(first);
+    expect(firstContractResponse.showShipping).toBe(false);
+    expect((await localInvoiceDocument(first.id))?.shippingDetails).toBeNull();
     expect(firstContractResponse.buyerPhone).toBe(input.buyerPhone);
     await expect(createIndividualInvoice({ ...input, buyerPhone: "+966 50 999 9999" }, actorId, environment))
       .rejects.toThrow(/different invoice details/);
@@ -340,6 +348,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
   it("supports optional collected-at-issuance with a cash or bank account journal and no due date", async () => {
     const issueDate = addCalendarDays(today, -1);
     const collected = await createIndividualInvoice({
+      showShipping: true,
       creationKey: `${base}-collected-creation-key`,
       buyerName: "مشتري دفع عند الإصدار",
       buyerPhone: "0501234567",
@@ -350,6 +359,7 @@ describe.runIf(runIntegration)("standalone individual invoice: disposable Postgr
       items: [{ productId: collectedProductId, quantity: 1, unitPrice: 115 }],
     }, actorId, environment);
     const collectedResponse = parseInvoiceResponse(collected);
+    expect((await localInvoiceDocument(collected.id))?.shippingDetails).toContain("الرياض");
     expect(collectedResponse).toMatchObject({
       individual: true,
       dueDate: null,

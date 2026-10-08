@@ -15,6 +15,7 @@ type CompanyInvoiceLine = {
 };
 
 export type CompanyInvoiceInput = {
+  showShipping?: boolean;
   creationKey: string;
   issueDate: string;
   dueDate: string;
@@ -82,6 +83,7 @@ export async function createCurrentCompanyInvoiceInTransaction(
     throw new DistributorInvoiceConflictError("Distributor countryCode must be an ISO 3166-1 alpha-2 code");
   }
   return createDistributorInvoiceInTransaction(tx, {
+    ...(input.showShipping ? { showShipping: true } : {}),
     creationKey: input.creationKey,
     distributorId: input.distributorId,
     contractId: input.contractId,
@@ -267,6 +269,7 @@ export async function createCompanyInvoice(input: CompanyInvoiceInput, actorId: 
       paymentMethod: input.paymentMethod!,
     }] : [];
     const historicalInput: HistoricalInvoiceInput = {
+      ...(input.showShipping ? { showShipping: true } : {}),
       creationKey: input.creationKey,
       distributorId: input.distributorId,
       invoiceNumber: originalInvoiceNumber,
