@@ -67,6 +67,11 @@ describe.sequential("historical company invoices", () => {
     }).returning();
     invoiceIds.push(duplicate.id);
     expect((await reconcileHistoricalInvoice(input())).conflicts).toContain(`Invoice #${duplicate.id}: ${duplicate.invoiceNumber}`);
+    await db.update(invoicesTable).set({ archivedAt: new Date() }).where(eq(invoicesTable.id, duplicate.id));
+    expect((await reconcileHistoricalInvoice(input())).conflicts).toContain(`Invoice #${duplicate.id}: ${duplicate.invoiceNumber}`);
+    await db.update(invoicesTable).set({ cancelledAt: new Date() }).where(eq(invoicesTable.id, duplicate.id));
+    // An archived row or cancellation flag without reversed journals is not sufficient.
+    expect((await reconcileHistoricalInvoice(input())).conflicts).toContain(`Invoice #${duplicate.id}: ${duplicate.invoiceNumber}`);
     await expect(createHistoricalInvoice(input(), actorId)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
     await db.transaction(async tx => {
       await tx.execute(sql`set local session_replication_role = 'replica'`);
@@ -185,6 +190,45 @@ describe.sequential("historical company invoices", () => {
     const [reversal] = await db.select().from(journalEntriesTable).where(eq(journalEntriesTable.reversalOfEntryId, sale.id));
     expect(reversal).toMatchObject({ status: "posted", entryDate: new Date().toISOString().slice(0, 10) });
     await expect(createHistoricalInvoice(submission, actorId)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
+    const replacement = { ...submission, creationKey: `${key}-replacement` };
+    expect((await reconcileHistoricalInvoice(replacement)).conflicts).toEqual([]);
+    // A cancelled number remains reserved, even though a fresh internal number is allowed.
+    expect((await reconcileHistoricalInvoice({ ...replacement, internalReference: false, invoiceNumber: invoice.invoiceNumber })).conflicts)
+      .toContain(`Invoice #${invoice.id}: ${invoice.invoiceNumber}`);
+    for (const entry of [sale, reversal]) {
+      const review = await db.transaction(async tx => {
+        // Simulate incomplete legacy cancellation only inside the disposable test database.
+        await tx.execute(sql`set local session_replication_role = 'replica'`);
+        await tx.update(journalEntriesTable).set({ status: entry.id === sale.id ? "posted" : "reversed" }).where(eq(journalEntriesTable.id, entry.id));
+        const result = await reconcileHistoricalInvoice(replacement, tx);
+        await tx.update(journalEntriesTable).set({ status: entry.status }).where(eq(journalEntriesTable.id, entry.id));
+        return result;
+      });
+      expect(review.conflicts).toContain(`Invoice #${invoice.id}: ${invoice.invoiceNumber}`);
+    }
+    const [unrelated] = await db.insert(journalEntriesTable).values({
+      entryNumber: "JE-99999998", entryDate: issueDate,
+      description: submission.buyerName, sourceType: "historical_import", sourceId: String(invoice.id),
+      createdBy: actorId, status: "draft",
+    }).returning();
+    try {
+      expect((await reconcileHistoricalInvoice(replacement)).conflicts).toContain(`Master Sales journal #${unrelated.id}`);
+    } finally {
+      await db.transaction(async tx => {
+        await tx.execute(sql`set local session_replication_role = 'replica'`);
+        await tx.delete(journalEntriesTable).where(eq(journalEntriesTable.id, unrelated.id));
+      });
+    }
+    const newInvoice = await createHistoricalInvoice(replacement, actorId);
+    invoiceIds.push(newInvoice.id);
+    expect(newInvoice.invoiceNumber).not.toBe(invoice.invoiceNumber);
+    expect(newInvoice.originalInvoiceNumber).toBe(invoice.originalInvoiceNumber);
+    expect((await createHistoricalInvoice(replacement, actorId)).id).toBe(newInvoice.id);
+    expect((await reconcileHistoricalInvoice({ ...replacement, creationKey: `${key}-duplicate-replacement` })).conflicts)
+      .toContain(`Invoice #${newInvoice.id}: ${newInvoice.invoiceNumber}`);
+    const [oldInvoice] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id));
+    expect(oldInvoice.invoiceNumber).toBe(invoice.invoiceNumber);
+    expect(oldInvoice.cancelledAt).not.toBeNull();
   });
   it("blocks later collections already represented by an import or receipt journal", async () => {
     const [imported] = await db.insert(journalEntriesTable).values({

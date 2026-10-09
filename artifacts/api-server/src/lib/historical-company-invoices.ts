@@ -1,4 +1,4 @@
-import { and, eq, ilike, or, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { db, invoicesTable, invoiceItemsTable, journalEntriesTable, receivablePaymentsTable, wholesaleDistributorsTable, distributorContractsTable, uploadedContractFilesTable } from "@workspace/db";
 import { ensureStandardAccountingChart, postJournalEntry } from "./accounting";
@@ -68,6 +68,38 @@ function validate(input: HistoricalInvoiceInput) {
   }
 }
 
+/** Ignore only completed cancellations, never mere archival or an unexplained status flag. */
+async function completedCancellations(rows: Array<typeof invoicesTable.$inferSelect>, executor: any) {
+  const invoices = rows.filter(row => row.cancelledAt && row.distributorId !== null);
+  const invoiceIds = new Set<number>(), journalIds = new Set<number>();
+  if (!invoices.length) return { invoiceIds, journalIds };
+  const sources = (row: typeof invoicesTable.$inferSelect) =>
+    row.historical === "yes" ? ["historical_company_invoice"] : ["distributor_invoice", "distributor_invoice_cogs"];
+  const originals: Array<typeof journalEntriesTable.$inferSelect> = await executor.select().from(journalEntriesTable).where(or(
+    ...invoices.map(row => and(eq(journalEntriesTable.sourceId, String(row.id)), inArray(journalEntriesTable.sourceType, sources(row)))),
+  ));
+  if (!originals.length) return { invoiceIds, journalIds };
+  const reversals: Array<typeof journalEntriesTable.$inferSelect> = await executor.select().from(journalEntriesTable).where(and(
+    inArray(journalEntriesTable.reversalOfEntryId, originals.map(entry => entry.id)),
+    eq(journalEntriesTable.status, "posted"),
+    eq(journalEntriesTable.sourceType, "reversal"),
+  ));
+  const payments: Array<{ invoiceId: number }> = await executor.select({ invoiceId: receivablePaymentsTable.invoiceId })
+    .from(receivablePaymentsTable).where(inArray(receivablePaymentsTable.invoiceId, invoices.map(row => row.id)));
+  for (const row of invoices) {
+    const related = originals.filter(entry => entry.sourceId === String(row.id) && entry.sourceType !== null && sources(row).includes(entry.sourceType));
+    if (payments.some(payment => payment.invoiceId === row.id) ||
+      !related.some(entry => entry.sourceType === sources(row)[0]) ||
+      related.some(entry => entry.status !== "reversed" || !reversals.some(reversal => reversal.reversalOfEntryId === entry.id))) continue;
+    invoiceIds.add(row.id);
+    for (const entry of related) {
+      journalIds.add(entry.id);
+      for (const reversal of reversals.filter(reversal => reversal.reversalOfEntryId === entry.id)) journalIds.add(reversal.id);
+    }
+  }
+  return { invoiceIds, journalIds };
+}
+
 // Read-only reconciliation, repeated under the number lock immediately before posting.
 export async function reconcileHistoricalInvoice(input: HistoricalInvoiceInput, executor: any = db) {
   validate(input);
@@ -88,6 +120,7 @@ export async function reconcileHistoricalInvoice(input: HistoricalInvoiceInput, 
     existingCriteria.push(sql`lower(coalesce(${invoicesTable.originalInvoiceNumber}, '')) = lower(${input.invoiceNumber.trim()})`);
   }
   const existing = await executor.select().from(invoicesTable).where(or(...existingCriteria));
+  const cancelled = await completedCancellations(existing, executor);
   const imported = await executor.select({ id: journalEntriesTable.id, description: journalEntriesTable.description })
     .from(journalEntriesTable).where(and(
       eq(journalEntriesTable.sourceType, "historical_import"),
@@ -107,9 +140,12 @@ export async function reconcileHistoricalInvoice(input: HistoricalInvoiceInput, 
     .from(receivablePaymentsTable).where(eq(receivablePaymentsTable.paymentKey, p.paymentKey))));
   const paymentConflicts = await Promise.all(input.payments.map(p => reconcileHistoricalPayment(input.distributorId, p, executor)));
   const conflicts = [
-    ...existing.map((row: typeof invoicesTable.$inferSelect) => `Invoice #${row.id}: ${row.invoiceNumber}`),
+    ...existing.filter((row: typeof invoicesTable.$inferSelect) =>
+      !cancelled.invoiceIds.has(row.id) ||
+      (!input.internalReference && input.invoiceNumber?.trim().toLowerCase() === row.invoiceNumber.toLowerCase())
+    ).map((row: typeof invoicesTable.$inferSelect) => `Invoice #${row.id}: ${row.invoiceNumber}`),
     ...imported.map((row: { id: number }) => `Master Sales journal #${row.id}`),
-    ...ledger.filter((row: { id: number; sourceType: string }) => !imported.some((i: { id: number }) => i.id === row.id))
+    ...ledger.filter((row: { id: number; sourceType: string }) => !cancelled.journalIds.has(row.id) && !imported.some((i: { id: number }) => i.id === row.id))
       .map((row: { id: number; sourceType: string }) => `Journal #${row.id} (${row.sourceType})`),
     ...paymentKeys.flat().map((row: { id: number }) => `Payment #${row.id}`),
     ...paymentConflicts.flat(),

@@ -10,6 +10,7 @@ import { cancelCompanyInvoice, createDistributorInvoice, createReceivablePayment
 import { invoiceItemName } from "./invoice-email";
 import { invoiceIssueTimestamp, saudiCalendarDate } from "./invoice-dates";
 import { createCompanyInvoice } from "./company-invoices";
+import { reconcileHistoricalInvoice, type HistoricalInvoiceInput } from "./historical-company-invoices";
 
 const base = 1_700_000_000 + (Date.now() % 100_000_000);
 const customerId = base;
@@ -1222,6 +1223,16 @@ describe.sequential("distributor invoice issuance", () => {
 
     const before = (await db.select().from(productsTable).where(eq(productsTable.id, productId)))[0];
     const invoice = await createDistributorInvoice(request, actorId, env);
+    const historicalReview: HistoricalInvoiceInput = {
+      creationKey: `replacement-review-${base}`, distributorId: request.distributorId,
+      internalReference: true, invoiceNumber: invoice.invoiceNumber,
+      issueDate: saudiCalendarDate(invoice.issueDatetime), dueDate: invoice.dueDate!,
+      buyerName: invoice.buyerName!, buyerTaxNumber: invoice.buyerTaxNumber,
+      sellerName: invoice.sellerName, sellerVatNumber: invoice.sellerVatNumber,
+      taxTreatment: "domestic", subtotal: invoice.subtotal, discountAmount: invoice.discountAmount,
+      vatAmount: invoice.vatAmount, totalAmount: invoice.totalAmount, items: invoice.items, payments: [],
+    };
+    expect((await reconcileHistoricalInvoice(historicalReview)).conflicts).toContain(`Invoice #${invoice.id}: ${invoice.invoiceNumber}`);
     const [shipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.invoiceId, invoice.id));
     expect(shipment.status).toBe("pending");
     const [sale] = await db.select().from(journalEntriesTable).where(and(eq(journalEntriesTable.sourceType, "distributor_invoice"), eq(journalEntriesTable.sourceId, String(invoice.id))));
@@ -1257,6 +1268,18 @@ describe.sequential("distributor invoice issuance", () => {
       .rejects.toBeInstanceOf(DistributorInvoiceConflictError);
     await expect(createDistributorInvoice(request, actorId, env)).rejects.toBeInstanceOf(DistributorInvoiceConflictError);
     expect((await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoice.id)))[0].sequenceNumber).toBe(invoice.sequenceNumber);
+    const review = await reconcileHistoricalInvoice(historicalReview);
+    expect(review.conflicts).not.toContain(`Invoice #${invoice.id}: ${invoice.invoiceNumber}`);
+    expect(review.conflicts).not.toContain(`Journal #${sale.id} (distributor_invoice)`);
+    expect(review.conflicts).not.toContain(`Journal #${cogs.id} (distributor_invoice_cogs)`);
+    const incomplete = await db.transaction(async tx => {
+      await tx.execute(sql`set local session_replication_role = 'replica'`);
+      await tx.update(journalEntriesTable).set({ status: "posted" }).where(eq(journalEntriesTable.id, cogs.id));
+      const result = await reconcileHistoricalInvoice(historicalReview, tx);
+      await tx.update(journalEntriesTable).set({ status: "reversed" }).where(eq(journalEntriesTable.id, cogs.id));
+      return result;
+    });
+    expect(incomplete.conflicts).toContain(`Invoice #${invoice.id}: ${invoice.invoiceNumber}`);
   });
 
   it("rejects collections and carrier activity without partially changing an invoice", async () => {
