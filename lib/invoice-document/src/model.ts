@@ -47,7 +47,7 @@ export function invoiceTotalRows(i: InvoiceFacts): TotalRow[] {
     push("صافي المبلغ الأصلي","Original net (after discount)",i.subtotal);
     push(i.invoiceDiscountPercent!=null ? `خصم استثنائي للتسجيل (${i.invoiceDiscountPercent}%)` : i.contractDiscountPercent!=null ? `الخصم المحتسب من مرجع العقد (${i.contractDiscountPercent}%)` : "الخصم الأصلي (ضمن الصافي)",
       i.invoiceDiscountPercent!=null ? `Prior override (${i.invoiceDiscountPercent}%)` : i.contractDiscountPercent!=null ? `Contract ref. discount (${i.contractDiscountPercent}%)` : "Original discount (already included)",i.discountAmount??0);
-    push("الضريبة الأصلية","Original VAT",i.vatAmount);
+    push("ضريبة القيمة المضافة","Value Added Tax (VAT)",i.vatAmount);
   } else if (contract) {
     push(international ? "الإجمالي قبل الخصم" : "الإجمالي قبل الخصم (شامل الضريبة)",international?"Gross before discount":"Gross before discount (VAT included)",i.items.reduce((s,r)=>s+r.unitPrice*r.quantity,0));
     push(i.invoiceDiscountPercent!=null ? `خصم استثنائي لهذه الفاتورة (${i.invoiceDiscountPercent}%)` : `خصم العقد (${i.contractDiscountPercent??0}%)`,

@@ -40,3 +40,9 @@ The user subsequently requested removing printed collection status, collected an
 **Why:** The user marked these exact sections in the corrected preview and explicitly requested their removal and an opt-in shipping control.
 
 **How to apply:** Keep payment records and tax QR data in the system; this is a document-presentation rule, not data deletion. Persist the choice per invoice and apply it across preview, PDF, print and emailed attachments. Test opted-in shipping and default-hidden shipping; shipping must not force an unnecessary new page.
+
+Use «ضريبة القيمة المضافة» for the tax label, including historical invoices; never call it «الضريبة الأصلية».
+
+**Why:** The user explicitly rejected that wording in the invoice preview.
+
+**How to apply:** Keep this terminology consistent across preview, print and generated PDF/email documents without changing the stored tax amounts or calculations.

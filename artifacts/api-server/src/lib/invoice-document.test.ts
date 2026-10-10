@@ -9,6 +9,17 @@ import QRCode from "qrcode";
 
 afterAll(closeInvoiceBrowser);
 describe("protected shared invoice document",()=>{
+  it("labels historical invoice tax as value added tax in both languages without changing amounts",()=>{
+    const invoice={...sampleInvoice(),historical:"yes",vatAmount:1045.95};
+    for(const language of ["ar","en"] as const){
+      const html=renderInvoiceHtml({invoice,assets:invoicePdfAssets(),language});
+      expect(html).toContain(language==="ar"?"ضريبة القيمة المضافة":"Value Added Tax (VAT)");
+      expect(html).not.toContain("الضريبة الأصلية");
+      expect(html).not.toContain("Original VAT");
+      expect(html).toContain("1,045.95");
+    }
+    expect(invoice.vatAmount).toBe(1045.95);
+  });
   it("retains the last preview without discarding invalid editable state and resumes after correction",()=>{
     const previous=createTemplate(),working=structuredClone(previous);
     working.elements.find(e=>e.kind==="notes")!.heading="تعديلات مسودة لم تحفظ";
@@ -146,11 +157,14 @@ describe("protected shared invoice document",()=>{
     const short=await inspectInvoiceDocument(hist,"ar",createTemplate(),true);
     expect(short.metrics.errors).toEqual([]);expect(short.metrics.pages).toBe(1);
     expect(short.metrics.text).toContain("LC-0005");expect(short.metrics.text).not.toContain("OLD-9");
+    expect(short.metrics.text).toContain("ضريبة القيمة المضافة");
+    expect(short.metrics.text).not.toContain("الضريبة الأصلية");
     const dir=mkdtempSync(`${tmpdir()}/hist-`);
     try{const f=`${dir}/h.pdf`;writeFileSync(f,short.buffer);
       expect(execFileSync("pdfinfo",[f]).toString()).toMatch(/Pages:\s+1\n/);
       const txt=execFileSync("pdftotext",["-layout",f,"-"]).toString();
       expect(txt).toContain("muskellolo.com");expect(txt).toContain("LC-0005");
+      expect(txt).toContain("المضافة");
       if(process.env.INVOICE_RENDER_OUT){writeFileSync(`${process.env.INVOICE_RENDER_OUT}/historical-short.pdf`,short.buffer);}
     }finally{rmSync(dir,{recursive:true,force:true});}
     expect(short.metrics.text).toContain("160.00");
